@@ -1,4 +1,4 @@
-# Signal Path: Game Concept
+# AV Tech RPG: Game Concept
 
 ## Elevator Pitch
 
@@ -13,7 +13,7 @@ making the system work five minutes before turnover.
 
 ## Genre
 
-*Signal Path* is an AV technician RPG. Jobs act as quests, tools and
+*AV Tech RPG* is an audio visual technician role-playing game. Jobs act as quests, tools and
 certifications unlock new approaches, and reputation opens more demanding
 contracts. The role-playing progression should support the troubleshooting
 gameplay rather than turn the project into a spreadsheet.
