@@ -1,4 +1,4 @@
-# Smartboard Swappers: Game Concept
+# Signal Path: Game Concept
 
 ## Elevator Pitch
 
@@ -10,6 +10,13 @@ the actual site conditions.
 The tone should be grounded and playful. The player gets the satisfaction of
 understanding a complicated room, finding the one thing that is wrong, and
 making the system work five minutes before turnover.
+
+## Genre
+
+*Signal Path* is an AV technician RPG. Jobs act as quests, tools and
+certifications unlock new approaches, and reputation opens more demanding
+contracts. The role-playing progression should support the troubleshooting
+gameplay rather than turn the project into a spreadsheet.
 
 ## Core Player Fantasy
 
@@ -97,8 +104,7 @@ These are intentionally open:
 - Do projects happen room-by-room, or does the player also manage a crew and
   schedule across a building?
 - How much humor should come from recognizable field situations?
-- Should the title remain *Smartboard Swappers*, or become the name of the
-  player's in-game company?
+- What should the player's in-game integration company be called?
 
 ## Prototype Guardrails
 
@@ -115,4 +121,3 @@ These are intentionally open:
 3. Pick the engine based on that prototype.
 4. Define the classroom signal chain and the exact failure state.
 5. Sketch the commissioning score categories.
-

@@ -1,6 +1,6 @@
-# Smartboard Swappers
+# Signal Path
 
-Smartboard Swappers is an early-stage game concept about the strange, specific,
+Signal Path is an early-stage AV technician RPG about the strange, specific,
 occasionally heroic work of an audio visual integration technician.
 
 You take commercial, education, and government AV jobs from site survey through
@@ -30,4 +30,3 @@ when the player can understand the room at a glance?
 
 The engine and technical stack are intentionally undecided until the first
 prototype is scoped.
-
