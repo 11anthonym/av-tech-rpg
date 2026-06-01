@@ -93,13 +93,19 @@ warehouse: {
   playerStart: { x: 120, y: 420 },
   decor: [
     { type: "label", x: 45, y: 36, w: 220, h: 38, text: "WAREHOUSE" },
+    { type: "boxes", x: 220, y: 180, w: 140, h: 90, text: "GEAR", solid: true },
   ],
 },
 ```
 
+Set `solid: true` on furniture, vehicles, boxes, and other objects the player
+should walk around. Leave signs and floor notes non-solid. The movement engine
+handles collision automatically.
+
 Scene-specific interactions still belong in `getInteractions()` inside
-`app.js`. Keep new maps small and test whether every walking trip creates a
-decision, a joke, or a useful sense of place.
+`app.js`. Add `npc: "SUP"` or another short label to an interaction when it
+should render as a visible person. Keep new maps small and test whether every
+walking trip creates a decision, a joke, or a useful sense of place.
 
 ## Add a Job
 

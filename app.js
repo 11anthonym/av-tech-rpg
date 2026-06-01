@@ -257,7 +257,9 @@ function startGame(technicianId) {
 
 function enterScene(sceneId, playerPosition = null) {
   state.sceneId = sceneId;
-  state.player = playerPosition ? { ...playerPosition } : { ...content.scenes[sceneId].playerStart };
+  state.player = playerPosition && !overlapsSolidObject(playerPosition.x, playerPosition.y)
+    ? { ...playerPosition }
+    : { ...content.scenes[sceneId].playerStart };
   render();
   elements.scene.focus();
 }
@@ -418,7 +420,7 @@ function getInteractions() {
   if (state.sceneId === "shop") {
     return [
       {
-        x: 330, y: 330, label: "Talk to supervisor",
+        x: 330, y: 330, label: "Talk to supervisor", npc: "SUP",
         action: () => {
           if (state.flags.finished) return notify('Supervisor: "Good work today. Dispatch will have more tomorrow."');
           if (!state.flags.shopBrief) {
@@ -486,7 +488,7 @@ function getInteractions() {
   if (state.sceneId === "garage") {
     return [
       ...(!state.flags.garageBrief ? [{
-        x: 665, y: 360, label: "Talk to supervisor",
+        x: 665, y: 360, label: "Talk to supervisor", npc: "SUP",
         action: () => {
           state.flags.garageBrief = true;
           addLog("Supervisor confirmed the garage carry was not included in dispatch's estimate.");
@@ -535,7 +537,7 @@ function getInteractions() {
   if (state.sceneId === "lobby") {
     return [
       {
-        x: 405, y: 225, label: "Check in with security",
+        x: 405, y: 225, label: "Check in with security", npc: "SEC",
         action: () => {
           state.flags.securityChecked = true;
           changeEnergy(-2);
@@ -563,7 +565,7 @@ function getInteractions() {
 
   return [
     ...(!state.flags.roomBrief && !state.flags.supervisorLeft ? [{
-      x: 320, y: 185, label: "Talk to supervisor",
+      x: 320, y: 185, label: "Talk to supervisor", npc: "SUP",
       action: () => {
         state.flags.roomBrief = true;
         addLog("Supervisor explained cart assembly in a hurry.");
@@ -653,6 +655,25 @@ function interact() {
   nearest.action();
 }
 
+function overlapsSolidObject(x, y) {
+  const playerBounds = { left: x - 11, right: x + 11, top: y - 13, bottom: y + 13 };
+  return content.scenes[state.sceneId].decor
+    .filter((item) => item.solid)
+    .some((item) => (
+      playerBounds.right > item.x
+      && playerBounds.left < item.x + item.w
+      && playerBounds.bottom > item.y
+      && playerBounds.top < item.y + item.h
+    ));
+}
+
+function moveOnAxis(axis, amount) {
+  const next = { ...state.player, [axis]: state.player[axis] + amount };
+  next.x = Math.max(28, Math.min(912, next.x));
+  next.y = Math.max(48, Math.min(500, next.y));
+  if (!overlapsSolidObject(next.x, next.y)) state.player = next;
+}
+
 function movePlayer() {
   if (state.modalOpen || !state.sceneId) return;
   let dx = 0;
@@ -663,8 +684,8 @@ function movePlayer() {
   if (keys.has("arrowdown") || keys.has("s")) dy += 1;
   if (!dx && !dy) return;
   const length = Math.hypot(dx, dy);
-  state.player.x = Math.max(28, Math.min(912, state.player.x + (dx / length) * PLAYER_SPEED));
-  state.player.y = Math.max(48, Math.min(500, state.player.y + (dy / length) * PLAYER_SPEED));
+  moveOnAxis("x", (dx / length) * PLAYER_SPEED);
+  moveOnAxis("y", (dy / length) * PLAYER_SPEED);
   renderPlayer();
   renderNearby();
 }
@@ -704,10 +725,11 @@ function renderDecor() {
   });
   const interactions = getInteractions().map((item) => {
     const marker = document.createElement("div");
-    marker.className = "interaction-marker";
+    marker.className = item.npc ? "interaction-marker npc-marker" : "interaction-marker";
     marker.style.left = `${item.x - 11}px`;
     marker.style.top = `${item.y - 11}px`;
     marker.title = item.label;
+    marker.textContent = item.npc || "";
     return marker;
   });
   elements.sceneLayer.replaceChildren(...decor, ...interactions);
