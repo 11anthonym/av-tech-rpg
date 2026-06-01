@@ -9,7 +9,7 @@ function createInitialState() {
     sceneId: null,
     player: { x: 0, y: 0 },
     tools: [],
-    carry: null,
+    carry: [],
     loaded: [],
     delivered: [],
     assembled: [],
@@ -92,7 +92,7 @@ function refreshTitleScreen() {
 
 function serializeGame() {
   return {
-    version: 1,
+    version: 2,
     technicianId: state.technician.id,
     sceneId: state.sceneId,
     player: state.player,
@@ -107,6 +107,39 @@ function serializeGame() {
     flags: state.flags,
     log: state.log,
   };
+}
+
+function normalizeCarry(carry) {
+  if (Array.isArray(carry)) return carry;
+  return carry ? [carry] : [];
+}
+
+function ownsTool(toolId) {
+  return state.tools.includes(toolId);
+}
+
+function getToolModifier(modifier) {
+  return state.tools.reduce((total, toolId) => total + (content.tools[toolId]?.modifiers?.[modifier] || 0), 0);
+}
+
+function getCarryCapacity(sceneId = state.sceneId) {
+  return sceneId === "garage" ? 1 + getToolModifier("garageCarryCapacityBonus") : 1;
+}
+
+function getEquipmentEnergyCost(baseCost) {
+  return Math.max(0, baseCost - getToolModifier("pickupEnergyReduction"));
+}
+
+function getAssemblyEnergyCost(baseCost) {
+  return Math.max(0, baseCost - getToolModifier("assemblyEnergyReduction"));
+}
+
+function hasCarriedItems() {
+  return state.carry.length > 0;
+}
+
+function getCarriedLabels() {
+  return state.carry.map((itemId) => content.tutorial.assembly.find((item) => item.id === itemId)?.label || itemId);
 }
 
 function saveGame() {
@@ -180,7 +213,7 @@ function continueGame() {
   const technician = content.technicians.find((item) => item.id === savedGame.technicianId);
   if (!technician || !content.scenes[savedGame.sceneId]) return clearSavedGame();
   resetRuntimeState();
-  Object.assign(state, savedGame, { technician, modalOpen: false });
+  Object.assign(state, savedGame, { technician, carry: normalizeCarry(savedGame.carry), modalOpen: false });
   elements.titleScreen.classList.add("hidden");
   elements.selection.classList.add("hidden");
   elements.gameLayout.classList.remove("hidden");
@@ -266,10 +299,6 @@ function enterScene(sceneId, playerPosition = null) {
 
 function getNextShopLoad() {
   return content.tutorial.shopLoad.find((item) => !state.loaded.includes(item));
-}
-
-function getNextGarageUnload() {
-  return content.tutorial.garageUnload.find((item) => !state.delivered.includes(item));
 }
 
 function getNextAssemblyItem() {
@@ -407,12 +436,28 @@ function chooseReward(toolId) {
     actions: [{
       label: "Return to Broomall Shop",
       onClick: () => {
-        state.carry = null;
+        state.carry = [];
         addLog(`${content.tools[toolId].name} added to your personal kit.`);
         addLog("Returned to the Broomall shop. More dispatches will be added next.");
         enterScene("shop");
       },
     }],
+  });
+}
+
+function showPersonalKit() {
+  const ownedTools = state.tools.map((toolId) => content.tools[toolId]);
+  showModal({
+    kicker: "Personal Kit",
+    title: "Your Tools",
+    body: `
+      <ul class="modal-list">
+        ${ownedTools.map((tool) => `<li><strong>${tool.name}</strong><span>${tool.effect}</span></li>`).join("")}
+      </ul>
+      <p class="muted">Garage carry capacity: ${getCarryCapacity("garage")} equipment group${getCarryCapacity("garage") === 1 ? "" : "s"}</p>
+      <p class="muted">Assembly energy cost: ${getAssemblyEnergyCost(7)} per cart component</p>
+    `,
+    actions: [{ label: "Close Tool Bag" }],
   });
 }
 
@@ -445,11 +490,11 @@ function getInteractions() {
         x: 590, y: 180, label: "Pick up staged equipment",
         action: () => {
           if (!state.flags.shopBrief) return notify("You should ask the supervisor what is happening.");
-          if (state.carry) return notify("Your hands are already full.");
+          if (hasCarriedItems()) return notify("Your hands are already full.");
           const next = getNextShopLoad();
           if (!next) return notify("The staged equipment is loaded.");
-          state.carry = next;
-          changeEnergy(-2);
+          state.carry = [next];
+          changeEnergy(-getEquipmentEnergyCost(2));
           addLog(`Picked up ${next}.`);
           render();
         },
@@ -465,13 +510,17 @@ function getInteractions() {
           });
         },
       },
+      ...(state.flags.finished ? [{
+        x: 355, y: 400, label: "Inspect personal kit",
+        action: showPersonalKit,
+      }] : []),
       {
-        x: 830, y: 380, label: state.carry ? "Load item into Van #3" : "Inspect Van #3",
+        x: 830, y: 380, label: hasCarriedItems() ? "Load item into Van #3" : "Inspect Van #3",
         action: () => {
-          if (state.carry) {
-            state.loaded.push(state.carry);
-            addLog(`${state.carry} loaded into Van #3.`);
-            state.carry = null;
+          if (hasCarriedItems()) {
+            state.loaded.push(...state.carry);
+            addLog(`${getCarriedLabels().join(" and ")} loaded into Van #3.`);
+            state.carry = [];
             if (state.loaded.length === content.tutorial.shopLoad.length) {
               addLog("Van loaded. Supervisor is ready to leave for Center City East.");
             }
@@ -504,23 +553,26 @@ function getInteractions() {
         x: 800, y: 375, label: "Unload next box group",
         action: () => {
           if (!state.flags.garageBrief) return notify("Your supervisor is waiting beside the van.");
-          if (state.carry) return notify("Your hands are already full.");
-          const next = getNextGarageUnload();
-          if (!next) return notify("Everything has been carried to the client entrance.");
-          state.carry = next;
-          changeEnergy(-3);
-          addLog(`Unloaded ${next} from the van.`);
+          if (hasCarriedItems()) return notify("Your hands are already full.");
+          const nextItems = content.tutorial.garageUnload
+            .filter((item) => !state.delivered.includes(item))
+            .slice(0, getCarryCapacity("garage"));
+          if (!nextItems.length) return notify("Everything has been carried to the client entrance.");
+          state.carry = nextItems;
+          changeEnergy(-getEquipmentEnergyCost(3));
+          addLog(`Unloaded ${nextItems.join(" and ")} from the van.`);
           render();
         },
       },
       {
-        x: 116, y: 185, label: state.carry ? "Carry item to client entrance" : "Walk to client entrance",
+        x: 116, y: 185, label: hasCarriedItems() ? "Carry equipment to client entrance" : "Walk to client entrance",
         action: () => {
-          if (state.carry) {
-            state.delivered.push(state.carry);
-            addLog(`${state.carry} carried from garage to the client entrance.`);
-            state.carry = null;
-            changeEnergy(-4);
+          if (hasCarriedItems()) {
+            const carriedLabels = getCarriedLabels();
+            state.delivered.push(...state.carry);
+            addLog(`${carriedLabels.join(" and ")} carried from garage to the client entrance.`);
+            state.carry = [];
+            changeEnergy(-getEquipmentEnergyCost(4));
             if (state.delivered.length === content.tutorial.garageUnload.length) {
               setClock("MON 8:39 AM");
               addLog("Equipment delivered to lobby. Utility cart would have helped.");
@@ -581,11 +633,11 @@ function getInteractions() {
       x: 178, y: 345, label: "Pick up next cart component",
       action: () => {
         if (!state.flags.roomBrief) return notify("Your supervisor is ready to explain the first cart.");
-        if (state.carry) return notify("Your hands are already full.");
+        if (hasCarriedItems()) return notify("Your hands are already full.");
         const next = getNextAssemblyItem();
         if (!next) return notify("Both carts are assembled.");
-        state.carry = next.id;
-        changeEnergy(-2);
+        state.carry = [next.id];
+        changeEnergy(-getEquipmentEnergyCost(2));
         addLog(`Picked up ${next.label}.`);
         render();
       },
@@ -596,13 +648,13 @@ function getInteractions() {
 }
 
 function installCartPart(destination) {
-  if (!state.carry) return notify("Pick up the next cart component from the delivered boxes.");
-  const part = content.tutorial.assembly.find((item) => item.id === state.carry);
+  if (!hasCarriedItems()) return notify("Pick up the next cart component from the delivered boxes.");
+  const part = content.tutorial.assembly.find((item) => item.id === state.carry[0]);
   if (!part || part.destination !== destination) return notify(`${part?.label || "That component"} belongs on the other cart.`);
   state.assembled.push(part.id);
-  state.carry = null;
-  changeEnergy(-7);
-  addLog(`${part.label} installed with your screwdriver.`);
+  state.carry = [];
+  changeEnergy(-getAssemblyEnergyCost(7));
+  addLog(`${part.label} installed ${ownsTool("drill") ? "with your drill" : "with your screwdriver"}.`);
   const cart1Done = state.assembled.filter((id) => id.startsWith("cart-1")).length === 2;
   const cart2Done = state.assembled.filter((id) => id.startsWith("cart-2")).length === 2;
   if (cart1Done && !state.flags.supervisorLeft) return showSupervisorDeparture();
@@ -738,9 +790,7 @@ function renderDecor() {
 function renderPlayer() {
   elements.player.style.left = `${state.player.x - 15}px`;
   elements.player.style.top = `${state.player.y - 19}px`;
-  const carried = state.carry
-    ? content.tutorial.assembly.find((item) => item.id === state.carry)?.label || state.carry
-    : null;
+  const carried = hasCarriedItems() ? getCarriedLabels().join(" + ") : null;
   elements.carryBubble.textContent = carried || "";
   elements.carryBubble.classList.toggle("hidden", !carried);
 }
@@ -760,12 +810,12 @@ function renderHud() {
   elements.burnoutValue.textContent = state.burnout;
   elements.craftValue.textContent = state.technician.stats.craftsmanship;
   elements.confidenceValue.textContent = state.technician.stats.confidence;
-  elements.carryCard.textContent = state.carry
-    ? content.tutorial.assembly.find((item) => item.id === state.carry)?.label || state.carry
-    : "Nothing";
+  elements.carryCard.textContent = hasCarriedItems()
+    ? `${getCarriedLabels().join(" + ")} (${state.carry.length}/${getCarryCapacity()})`
+    : `Nothing (0/${getCarryCapacity()})`;
   elements.toolList.replaceChildren(...state.tools.map((toolId) => {
     const li = document.createElement("li");
-    li.textContent = content.tools[toolId].name;
+    li.innerHTML = `<strong>${content.tools[toolId].name}</strong><small>${content.tools[toolId].effect}</small>`;
     return li;
   }));
   elements.vehicleCard.innerHTML = `
