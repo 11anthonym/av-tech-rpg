@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AV Tech RPG | First Day</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">AV Tech RPG</p>
+        <h1 id="location-title">Technician Selection</h1>
+      </div>
+      <div class="shift-meta">
+        <span class="save-status hidden" id="save-status">AUTOSAVED</span>
+        <span id="clock">MON 7:11 AM</span>
+        <span class="status" id="job-status">FIRST DAY</span>
+        <button class="text-button hidden" id="menu-button" type="button">Main Menu</button>
+      </div>
+    </header>
+
+    <main id="app">
+      <section class="title-screen" id="title-screen">
+        <div class="title-hero">
+          <p class="eyebrow">Greater Philadelphia Field Operations</p>
+          <h2>AV Tech RPG</h2>
+          <p>Start with a screwdriver. Survive the schedule. Build a career.</p>
+        </div>
+
+        <div class="title-card">
+          <p class="eyebrow">Career</p>
+          <h3>Clock In</h3>
+          <p class="title-copy">Your first employer has a Broomall shop, one questionable van, and a downtown job that should be simple.</p>
+          <div class="title-actions">
+            <button class="primary-button" id="continue-button" type="button">Continue Career</button>
+            <button class="secondary-button" id="new-game-button" type="button">New Career</button>
+            <button class="text-button danger-text" id="clear-save-button" type="button">Clear Saved Career</button>
+          </div>
+          <p class="save-summary" id="save-summary"></p>
+        </div>
+      </section>
+
+      <section class="selection-screen hidden" id="selection-screen">
+        <div class="selection-heading">
+          <p class="eyebrow">New Game</p>
+          <h2>Choose Your Technician</h2>
+          <p>Specific technicians with different strengths will be added later. Start with the prototype profile.</p>
+        </div>
+        <div class="technician-grid" id="technician-grid"></div>
+        <button class="text-button selection-back" id="selection-back-button" type="button">Back to Main Menu</button>
+      </section>
+
+      <section class="game-layout hidden" id="game-layout">
+        <aside class="panel hud-panel">
+          <div class="panel-heading">
+            <p class="eyebrow">Technician</p>
+            <h2 id="tech-name">--</h2>
+          </div>
+
+          <section>
+            <h3>Shift Status</h3>
+            <div class="meter-row">
+              <span>Energy</span>
+              <strong id="energy-value">100</strong>
+            </div>
+            <div class="meter"><i id="energy-meter"></i></div>
+            <div class="stat-row"><span>Burnout</span><strong id="burnout-value">0</strong></div>
+            <div class="stat-row"><span>Craftsmanship</span><strong id="craft-value">0</strong></div>
+            <div class="stat-row"><span>Confidence</span><strong id="confidence-value">0</strong></div>
+          </section>
+
+          <section>
+            <h3>Carrying</h3>
+            <div class="carry-card" id="carry-card">Nothing</div>
+          </section>
+
+          <section>
+            <h3>Personal Tools</h3>
+            <ul class="compact-list" id="tool-list"></ul>
+          </section>
+
+          <section>
+            <h3>Vehicle</h3>
+            <div class="vehicle-card" id="vehicle-card"></div>
+          </section>
+        </aside>
+
+        <section class="scene-shell">
+          <div class="scene-header">
+            <div>
+              <p class="eyebrow" id="scene-kicker">Broomall, PA</p>
+              <h2 id="scene-name">Trunkslammer Shop</h2>
+            </div>
+            <p id="objective">Find your supervisor.</p>
+          </div>
+
+          <div class="scene" id="scene" tabindex="0" aria-label="Walkable game map">
+            <div class="scene-world">
+              <div class="scene-layer" id="scene-layer"></div>
+              <div class="player" id="player">
+                <span class="carry-bubble hidden" id="carry-bubble"></span>
+                <i></i>
+                <b>YOU</b>
+              </div>
+            </div>
+          </div>
+
+          <div class="scene-footer">
+            <span>Move: <kbd>WASD</kbd> or <kbd>Arrow Keys</kbd></span>
+            <span>Interact: <kbd>E</kbd> or <kbd>Space</kbd></span>
+            <button class="primary-button compact" id="interact-button" type="button">Interact</button>
+          </div>
+        </section>
+
+        <aside class="panel task-panel">
+          <div class="panel-heading">
+            <p class="eyebrow">Dispatch</p>
+            <h2>Two Quick Carts</h2>
+          </div>
+          <p class="muted">Build two mobile video conferencing carts at a Center City East office.</p>
+
+          <section>
+            <h3>Current Step</h3>
+            <p class="task-copy" id="task-copy"></p>
+          </section>
+
+          <section>
+            <h3>Nearby</h3>
+            <div class="nearby-card" id="nearby-card">Walk toward an object or person.</div>
+          </section>
+
+          <section class="log-shell">
+            <h3>Field Log</h3>
+            <ol class="field-log" id="field-log"></ol>
+          </section>
+        </aside>
+      </section>
+    </main>
+
+    <div class="modal-backdrop hidden" id="modal-backdrop">
+      <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <p class="eyebrow" id="modal-kicker">Dispatch Update</p>
+        <h2 id="modal-title"></h2>
+        <div class="modal-body" id="modal-body"></div>
+        <div class="modal-actions" id="modal-actions"></div>
+      </section>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -11,6 +11,11 @@ The tone should be grounded and playful. The player gets the satisfaction of
 understanding a complicated room, finding the one thing that is wrong, and
 making the system work five minutes before turnover.
 
+The career begins at a poorly managed trunkslammer company in the greater
+Philadelphia area. The player starts with a screwdriver, little support, and
+assignments that were sold with unrealistic assumptions. Better tools,
+experience, and employers gradually turn chaos into competence.
+
 ## Genre
 
 *AV Tech RPG* is an audio visual technician role-playing game. Jobs act as quests, tools and
@@ -33,31 +38,34 @@ This is a game about practical competence:
 
 ## Candidate Core Loop
 
-1. Accept a job with a scope, drawings, budget, and deadline.
-2. Survey the site and notice constraints or contradictions.
-3. Plan equipment placement and cable routes.
-4. Install devices and connect the system.
-5. Configure and test the room.
-6. Troubleshoot failures, including mistakes and unexpected field conditions.
-7. Commission the system and receive a score.
-8. Spend earnings and reputation on tools, certifications, and larger jobs.
+1. Return to a walkable company shop.
+2. Review the dispatch board and load tools and equipment into the van.
+3. Travel to a job site and handle parking, loading, or access complications.
+4. Complete an approachable install, service, survey, training, or commissioning
+   assignment.
+5. Balance speed, craftsmanship, fatigue, and management pressure.
+6. Return to the shop with pay, experience, reputation changes, and possible
+   callbacks.
+7. Buy practical upgrades and eventually move to better employers or start a
+   company.
 
 ## First Playable Slice
 
-Start with one classroom retrofit. The room needs a flat panel display, a wall
-plate input, a small rack, speakers, and a control point.
+Start with the player's first day at a bad company. Leadership promises that a
+supervisor will remain onsite to train the player while they build two mobile
+video conferencing carts. After unloading and a short introduction, the
+supervisor is pulled into meetings at another site and apologetically leaves.
 
 The player should be able to:
 
-- Inspect a simplified work order.
-- Place required equipment.
-- Connect a visible signal chain.
-- Route cables while respecting distance and pathway constraints.
-- Use a tester or symptom clues to find a fault.
-- Complete a commissioning checklist.
-
-Possible first fault: the display reports no signal because an extender endpoint
-is connected incorrectly. This keeps the diagnosis visual and understandable.
+- Walk around a small, disorganized shop.
+- Load the van with a screwdriver and cart components.
+- Select the job on a simplified Philadelphia-area map.
+- Handle one parking or site-access event.
+- Assemble two carts using readable, low-technical interactions.
+- Choose between rushing, tidy work, asking for clarification, and improvising.
+- See fatigue, overtime, and management pressure affect the result.
+- Return to the shop with pay, experience, and burnout.
 
 ## Job Families
 
@@ -94,6 +102,12 @@ is connected incorrectly. This keeps the diagnosis visual and understandable.
   underlying system technically functions.
 - **Career progression:** Unlock better tools, certifications, helpers, and more
   complex job types.
+- **Field logistics:** Load the van, navigate the Philadelphia area, find
+  parking, access loading docks, and carry equipment through real spaces.
+- **Fatigue and burnout:** Let repeated overtime create longer-term tradeoffs
+  without turning the game into a spreadsheet.
+- **Employers:** Give each company its own shop, culture, expectations, and
+  flavor of dysfunction.
 
 ## Tone And Presentation Questions
 
@@ -113,11 +127,15 @@ These are intentionally open:
 - Let the player understand why a fix worked.
 - Keep the first room small enough to replay quickly.
 - Treat domain accuracy as flavor and structure, not as a barrier to entry.
+- Make the joke understandable to non-technicians and especially recognizable to
+  people who have worked in the field.
+- Use short event cards and visible consequences instead of dense dialogue trees.
+- Do not reward unsafe work.
 
 ## Next Design Decisions
 
-1. Choose a camera and interaction style.
-2. Decide whether the first prototype is 2D or 3D.
-3. Pick the engine based on that prototype.
-4. Define the classroom signal chain and the exact failure state.
-5. Sketch the commissioning score categories.
+1. Decide how much direct movement and carrying the first prototype needs.
+2. Define the two-cart tutorial interactions.
+3. Choose the smallest useful shop layout.
+4. Decide how the first travel and parking event works.
+5. Sketch the initial attributes and end-of-day result screen.
