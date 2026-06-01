@@ -16,6 +16,7 @@ window.GAME_CONTENT = {
       name: "Basic Screwdriver",
       description: "The one tool you knew to bring.",
       effect: "Allows basic assembly.",
+      price: 0,
     },
     toolBag: {
       id: "toolBag",
@@ -23,6 +24,7 @@ window.GAME_CONTENT = {
       description: "A place for your tools that is not a cardboard box.",
       effect: "Reduce energy spent picking up equipment by 1.",
       modifiers: { pickupEnergyReduction: 1 },
+      price: 65,
     },
     drill: {
       id: "drill",
@@ -30,6 +32,7 @@ window.GAME_CONTENT = {
       description: "Entry-level, but the battery is yours.",
       effect: "Reduce energy spent assembling equipment by 4.",
       modifiers: { assemblyEnergyReduction: 4 },
+      price: 125,
     },
     handTruck: {
       id: "handTruck",
@@ -37,6 +40,7 @@ window.GAME_CONTENT = {
       description: "Carry more gear before your next garage trip.",
       effect: "Carry one additional equipment group during garage unloads.",
       modifiers: { garageCarryCapacityBonus: 1 },
+      price: 100,
     },
   },
 
@@ -76,6 +80,8 @@ window.GAME_CONTENT = {
         { type: "shelf", x: 480, y: 88, w: 220, h: 92, text: "STAGING AREA", solid: true },
         { type: "shelf", x: 500, y: 355, w: 160, h: 92, text: "MYSTERY RETURNS", solid: true },
         { type: "workbench", x: 270, y: 420, w: 170, h: 60, text: "TOOL WORKBENCH", solid: true },
+        { type: "counter", x: 68, y: 300, w: 150, h: 64, text: "SUPPLY COUNTER", solid: true },
+        { type: "break-area", x: 285, y: 95, w: 130, h: 70, text: "BREAK AREA", solid: true },
         { type: "van", x: 760, y: 280, w: 150, h: 190, text: "VAN #3", solid: true },
         { type: "floor-note", x: 278, y: 208, w: 150, h: 30, text: "UNLABELED CABLES" },
       ],

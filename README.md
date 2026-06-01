@@ -31,7 +31,8 @@ a badly managed AV workday while gradually becoming a more capable technician?
 
 The current browser prototype includes technician selection, a walkable Broomall
 shop, van loading, a scripted Center City East trip, garage unloading, client
-check-in, the two-cart tutorial, fatigue, and a starter tool reward.
+check-in, the two-cart tutorial, fatigue, a starter tool reward, and a
+post-tutorial shop hub for recovery and personal-tool purchases.
 
 ## Design Notes
 

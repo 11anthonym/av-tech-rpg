@@ -15,6 +15,7 @@ function createInitialState() {
     assembled: [],
     energy: 100,
     burnout: 0,
+    cash: 0,
     clock: "MON 7:11 AM",
     flags: {},
     log: [],
@@ -43,6 +44,7 @@ const elements = {
   energyValue: document.querySelector("#energy-value"),
   energyMeter: document.querySelector("#energy-meter"),
   burnoutValue: document.querySelector("#burnout-value"),
+  cashValue: document.querySelector("#cash-value"),
   craftValue: document.querySelector("#craft-value"),
   confidenceValue: document.querySelector("#confidence-value"),
   carryCard: document.querySelector("#carry-card"),
@@ -74,13 +76,19 @@ function getSavedGame() {
   }
 }
 
+function inferSavedCash(savedGame) {
+  if (typeof savedGame.cash === "number") return savedGame.cash;
+  if (!savedGame.flags?.finished) return 0;
+  return savedGame.flags.finishChoice === "tidy" ? 152 : 141;
+}
+
 function getSaveSummary(savedGame) {
   if (!savedGame) return "No saved career yet.";
   const technician = content.technicians.find((item) => item.id === savedGame.technicianId);
   const scene = content.scenes[savedGame.sceneId];
   const reward = savedGame.flags?.reward ? content.tools[savedGame.flags.reward]?.name : null;
-  const detail = reward ? ` | Latest tool: ${reward}` : "";
-  return `${technician?.name || "Technician"} | ${scene?.name || "First day"} | Energy ${savedGame.energy}${detail}`;
+  const detail = reward ? ` | Tutorial reward: ${reward}` : "";
+  return `${technician?.name || "Technician"} | ${scene?.name || "First day"} | Energy ${savedGame.energy} | Cash $${inferSavedCash(savedGame)}${detail}`;
 }
 
 function refreshTitleScreen() {
@@ -92,7 +100,7 @@ function refreshTitleScreen() {
 
 function serializeGame() {
   return {
-    version: 2,
+    version: 3,
     technicianId: state.technician.id,
     sceneId: state.sceneId,
     player: state.player,
@@ -103,6 +111,7 @@ function serializeGame() {
     assembled: state.assembled,
     energy: state.energy,
     burnout: state.burnout,
+    cash: state.cash,
     clock: state.clock,
     flags: state.flags,
     log: state.log,
@@ -212,8 +221,17 @@ function continueGame() {
   if (!savedGame) return;
   const technician = content.technicians.find((item) => item.id === savedGame.technicianId);
   if (!technician || !content.scenes[savedGame.sceneId]) return clearSavedGame();
+  const flags = { ...savedGame.flags };
+  const migratedCash = inferSavedCash(savedGame);
+  if (flags.finished) flags.tutorialPaid = true;
   resetRuntimeState();
-  Object.assign(state, savedGame, { technician, carry: normalizeCarry(savedGame.carry), modalOpen: false });
+  Object.assign(state, savedGame, {
+    technician,
+    carry: normalizeCarry(savedGame.carry),
+    cash: migratedCash,
+    flags,
+    modalOpen: false,
+  });
   elements.titleScreen.classList.add("hidden");
   elements.selection.classList.add("hidden");
   elements.gameLayout.classList.remove("hidden");
@@ -395,11 +413,16 @@ function finishJob(choice) {
     setClock("MON 5:54 PM");
     addLog("You left before traffic got worse. The second cart may become a callback.");
   }
+  if (!state.flags.tutorialPaid) {
+    state.cash += choice === "tidy" ? 152 : 141;
+    state.flags.tutorialPaid = true;
+  }
   showResults();
 }
 
 function showResults() {
   const tidy = state.flags.finishChoice === "tidy";
+  const netPay = tidy ? 152 : 141;
   showModal({
     kicker: "End of Day",
     title: "Two Quick Carts: Complete",
@@ -408,6 +431,8 @@ function showResults() {
         <span>Base wages</span><strong>+$128</strong>
         <span>Overtime</span><strong>+${tidy ? "$42" : "$31"}</strong>
         <span>Garage parking</span><strong>-$18</strong>
+        <span>Net take-home</span><strong>+$${netPay}</strong>
+        <span>Cash balance</span><strong>$${state.cash}</strong>
         <span>Expense status</span><strong>Receipt under review</strong>
         <span>Energy remaining</span><strong>${state.energy}/100</strong>
         <span>Burnout</span><strong>${state.burnout}</strong>
@@ -461,6 +486,71 @@ function showPersonalKit() {
   });
 }
 
+function showSupplyCounter() {
+  const availableTools = Object.values(content.tools).filter((tool) => tool.price > 0 && !ownsTool(tool.id));
+  showModal({
+    kicker: "Broomall Supply Counter",
+    title: "Personal Tool Purchases",
+    body: availableTools.length ? `
+      <p>Company reimbursement policy: optimistic.</p>
+      <ul class="modal-list">
+        ${availableTools.map((tool) => `<li><strong>${tool.name} - $${tool.price}</strong><span>${tool.effect}</span></li>`).join("")}
+      </ul>
+      <p class="muted">Cash available: $${state.cash}</p>
+    ` : `<p>You already own every tool currently stocked here.</p>`,
+    actions: [
+      ...availableTools.map((tool) => ({
+        label: `Buy ${tool.name} - $${tool.price}`,
+        className: "secondary-button",
+        onClick: () => buyTool(tool.id),
+      })),
+      { label: "Leave Supply Counter" },
+    ],
+  });
+}
+
+function buyTool(toolId) {
+  const tool = content.tools[toolId];
+  if (!tool || ownsTool(toolId)) return showSupplyCounter();
+  if (state.cash < tool.price) {
+    addLog(`Not enough cash for ${tool.name}.`);
+    return showSupplyCounter();
+  }
+  state.cash -= tool.price;
+  state.tools.push(toolId);
+  addLog(`${tool.name} purchased for $${tool.price}.`);
+  showModal({
+    kicker: "Personal Tool Added",
+    title: tool.name,
+    body: `<p>${tool.description}</p><p class="muted">${tool.effect}</p><p class="muted">Cash remaining: $${state.cash}</p>`,
+    actions: [{ label: "Return to Shop", onClick: render }],
+  });
+}
+
+function takeBreak() {
+  if (state.energy >= 100 && state.burnout === 0) return notify("You are already rested enough for the next dispatch.");
+  state.energy = Math.min(100, state.energy + 24);
+  state.burnout = Math.max(0, state.burnout - 1);
+  const weekdays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+  const dayIndex = weekdays.indexOf(state.clock.slice(0, 3));
+  setClock(`${weekdays[(dayIndex + 1) % weekdays.length]} 7:22 AM`);
+  addLog("Took an unpaid recovery day. Energy improved and burnout eased.");
+  render();
+}
+
+function showDispatchPreview() {
+  showModal({
+    kicker: "Dispatch Board",
+    title: "More Work Is Coming",
+    body: `
+      <p><strong>Service Call:</strong> Conference-room display issue in Conshohocken.</p>
+      <p><strong>Status:</strong> Next playable dispatch is not implemented yet.</p>
+      <p class="muted">Use the supply counter, inspect your kit, or take an unpaid recovery day before the next job arrives.</p>
+    `,
+    actions: [{ label: "Return to Shop" }],
+  });
+}
+
 function getInteractions() {
   if (state.sceneId === "shop") {
     return [
@@ -483,8 +573,10 @@ function getInteractions() {
         },
       },
       {
-        x: 150, y: 170, label: "Read dispatch board",
-        action: () => notify("Dispatch board: TWO QUICK CARTS. Estimated labor: unclear."),
+        x: 150, y: 270, label: "Read dispatch board",
+        action: () => state.flags.finished
+          ? showDispatchPreview()
+          : notify("Dispatch board: TWO QUICK CARTS. Estimated labor: unclear."),
       },
       {
         x: 590, y: 180, label: "Pick up staged equipment",
@@ -513,6 +605,12 @@ function getInteractions() {
       ...(state.flags.finished ? [{
         x: 355, y: 400, label: "Inspect personal kit",
         action: showPersonalKit,
+      }, {
+        x: 145, y: 400, label: "Browse personal tools",
+        action: showSupplyCounter,
+      }, {
+        x: 350, y: 185, label: "Take unpaid recovery day",
+        action: takeBreak,
       }] : []),
       {
         x: 830, y: 380, label: hasCarriedItems() ? "Load item into Van #3" : "Inspect Van #3",
@@ -808,6 +906,7 @@ function renderHud() {
   elements.energyValue.textContent = state.energy;
   elements.energyMeter.style.width = `${state.energy}%`;
   elements.burnoutValue.textContent = state.burnout;
+  elements.cashValue.textContent = `$${state.cash}`;
   elements.craftValue.textContent = state.technician.stats.craftsmanship;
   elements.confidenceValue.textContent = state.technician.stats.confidence;
   elements.carryCard.textContent = hasCarriedItems()

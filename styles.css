@@ -89,6 +89,8 @@ kbd { padding: 2px 5px; border: 1px solid #53615e; border-radius: 3px; color: va
 .decor.office { background: rgba(196, 185, 151, .82); }
 .decor.shelf { background: repeating-linear-gradient(0deg, #a59a7d 0 19px, #81775e 20px 24px); }
 .decor.workbench { background: repeating-linear-gradient(90deg, #8f7e62 0 22px, #75664e 23px 27px); }
+.decor.counter { background: repeating-linear-gradient(90deg, #9c8b6c 0 22px, #7d6e54 23px 27px); }
+.decor.break-area { background: #b5a983; }
 .decor.van { border-radius: 12px 12px 4px 4px; color: #eee8d8; background: #5f756f; }
 .decor.exit { color: #eee8d8; background: #61746f; }
 .decor.desk { background: #b3a681; }

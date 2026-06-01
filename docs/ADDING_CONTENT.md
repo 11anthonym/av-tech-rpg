@@ -13,9 +13,9 @@ game engine.
 ## Save Data
 
 The browser prototype autosaves career progress to local storage under
-`av-tech-rpg-save-v1`. The internal save format is currently version `2`. The
+`av-tech-rpg-save-v1`. The internal save format is currently version `3`. The
 save records the technician, tools, scene, position, carried items, tutorial
-progress, fatigue, flags, and field log.
+progress, fatigue, cash, flags, and field log.
 
 When changing saved data structures later:
 
@@ -41,11 +41,13 @@ labeler: {
   description: "Your cables can finally explain themselves.",
   effect: "Reduce callback risk during commissioning.",
   modifiers: { callbackRiskReduction: 1 },
+  price: 75,
 },
 ```
 
-The HUD renders the `effect` text automatically. Modifier keys only change
-gameplay after `app.js` reads them. The first reusable modifiers are:
+Set `price` to a positive number to stock the tool at the post-tutorial supply
+counter. The HUD renders the `effect` text automatically. Modifier keys only
+change gameplay after `app.js` reads them. The first reusable modifiers are:
 
 - `pickupEnergyReduction`
 - `assemblyEnergyReduction`
