@@ -19,7 +19,9 @@ The playable slice now has:
    choice, and a management-versus-field-judgment report decision.
 5. A South Philadelphia commissioning visit with three checks, an incomplete
    room, and a craftsmanship-based punch-list option.
-6. A completion card with a career snapshot, nearby locked work, and playtest
+6. A short Broomall warehouse run that reuses the shop map and tests whether
+   stockroom exploration works as a change of pace.
+7. A completion card with a career snapshot, nearby locked work, and playtest
    questions.
 
 ## Playtest Questions
@@ -37,6 +39,7 @@ Watch a player complete the current build before expanding it. Look for:
 - Does commissioning deliver the satisfaction of understanding an unfinished
   room without becoming a technical quiz?
 - Is the craftsmanship-based punch-list option a satisfying training payoff?
+- Does the warehouse run feel like a brisk change of pace rather than a detour?
 - Are the AV jokes legible to newcomers and recognizable to working techs?
 - Does the completion card make players curious about one more dispatch?
 
@@ -67,16 +70,22 @@ The **South Philadelphia Commissioning** dispatch tests incomplete-site
 troubleshooting. The room is marked ready, but a silent speaker, loose
 termination, and mirrored drawing disagree.
 
+## Current Warehouse Experiment
+
+The **Warehouse Run** tests shop exploration and van organization as a short
+change of pace. It reuses the Broomall map, asks the player to search three
+existing hotspots, and ends with one stockroom-cleanup decision.
+
 ## Next Experiment
 
-After a playtest pass, build only the **Warehouse Run** if the growing workday
-still feels brisk. Use it to test shop exploration and van organization as a
-short change of pace.
+After a playtest pass, add only a **second technician profile** if the full
+prototype still feels brisk. Use it to test whether starting stats create a
+meaningfully different replay without changing the dispatch sequence.
 
 ## Later Experiments
 
-- **Second technician profile:** Test whether starting stats create a meaningfully
-  different replay.
+- **Navy Yard Secure Access:** Test a small access complication.
+- **Cherry Hill Return Toll:** Test one readable travel-cost decision.
 
 ## Prototype Guardrail
 

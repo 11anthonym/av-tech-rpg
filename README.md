@@ -49,8 +49,11 @@ straightforward. The player can document the access problem, use confidence
 training to push back calmly, or keep management happy by leaving the problem
 for install day. A South Philadelphia commissioning visit follows: the room is
 closed on paper, one ceiling speaker is silent, and the closeout drawing belongs
-to the mirrored room across the hall. The slice ends with a snapshot of the
-player's progress plus locked previews of future dispatches.
+to the mirrored room across the hall. A short Broomall warehouse run closes the
+slice by sending the player through Van #3, the staging shelf, and the
+mystery-return pile for a replacement power supply reportedly stored in one of
+the vans. The slice ends with a snapshot of the player's progress plus locked
+previews of future dispatches.
 
 ## Design Notes
 

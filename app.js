@@ -17,6 +17,7 @@ function createInitialState() {
     serviceInstalled: [],
     surveyInspections: [],
     commissioningChecks: [],
+    warehouseChecks: [],
     energy: 100,
     burnout: 0,
     cash: 0,
@@ -39,6 +40,9 @@ function createInitialState() {
       commissioningRoomsCompleted: 0,
       incompleteRoomsDocumented: 0,
       roomsPassedAnyway: 0,
+      warehouseRunsCompleted: 0,
+      stockroomLabelsFixed: 0,
+      mysteryBoxesLeft: 0,
     },
     clock: "MON 7:11 AM",
     flags: {},
@@ -119,7 +123,8 @@ function inferSavedXp(savedGame) {
   return (savedGame.flags?.finished ? 40 : 0)
     + (savedGame.flags?.serviceComplete ? (savedGame.flags.serviceApproach === "verify" ? 50 : 40) : 0)
     + (savedGame.flags?.surveyComplete ? (savedGame.flags.surveyApproach === "pushback" ? 60 : savedGame.flags.surveyApproach === "document" ? 55 : 35) : 0)
-    + (savedGame.flags?.commissioningComplete ? (savedGame.flags.commissioningApproach === "craft" ? 65 : savedGame.flags.commissioningApproach === "repair" ? 60 : 40) : 0);
+    + (savedGame.flags?.commissioningComplete ? (savedGame.flags.commissioningApproach === "craft" ? 65 : savedGame.flags.commissioningApproach === "repair" ? 60 : 40) : 0)
+    + (savedGame.flags?.warehouseComplete ? (savedGame.flags.warehouseApproach === "label" ? 50 : 35) : 0);
 }
 
 function inferSavedReputation(savedGame) {
@@ -160,6 +165,14 @@ function inferSavedReputation(savedGame) {
       reputation.management -= 1;
     }
   }
+  if (savedGame.flags?.warehouseComplete) {
+    if (savedGame.flags.warehouseApproach === "label") {
+      reputation.coworkers += 1;
+      reputation.management -= 1;
+    } else {
+      reputation.management += 1;
+    }
+  }
   return reputation;
 }
 
@@ -179,6 +192,9 @@ function inferSavedStats(savedGame) {
     commissioningRoomsCompleted: 0,
     incompleteRoomsDocumented: 0,
     roomsPassedAnyway: 0,
+    warehouseRunsCompleted: 0,
+    stockroomLabelsFixed: 0,
+    mysteryBoxesLeft: 0,
   };
   if (savedGame.stats) return { ...stats, ...savedGame.stats };
   if (savedGame.flags?.finished) {
@@ -207,6 +223,11 @@ function inferSavedStats(savedGame) {
       stats.incompleteRoomsDocumented += 1;
       stats.carefulFinishes += 1;
     }
+  }
+  if (savedGame.flags?.warehouseComplete) {
+    stats.warehouseRunsCompleted += 1;
+    if (savedGame.flags.warehouseApproach === "label") stats.stockroomLabelsFixed += 1;
+    else stats.mysteryBoxesLeft += 1;
   }
   return stats;
 }
@@ -246,7 +267,7 @@ function refreshTitleScreen() {
 
 function serializeGame() {
   return {
-    version: 8,
+    version: 9,
     technicianId: state.technician.id,
     sceneId: state.sceneId,
     player: state.player,
@@ -259,6 +280,7 @@ function serializeGame() {
     serviceInstalled: state.serviceInstalled,
     surveyInspections: state.surveyInspections,
     commissioningChecks: state.commissioningChecks,
+    warehouseChecks: state.warehouseChecks,
     energy: state.energy,
     burnout: state.burnout,
     cash: state.cash,
@@ -420,6 +442,7 @@ function continueGame() {
   if (flags.serviceComplete) flags.serviceProgressAwarded = true;
   if (flags.surveyComplete) flags.surveyProgressAwarded = true;
   if (flags.commissioningComplete) flags.commissioningProgressAwarded = true;
+  if (flags.warehouseComplete) flags.warehouseProgressAwarded = true;
   if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
     flags.serviceCallbackPending = true;
   }
@@ -431,9 +454,10 @@ function continueGame() {
     serviceInstalled: savedGame.serviceInstalled || [],
     surveyInspections: savedGame.surveyInspections || [],
     commissioningChecks: savedGame.commissioningChecks || [],
+    warehouseChecks: savedGame.warehouseChecks || [],
     cash: migratedCash,
     xp: migratedXp,
-    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0),
+    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0) + (flags.warehouseComplete ? 1 : 0),
     reputation: migratedReputation,
     training: savedGame.training || [],
     stats: migratedStats,
@@ -464,6 +488,9 @@ function resumeRequiredPrompt() {
   }
   if (state.sceneId === "southPhillyCommissioning" && state.commissioningChecks.length === content.commissioningDispatch.checks.length && !state.flags.commissioningComplete) {
     return showCommissioningChoice();
+  }
+  if (state.sceneId === "shop" && state.flags.warehouseStarted && state.warehouseChecks.length === content.warehouseDispatch.checks.length && !state.flags.warehouseComplete) {
+    return showWarehouseChoice();
   }
 }
 
@@ -799,6 +826,9 @@ function getCareerLedgerMarkup() {
       <span>Rooms commissioned</span><strong>${state.stats.commissioningRoomsCompleted}</strong>
       <span>Incomplete rooms documented</span><strong>${state.stats.incompleteRoomsDocumented}</strong>
       <span>Rooms passed anyway</span><strong>${state.stats.roomsPassedAnyway}</strong>
+      <span>Warehouse runs completed</span><strong>${state.stats.warehouseRunsCompleted}</strong>
+      <span>Stockroom labels corrected</span><strong>${state.stats.stockroomLabelsFixed}</strong>
+      <span>Mystery boxes left alone</span><strong>${state.stats.mysteryBoxesLeft}</strong>
     </div>
   `;
 }
@@ -1003,9 +1033,12 @@ function takeBreak() {
 }
 
 function showDispatchPreview() {
+  if (state.flags.warehouseComplete) {
+    return showPrototypeSummary();
+  }
   if (state.flags.commissioningComplete) {
     if (hasPendingTraining()) return notify("Mark your new field-training focus on the clipboard before closing out the prototype.");
-    return showPrototypeSummary();
+    return showWarehouseDispatchPreview();
   }
   if (state.flags.surveyComplete) {
     return showCommissioningDispatchPreview();
@@ -1059,7 +1092,7 @@ function showPrototypeSummary() {
       <p><strong>Prototype playtest questions:</strong></p>
       <ul class="modal-list">
         <li><strong>Did the walking stay purposeful?</strong><span>Loading and carrying should explain the job without becoming repetitive.</span></li>
-        <li><strong>Did your choices feel visible?</strong><span>Your tools, preparation, diagnosis, survey report, and commissioning notes should change how the workday plays.</span></li>
+        <li><strong>Did your choices feel visible?</strong><span>Your tools, preparation, diagnosis, survey report, commissioning notes, and stockroom decision should change how the workday plays.</span></li>
         <li><strong>Did progression make you curious?</strong><span>The shop, clipboard, and locked dispatches should make one more workday sound appealing.</span></li>
       </ul>
       <blockquote>Dispatch note: "Please remain flexible. Several schedules are currently being finalized retroactively."</blockquote>
@@ -1069,6 +1102,130 @@ function showPrototypeSummary() {
       { label: "Return To Shop", className: "secondary-button", onClick: render },
       { label: "Return To Title Screen", className: "secondary-button", onClick: showTitleScreen },
     ],
+  });
+}
+
+function showWarehouseDispatchPreview() {
+  showModal({
+    kicker: "Dispatch Board",
+    title: content.warehouseDispatch.title,
+    body: `
+      <p><strong>Warehouse Run:</strong> Find a replacement power supply before another technician leaves for a service call.</p>
+      <p>Dispatch says it was stored in one of the vans. Van #2 is already offsite, and the key board says its key is with SALES.</p>
+      <blockquote>Management note: "This should only take a minute. Please check the obvious places before escalating."</blockquote>
+    `,
+    actions: [
+      { label: "Start Looking", onClick: startWarehouseRun },
+      { label: "Return to Shop", className: "secondary-button" },
+    ],
+  });
+}
+
+function startWarehouseRun() {
+  state.flags.warehouseStarted = true;
+  state.flags.prototypeSummaryViewed = false;
+  setClock(`${state.clock.slice(0, 3)} 4:18 PM`);
+  addLog("Started looking for a replacement power supply reportedly stored in one of the vans.");
+  render();
+  showModal({
+    kicker: "Broomall Warehouse Run",
+    title: "Check The Obvious Places",
+    body: `
+      <p>Search Van #3, the staging shelf, and the mystery-return pile. Dispatch has already asked whether you found it.</p>
+      <p class="muted">${ownsTool("toolBag") ? "Your tool bag makes it easier to work through the loose stock." : "Loose adapters have achieved a stable ecosystem."}</p>
+    `,
+    actions: [{ label: "Start Searching", onClick: render }],
+  });
+}
+
+function getWarehouseSearchEnergyCost() {
+  return getEquipmentEnergyCost(2);
+}
+
+function getWarehouseLabelEnergyCost() {
+  return ownsTool("labeler") ? 1 : 2;
+}
+
+function inspectWarehouseLocation(checkId) {
+  const check = content.warehouseDispatch.checks.find((item) => item.id === checkId);
+  if (!check || state.warehouseChecks.includes(checkId)) return notify(`${check?.label || "That location"} is already checked.`);
+  state.warehouseChecks.push(checkId);
+  changeEnergy(-getWarehouseSearchEnergyCost());
+  addLog(`${check.label} checked: ${check.log}`);
+  render();
+  const allChecked = state.warehouseChecks.length === content.warehouseDispatch.checks.length;
+  showModal({
+    kicker: "Warehouse Note",
+    title: check.label,
+    body: `
+      <p>${check.detail}</p>
+      ${allChecked ? `<p class="muted">The matching power supply is in the mystery-return pile beneath a handwritten question mark. Decide how much cleanup dispatch is willing to survive.</p>` : ""}
+    `,
+    actions: [{ label: allChecked ? "Review Found Power Supply" : "Keep Looking", onClick: allChecked ? showWarehouseChoice : render }],
+  });
+}
+
+function showWarehouseChoice() {
+  showModal({
+    kicker: "Warehouse Run",
+    title: "Power Supply Located Technically",
+    body: `
+      <p>The correct power supply was placed in mystery returns beneath a box labeled <strong>HDMI EXTENDERS / DO NOT STOCK / RETURN?</strong></p>
+      <p>Dispatch wants the part immediately. Correcting the bin label would save the next search, but it would extend a task estimated at one minute.</p>
+    `,
+    actions: [
+      { label: `Hand off part and correct the bin label (-${getWarehouseLabelEnergyCost()} energy)`, onClick: () => finishWarehouseRun("label") },
+      { label: "Hand off part and leave the pile alone", className: "secondary-button", onClick: () => finishWarehouseRun("handoff") },
+    ],
+  });
+}
+
+function finishWarehouseRun(approach) {
+  const correctedLabel = approach === "label";
+  if (correctedLabel) changeEnergy(-getWarehouseLabelEnergyCost());
+  state.flags.warehouseComplete = true;
+  state.flags.warehouseApproach = approach;
+  state.flags.prototypeSummaryViewed = false;
+  setClock(`${state.clock.slice(0, 3)} ${correctedLabel ? "4:43" : "4:35"} PM`);
+  if (!state.flags.warehousePaid) {
+    state.cash += 48;
+    state.flags.warehousePaid = true;
+  }
+  if (!state.flags.warehouseProgressAwarded) {
+    awardCareerProgress({
+      xp: correctedLabel ? 50 : 35,
+      reputation: correctedLabel
+        ? { clients: 0, coworkers: 1, management: -1 }
+        : { clients: 0, coworkers: 0, management: 1 },
+      source: content.warehouseDispatch.title,
+    });
+    state.flags.warehouseProgressAwarded = true;
+  }
+  if (!state.flags.warehouseStatsRecorded) {
+    state.stats.warehouseRunsCompleted += 1;
+    if (correctedLabel) state.stats.stockroomLabelsFixed += 1;
+    else state.stats.mysteryBoxesLeft += 1;
+    state.flags.warehouseStatsRecorded = true;
+  }
+  addLog(correctedLabel
+    ? "Handed off the replacement power supply and corrected the mystery-return bin label."
+    : "Handed off the replacement power supply. The mystery-return pile remains self-governing.");
+  render();
+  showModal({
+    kicker: "Warehouse Run Complete",
+    title: correctedLabel ? "The Next Search Might Be Shorter" : "The Part Left The Building",
+    body: `
+      <div class="results-grid">
+        <span>Warehouse wages</span><strong>+$48</strong>
+        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Experience</span><strong>+${correctedLabel ? 50 : 35} XP</strong>
+        <span>Stockroom</span><strong>${correctedLabel ? "Bin label corrected" : "Mystery pile preserved"}</strong>
+      </div>
+      ${correctedLabel
+        ? `<blockquote>Management note: "Please avoid spending excessive time reorganizing stock during urgent dispatch support."</blockquote>`
+        : `<blockquote>Management note: "Thanks for keeping the warehouse run efficient."</blockquote>`}
+    `,
+    actions: [{ label: "Return To Shop", onClick: render }],
   });
 }
 
@@ -1575,6 +1732,7 @@ function showServiceResults() {
 
 function getInteractions() {
   if (state.sceneId === "shop") {
+    const warehouseActive = state.flags.warehouseStarted && !state.flags.warehouseComplete;
     return [
       {
         x: 330, y: 330, label: "Talk to supervisor", npc: "SUP",
@@ -1609,8 +1767,9 @@ function getInteractions() {
           : notify("Dispatch board: TWO QUICK CARTS. Estimated labor: unclear."),
       },
       {
-        x: 590, y: 180, label: "Pick up staged equipment",
+        x: 590, y: 180, label: warehouseActive ? "Search staging shelf" : "Pick up staged equipment",
         action: () => {
+          if (warehouseActive) return inspectWarehouseLocation("staging");
           if (!state.flags.shopBrief) return notify("You should ask the supervisor what is happening.");
           if (hasCarriedItems()) return notify("Your hands are already full.");
           const next = getNextShopLoad();
@@ -1622,8 +1781,9 @@ function getInteractions() {
         },
       },
       {
-        x: 580, y: 400, label: "Inspect shop loaner drill",
+        x: 580, y: 400, label: warehouseActive ? "Search mystery-return pile" : "Inspect shop loaner drill",
         action: () => {
+          if (warehouseActive) return inspectWarehouseLocation("returns");
           showModal({
             kicker: "Company Loaner",
             title: "Shop Loaner Drill",
@@ -1646,8 +1806,9 @@ function getInteractions() {
         action: takeBreak,
       }] : []),
       {
-        x: 830, y: 380, label: hasCarriedItems() ? "Load item into Van #3" : "Inspect Van #3",
+        x: 830, y: 380, label: warehouseActive ? "Search Van #3" : hasCarriedItems() ? "Load item into Van #3" : "Inspect Van #3",
         action: () => {
+          if (warehouseActive) return inspectWarehouseLocation("van3");
           if (hasCarriedItems()) {
             state.loaded.push(...state.carry);
             addLog(`${getCarriedLabels().join(" and ")} loaded into Van #3.`);
@@ -1989,8 +2150,13 @@ function getObjective() {
     if (state.flags.serviceComplete && hasPendingTraining()) return "Choose a field-training focus from the career clipboard.";
     if (state.flags.serviceComplete && !state.flags.surveyComplete) return "Review the University City site survey on the dispatch board.";
     if (state.flags.surveyComplete && !state.flags.commissioningComplete) return "Review the South Philadelphia commissioning visit on the dispatch board.";
-    if (state.flags.commissioningComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
-    if (state.flags.commissioningComplete) return "Current prototype complete. Explore the shop.";
+    if (state.flags.warehouseStarted && !state.flags.warehouseComplete) {
+      if (state.warehouseChecks.length === content.warehouseDispatch.checks.length) return "Review the found power supply.";
+      return `Search the shop for the replacement power supply (${state.warehouseChecks.length}/${content.warehouseDispatch.checks.length}).`;
+    }
+    if (state.flags.commissioningComplete && !state.flags.warehouseComplete) return "Review the warehouse run on the dispatch board.";
+    if (state.flags.warehouseComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
+    if (state.flags.warehouseComplete) return "Current prototype complete. Explore the shop.";
     if (state.flags.finished) return "Prepare for the Conshohocken service call.";
     if (!state.flags.shopBrief) return "Find your supervisor.";
     if (state.loaded.length < content.tutorial.shopLoad.length) return `Load staged equipment into Van #3 (${state.loaded.length}/3).`;
@@ -2194,22 +2360,27 @@ function render() {
   const serviceActive = state.sceneId === "serviceOffice";
   const surveyActive = state.sceneId === "universitySurvey";
   const commissioningActive = state.sceneId === "southPhillyCommissioning";
-  const activeDispatch = commissioningActive || state.flags.commissioningStarted || state.flags.commissioningComplete
-    ? content.commissioningDispatch
-    : surveyActive || state.flags.surveyStarted || state.flags.surveyComplete
+  const warehouseActive = state.flags.warehouseStarted && !state.flags.warehouseComplete;
+  const activeDispatch = state.flags.warehouseStarted || state.flags.warehouseComplete
+    ? content.warehouseDispatch
+    : commissioningActive || state.flags.commissioningStarted || state.flags.commissioningComplete
+      ? content.commissioningDispatch
+      : surveyActive || state.flags.surveyStarted || state.flags.surveyComplete
       ? content.surveyDispatch
       : serviceActive || state.flags.serviceStarted || state.flags.serviceComplete
       ? content.serviceDispatch
       : { title: "Two Quick Carts", summary: "Build two mobile video conferencing carts at a Center City East office." };
-  elements.jobStatus.textContent = commissioningActive
-    ? "COMMISSIONING"
-    : surveyActive
+  elements.jobStatus.textContent = warehouseActive
+    ? "WAREHOUSE RUN"
+    : commissioningActive
+      ? "COMMISSIONING"
+      : surveyActive
       ? "SITE SURVEY"
       : serviceActive
       ? "SERVICE CALL"
-      : state.flags.commissioningComplete
+      : state.flags.warehouseComplete
         ? "DISPATCH COMPLETE"
-        : state.flags.surveyComplete
+        : state.flags.commissioningComplete
           ? "SHOP HUB"
       : state.flags.finished
         ? "SHOP HUB"

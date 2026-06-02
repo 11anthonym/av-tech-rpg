@@ -177,10 +177,39 @@ window.GAME_CONTENT = {
     ],
   },
 
+  warehouseDispatch: {
+    title: "Warehouse Run",
+    summary: "Find a replacement power supply reportedly stored in one of the vans.",
+    checks: [
+      {
+        id: "staging",
+        label: "Staging shelf",
+        log: "the shelf contains the loaner-drill charger and several remotes for unknown displays",
+        detail: "The staging shelf has the missing charger for the shop loaner drill, three remotes for displays the company does not own, and no matching power supply.",
+      },
+      {
+        id: "van3",
+        label: "Van #3",
+        log: "the van crate contains power supplies for two different models and one empty tester case",
+        detail: "Van #3 has a milk crate labeled MISC. Inside are two power supplies for the wrong display family and a cable-tester case containing no cable tester.",
+      },
+      {
+        id: "returns",
+        label: "Mystery-return pile",
+        log: "the matching power supply is beneath a box labeled HDMI EXTENDERS / DO NOT STOCK / RETURN?",
+        detail: "The correct power supply is in the mystery-return pile beneath a box labeled HDMI EXTENDERS / DO NOT STOCK / RETURN? The question mark appears to be the current inventory process.",
+      },
+    ],
+  },
+
   upcomingDispatches: [
     {
-      title: "Warehouse Run",
-      summary: "Locate a replacement power supply reportedly stored in one of the vans.",
+      title: "Navy Yard Secure Access",
+      summary: "Dispatch has a building number. The security booth has a second building number.",
+    },
+    {
+      title: "Cherry Hill Return Toll",
+      summary: "Dispatch accounted for the bridge on the way there.",
     },
   ],
 

@@ -13,7 +13,7 @@ game engine.
 ## Save Data
 
 The browser prototype autosaves career progress to local storage under
-`av-tech-rpg-save-v1`. The internal save format is currently version `8`. The
+`av-tech-rpg-save-v1`. The internal save format is currently version `9`. The
 save records the technician, tools, scene, position, carried items, tutorial
 progress, fatigue, cash, experience, reputation, field training, flags, and
 field log. It also stores a compact career ledger for completed-job statistics.
