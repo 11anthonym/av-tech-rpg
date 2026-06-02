@@ -1,4 +1,5 @@
 # AV Tech RPG
+This is just for fun and not to be taken too seriously.
 
 AV Tech RPG is an early-stage game concept about the strange, specific,
 occasionally heroic work of an audio visual integration technician.
