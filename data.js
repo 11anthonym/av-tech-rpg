@@ -152,11 +152,32 @@ window.GAME_CONTENT = {
     ],
   },
 
+  commissioningDispatch: {
+    title: "South Philadelphia Commissioning",
+    summary: "Commission a training room that is more complete on paper than in person.",
+    checks: [
+      {
+        id: "speaker-zone",
+        label: "Ceiling speaker zone",
+        log: "the third speaker remains silent during the test tone",
+        detail: "The first two ceiling speakers play the test tone. The third contributes a thoughtful silence from the back of the room.",
+      },
+      {
+        id: "termination",
+        label: "Credenza termination",
+        log: "the silent speaker line is loose at the output block",
+        detail: "The third speaker line is landed loosely at the output block. It is close enough to the terminal to suggest optimism, but not close enough to carry audio.",
+      },
+      {
+        id: "drawing",
+        label: "Closeout drawing",
+        log: "the drawing belongs to the mirrored room across the hall",
+        detail: "The closeout drawing is neat, legible, and for the mirrored room across the hall. Somebody changed the room number in the filename and declared victory.",
+      },
+    ],
+  },
+
   upcomingDispatches: [
-    {
-      title: "South Philadelphia Commissioning",
-      summary: "The room is marked ready for commissioning. Three ceiling speakers disagree.",
-    },
     {
       title: "Warehouse Run",
       summary: "Locate a replacement power supply reportedly stored in one of the vans.",
@@ -238,6 +259,20 @@ window.GAME_CONTENT = {
         { type: "build", x: 645, y: 350, w: 225, h: 88, text: "DISPLAY WALL", solid: true },
         { type: "floor-note", x: 390, y: 235, w: 175, h: 32, text: "TIGHT HALLWAY TURN" },
         { type: "floor-note", x: 385, y: 390, w: 190, h: 30, text: "SALES SKETCH: ONE ARROW" },
+      ],
+    },
+    southPhillyCommissioning: {
+      name: "Training Room 3B",
+      kicker: "South Philadelphia",
+      playerStart: { x: 120, y: 430 },
+      decor: [
+        { type: "label", x: 45, y: 36, w: 245, h: 38, text: "TRAINING ROOM 3B" },
+        { type: "desk", x: 78, y: 110, w: 185, h: 92, text: "CLIENT TABLE", solid: true },
+        { type: "counter", x: 665, y: 325, w: 205, h: 105, text: "AV CREDENZA", solid: true },
+        { type: "build", x: 390, y: 105, w: 185, h: 82, text: "CEILING SPEAKER ZONE" },
+        { type: "floor-note", x: 430, y: 250, w: 185, h: 30, text: "TEST TONE: 2 OF 3" },
+        { type: "floor-note", x: 300, y: 395, w: 230, h: 30, text: "CLOSEOUT DRAWING / ROOM 3A?" },
+        { type: "floor-note", x: 690, y: 465, w: 170, h: 30, text: "TICKET STATUS: CLOSED" },
       ],
     },
   },

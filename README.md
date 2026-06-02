@@ -47,8 +47,10 @@ City site survey then asks the player to check an elevator, hallway turn, and
 classroom wall after sales measured only the dimension that made the quote look
 straightforward. The player can document the access problem, use confidence
 training to push back calmly, or keep management happy by leaving the problem
-for install day. The slice ends with a snapshot of the player's progress plus
-locked previews of future dispatches.
+for install day. A South Philadelphia commissioning visit follows: the room is
+closed on paper, one ceiling speaker is silent, and the closeout drawing belongs
+to the mirrored room across the hall. The slice ends with a snapshot of the
+player's progress plus locked previews of future dispatches.
 
 ## Design Notes
 

@@ -16,6 +16,7 @@ function createInitialState() {
     serviceDelivered: [],
     serviceInstalled: [],
     surveyInspections: [],
+    commissioningChecks: [],
     energy: 100,
     burnout: 0,
     cash: 0,
@@ -35,6 +36,9 @@ function createInitialState() {
       surveysCompleted: 0,
       accessRisksDocumented: 0,
       quotesTrustedAnyway: 0,
+      commissioningRoomsCompleted: 0,
+      incompleteRoomsDocumented: 0,
+      roomsPassedAnyway: 0,
     },
     clock: "MON 7:11 AM",
     flags: {},
@@ -114,7 +118,8 @@ function inferSavedXp(savedGame) {
   if (typeof savedGame.xp === "number") return savedGame.xp;
   return (savedGame.flags?.finished ? 40 : 0)
     + (savedGame.flags?.serviceComplete ? (savedGame.flags.serviceApproach === "verify" ? 50 : 40) : 0)
-    + (savedGame.flags?.surveyComplete ? (savedGame.flags.surveyApproach === "pushback" ? 60 : savedGame.flags.surveyApproach === "document" ? 55 : 35) : 0);
+    + (savedGame.flags?.surveyComplete ? (savedGame.flags.surveyApproach === "pushback" ? 60 : savedGame.flags.surveyApproach === "document" ? 55 : 35) : 0)
+    + (savedGame.flags?.commissioningComplete ? (savedGame.flags.commissioningApproach === "craft" ? 65 : savedGame.flags.commissioningApproach === "repair" ? 60 : 40) : 0);
 }
 
 function inferSavedReputation(savedGame) {
@@ -146,6 +151,15 @@ function inferSavedReputation(savedGame) {
       reputation.management -= 1;
     }
   }
+  if (savedGame.flags?.commissioningComplete) {
+    if (savedGame.flags.commissioningApproach === "pass") {
+      reputation.management += 1;
+    } else {
+      reputation.clients += 2;
+      reputation.coworkers += savedGame.flags.commissioningApproach === "craft" ? 2 : 1;
+      reputation.management -= 1;
+    }
+  }
   return reputation;
 }
 
@@ -162,6 +176,9 @@ function inferSavedStats(savedGame) {
     surveysCompleted: 0,
     accessRisksDocumented: 0,
     quotesTrustedAnyway: 0,
+    commissioningRoomsCompleted: 0,
+    incompleteRoomsDocumented: 0,
+    roomsPassedAnyway: 0,
   };
   if (savedGame.stats) return { ...stats, ...savedGame.stats };
   if (savedGame.flags?.finished) {
@@ -180,6 +197,16 @@ function inferSavedStats(savedGame) {
     stats.surveysCompleted += 1;
     if (savedGame.flags.surveyApproach === "trust") stats.quotesTrustedAnyway += 1;
     else stats.accessRisksDocumented += 1;
+  }
+  if (savedGame.flags?.commissioningComplete) {
+    stats.commissioningRoomsCompleted += 1;
+    if (savedGame.flags.commissioningApproach === "pass") {
+      stats.roomsPassedAnyway += 1;
+      stats.callbacks += 1;
+    } else {
+      stats.incompleteRoomsDocumented += 1;
+      stats.carefulFinishes += 1;
+    }
   }
   return stats;
 }
@@ -219,7 +246,7 @@ function refreshTitleScreen() {
 
 function serializeGame() {
   return {
-    version: 7,
+    version: 8,
     technicianId: state.technician.id,
     sceneId: state.sceneId,
     player: state.player,
@@ -231,6 +258,7 @@ function serializeGame() {
     serviceDelivered: state.serviceDelivered,
     serviceInstalled: state.serviceInstalled,
     surveyInspections: state.surveyInspections,
+    commissioningChecks: state.commissioningChecks,
     energy: state.energy,
     burnout: state.burnout,
     cash: state.cash,
@@ -391,6 +419,7 @@ function continueGame() {
   if (flags.finished) flags.tutorialProgressAwarded = true;
   if (flags.serviceComplete) flags.serviceProgressAwarded = true;
   if (flags.surveyComplete) flags.surveyProgressAwarded = true;
+  if (flags.commissioningComplete) flags.commissioningProgressAwarded = true;
   if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
     flags.serviceCallbackPending = true;
   }
@@ -401,9 +430,10 @@ function continueGame() {
     serviceDelivered: savedGame.serviceDelivered || [],
     serviceInstalled: savedGame.serviceInstalled || [],
     surveyInspections: savedGame.surveyInspections || [],
+    commissioningChecks: savedGame.commissioningChecks || [],
     cash: migratedCash,
     xp: migratedXp,
-    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0),
+    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0),
     reputation: migratedReputation,
     training: savedGame.training || [],
     stats: migratedStats,
@@ -431,6 +461,9 @@ function resumeRequiredPrompt() {
   }
   if (state.sceneId === "universitySurvey" && state.surveyInspections.length === content.surveyDispatch.inspections.length && !state.flags.surveyComplete) {
     return showSurveyReportChoice();
+  }
+  if (state.sceneId === "southPhillyCommissioning" && state.commissioningChecks.length === content.commissioningDispatch.checks.length && !state.flags.commissioningComplete) {
+    return showCommissioningChoice();
   }
 }
 
@@ -763,6 +796,9 @@ function getCareerLedgerMarkup() {
       <span>Site surveys completed</span><strong>${state.stats.surveysCompleted}</strong>
       <span>Access risks documented</span><strong>${state.stats.accessRisksDocumented}</strong>
       <span>Quotes trusted anyway</span><strong>${state.stats.quotesTrustedAnyway}</strong>
+      <span>Rooms commissioned</span><strong>${state.stats.commissioningRoomsCompleted}</strong>
+      <span>Incomplete rooms documented</span><strong>${state.stats.incompleteRoomsDocumented}</strong>
+      <span>Rooms passed anyway</span><strong>${state.stats.roomsPassedAnyway}</strong>
     </div>
   `;
 }
@@ -967,8 +1003,12 @@ function takeBreak() {
 }
 
 function showDispatchPreview() {
-  if (state.flags.surveyComplete) {
+  if (state.flags.commissioningComplete) {
+    if (hasPendingTraining()) return notify("Mark your new field-training focus on the clipboard before closing out the prototype.");
     return showPrototypeSummary();
+  }
+  if (state.flags.surveyComplete) {
+    return showCommissioningDispatchPreview();
   }
   if (state.flags.serviceComplete) {
     if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) {
@@ -1019,7 +1059,7 @@ function showPrototypeSummary() {
       <p><strong>Prototype playtest questions:</strong></p>
       <ul class="modal-list">
         <li><strong>Did the walking stay purposeful?</strong><span>Loading and carrying should explain the job without becoming repetitive.</span></li>
-        <li><strong>Did your choices feel visible?</strong><span>Your tools, preparation, diagnosis, and survey report should change how the workday plays.</span></li>
+        <li><strong>Did your choices feel visible?</strong><span>Your tools, preparation, diagnosis, survey report, and commissioning notes should change how the workday plays.</span></li>
         <li><strong>Did progression make you curious?</strong><span>The shop, clipboard, and locked dispatches should make one more workday sound appealing.</span></li>
       </ul>
       <blockquote>Dispatch note: "Please remain flexible. Several schedules are currently being finalized retroactively."</blockquote>
@@ -1029,6 +1069,152 @@ function showPrototypeSummary() {
       { label: "Return To Shop", className: "secondary-button", onClick: render },
       { label: "Return To Title Screen", className: "secondary-button", onClick: showTitleScreen },
     ],
+  });
+}
+
+function showCommissioningDispatchPreview() {
+  showModal({
+    kicker: "Dispatch Board",
+    title: content.commissioningDispatch.title,
+    body: `
+      <p><strong>Commissioning:</strong> Verify a small South Philadelphia training room before client handoff.</p>
+      <p>The installation ticket is closed. The client says one side of the room sounds quieter than the other.</p>
+      <blockquote>Project note: "Room complete except final commissioning. Please avoid creating a punch list unless necessary."</blockquote>
+    `,
+    actions: [
+      { label: "Accept Commissioning Visit", onClick: promptCommissioningTravel },
+      { label: "Return to Shop", className: "secondary-button" },
+    ],
+  });
+}
+
+function promptCommissioningTravel() {
+  showModal({
+    kicker: "Route Summary",
+    title: "Broomall -> South Philadelphia",
+    body: `
+      <p><strong>Dispatch estimate:</strong> Confirm room operation and collect client signoff.</p>
+      <p class="muted">The completion sheet has already been signed internally.</p>
+      <div class="route-line"><span>BROOMALL</span><i></i><span>SOUTH PHILADELPHIA</span></div>
+    `,
+    actions: [{
+      label: "Drive To Training Room",
+      onClick: () => {
+        state.flags.commissioningStarted = true;
+        setClock(`${state.clock.slice(0, 3)} 3:04 PM`);
+        addLog("Arrived in South Philadelphia to commission a room already marked complete.");
+        enterScene("southPhillyCommissioning");
+      },
+    }],
+  });
+}
+
+function getCommissioningCheckEnergyCost() {
+  return getVerificationEnergyCost(3);
+}
+
+function getCommissioningRepairEnergyCost(baseCost) {
+  return getVerificationEnergyCost(baseCost);
+}
+
+function inspectCommissioningCondition(checkId) {
+  const check = content.commissioningDispatch.checks.find((item) => item.id === checkId);
+  if (!check || state.commissioningChecks.includes(checkId)) return notify(`${check?.label || "That condition"} is already in your notes.`);
+  state.commissioningChecks.push(checkId);
+  changeEnergy(-getCommissioningCheckEnergyCost());
+  addLog(`${check.label} checked: ${check.log}`);
+  render();
+  const allChecked = state.commissioningChecks.length === content.commissioningDispatch.checks.length;
+  showModal({
+    kicker: "Commissioning Note",
+    title: check.label,
+    body: `
+      <p>${check.detail}</p>
+      ${ownsTool("labeler") ? `<p class="muted">Josh's rebuilt labeler makes it easier to leave the suspect path readable.</p>` : ""}
+      ${allChecked ? `<p class="muted">You found the room issue. Return to the client contact and close out the visit.</p>` : ""}
+    `,
+    actions: [{ label: allChecked ? "Return To Client Contact" : "Keep Testing", onClick: render }],
+  });
+}
+
+function showCommissioningChoice() {
+  showModal({
+    kicker: "Commissioning Decision",
+    title: "The Room Is Complete On Paper",
+    body: `
+      <p>The third ceiling speaker is silent because its termination is loose. The drawing is for a mirrored room across the hall, which explains why the closed ticket was so confident.</p>
+      <p>The client would like the room working. Project management would like the completion sheet to remain emotionally undisturbed.</p>
+    `,
+    actions: [
+      { label: `Repair termination and document discrepancy (-${getCommissioningRepairEnergyCost(6)} energy)`, onClick: () => finishCommissioning("repair") },
+      ...(getCraftsmanship() >= 3 ? [{
+        label: `Redress termination and issue clean punch list (-${getCommissioningRepairEnergyCost(5)} energy)`,
+        className: "secondary-button",
+        onClick: () => finishCommissioning("craft"),
+      }] : []),
+      { label: "Patch around it and mark room passed", className: "secondary-button", onClick: () => finishCommissioning("pass") },
+    ],
+  });
+}
+
+function finishCommissioning(approach) {
+  const careful = approach !== "pass";
+  const xp = approach === "craft" ? 65 : approach === "repair" ? 60 : 40;
+  if (careful) changeEnergy(-getCommissioningRepairEnergyCost(approach === "craft" ? 5 : 6));
+  state.flags.commissioningComplete = true;
+  state.flags.commissioningApproach = approach;
+  state.flags.prototypeSummaryViewed = false;
+  setClock(`${state.clock.slice(0, 3)} ${approach === "pass" ? "3:39" : "4:06"} PM`);
+  if (!state.flags.commissioningPaid) {
+    state.cash += 84;
+    state.flags.commissioningPaid = true;
+  }
+  if (!state.flags.commissioningProgressAwarded) {
+    awardCareerProgress({
+      xp,
+      reputation: careful
+        ? { clients: 2, coworkers: approach === "craft" ? 2 : 1, management: -1 }
+        : { clients: 0, coworkers: 0, management: 1 },
+      source: content.commissioningDispatch.title,
+    });
+    state.flags.commissioningProgressAwarded = true;
+  }
+  if (!state.flags.commissioningStatsRecorded) {
+    state.stats.commissioningRoomsCompleted += 1;
+    if (careful) {
+      state.stats.incompleteRoomsDocumented += 1;
+      state.stats.carefulFinishes += 1;
+    } else {
+      state.stats.roomsPassedAnyway += 1;
+      state.stats.callbacks += 1;
+    }
+    state.flags.commissioningStatsRecorded = true;
+  }
+  addLog(careful
+    ? "Repaired the South Philadelphia speaker termination and documented the mirrored drawing."
+    : "Marked the South Philadelphia room passed. The silent speaker remains a future service call.");
+  render();
+  showModal({
+    kicker: "Commissioning Visit Complete",
+    title: approach === "craft" ? "The Room Works And The Notes Do Too" : approach === "repair" ? "The Room Works Despite The Ticket" : "The Completion Sheet Remains Complete",
+    body: `
+      <div class="results-grid">
+        <span>Commissioning wages</span><strong>+$84</strong>
+        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Experience</span><strong>+${xp} XP</strong>
+        <span>Closeout</span><strong>${approach === "craft" ? "Clean punch list issued" : approach === "repair" ? "Issue repaired and documented" : "Room marked passed"}</strong>
+      </div>
+      ${careful
+        ? `<blockquote>Management note: "Please distinguish between commissioning and reopening completed installation work."</blockquote>`
+        : `<blockquote>Management note: "Thanks for keeping closeout moving. Service can address any user-reported concerns."</blockquote>`}
+    `,
+    actions: [{
+      label: "Return To Broomall Shop",
+      onClick: () => {
+        addLog("Returned to the Broomall shop after the South Philadelphia commissioning visit.");
+        enterScene("shop");
+      },
+    }],
   });
 }
 
@@ -1666,6 +1852,51 @@ function getInteractions() {
     ];
   }
 
+  if (state.sceneId === "southPhillyCommissioning") {
+    const allChecked = state.commissioningChecks.length === content.commissioningDispatch.checks.length;
+    return [
+      {
+        x: 300, y: 185, label: allChecked ? "Close out commissioning visit" : "Talk to client contact", npc: "CLIENT",
+        action: () => {
+          if (allChecked) return showCommissioningChoice();
+          if (state.flags.commissioningBrief) return notify('Client: "The back of the room is still quieter. The installer said commissioning would tune it."');
+          state.flags.commissioningBrief = true;
+          addLog("Client reported that one side of the completed room still sounds quieter.");
+          showModal({
+            kicker: "Client Contact",
+            title: "The Room Is Ready For Final Final",
+            body: `
+              <p>"The install team said the room was complete. The back speaker never sounded right, but they said commissioning would tune it."</p>
+              <p class="muted">Test the ceiling speakers, inspect the credenza termination, and review the closeout drawing.</p>
+            `,
+            actions: [{ label: "Start Commissioning", onClick: render }],
+          });
+        },
+      },
+      {
+        x: 485, y: 220, label: "Test ceiling speaker zone",
+        action: () => {
+          if (!state.flags.commissioningBrief) return notify("Check in with the client contact first.");
+          inspectCommissioningCondition("speaker-zone");
+        },
+      },
+      {
+        x: 760, y: 300, label: "Inspect credenza termination",
+        action: () => {
+          if (!state.flags.commissioningBrief) return notify("Check in with the client contact first.");
+          inspectCommissioningCondition("termination");
+        },
+      },
+      {
+        x: 410, y: 375, label: "Review closeout drawing",
+        action: () => {
+          if (!state.flags.commissioningBrief) return notify("Check in with the client contact first.");
+          inspectCommissioningCondition("drawing");
+        },
+      },
+    ];
+  }
+
   return [
     ...(!state.flags.roomBrief && !state.flags.supervisorLeft ? [{
       x: 320, y: 185, label: "Talk to supervisor", npc: "SUP",
@@ -1757,8 +1988,9 @@ function getObjective() {
     if (state.flags.serviceComplete && !state.flags.joshServiceDebriefed) return "Check in with Josh at the workbench.";
     if (state.flags.serviceComplete && hasPendingTraining()) return "Choose a field-training focus from the career clipboard.";
     if (state.flags.serviceComplete && !state.flags.surveyComplete) return "Review the University City site survey on the dispatch board.";
-    if (state.flags.surveyComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
-    if (state.flags.surveyComplete) return "Current prototype complete. Explore the shop.";
+    if (state.flags.surveyComplete && !state.flags.commissioningComplete) return "Review the South Philadelphia commissioning visit on the dispatch board.";
+    if (state.flags.commissioningComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
+    if (state.flags.commissioningComplete) return "Current prototype complete. Explore the shop.";
     if (state.flags.finished) return "Prepare for the Conshohocken service call.";
     if (!state.flags.shopBrief) return "Find your supervisor.";
     if (state.loaded.length < content.tutorial.shopLoad.length) return `Load staged equipment into Van #3 (${state.loaded.length}/3).`;
@@ -1784,6 +2016,13 @@ function getObjective() {
       return `Inspect the campus access path (${state.surveyInspections.length}/${content.surveyDispatch.inspections.length}).`;
     }
     return "Return to the facilities contact and file the survey report.";
+  }
+  if (state.sceneId === "southPhillyCommissioning") {
+    if (!state.flags.commissioningBrief) return "Check in with the client contact.";
+    if (state.commissioningChecks.length < content.commissioningDispatch.checks.length) {
+      return `Commission the training room (${state.commissioningChecks.length}/${content.commissioningDispatch.checks.length}).`;
+    }
+    return "Return to the client contact and close out the commissioning visit.";
   }
   if (!state.flags.roomBrief) return "Ask the supervisor how to start the cart build.";
   if (state.assembled.length < 2) return `Assemble Cart 1 with your supervisor (${state.assembled.length}/2).`;
@@ -1954,18 +2193,23 @@ function render() {
   elements.clock.textContent = state.clock;
   const serviceActive = state.sceneId === "serviceOffice";
   const surveyActive = state.sceneId === "universitySurvey";
-  const activeDispatch = surveyActive || state.flags.surveyStarted || state.flags.surveyComplete
-    ? content.surveyDispatch
-    : serviceActive || state.flags.serviceStarted || state.flags.serviceComplete
+  const commissioningActive = state.sceneId === "southPhillyCommissioning";
+  const activeDispatch = commissioningActive || state.flags.commissioningStarted || state.flags.commissioningComplete
+    ? content.commissioningDispatch
+    : surveyActive || state.flags.surveyStarted || state.flags.surveyComplete
+      ? content.surveyDispatch
+      : serviceActive || state.flags.serviceStarted || state.flags.serviceComplete
       ? content.serviceDispatch
       : { title: "Two Quick Carts", summary: "Build two mobile video conferencing carts at a Center City East office." };
-  elements.jobStatus.textContent = surveyActive
-    ? "SITE SURVEY"
-    : serviceActive
+  elements.jobStatus.textContent = commissioningActive
+    ? "COMMISSIONING"
+    : surveyActive
+      ? "SITE SURVEY"
+      : serviceActive
       ? "SERVICE CALL"
-      : state.flags.surveyComplete
+      : state.flags.commissioningComplete
         ? "DISPATCH COMPLETE"
-        : state.flags.serviceComplete
+        : state.flags.surveyComplete
           ? "SHOP HUB"
       : state.flags.finished
         ? "SHOP HUB"

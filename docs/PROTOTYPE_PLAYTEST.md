@@ -17,7 +17,9 @@ The playable slice now has:
    focus, and a small Josh relationship milestone.
 4. A University City site survey with three observations, a short preparation
    choice, and a management-versus-field-judgment report decision.
-5. A completion card with a career snapshot, nearby locked work, and playtest
+5. A South Philadelphia commissioning visit with three checks, an incomplete
+   room, and a craftsmanship-based punch-list option.
+6. A completion card with a career snapshot, nearby locked work, and playtest
    questions.
 
 ## Playtest Questions
@@ -32,6 +34,9 @@ Watch a player complete the current build before expanding it. Look for:
 - Does the shop feel like a place worth returning to?
 - Does the site survey feel different from install and service work?
 - Is the confidence-based sales pushback option a satisfying training payoff?
+- Does commissioning deliver the satisfaction of understanding an unfinished
+  room without becoming a technical quiz?
+- Is the craftsmanship-based punch-list option a satisfying training payoff?
 - Are the AV jokes legible to newcomers and recognizable to working techs?
 - Does the completion card make players curious about one more dispatch?
 
@@ -56,16 +61,20 @@ Keep it compact:
 The survey rewards observation and calm pushback. It deliberately avoids a
 measurement minigame, a new inventory screen, another Josh arc, or a large map.
 
+## Current Commissioning Experiment
+
+The **South Philadelphia Commissioning** dispatch tests incomplete-site
+troubleshooting. The room is marked ready, but a silent speaker, loose
+termination, and mirrored drawing disagree.
+
 ## Next Experiment
 
-After a playtest pass, build only the **South Philadelphia Commissioning**
-dispatch if the survey proves that a second non-install job family is fun. Use
-it to test incomplete-site troubleshooting.
+After a playtest pass, build only the **Warehouse Run** if the growing workday
+still feels brisk. Use it to test shop exploration and van organization as a
+short change of pace.
 
 ## Later Experiments
 
-- **Warehouse Run:** Test shop exploration and van organization as a short
-  change of pace.
 - **Second technician profile:** Test whether starting stats create a meaningfully
   different replay.
 
