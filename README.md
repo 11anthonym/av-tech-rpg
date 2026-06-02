@@ -83,6 +83,9 @@ separate from a save created on a hosted website.
 
 ## Share Online
 
+Play the hosted version at
+[https://11anthonym.github.io/av-tech-rpg/](https://11anthonym.github.io/av-tech-rpg/).
+
 The game is a static website: `index.html`, `styles.css`, `data.js`, and
 `app.js`. It can be hosted without a build step on GitHub Pages, Netlify,
 Cloudflare Pages, or any ordinary static web host. GitHub Pages is the simplest
