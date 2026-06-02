@@ -13,9 +13,25 @@ function createInitialState() {
     loaded: [],
     delivered: [],
     assembled: [],
+    serviceDelivered: [],
+    serviceInstalled: [],
     energy: 100,
     burnout: 0,
     cash: 0,
+    xp: 0,
+    jobsCompleted: 0,
+    reputation: { clients: 0, coworkers: 0, management: 0 },
+    training: [],
+    stats: {
+      carefulFinishes: 0,
+      callbacks: 0,
+      callbacksResolved: 0,
+      overtimeDays: 0,
+      recoveryDays: 0,
+      workOrdersReviewed: 0,
+      lunchesPacked: 0,
+      coffeesBought: 0,
+    },
     clock: "MON 7:11 AM",
     flags: {},
     log: [],
@@ -47,6 +63,12 @@ const elements = {
   cashValue: document.querySelector("#cash-value"),
   craftValue: document.querySelector("#craft-value"),
   confidenceValue: document.querySelector("#confidence-value"),
+  rankValue: document.querySelector("#rank-value"),
+  levelValue: document.querySelector("#level-value"),
+  xpValue: document.querySelector("#xp-value"),
+  clientRepValue: document.querySelector("#client-rep-value"),
+  coworkerRepValue: document.querySelector("#coworker-rep-value"),
+  managementRepValue: document.querySelector("#management-rep-value"),
   carryCard: document.querySelector("#carry-card"),
   carryBubble: document.querySelector("#carry-bubble"),
   toolList: document.querySelector("#tool-list"),
@@ -61,6 +83,8 @@ const elements = {
   player: document.querySelector("#player"),
   interactButton: document.querySelector("#interact-button"),
   fieldLog: document.querySelector("#field-log"),
+  dispatchTitle: document.querySelector("#dispatch-title"),
+  dispatchSummary: document.querySelector("#dispatch-summary"),
   modalBackdrop: document.querySelector("#modal-backdrop"),
   modalKicker: document.querySelector("#modal-kicker"),
   modalTitle: document.querySelector("#modal-title"),
@@ -82,13 +106,86 @@ function inferSavedCash(savedGame) {
   return savedGame.flags.finishChoice === "tidy" ? 152 : 141;
 }
 
+function inferSavedXp(savedGame) {
+  if (typeof savedGame.xp === "number") return savedGame.xp;
+  return (savedGame.flags?.finished ? 40 : 0)
+    + (savedGame.flags?.serviceComplete ? (savedGame.flags.serviceApproach === "verify" ? 50 : 40) : 0);
+}
+
+function inferSavedReputation(savedGame) {
+  if (savedGame.reputation) return savedGame.reputation;
+  const reputation = { clients: 0, coworkers: 0, management: 0 };
+  if (savedGame.flags?.finished) {
+    if (savedGame.flags.finishChoice === "tidy") {
+      reputation.clients += 2;
+      reputation.coworkers += 1;
+      reputation.management -= 1;
+    } else {
+      reputation.management += 1;
+    }
+  }
+  if (savedGame.flags?.serviceComplete) {
+    if (savedGame.flags.serviceApproach === "verify") {
+      reputation.clients += 2;
+      reputation.coworkers += 1;
+    } else {
+      reputation.management += 1;
+    }
+  }
+  return reputation;
+}
+
+function inferSavedStats(savedGame) {
+  const stats = {
+    carefulFinishes: 0,
+    callbacks: 0,
+    callbacksResolved: 0,
+    overtimeDays: 0,
+    recoveryDays: 0,
+    workOrdersReviewed: 0,
+    lunchesPacked: 0,
+    coffeesBought: 0,
+  };
+  if (savedGame.stats) return { ...stats, ...savedGame.stats };
+  if (savedGame.flags?.finished) {
+    stats.overtimeDays += 1;
+    if (savedGame.flags.finishChoice === "tidy") stats.carefulFinishes += 1;
+  }
+  if (savedGame.flags?.serviceComplete) {
+    if (savedGame.flags.serviceApproach === "verify") stats.carefulFinishes += 1;
+    else stats.callbacks += 1;
+  }
+  if (savedGame.flags?.serviceCallbackResolved) stats.callbacksResolved += 1;
+  if (savedGame.flags?.servicePreparation === "review") stats.workOrdersReviewed += 1;
+  if (savedGame.flags?.servicePreparation === "lunch") stats.lunchesPacked += 1;
+  if (savedGame.flags?.servicePreparation === "coffee") stats.coffeesBought += 1;
+  return stats;
+}
+
+function getCareerLevel(xp = state.xp) {
+  return content.career.ranks.reduce((level, rank) => xp >= rank.xpRequired ? rank.level : level, 1);
+}
+
+function getCareerRank(level = getCareerLevel()) {
+  return content.career.ranks.find((rank) => rank.level === level) || content.career.ranks[0];
+}
+
+function getNextCareerRank() {
+  return content.career.ranks.find((rank) => rank.level > getCareerLevel()) || null;
+}
+
+function hasPendingTraining() {
+  return state.training.length < getCareerLevel() - 1;
+}
+
 function getSaveSummary(savedGame) {
   if (!savedGame) return "No saved career yet.";
   const technician = content.technicians.find((item) => item.id === savedGame.technicianId);
   const scene = content.scenes[savedGame.sceneId];
   const reward = savedGame.flags?.reward ? content.tools[savedGame.flags.reward]?.name : null;
   const detail = reward ? ` | Tutorial reward: ${reward}` : "";
-  return `${technician?.name || "Technician"} | ${scene?.name || "First day"} | Energy ${savedGame.energy} | Cash $${inferSavedCash(savedGame)}${detail}`;
+  const level = getCareerLevel(inferSavedXp(savedGame));
+  return `${technician?.name || "Technician"} | Level ${level} | ${scene?.name || "First day"} | Energy ${savedGame.energy} | Cash $${inferSavedCash(savedGame)}${detail}`;
 }
 
 function refreshTitleScreen() {
@@ -100,7 +197,7 @@ function refreshTitleScreen() {
 
 function serializeGame() {
   return {
-    version: 3,
+    version: 6,
     technicianId: state.technician.id,
     sceneId: state.sceneId,
     player: state.player,
@@ -109,9 +206,16 @@ function serializeGame() {
     loaded: state.loaded,
     delivered: state.delivered,
     assembled: state.assembled,
+    serviceDelivered: state.serviceDelivered,
+    serviceInstalled: state.serviceInstalled,
     energy: state.energy,
     burnout: state.burnout,
     cash: state.cash,
+    xp: state.xp,
+    jobsCompleted: state.jobsCompleted,
+    reputation: state.reputation,
+    training: state.training,
+    stats: state.stats,
     clock: state.clock,
     flags: state.flags,
     log: state.log,
@@ -131,8 +235,26 @@ function getToolModifier(modifier) {
   return state.tools.reduce((total, toolId) => total + (content.tools[toolId]?.modifiers?.[modifier] || 0), 0);
 }
 
+function getTrainingModifier(modifier) {
+  return state.training.reduce((total, trainingId) => (
+    total + (content.career.trainingChoices.find((choice) => choice.id === trainingId)?.modifiers?.[modifier] || 0)
+  ), 0);
+}
+
+function getMaxEnergy() {
+  return state.technician.stats.energy + getTrainingModifier("maxEnergy");
+}
+
+function getCraftsmanship() {
+  return state.technician.stats.craftsmanship + getTrainingModifier("craftsmanship");
+}
+
+function getConfidence() {
+  return state.technician.stats.confidence + getTrainingModifier("confidence");
+}
+
 function getCarryCapacity(sceneId = state.sceneId) {
-  return sceneId === "garage" ? 1 + getToolModifier("garageCarryCapacityBonus") : 1;
+  return ["garage", "serviceOffice"].includes(sceneId) ? 1 + getToolModifier("garageCarryCapacityBonus") : 1;
 }
 
 function getEquipmentEnergyCost(baseCost) {
@@ -143,12 +265,28 @@ function getAssemblyEnergyCost(baseCost) {
   return Math.max(0, baseCost - getToolModifier("assemblyEnergyReduction"));
 }
 
+function getVerificationEnergyCost(baseCost) {
+  return Math.max(0, baseCost - getToolModifier("verificationEnergyReduction"));
+}
+
+function getServiceDiagnosisEnergyCost(baseCost) {
+  return Math.max(0, baseCost - (state.flags.servicePreparation === "review" ? 1 : 0));
+}
+
+function getServiceVerificationEnergyCost(baseCost) {
+  return Math.max(0, getVerificationEnergyCost(baseCost) - (state.flags.servicePreparation === "josh" ? 1 : 0));
+}
+
 function hasCarriedItems() {
   return state.carry.length > 0;
 }
 
 function getCarriedLabels() {
-  return state.carry.map((itemId) => content.tutorial.assembly.find((item) => item.id === itemId)?.label || itemId);
+  return state.carry.map((itemId) => (
+    content.tutorial.assembly.find((item) => item.id === itemId)?.label
+    || content.serviceDispatch.swapItems.find((item) => item.id === itemId)?.label
+    || itemId
+  ));
 }
 
 function saveGame() {
@@ -223,12 +361,27 @@ function continueGame() {
   if (!technician || !content.scenes[savedGame.sceneId]) return clearSavedGame();
   const flags = { ...savedGame.flags };
   const migratedCash = inferSavedCash(savedGame);
+  const migratedXp = inferSavedXp(savedGame);
+  const migratedReputation = inferSavedReputation(savedGame);
+  const migratedStats = inferSavedStats(savedGame);
   if (flags.finished) flags.tutorialPaid = true;
+  if (flags.finished) flags.tutorialProgressAwarded = true;
+  if (flags.serviceComplete) flags.serviceProgressAwarded = true;
+  if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
+    flags.serviceCallbackPending = true;
+  }
   resetRuntimeState();
   Object.assign(state, savedGame, {
     technician,
     carry: normalizeCarry(savedGame.carry),
+    serviceDelivered: savedGame.serviceDelivered || [],
+    serviceInstalled: savedGame.serviceInstalled || [],
     cash: migratedCash,
+    xp: migratedXp,
+    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0),
+    reputation: migratedReputation,
+    training: savedGame.training || [],
+    stats: migratedStats,
     flags,
     modalOpen: false,
   });
@@ -247,6 +400,9 @@ function resumeRequiredPrompt() {
   }
   if (state.sceneId === "client" && state.assembled.length === content.tutorial.assembly.length && !state.flags.finished) {
     return showFinishChoice();
+  }
+  if (state.sceneId === "serviceOffice" && state.serviceInstalled.length === content.serviceDispatch.swapItems.length && !state.flags.serviceComplete) {
+    return showServiceResults();
   }
 }
 
@@ -286,11 +442,25 @@ function addLog(message) {
 }
 
 function changeEnergy(amount) {
-  state.energy = Math.max(0, Math.min(100, state.energy + amount));
+  state.energy = Math.max(0, Math.min(getMaxEnergy(), state.energy + amount));
 }
 
 function setClock(clock) {
   state.clock = clock;
+}
+
+function awardCareerProgress({ xp, reputation, source }) {
+  const previousLevel = getCareerLevel();
+  state.xp += xp;
+  state.jobsCompleted += 1;
+  Object.entries(reputation).forEach(([group, amount]) => {
+    state.reputation[group] += amount;
+  });
+  addLog(`${source}: +${xp} XP.`);
+  const currentLevel = getCareerLevel();
+  if (currentLevel > previousLevel) {
+    addLog(`Career level increased. You are now a Level ${currentLevel} ${getCareerRank(currentLevel).name}.`);
+  }
 }
 
 function startGame(technicianId) {
@@ -391,7 +561,7 @@ function showFinishChoice() {
     title: "Cart 2 Works. The Cables Do Not Look Happy.",
     body: `
       <p>Dispatch expected you to be done hours ago. You can clean up the cable routing or leave before traffic gets worse.</p>
-      <p><strong>Energy:</strong> ${state.energy}/100</p>
+      <p><strong>Energy:</strong> ${state.energy}/${getMaxEnergy()}</p>
     `,
     actions: [
       { label: "Dress the cables properly (+35 min)", onClick: () => finishJob("tidy") },
@@ -417,6 +587,21 @@ function finishJob(choice) {
     state.cash += choice === "tidy" ? 152 : 141;
     state.flags.tutorialPaid = true;
   }
+  if (!state.flags.tutorialProgressAwarded) {
+    awardCareerProgress({
+      xp: 40,
+      reputation: choice === "tidy"
+        ? { clients: 2, coworkers: 1, management: -1 }
+        : { clients: 0, coworkers: 0, management: 1 },
+      source: "Two Quick Carts",
+    });
+    state.flags.tutorialProgressAwarded = true;
+  }
+  if (!state.flags.tutorialStatsRecorded) {
+    state.stats.overtimeDays += 1;
+    if (choice === "tidy") state.stats.carefulFinishes += 1;
+    state.flags.tutorialStatsRecorded = true;
+  }
   showResults();
 }
 
@@ -434,8 +619,9 @@ function showResults() {
         <span>Net take-home</span><strong>+$${netPay}</strong>
         <span>Cash balance</span><strong>$${state.cash}</strong>
         <span>Expense status</span><strong>Receipt under review</strong>
-        <span>Energy remaining</span><strong>${state.energy}/100</strong>
+        <span>Energy remaining</span><strong>${state.energy}/${getMaxEnergy()}</strong>
         <span>Burnout</span><strong>${state.burnout}</strong>
+        <span>Experience</span><strong>+40 XP</strong>
       </div>
       <blockquote>Management note: "Please improve time management and plan parking more efficiently."</blockquote>
       <p>You survived your first week early. Choose one starter upgrade.</p>
@@ -481,8 +667,218 @@ function showPersonalKit() {
       </ul>
       <p class="muted">Garage carry capacity: ${getCarryCapacity("garage")} equipment group${getCarryCapacity("garage") === 1 ? "" : "s"}</p>
       <p class="muted">Assembly energy cost: ${getAssemblyEnergyCost(7)} per cart component</p>
+      <p class="muted">Signal-path verification energy cost: ${getVerificationEnergyCost(4)}</p>
     `,
     actions: [{ label: "Close Tool Bag" }],
+  });
+}
+
+function showCareerClipboard() {
+  const rank = getCareerRank();
+  const nextRank = getNextCareerRank();
+  const pendingTraining = hasPendingTraining();
+  const selectedTraining = state.training.map((trainingId) => (
+    content.career.trainingChoices.find((choice) => choice.id === trainingId)
+  ));
+  showModal({
+    kicker: "Broomall Career Clipboard",
+    title: `Level ${rank.level} ${rank.name}`,
+    body: `
+      <div class="results-grid">
+        <span>Experience</span><strong>${state.xp} XP</strong>
+        <span>Next rank</span><strong>${nextRank ? `${nextRank.name} at ${nextRank.xpRequired} XP` : "More ranks coming soon"}</strong>
+        <span>Jobs completed</span><strong>${state.jobsCompleted}</strong>
+        <span>Client reputation</span><strong>${formatReputation(state.reputation.clients)}</strong>
+        <span>Coworker reputation</span><strong>${formatReputation(state.reputation.coworkers)}</strong>
+        <span>Management reputation</span><strong>${formatReputation(state.reputation.management)}</strong>
+      </div>
+      ${selectedTraining.length ? `
+        <p><strong>Training completed:</strong></p>
+        <ul class="modal-list">
+          ${selectedTraining.map((choice) => `<li><strong>${choice.name}</strong><span>${choice.effect}</span></li>`).join("")}
+        </ul>
+      ` : ""}
+      <p><strong>Milestone preview:</strong></p>
+      <ul class="modal-list">
+        ${getCareerMilestones().map((milestone) => `<li><strong>${milestone.status} ${milestone.name}</strong><span>${milestone.description}</span></li>`).join("")}
+      </ul>
+      <p><strong>Career ledger:</strong></p>
+      ${getCareerLedgerMarkup()}
+      <p class="muted">${pendingTraining
+        ? "You earned a new field-training focus. Pick the habit you want to develop next."
+        : "Complete more dispatches to unlock another field-training focus."}</p>
+    `,
+    actions: [
+      ...(pendingTraining ? content.career.trainingChoices
+        .filter((choice) => !state.training.includes(choice.id))
+        .map((choice) => ({
+        label: `${choice.name}: ${choice.effect}`,
+        className: "secondary-button",
+        onClick: () => chooseTraining(choice.id),
+      })) : []),
+      { label: "Return Clipboard" },
+    ],
+  });
+}
+
+function getCareerLedgerMarkup() {
+  return `
+    <div class="results-grid">
+      <span>Careful finishes</span><strong>${state.stats.carefulFinishes}</strong>
+      <span>Callbacks generated</span><strong>${state.stats.callbacks}</strong>
+      <span>Callback notes rebuilt</span><strong>${state.stats.callbacksResolved}</strong>
+      <span>Overtime days</span><strong>${state.stats.overtimeDays}</strong>
+      <span>Recovery days taken</span><strong>${state.stats.recoveryDays}</strong>
+      <span>Work orders reviewed</span><strong>${state.stats.workOrdersReviewed}</strong>
+      <span>Lunches packed</span><strong>${state.stats.lunchesPacked}</strong>
+      <span>Coffee jar contributions</span><strong>${state.stats.coffeesBought}</strong>
+    </div>
+  `;
+}
+
+function getCareerMilestones() {
+  const josh = content.coworkers.josh;
+  return [
+    {
+      status: state.training.length ? "[COMPLETE]" : getCareerLevel() >= 2 ? "[AVAILABLE]" : "[LOCKED]",
+      name: "Junior Tech field-training focus",
+      description: "Reach Level 2, then choose one practical habit from the career clipboard.",
+    },
+    {
+      status: ownsTool("labeler") ? "[COMPLETE]" : state.reputation.coworkers >= josh.labelerTrustRequired ? "[AVAILABLE]" : "[LOCKED]",
+      name: `${josh.name}'s rebuilt labeler`,
+      description: `Earn ${josh.labelerTrustRequired} coworker reputation and check in with ${josh.name} at the shop.`,
+    },
+    {
+      status: getCareerLevel() >= 3 ? "[COMPLETE]" : "[LOCKED]",
+      name: "Field Tech rank",
+      description: "Reach 180 XP. Certification choices will build on this milestone later.",
+    },
+  ];
+}
+
+function formatReputation(value) {
+  return value > 0 ? `+${value}` : `${value}`;
+}
+
+function chooseTraining(trainingId) {
+  if (!hasPendingTraining()) return showCareerClipboard();
+  const choice = content.career.trainingChoices.find((item) => item.id === trainingId);
+  if (!choice || state.training.includes(trainingId)) return showCareerClipboard();
+  const previousMaxEnergy = getMaxEnergy();
+  state.training.push(trainingId);
+  if (getMaxEnergy() > previousMaxEnergy) changeEnergy(getMaxEnergy() - previousMaxEnergy);
+  addLog(`${choice.name} selected as your next field-training focus.`);
+  showModal({
+    kicker: "Field Training Added",
+    title: choice.name,
+    body: `<p>${choice.description}</p><p class="muted">${choice.effect}</p>`,
+    actions: [{ label: "Return to Shop", onClick: render }],
+  });
+}
+
+function showJoshConversation() {
+  const josh = content.coworkers.josh;
+  if (!state.flags.metJosh) {
+    state.flags.metJosh = true;
+    addLog("Met Josh, the lead technician. Management interrupted to blame him for an inventory problem.");
+    return showModal({
+      kicker: `${josh.name} / ${josh.role}`,
+      title: "The Person Keeping This Place Running",
+      body: `
+        <p>Josh is sorting a pile of adapters into bins with labels that look newer than the shelves.</p>
+        <p><strong>Manager, from the sales office:</strong> "Josh, why are we missing two HDMI couplers? This inventory situation is becoming a pattern."</p>
+        <p><strong>Josh:</strong> "Morning. Ignore that. They zip-tied both couplers behind a display yesterday and called it spare inventory. If you get stuck onsite, slow down and trace the path before you start swapping things."</p>
+      `,
+      actions: [{ label: "Thank Josh", onClick: render }],
+    });
+  }
+  if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) return showJoshCallback();
+  if (state.flags.serviceComplete && !state.flags.joshServiceDebriefed) {
+    const checkedSignalPath = state.flags.serviceApproach === "verify";
+    state.flags.joshServiceDebriefed = true;
+    addLog(checkedSignalPath
+      ? "Josh noticed the Conshohocken room notes and the labeled coupler."
+      : "Josh reviewed the Conshohocken callback and the missing room notes.");
+    return showModal({
+      kicker: `${josh.name} / ${josh.role}`,
+      title: checkedSignalPath ? "Good Notes Save The Next Person" : "Now The Ticket Is Better Than It Was",
+      body: `
+        <p>Josh looks over the Conshohocken notes while management asks whether he can also swing by a warehouse to find a power supply that was last seen in "one of the vans."</p>
+        <p><strong>Josh:</strong> "${checkedSignalPath
+          ? "You traced it, marked the odd coupler, and left enough detail that the next person will know what happened. That is the job."
+          : "You know what bit you now. Put it in the notes, label the weird part, and the next person gets to start one step ahead."}"</p>
+      `,
+      actions: [{
+        label: canReceiveJoshLabeler() ? "Talk Tools" : "Keep That In Mind",
+        onClick: () => canReceiveJoshLabeler() ? showJoshLabelerOffer() : render(),
+      }],
+    });
+  }
+  if (canReceiveJoshLabeler()) return showJoshLabelerOffer();
+  notify(`Josh: "Label both ends. Future you is also a technician, and future you is already annoyed."`);
+}
+
+function showJoshCallback() {
+  showModal({
+    kicker: "Callback Note",
+    title: "Management Found A Way To Blame Josh",
+    body: `
+      <p>The Conshohocken room dropped signal again after you left. Josh found the callback note clipped to his bench underneath a handwritten work order for "TV issue."</p>
+      <p><strong>Manager:</strong> "Josh, can you clean this up? We need better oversight on these service calls."</p>
+      <p><strong>Josh:</strong> "The weird coupler should have been in the ticket. I can close it out. If you have a minute, help me reconstruct the room notes so the next call is cleaner."</p>
+    `,
+    actions: [
+      { label: "Help Josh reconstruct the notes (-3 energy)", onClick: () => resolveJoshCallback(true) },
+      { label: "Leave Josh to close the callback", className: "secondary-button", onClick: () => resolveJoshCallback(false) },
+    ],
+  });
+}
+
+function resolveJoshCallback(helpJosh) {
+  state.flags.serviceCallbackResolved = true;
+  if (helpJosh) {
+    changeEnergy(-3);
+    state.reputation.coworkers += 1;
+    addLog("Helped Josh reconstruct the callback notes. Coworker reputation improved.");
+  } else {
+    state.reputation.management += 1;
+    addLog("Josh handled the callback while management praised the team's responsiveness.");
+  }
+  state.stats.callbacksResolved += 1;
+  render();
+  if (canReceiveJoshLabeler()) showJoshLabelerOffer();
+}
+
+function canReceiveJoshLabeler() {
+  return state.flags.metJosh
+    && !ownsTool("labeler")
+    && state.reputation.coworkers >= content.coworkers.josh.labelerTrustRequired;
+}
+
+function showJoshLabelerOffer() {
+  const tool = content.tools.labeler;
+  showModal({
+    kicker: "Coworker Hand-Me-Down",
+    title: tool.name,
+    body: `
+      <p><strong>Josh:</strong> "I rebuilt the feed roller on this one. It is not fancy, but it is dependable. Put your name in it before somebody decides it belongs in Van #2."</p>
+      <p>${tool.description}</p>
+      <p class="muted">${tool.effect}</p>
+    `,
+    actions: [{ label: "Add Labeler To Personal Kit", onClick: receiveJoshLabeler }],
+  });
+}
+
+function receiveJoshLabeler() {
+  if (!ownsTool("labeler")) state.tools.push("labeler");
+  state.flags.joshLabelerGift = true;
+  addLog("Josh handed down his rebuilt labeler.");
+  showModal({
+    kicker: "Personal Tool Added",
+    title: content.tools.labeler.name,
+    body: `<p>${content.tools.labeler.description}</p><p class="muted">${content.tools.labeler.effect}</p>`,
+    actions: [{ label: "Return to Shop", onClick: render }],
   });
 }
 
@@ -528,9 +924,10 @@ function buyTool(toolId) {
 }
 
 function takeBreak() {
-  if (state.energy >= 100 && state.burnout === 0) return notify("You are already rested enough for the next dispatch.");
-  state.energy = Math.min(100, state.energy + 24);
+  if (state.energy >= getMaxEnergy() && state.burnout === 0) return notify("You are already rested enough for the next dispatch.");
+  state.energy = Math.min(getMaxEnergy(), state.energy + 24);
   state.burnout = Math.max(0, state.burnout - 1);
+  state.stats.recoveryDays += 1;
   const weekdays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
   const dayIndex = weekdays.indexOf(state.clock.slice(0, 3));
   setClock(`${weekdays[(dayIndex + 1) % weekdays.length]} 7:22 AM`);
@@ -539,15 +936,220 @@ function takeBreak() {
 }
 
 function showDispatchPreview() {
+  if (state.flags.serviceComplete) {
+    return showPrototypeSummary();
+  }
   showModal({
     kicker: "Dispatch Board",
-    title: "More Work Is Coming",
+    title: "One Quick Display Swap",
     body: `
       <p><strong>Service Call:</strong> Conference-room display issue in Conshohocken.</p>
-      <p><strong>Status:</strong> Next playable dispatch is not implemented yet.</p>
-      <p class="muted">Use the supply counter, inspect your kit, or take an unpaid recovery day before the next job arrives.</p>
+      <p>Sales says the replacement display is already onsite. The client says the room is booked again this afternoon.</p>
+      ${state.flags.servicePreparation ? `<p class="muted">Preparation selected: ${getServicePreparationLabel()}</p>` : ""}
+      <p class="muted">Use the supply counter, inspect your kit, or take an unpaid recovery day before leaving.</p>
     `,
-    actions: [{ label: "Return to Shop" }],
+    actions: [
+      { label: "Accept Service Call", onClick: () => state.flags.servicePreparation ? promptServiceTravel() : showServicePreparation() },
+      { label: "Return to Shop", className: "secondary-button" },
+    ],
+  });
+}
+
+function showPrototypeSummary() {
+  const rank = getCareerRank();
+  state.flags.prototypeSummaryViewed = true;
+  render();
+  showModal({
+    kicker: "Current Prototype Complete",
+    title: `Level ${rank.level} ${rank.name}`,
+    body: `
+      <p>You completed the currently playable dispatches. The Broomall board already has more work written in erasable marker.</p>
+      <div class="results-grid">
+        <span>Experience</span><strong>${state.xp} XP</strong>
+        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Client reputation</span><strong>${formatReputation(state.reputation.clients)}</strong>
+        <span>Coworker reputation</span><strong>${formatReputation(state.reputation.coworkers)}</strong>
+        <span>Management reputation</span><strong>${formatReputation(state.reputation.management)}</strong>
+      </div>
+      <p><strong>Career ledger:</strong></p>
+      ${getCareerLedgerMarkup()}
+      <p><strong>Upcoming dispatches:</strong></p>
+      <ul class="modal-list">
+        ${content.upcomingDispatches.map((dispatch) => `<li><strong>[LOCKED] ${dispatch.title}</strong><span>${dispatch.summary}</span></li>`).join("")}
+      </ul>
+      <p><strong>Prototype playtest questions:</strong></p>
+      <ul class="modal-list">
+        <li><strong>Did the walking stay purposeful?</strong><span>Loading and carrying should explain the job without becoming repetitive.</span></li>
+        <li><strong>Did your choices feel visible?</strong><span>Your tool, preparation, and diagnosis choices should change how the second dispatch plays.</span></li>
+        <li><strong>Did progression make you curious?</strong><span>The shop, clipboard, and locked dispatches should make one more workday sound appealing.</span></li>
+      </ul>
+      <blockquote>Dispatch note: "Please remain flexible. Several schedules are currently being finalized retroactively."</blockquote>
+    `,
+    actions: [
+      { label: "Review Career Clipboard", onClick: showCareerClipboard },
+      { label: "Return To Shop", className: "secondary-button", onClick: render },
+      { label: "Return To Title Screen", className: "secondary-button", onClick: showTitleScreen },
+    ],
+  });
+}
+
+function getServicePreparationLabel() {
+  return {
+    review: "Reviewed work order",
+    lunch: "Packed lunch",
+    coffee: "Shop coffee",
+    josh: "Asked Josh for advice",
+    none: "No extra preparation",
+  }[state.flags.servicePreparation] || "None";
+}
+
+function showServicePreparation() {
+  showModal({
+    kicker: "Before You Leave",
+    title: "Prepare For The Service Call",
+    body: `
+      <p>Dispatch called this a quick display issue. You have time for one small preparation step before taking Van #3 to Conshohocken.</p>
+      <p class="muted">Cash available: $${state.cash}</p>
+    `,
+    actions: [
+      { label: "Review the work order", onClick: () => chooseServicePreparation("review") },
+      { label: "Pack lunch from the break area", className: "secondary-button", onClick: () => chooseServicePreparation("lunch") },
+      ...(state.cash >= 5 ? [{
+        label: "Buy shop coffee - $5",
+        className: "secondary-button",
+        onClick: () => chooseServicePreparation("coffee"),
+      }] : []),
+      { label: "Ask Josh what to watch for", className: "secondary-button", onClick: () => chooseServicePreparation("josh") },
+      { label: "Leave now without extra prep", className: "secondary-button", onClick: () => chooseServicePreparation("none") },
+    ],
+  });
+}
+
+function chooseServicePreparation(preparation) {
+  state.flags.servicePreparation = preparation;
+  let title = "Van #3 Is Ready";
+  let body = "<p>You decide not to spend more time preparing. Dispatch already used the word quick twice.</p>";
+  if (preparation === "review") {
+    title = "Read The Small Print";
+    body = `<p>The work order is mostly a forwarded email chain. One buried note mentions an inline coupler behind the credenza.</p>
+      <p class="muted">Diagnosis will cost 1 less energy.</p>`;
+    addLog("Reviewed the Conshohocken work order and found a buried note about an inline coupler.");
+    state.stats.workOrdersReviewed += 1;
+  }
+  if (preparation === "lunch") {
+    title = "Lunch Acquired";
+    body = `<p>You pack something from the break area before anybody can schedule through lunch.</p>
+      <p class="muted">Recover 8 energy when you arrive in Conshohocken.</p>`;
+    addLog("Packed lunch before leaving the Broomall shop.");
+    state.stats.lunchesPacked += 1;
+  }
+  if (preparation === "coffee") {
+    title = "Shop Coffee";
+    body = `<p>The coffee is hot and technically belongs to the company. The five-dollar jar beside it suggests otherwise.</p>
+      <p class="muted">Recover 12 energy now.</p>`;
+    state.cash -= 5;
+    changeEnergy(12);
+    addLog("Bought shop coffee for $5. Energy improved.");
+    state.stats.coffeesBought += 1;
+  }
+  if (preparation === "josh") {
+    title = "Josh Has Seen This Movie Before";
+    body = `<p>Josh pauses while sorting adapters into bins.</p>
+      <p><strong>Josh:</strong> "If the display is flickering, verify the whole path before you swap anything. Half the mystery boxes in this shop are just couplers nobody documented."</p>
+      <p><strong>Manager, from the sales office:</strong> "Josh, do you know why Van #2 has three remotes for displays we do not own?"</p>
+      <p class="muted">Signal-path verification will cost 1 less energy.</p>`;
+    if (!state.flags.metJosh) addLog("Asked Josh for advice while management investigated the Van #2 remote collection.");
+    state.flags.metJosh = true;
+  }
+  render();
+  showModal({
+    kicker: "Preparation Selected",
+    title,
+    body,
+    actions: [{ label: "Head To Conshohocken", onClick: promptServiceTravel }],
+  });
+}
+
+function promptServiceTravel() {
+  const reviewedTicket = state.flags.servicePreparation === "review";
+  showModal({
+    kicker: "Route Summary",
+    title: "Broomall -> Conshohocken",
+    body: `
+      <p><strong>Dispatch estimate:</strong> Diagnose the display issue and swap the screen if needed.</p>
+      ${reviewedTicket ? `<p class="expense"><strong>Work-order note:</strong> Inline coupler reported behind the credenza.</p>` : ""}
+      <div class="route-line"><span>BROOMALL</span><i></i><span>CONSHOHOCKEN</span></div>
+    `,
+    actions: [{
+      label: "Drive to Client Office",
+      onClick: () => {
+        state.flags.serviceStarted = true;
+        state.carry = [];
+        if (state.flags.servicePreparation === "lunch" && !state.flags.serviceLunchUsed) {
+          changeEnergy(8);
+          state.flags.serviceLunchUsed = true;
+          addLog("Ate the packed lunch before heading inside. Energy improved.");
+        }
+        setClock(`${state.clock.slice(0, 3)} 9:14 AM`);
+        addLog("Arrived in Conshohocken for a display service call.");
+        enterScene("serviceOffice");
+      },
+    }],
+  });
+}
+
+function showServiceResults() {
+  const checkedSignalPath = state.flags.serviceApproach === "verify";
+  state.flags.serviceComplete = true;
+  state.carry = [];
+  setClock(`${state.clock.slice(0, 3)} ${checkedSignalPath ? "11:26" : "11:44"} AM`);
+  if (!state.flags.servicePaid) {
+    state.cash += 96;
+    state.flags.servicePaid = true;
+  }
+  if (!state.flags.serviceProgressAwarded) {
+    awardCareerProgress({
+      xp: checkedSignalPath ? 50 : 40,
+      reputation: checkedSignalPath
+        ? { clients: 2, coworkers: 1, management: 0 }
+        : { clients: 0, coworkers: 0, management: 1 },
+      source: "One Quick Display Swap",
+    });
+    state.flags.serviceProgressAwarded = true;
+  }
+  if (!state.flags.serviceStatsRecorded) {
+    if (checkedSignalPath) state.stats.carefulFinishes += 1;
+    else state.stats.callbacks += 1;
+    state.flags.serviceStatsRecorded = true;
+  }
+  addLog("Replacement display installed. The quick service call is complete.");
+  render();
+  showModal({
+    kicker: "Service Call Complete",
+    title: "One Quick Display Swap: Complete",
+    body: `
+      <div class="results-grid">
+        <span>Service wages</span><strong>+$96</strong>
+        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Energy remaining</span><strong>${state.energy}/${getMaxEnergy()}</strong>
+        <span>Burnout</span><strong>${state.burnout}</strong>
+        <span>Experience</span><strong>+${checkedSignalPath ? 50 : 40} XP</strong>
+        <span>Preparation</span><strong>${getServicePreparationLabel()}</strong>
+        <span>Diagnosis</span><strong>${checkedSignalPath ? "Signal path verified" : "Rework required"}</strong>
+      </div>
+      <blockquote>Client note: "Thank you for fixing the display before the afternoon meeting.${checkedSignalPath ? " The cable notes are helpful." : ""}"</blockquote>
+    `,
+    actions: [{
+      label: "Return to Broomall Shop",
+      onClick: () => {
+        if (!checkedSignalPath) {
+          state.flags.serviceCallbackPending = true;
+          addLog("A Conshohocken callback note appeared before you made it back to Broomall.");
+        }
+        addLog("Returned to the Broomall shop after the Conshohocken service call.");
+        enterScene("shop");
+      },
+    }],
   });
 }
 
@@ -557,6 +1159,7 @@ function getInteractions() {
       {
         x: 330, y: 330, label: "Talk to supervisor", npc: "SUP",
         action: () => {
+          if (state.flags.serviceComplete && hasPendingTraining()) return notify('Supervisor: "You leveled up fast. Mark a training focus on the clipboard before dispatch adds anything else."');
           if (state.flags.finished) return notify('Supervisor: "Good work today. Dispatch will have more tomorrow."');
           if (!state.flags.shopBrief) {
             state.flags.shopBrief = true;
@@ -572,6 +1175,13 @@ function getInteractions() {
           }
         },
       },
+      ...(state.flags.finished ? [{
+        x: 690, y: 245, label: state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved
+          ? "Talk to Josh about callback"
+          : "Talk to Josh",
+        npc: "JOSH",
+        action: showJoshConversation,
+      }] : []),
       {
         x: 150, y: 270, label: "Read dispatch board",
         action: () => state.flags.finished
@@ -605,6 +1215,9 @@ function getInteractions() {
       ...(state.flags.finished ? [{
         x: 355, y: 400, label: "Inspect personal kit",
         action: showPersonalKit,
+      }, {
+        x: 500, y: 270, label: hasPendingTraining() ? "Choose field-training focus" : "Review career clipboard",
+        action: showCareerClipboard,
       }, {
         x: 145, y: 400, label: "Browse personal tools",
         action: showSupplyCounter,
@@ -713,6 +1326,67 @@ function getInteractions() {
     ];
   }
 
+  if (state.sceneId === "serviceOffice") {
+    if (state.flags.serviceComplete) return [];
+    return [
+      {
+        x: 300, y: 185, label: "Talk to client contact", npc: "CLIENT",
+        action: () => {
+          if (state.flags.serviceBrief) return notify('Client: "The afternoon meeting starts at one. No pressure."');
+          state.flags.serviceBrief = true;
+          addLog("Client confirmed the display failed during the morning meeting.");
+          showModal({
+            kicker: "Client Contact",
+            title: "It Worked Yesterday",
+            body: `<p>"The display powers on, but it flickers and drops out. Sales said you would swap it before the one o'clock meeting."</p>`,
+            actions: [{ label: "Inspect Display", onClick: render }],
+          });
+        },
+      },
+      {
+        x: 760, y: 305, label: state.flags.serviceInspected ? "Install replacement parts" : "Inspect failed display",
+        action: () => {
+          if (!state.flags.serviceBrief) return notify("Check in with the client contact first.");
+          if (!state.flags.serviceInspected) {
+            state.flags.serviceInspected = true;
+            changeEnergy(-getServiceDiagnosisEnergyCost(3));
+            addLog("Confirmed the display needs replacement. The signal path still has an unlabeled coupler.");
+            render();
+            return showModal({
+              kicker: "Diagnosis",
+              title: "The Quick Fix Is a Display Swap",
+              body: `
+                <p>The display itself is failing. The replacement screen and hardware tote are onsite.</p>
+                <p>There is also an unlabeled coupler behind the credenza. You can verify the signal path now or trust the service ticket and start swapping equipment.</p>
+                ${state.flags.servicePreparation === "review" ? `<p class="muted">Reviewing the forwarded email chain saved time during diagnosis.</p>` : ""}
+              `,
+              actions: [
+                { label: `Verify signal path (-${getServiceVerificationEnergyCost(4)} energy)`, onClick: () => chooseServiceApproach("verify") },
+                { label: "Trust the ticket and swap", className: "secondary-button", onClick: () => chooseServiceApproach("rush") },
+              ],
+            });
+          }
+          installServicePart();
+        },
+      },
+      {
+        x: 178, y: 350, label: "Pick up replacement gear",
+        action: () => {
+          if (!state.flags.serviceInspected) return notify("Inspect the failed display before opening replacement gear.");
+          if (hasCarriedItems()) return notify("Your hands are already full.");
+          const nextItems = content.serviceDispatch.swapItems
+            .filter((item) => !state.serviceDelivered.includes(item.id) && !state.serviceInstalled.includes(item.id))
+            .slice(0, getCarryCapacity("serviceOffice"));
+          if (!nextItems.length) return notify("All replacement gear is beside the failed display.");
+          state.carry = nextItems.map((item) => item.id);
+          changeEnergy(-getEquipmentEnergyCost(3));
+          addLog(`Picked up ${nextItems.map((item) => item.label).join(" and ")}.`);
+          render();
+        },
+      },
+    ];
+  }
+
   return [
     ...(!state.flags.roomBrief && !state.flags.supervisorLeft ? [{
       x: 320, y: 185, label: "Talk to supervisor", npc: "SUP",
@@ -745,6 +1419,39 @@ function getInteractions() {
   ];
 }
 
+function chooseServiceApproach(approach) {
+  state.flags.serviceApproach = approach;
+  if (approach === "verify") {
+    changeEnergy(-getServiceVerificationEnergyCost(4));
+    addLog("Verified the signal path and marked the unlabeled coupler before the swap.");
+  } else {
+    addLog("Trusted the service ticket and started the display swap immediately.");
+  }
+  render();
+}
+
+function installServicePart() {
+  if (!hasCarriedItems()) return notify("Pick up replacement gear from the boxes.");
+  const items = [...state.carry];
+  state.serviceDelivered.push(...items);
+  state.serviceInstalled.push(...items);
+  state.carry = [];
+  changeEnergy(-getAssemblyEnergyCost(10));
+  addLog(`${getServiceItemLabels(items).join(" and ")} installed ${ownsTool("drill") ? "with your drill" : "with your screwdriver"}.`);
+  if (state.serviceInstalled.length === content.serviceDispatch.swapItems.length) {
+    if (state.flags.serviceApproach !== "verify") {
+      changeEnergy(-6);
+      addLog("Reopened the connection panel after the unlabeled coupler caused a dropout.");
+    }
+    return showServiceResults();
+  }
+  render();
+}
+
+function getServiceItemLabels(itemIds) {
+  return itemIds.map((itemId) => content.serviceDispatch.swapItems.find((item) => item.id === itemId)?.label || itemId);
+}
+
 function installCartPart(destination) {
   if (!hasCarriedItems()) return notify("Pick up the next cart component from the delivered boxes.");
   const part = content.tutorial.assembly.find((item) => item.id === state.carry[0]);
@@ -767,7 +1474,12 @@ function notify(message) {
 
 function getObjective() {
   if (state.sceneId === "shop") {
-    if (state.flags.finished) return "First tutorial complete. Explore the shop.";
+    if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) return "Talk to Josh about the Conshohocken callback.";
+    if (state.flags.serviceComplete && !state.flags.joshServiceDebriefed) return "Check in with Josh at the workbench.";
+    if (state.flags.serviceComplete && hasPendingTraining()) return "Choose a field-training focus from the career clipboard.";
+    if (state.flags.serviceComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
+    if (state.flags.serviceComplete) return "Current prototype complete. Explore the shop.";
+    if (state.flags.finished) return "Prepare for the Conshohocken service call.";
     if (!state.flags.shopBrief) return "Find your supervisor.";
     if (state.loaded.length < content.tutorial.shopLoad.length) return `Load staged equipment into Van #3 (${state.loaded.length}/3).`;
     return "Inspect Van #3 and leave for Center City East.";
@@ -779,6 +1491,12 @@ function getObjective() {
   if (state.sceneId === "lobby") {
     if (!state.flags.securityChecked) return "Check in with security.";
     return "Take the elevator to the client floor.";
+  }
+  if (state.sceneId === "serviceOffice") {
+    if (!state.flags.serviceBrief) return "Check in with the client contact.";
+    if (!state.flags.serviceInspected) return "Inspect the failed display.";
+    if (state.flags.serviceComplete) return "Review the completed service call.";
+    return `Install replacement gear (${state.serviceInstalled.length}/${content.serviceDispatch.swapItems.length}).`;
   }
   if (!state.flags.roomBrief) return "Ask the supervisor how to start the cart build.";
   if (state.assembled.length < 2) return `Assemble Cart 1 with your supervisor (${state.assembled.length}/2).`;
@@ -902,13 +1620,20 @@ function renderNearby() {
 
 function renderHud() {
   const vehicle = content.vehicles.van3;
+  const rank = getCareerRank();
   elements.techName.textContent = state.technician.name;
   elements.energyValue.textContent = state.energy;
-  elements.energyMeter.style.width = `${state.energy}%`;
+  elements.energyMeter.style.width = `${(state.energy / getMaxEnergy()) * 100}%`;
   elements.burnoutValue.textContent = state.burnout;
   elements.cashValue.textContent = `$${state.cash}`;
-  elements.craftValue.textContent = state.technician.stats.craftsmanship;
-  elements.confidenceValue.textContent = state.technician.stats.confidence;
+  elements.craftValue.textContent = getCraftsmanship();
+  elements.confidenceValue.textContent = getConfidence();
+  elements.rankValue.textContent = rank.name;
+  elements.levelValue.textContent = rank.level;
+  elements.xpValue.textContent = `${state.xp} XP`;
+  elements.clientRepValue.textContent = formatReputation(state.reputation.clients);
+  elements.coworkerRepValue.textContent = formatReputation(state.reputation.coworkers);
+  elements.managementRepValue.textContent = formatReputation(state.reputation.management);
   elements.carryCard.textContent = hasCarriedItems()
     ? `${getCarriedLabels().join(" + ")} (${state.carry.length}/${getCarryCapacity()})`
     : `Nothing (0/${getCarryCapacity()})`;
@@ -940,7 +1665,18 @@ function render() {
   elements.sceneKicker.textContent = scene.kicker;
   elements.sceneName.textContent = scene.name;
   elements.clock.textContent = state.clock;
-  elements.jobStatus.textContent = state.flags.finished ? "SHIFT COMPLETE" : "FIRST DAY";
+  const serviceActive = state.sceneId === "serviceOffice";
+  elements.jobStatus.textContent = serviceActive
+    ? "SERVICE CALL"
+    : state.flags.serviceComplete
+      ? "DISPATCH COMPLETE"
+      : state.flags.finished
+        ? "SHOP HUB"
+        : "FIRST DAY";
+  elements.dispatchTitle.textContent = serviceActive ? content.serviceDispatch.title : "Two Quick Carts";
+  elements.dispatchSummary.textContent = serviceActive
+    ? content.serviceDispatch.summary
+    : "Build two mobile video conferencing carts at a Center City East office.";
   elements.objective.textContent = getObjective();
   elements.taskCopy.textContent = getObjective();
   renderDecor();

@@ -123,7 +123,7 @@ kbd { padding: 2px 5px; border: 1px solid #53615e; border-radius: 3px; color: va
 .danger-text { color: #df8a7e; }
 
 .modal-backdrop { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: rgba(8, 11, 10, .72); }
-.modal-card { width: min(540px, calc(100vw - 40px)); padding: 22px; border: 1px solid #56645f; border-radius: 8px; background: #1b2421; box-shadow: 0 24px 70px rgba(0, 0, 0, .42); }
+.modal-card { width: min(540px, calc(100vw - 40px)); max-height: calc(100vh - 32px); padding: 22px; overflow: auto; border: 1px solid #56645f; border-radius: 8px; background: #1b2421; box-shadow: 0 24px 70px rgba(0, 0, 0, .42); }
 .modal-card h2 { margin: 6px 0 14px; font-size: 25px; }
 .modal-body { color: var(--muted); font-size: 13px; line-height: 1.6; }
 .modal-body p + p { margin-top: 10px; }

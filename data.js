@@ -42,6 +42,14 @@ window.GAME_CONTENT = {
       modifiers: { garageCarryCapacityBonus: 1 },
       price: 100,
     },
+    labeler: {
+      id: "labeler",
+      name: "Josh's Rebuilt Labeler",
+      description: "Josh repaired the feed roller and wrote your name inside the battery cover.",
+      effect: "Reduce energy spent verifying signal paths by 2.",
+      modifiers: { verificationEnergyReduction: 2 },
+      price: 0,
+    },
   },
 
   vehicles: {
@@ -57,6 +65,47 @@ window.GAME_CONTENT = {
     },
   },
 
+  career: {
+    ranks: [
+      { level: 1, name: "Helper", xpRequired: 0 },
+      { level: 2, name: "Junior Tech", xpRequired: 80 },
+      { level: 3, name: "Field Tech", xpRequired: 180 },
+    ],
+    trainingChoices: [
+      {
+        id: "craftsmanship",
+        name: "Neater Installs",
+        description: "Practice cable dressing, labeling, and the quiet art of leaving a room better than you found it.",
+        effect: "+1 Craftsmanship",
+        modifiers: { craftsmanship: 1 },
+      },
+      {
+        id: "confidence",
+        name: "Calm Troubleshooting",
+        description: "Build a repeatable process for the moment when everyone else starts guessing.",
+        effect: "+1 Confidence",
+        modifiers: { confidence: 1 },
+      },
+      {
+        id: "endurance",
+        name: "Pack A Lunch",
+        description: "A small amount of planning makes the long days less punishing.",
+        effect: "+10 maximum energy",
+        modifiers: { maxEnergy: 10 },
+      },
+    ],
+  },
+
+  coworkers: {
+    josh: {
+      id: "josh",
+      name: "Josh",
+      role: "Lead Technician",
+      description: "Patient, capable, and somehow blamed whenever the schedule meets reality.",
+      labelerTrustRequired: 2,
+    },
+  },
+
   tutorial: {
     shopLoad: ["Cart frame boxes", "Display boxes", "Accessory tote"],
     garageUnload: ["Cart frame boxes", "Display boxes", "Accessory tote"],
@@ -68,6 +117,30 @@ window.GAME_CONTENT = {
     ],
     rewardTools: ["toolBag", "drill", "handTruck"],
   },
+
+  serviceDispatch: {
+    title: "One Quick Display Swap",
+    summary: "Replace a conference-room display at a Conshohocken office.",
+    swapItems: [
+      { id: "replacement-display", label: "Replacement display" },
+      { id: "mount-hardware", label: "Mount hardware tote" },
+    ],
+  },
+
+  upcomingDispatches: [
+    {
+      title: "University City Site Survey",
+      summary: "Sales measured the wall. The elevator opening is still a developing story.",
+    },
+    {
+      title: "South Philadelphia Commissioning",
+      summary: "The room is marked ready for commissioning. Three ceiling speakers disagree.",
+    },
+    {
+      title: "Warehouse Run",
+      summary: "Locate a replacement power supply reportedly stored in one of the vans.",
+    },
+  ],
 
   scenes: {
     shop: {
@@ -84,6 +157,7 @@ window.GAME_CONTENT = {
         { type: "break-area", x: 285, y: 95, w: 130, h: 70, text: "BREAK AREA", solid: true },
         { type: "van", x: 760, y: 280, w: 150, h: 190, text: "VAN #3", solid: true },
         { type: "floor-note", x: 278, y: 208, w: 150, h: 30, text: "UNLABELED CABLES" },
+        { type: "floor-note", x: 432, y: 246, w: 150, h: 30, text: "CAREER CLIPBOARD" },
       ],
     },
     garage: {
@@ -118,6 +192,18 @@ window.GAME_CONTENT = {
         { type: "build", x: 455, y: 120, w: 150, h: 150, text: "CART 1", solid: true },
         { type: "build", x: 680, y: 290, w: 150, h: 150, text: "CART 2", solid: true },
         { type: "floor-note", x: 345, y: 410, w: 210, h: 30, text: "PACKAGING ACCUMULATES HERE" },
+      ],
+    },
+    serviceOffice: {
+      name: "Conference Room 2B",
+      kicker: "Conshohocken, PA",
+      playerStart: { x: 120, y: 430 },
+      decor: [
+        { type: "label", x: 45, y: 36, w: 250, h: 38, text: "CONFERENCE ROOM 2B" },
+        { type: "desk", x: 80, y: 120, w: 175, h: 92, text: "CLIENT TABLE", solid: true },
+        { type: "boxes", x: 92, y: 315, w: 175, h: 92, text: "REPLACEMENT GEAR", solid: true },
+        { type: "build", x: 680, y: 135, w: 180, h: 155, text: "FAILED DISPLAY", solid: true },
+        { type: "floor-note", x: 390, y: 380, w: 210, h: 30, text: "CABLES LABELED: MOSTLY" },
       ],
     },
   },
