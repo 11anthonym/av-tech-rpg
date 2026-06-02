@@ -13,9 +13,10 @@ game engine.
 ## Save Data
 
 The browser prototype autosaves career progress to local storage under
-`av-tech-rpg-save-v1`. The internal save format is currently version `3`. The
+`av-tech-rpg-save-v1`. The internal save format is currently version `9`. The
 save records the technician, tools, scene, position, carried items, tutorial
-progress, fatigue, cash, flags, and field log.
+progress, fatigue, cash, experience, reputation, field training, flags, and
+field log. It also stores a compact career ledger for completed-job statistics.
 
 When changing saved data structures later:
 
@@ -52,9 +53,40 @@ change gameplay after `app.js` reads them. The first reusable modifiers are:
 - `pickupEnergyReduction`
 - `assemblyEnergyReduction`
 - `garageCarryCapacityBonus`
+- `verificationEnergyReduction`
 
 When a tool needs a new kind of behavior, add its modifier to `data.js`, read it
 through `getToolModifier()` in `app.js`, and keep the tool ID stable.
+
+## Add Career Progression
+
+`data.js` contains the early career ranks and field-training choices. Each rank
+has a level, display name, and experience requirement. Each training choice has
+a stable ID, description, readable effect, and modifier map.
+
+The first reusable training modifiers are:
+
+- `craftsmanship`
+- `confidence`
+- `maxEnergy`
+
+Jobs award experience and reputation in `app.js` when their result is recorded.
+Keep those awards guarded by a saved flag so reopening a result modal cannot
+grant the same progression twice.
+
+Coworker relationship milestones can grant a tool without stocking it at the
+supply counter. Keep the tool's `price` at `0`, give the relationship a readable
+reputation requirement in `data.js`, and award the stable tool ID from the
+shop interaction after the requirement is met.
+
+The Conshohocken dispatch and University City survey each have one lightweight
+preparation choice before travel. Keep preparation effects small and legible:
+one saved flag, one visible payoff during the job, and no separate inventory
+screen.
+
+Add future job ideas to `upcomingDispatches` in `data.js` before implementing
+them. The current-prototype summary renders these as locked previews so players
+can see nearby goals without expanding the playable scope prematurely.
 
 ## Add a Technician
 

@@ -42,6 +42,14 @@ window.GAME_CONTENT = {
       modifiers: { garageCarryCapacityBonus: 1 },
       price: 100,
     },
+    labeler: {
+      id: "labeler",
+      name: "Josh's Rebuilt Labeler",
+      description: "Josh repaired the feed roller and wrote your name inside the battery cover.",
+      effect: "Reduce energy spent verifying signal paths by 2.",
+      modifiers: { verificationEnergyReduction: 2 },
+      price: 0,
+    },
   },
 
   vehicles: {
@@ -57,6 +65,47 @@ window.GAME_CONTENT = {
     },
   },
 
+  career: {
+    ranks: [
+      { level: 1, name: "Helper", xpRequired: 0 },
+      { level: 2, name: "Junior Tech", xpRequired: 80 },
+      { level: 3, name: "Field Tech", xpRequired: 180 },
+    ],
+    trainingChoices: [
+      {
+        id: "craftsmanship",
+        name: "Neater Installs",
+        description: "Practice cable dressing, labeling, and the quiet art of leaving a room better than you found it.",
+        effect: "+1 Craftsmanship",
+        modifiers: { craftsmanship: 1 },
+      },
+      {
+        id: "confidence",
+        name: "Calm Troubleshooting",
+        description: "Build a repeatable process for the moment when everyone else starts guessing.",
+        effect: "+1 Confidence",
+        modifiers: { confidence: 1 },
+      },
+      {
+        id: "endurance",
+        name: "Pack A Lunch",
+        description: "A small amount of planning makes the long days less punishing.",
+        effect: "+10 maximum energy",
+        modifiers: { maxEnergy: 10 },
+      },
+    ],
+  },
+
+  coworkers: {
+    josh: {
+      id: "josh",
+      name: "Josh",
+      role: "Lead Technician",
+      description: "Patient, capable, and somehow blamed whenever the schedule meets reality.",
+      labelerTrustRequired: 2,
+    },
+  },
+
   tutorial: {
     shopLoad: ["Cart frame boxes", "Display boxes", "Accessory tote"],
     garageUnload: ["Cart frame boxes", "Display boxes", "Accessory tote"],
@@ -68,6 +117,101 @@ window.GAME_CONTENT = {
     ],
     rewardTools: ["toolBag", "drill", "handTruck"],
   },
+
+  serviceDispatch: {
+    title: "One Quick Display Swap",
+    summary: "Replace a conference-room display at a Conshohocken office.",
+    swapItems: [
+      { id: "replacement-display", label: "Replacement display" },
+      { id: "mount-hardware", label: "Mount hardware tote" },
+    ],
+  },
+
+  surveyDispatch: {
+    title: "University City Site Survey",
+    summary: "Confirm whether a quoted classroom display can reach its intended wall.",
+    inspections: [
+      {
+        id: "elevator",
+        label: "Freight elevator opening",
+        log: "the proposed display carton is wider than the clear opening",
+        detail: "The freight elevator is functional and reasonably clean. Its clear opening is narrower than the unopened 98-inch display carton shown on the sales sketch.",
+      },
+      {
+        id: "hallway",
+        label: "Hallway turn",
+        log: "the corner removes the optimistic diagonal approach",
+        detail: "The hallway makes a tight turn immediately after the elevator. Angling the carton might have been a theory in a larger hallway. This is not that hallway.",
+      },
+      {
+        id: "wall",
+        label: "Classroom display wall",
+        log: "the wall works, which is how the access problem escaped the quote",
+        detail: "The intended wall has enough space and nearby power. Sales measured this part correctly, then apparently stopped walking.",
+      },
+    ],
+  },
+
+  commissioningDispatch: {
+    title: "South Philadelphia Commissioning",
+    summary: "Commission a training room that is more complete on paper than in person.",
+    checks: [
+      {
+        id: "speaker-zone",
+        label: "Ceiling speaker zone",
+        log: "the third speaker remains silent during the test tone",
+        detail: "The first two ceiling speakers play the test tone. The third contributes a thoughtful silence from the back of the room.",
+      },
+      {
+        id: "termination",
+        label: "Credenza termination",
+        log: "the silent speaker line is loose at the output block",
+        detail: "The third speaker line is landed loosely at the output block. It is close enough to the terminal to suggest optimism, but not close enough to carry audio.",
+      },
+      {
+        id: "drawing",
+        label: "Closeout drawing",
+        log: "the drawing belongs to the mirrored room across the hall",
+        detail: "The closeout drawing is neat, legible, and for the mirrored room across the hall. Somebody changed the room number in the filename and declared victory.",
+      },
+    ],
+  },
+
+  warehouseDispatch: {
+    title: "Warehouse Run",
+    summary: "Find a replacement power supply reportedly stored in one of the vans.",
+    checks: [
+      {
+        id: "staging",
+        label: "Staging shelf",
+        log: "the shelf contains the loaner-drill charger and several remotes for unknown displays",
+        detail: "The staging shelf has the missing charger for the shop loaner drill, three remotes for displays the company does not own, and no matching power supply.",
+      },
+      {
+        id: "van3",
+        label: "Van #3",
+        log: "the van crate contains power supplies for two different models and one empty tester case",
+        detail: "Van #3 has a milk crate labeled MISC. Inside are two power supplies for the wrong display family and a cable-tester case containing no cable tester.",
+      },
+      {
+        id: "returns",
+        label: "Mystery-return pile",
+        log: "the matching power supply is beneath a box labeled HDMI EXTENDERS / DO NOT STOCK / RETURN?",
+        detail: "The correct power supply is in the mystery-return pile beneath a box labeled HDMI EXTENDERS / DO NOT STOCK / RETURN? The question mark appears to be the current inventory process.",
+      },
+    ],
+  },
+
+  upcomingDispatches: [
+    {
+      title: "Navy Yard Secure Access",
+      summary: "Dispatch has a building number. The security booth has a second building number.",
+    },
+    {
+      title: "Cherry Hill Return Toll",
+      summary: "Dispatch accounted for the bridge on the way there.",
+    },
+  ],
 
   scenes: {
     shop: {
@@ -84,6 +228,7 @@ window.GAME_CONTENT = {
         { type: "break-area", x: 285, y: 95, w: 130, h: 70, text: "BREAK AREA", solid: true },
         { type: "van", x: 760, y: 280, w: 150, h: 190, text: "VAN #3", solid: true },
         { type: "floor-note", x: 278, y: 208, w: 150, h: 30, text: "UNLABELED CABLES" },
+        { type: "floor-note", x: 432, y: 246, w: 150, h: 30, text: "CAREER CLIPBOARD" },
       ],
     },
     garage: {
@@ -118,6 +263,45 @@ window.GAME_CONTENT = {
         { type: "build", x: 455, y: 120, w: 150, h: 150, text: "CART 1", solid: true },
         { type: "build", x: 680, y: 290, w: 150, h: 150, text: "CART 2", solid: true },
         { type: "floor-note", x: 345, y: 410, w: 210, h: 30, text: "PACKAGING ACCUMULATES HERE" },
+      ],
+    },
+    serviceOffice: {
+      name: "Conference Room 2B",
+      kicker: "Conshohocken, PA",
+      playerStart: { x: 120, y: 430 },
+      decor: [
+        { type: "label", x: 45, y: 36, w: 250, h: 38, text: "CONFERENCE ROOM 2B" },
+        { type: "desk", x: 80, y: 120, w: 175, h: 92, text: "CLIENT TABLE", solid: true },
+        { type: "boxes", x: 92, y: 315, w: 175, h: 92, text: "REPLACEMENT GEAR", solid: true },
+        { type: "build", x: 680, y: 135, w: 180, h: 155, text: "FAILED DISPLAY", solid: true },
+        { type: "floor-note", x: 390, y: 380, w: 210, h: 30, text: "CABLES LABELED: MOSTLY" },
+      ],
+    },
+    universitySurvey: {
+      name: "Campus Classroom Access",
+      kicker: "University City, Philadelphia",
+      playerStart: { x: 120, y: 430 },
+      decor: [
+        { type: "label", x: 45, y: 36, w: 270, h: 38, text: "CAMPUS CLASSROOM ACCESS" },
+        { type: "desk", x: 82, y: 112, w: 190, h: 92, text: "FACILITIES DESK", solid: true },
+        { type: "elevator", x: 735, y: 90, w: 155, h: 185, text: "FREIGHT ELEVATOR", solid: true },
+        { type: "build", x: 645, y: 350, w: 225, h: 88, text: "DISPLAY WALL", solid: true },
+        { type: "floor-note", x: 390, y: 235, w: 175, h: 32, text: "TIGHT HALLWAY TURN" },
+        { type: "floor-note", x: 385, y: 390, w: 190, h: 30, text: "SALES SKETCH: ONE ARROW" },
+      ],
+    },
+    southPhillyCommissioning: {
+      name: "Training Room 3B",
+      kicker: "South Philadelphia",
+      playerStart: { x: 120, y: 430 },
+      decor: [
+        { type: "label", x: 45, y: 36, w: 245, h: 38, text: "TRAINING ROOM 3B" },
+        { type: "desk", x: 78, y: 110, w: 185, h: 92, text: "CLIENT TABLE", solid: true },
+        { type: "counter", x: 665, y: 325, w: 205, h: 105, text: "AV CREDENZA", solid: true },
+        { type: "build", x: 390, y: 105, w: 185, h: 82, text: "CEILING SPEAKER ZONE" },
+        { type: "floor-note", x: 430, y: 250, w: 185, h: 30, text: "TEST TONE: 2 OF 3" },
+        { type: "floor-note", x: 300, y: 395, w: 230, h: 30, text: "CLOSEOUT DRAWING / ROOM 3A?" },
+        { type: "floor-note", x: 690, y: 465, w: 170, h: 30, text: "TICKET STATUS: CLOSED" },
       ],
     },
   },
