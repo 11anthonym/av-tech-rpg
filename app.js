@@ -15,6 +15,7 @@ function createInitialState() {
     assembled: [],
     serviceDelivered: [],
     serviceInstalled: [],
+    surveyInspections: [],
     energy: 100,
     burnout: 0,
     cash: 0,
@@ -31,6 +32,9 @@ function createInitialState() {
       workOrdersReviewed: 0,
       lunchesPacked: 0,
       coffeesBought: 0,
+      surveysCompleted: 0,
+      accessRisksDocumented: 0,
+      quotesTrustedAnyway: 0,
     },
     clock: "MON 7:11 AM",
     flags: {},
@@ -109,7 +113,8 @@ function inferSavedCash(savedGame) {
 function inferSavedXp(savedGame) {
   if (typeof savedGame.xp === "number") return savedGame.xp;
   return (savedGame.flags?.finished ? 40 : 0)
-    + (savedGame.flags?.serviceComplete ? (savedGame.flags.serviceApproach === "verify" ? 50 : 40) : 0);
+    + (savedGame.flags?.serviceComplete ? (savedGame.flags.serviceApproach === "verify" ? 50 : 40) : 0)
+    + (savedGame.flags?.surveyComplete ? (savedGame.flags.surveyApproach === "pushback" ? 60 : savedGame.flags.surveyApproach === "document" ? 55 : 35) : 0);
 }
 
 function inferSavedReputation(savedGame) {
@@ -132,6 +137,15 @@ function inferSavedReputation(savedGame) {
       reputation.management += 1;
     }
   }
+  if (savedGame.flags?.surveyComplete) {
+    if (savedGame.flags.surveyApproach === "trust") {
+      reputation.management += 1;
+    } else {
+      reputation.clients += 2;
+      reputation.coworkers += 1;
+      reputation.management -= 1;
+    }
+  }
   return reputation;
 }
 
@@ -145,6 +159,9 @@ function inferSavedStats(savedGame) {
     workOrdersReviewed: 0,
     lunchesPacked: 0,
     coffeesBought: 0,
+    surveysCompleted: 0,
+    accessRisksDocumented: 0,
+    quotesTrustedAnyway: 0,
   };
   if (savedGame.stats) return { ...stats, ...savedGame.stats };
   if (savedGame.flags?.finished) {
@@ -159,6 +176,11 @@ function inferSavedStats(savedGame) {
   if (savedGame.flags?.servicePreparation === "review") stats.workOrdersReviewed += 1;
   if (savedGame.flags?.servicePreparation === "lunch") stats.lunchesPacked += 1;
   if (savedGame.flags?.servicePreparation === "coffee") stats.coffeesBought += 1;
+  if (savedGame.flags?.surveyComplete) {
+    stats.surveysCompleted += 1;
+    if (savedGame.flags.surveyApproach === "trust") stats.quotesTrustedAnyway += 1;
+    else stats.accessRisksDocumented += 1;
+  }
   return stats;
 }
 
@@ -197,7 +219,7 @@ function refreshTitleScreen() {
 
 function serializeGame() {
   return {
-    version: 6,
+    version: 7,
     technicianId: state.technician.id,
     sceneId: state.sceneId,
     player: state.player,
@@ -208,6 +230,7 @@ function serializeGame() {
     assembled: state.assembled,
     serviceDelivered: state.serviceDelivered,
     serviceInstalled: state.serviceInstalled,
+    surveyInspections: state.surveyInspections,
     energy: state.energy,
     burnout: state.burnout,
     cash: state.cash,
@@ -367,6 +390,7 @@ function continueGame() {
   if (flags.finished) flags.tutorialPaid = true;
   if (flags.finished) flags.tutorialProgressAwarded = true;
   if (flags.serviceComplete) flags.serviceProgressAwarded = true;
+  if (flags.surveyComplete) flags.surveyProgressAwarded = true;
   if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
     flags.serviceCallbackPending = true;
   }
@@ -376,9 +400,10 @@ function continueGame() {
     carry: normalizeCarry(savedGame.carry),
     serviceDelivered: savedGame.serviceDelivered || [],
     serviceInstalled: savedGame.serviceInstalled || [],
+    surveyInspections: savedGame.surveyInspections || [],
     cash: migratedCash,
     xp: migratedXp,
-    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0),
+    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0),
     reputation: migratedReputation,
     training: savedGame.training || [],
     stats: migratedStats,
@@ -403,6 +428,9 @@ function resumeRequiredPrompt() {
   }
   if (state.sceneId === "serviceOffice" && state.serviceInstalled.length === content.serviceDispatch.swapItems.length && !state.flags.serviceComplete) {
     return showServiceResults();
+  }
+  if (state.sceneId === "universitySurvey" && state.surveyInspections.length === content.surveyDispatch.inspections.length && !state.flags.surveyComplete) {
+    return showSurveyReportChoice();
   }
 }
 
@@ -732,6 +760,9 @@ function getCareerLedgerMarkup() {
       <span>Work orders reviewed</span><strong>${state.stats.workOrdersReviewed}</strong>
       <span>Lunches packed</span><strong>${state.stats.lunchesPacked}</strong>
       <span>Coffee jar contributions</span><strong>${state.stats.coffeesBought}</strong>
+      <span>Site surveys completed</span><strong>${state.stats.surveysCompleted}</strong>
+      <span>Access risks documented</span><strong>${state.stats.accessRisksDocumented}</strong>
+      <span>Quotes trusted anyway</span><strong>${state.stats.quotesTrustedAnyway}</strong>
     </div>
   `;
 }
@@ -936,8 +967,16 @@ function takeBreak() {
 }
 
 function showDispatchPreview() {
-  if (state.flags.serviceComplete) {
+  if (state.flags.surveyComplete) {
     return showPrototypeSummary();
+  }
+  if (state.flags.serviceComplete) {
+    if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) {
+      return notify("The Conshohocken callback note is still clipped to Josh's bench.");
+    }
+    if (!state.flags.joshServiceDebriefed) return notify("Check in with Josh before dispatch adds another stop.");
+    if (hasPendingTraining()) return notify("Mark your field-training focus on the clipboard before taking another dispatch.");
+    return showSurveyDispatchPreview();
   }
   showModal({
     kicker: "Dispatch Board",
@@ -980,7 +1019,7 @@ function showPrototypeSummary() {
       <p><strong>Prototype playtest questions:</strong></p>
       <ul class="modal-list">
         <li><strong>Did the walking stay purposeful?</strong><span>Loading and carrying should explain the job without becoming repetitive.</span></li>
-        <li><strong>Did your choices feel visible?</strong><span>Your tool, preparation, and diagnosis choices should change how the second dispatch plays.</span></li>
+        <li><strong>Did your choices feel visible?</strong><span>Your tools, preparation, diagnosis, and survey report should change how the workday plays.</span></li>
         <li><strong>Did progression make you curious?</strong><span>The shop, clipboard, and locked dispatches should make one more workday sound appealing.</span></li>
       </ul>
       <blockquote>Dispatch note: "Please remain flexible. Several schedules are currently being finalized retroactively."</blockquote>
@@ -990,6 +1029,201 @@ function showPrototypeSummary() {
       { label: "Return To Shop", className: "secondary-button", onClick: render },
       { label: "Return To Title Screen", className: "secondary-button", onClick: showTitleScreen },
     ],
+  });
+}
+
+function showSurveyDispatchPreview() {
+  showModal({
+    kicker: "Dispatch Board",
+    title: content.surveyDispatch.title,
+    body: `
+      <p><strong>Site Survey:</strong> Confirm access and mounting conditions for a University City classroom display.</p>
+      <p>Sales already measured the wall. The facilities contact asked whether the quoted display will fit through the building.</p>
+      ${state.flags.surveyPreparation ? `<p class="muted">Preparation selected: ${getSurveyPreparationLabel()}</p>` : ""}
+      <blockquote>Sales note: "Should be straightforward. Same basic idea as a display we installed somewhere else."</blockquote>
+    `,
+    actions: [
+      { label: "Accept Site Survey", onClick: () => state.flags.surveyPreparation ? promptSurveyTravel() : showSurveyPreparation() },
+      { label: "Return to Shop", className: "secondary-button" },
+    ],
+  });
+}
+
+function getSurveyPreparationLabel() {
+  return {
+    sketch: "Reviewed sales sketch",
+    measure: "Found shop tape measure",
+    none: "Left with the forwarded email",
+  }[state.flags.surveyPreparation] || "None";
+}
+
+function showSurveyPreparation() {
+  showModal({
+    kicker: "Before You Leave",
+    title: "Prepare For The Site Survey",
+    body: `
+      <p>The forwarded work order says to confirm the wall dimensions. Facilities also asked about the delivery path, which is not mentioned in the quote.</p>
+      <p class="muted">Take one small preparation step before heading to University City.</p>
+    `,
+    actions: [
+      { label: "Review the sales sketch", onClick: () => chooseSurveyPreparation("sketch") },
+      { label: "Find the shop tape measure", className: "secondary-button", onClick: () => chooseSurveyPreparation("measure") },
+      { label: "Leave with the forwarded email", className: "secondary-button", onClick: () => chooseSurveyPreparation("none") },
+    ],
+  });
+}
+
+function chooseSurveyPreparation(preparation) {
+  state.flags.surveyPreparation = preparation;
+  let title = "The Email Will Have To Do";
+  let body = `<p>The forwarded email contains a room number and the phrase "standard display." Nobody defined standard.</p>`;
+  if (preparation === "sketch") {
+    title = "Sales Sketch Located";
+    body = `
+      <p>The sketch shows a 98-inch display on the classroom wall. The delivery path is represented by an arrow entering from the edge of the page.</p>
+      <p class="muted">Filing a careful report will cost 1 less energy.</p>
+    `;
+    addLog("Reviewed the sales sketch. The proposed 98-inch display arrives by way of a confident arrow.");
+  }
+  if (preparation === "measure") {
+    title = "Tape Measure Located";
+    body = `
+      <p>You find the shop tape measure in a box labeled AUDIO. Somebody scratched out another technician's initials and wrote COMPANY.</p>
+      <p class="muted">Each survey inspection will cost 1 less energy.</p>
+    `;
+    addLog("Found the company tape measure in a box labeled AUDIO.");
+  }
+  if (preparation === "none") addLog("Left for University City with the forwarded sales email.");
+  render();
+  showModal({
+    kicker: "Preparation Selected",
+    title,
+    body,
+    actions: [{ label: "Head To University City", onClick: promptSurveyTravel }],
+  });
+}
+
+function promptSurveyTravel() {
+  showModal({
+    kicker: "Route Summary",
+    title: "Broomall -> University City",
+    body: `
+      <p><strong>Dispatch estimate:</strong> Measure one wall. Confirm install conditions. Do not overcomplicate the quote.</p>
+      <div class="route-line"><span>BROOMALL</span><i></i><span>UNIVERSITY CITY</span></div>
+    `,
+    actions: [{
+      label: "Drive To Campus",
+      onClick: () => {
+        state.flags.surveyStarted = true;
+        setClock(`${state.clock.slice(0, 3)} 1:18 PM`);
+        addLog("Arrived in University City for a classroom display site survey.");
+        enterScene("universitySurvey");
+      },
+    }],
+  });
+}
+
+function getSurveyInspectionEnergyCost() {
+  return Math.max(0, 2 - (state.flags.surveyPreparation === "measure" ? 1 : 0));
+}
+
+function getSurveyReportEnergyCost(baseCost) {
+  return Math.max(0, baseCost - (state.flags.surveyPreparation === "sketch" ? 1 : 0));
+}
+
+function inspectSurveyConstraint(inspectionId) {
+  const inspection = content.surveyDispatch.inspections.find((item) => item.id === inspectionId);
+  if (!inspection || state.surveyInspections.includes(inspectionId)) return notify(`${inspection?.label || "That condition"} is already in your notes.`);
+  state.surveyInspections.push(inspectionId);
+  changeEnergy(-getSurveyInspectionEnergyCost());
+  addLog(`${inspection.label} checked: ${inspection.log}`);
+  render();
+  const allChecked = state.surveyInspections.length === content.surveyDispatch.inspections.length;
+  showModal({
+    kicker: "Survey Note",
+    title: inspection.label,
+    body: `
+      <p>${inspection.detail}</p>
+      ${allChecked ? `<p class="muted">You have enough information. Return to the facilities contact and file the survey report.</p>` : ""}
+    `,
+    actions: [{ label: allChecked ? "Return To Facilities Contact" : "Keep Surveying", onClick: render }],
+  });
+}
+
+function showSurveyReportChoice() {
+  showModal({
+    kicker: "Survey Report",
+    title: "The Wall Is Not The Only Dimension",
+    body: `
+      <p>The 98-inch display fits on the classroom wall. It does not fit through the elevator opening, and the hallway turn offers no useful miracle.</p>
+      <p>Sales wants the survey closed today because the quote is "basically approved."</p>
+    `,
+    actions: [
+      { label: `Document the access constraint (-${getSurveyReportEnergyCost(3)} energy)`, onClick: () => finishSurvey("document") },
+      ...(getConfidence() >= 2 ? [{
+        label: `Call sales and push back calmly (-${getSurveyReportEnergyCost(2)} energy)`,
+        className: "secondary-button",
+        onClick: () => finishSurvey("pushback"),
+      }] : []),
+      { label: "Trust the quote and mark survey complete", className: "secondary-button", onClick: () => finishSurvey("trust") },
+    ],
+  });
+}
+
+function finishSurvey(approach) {
+  const careful = approach !== "trust";
+  const xp = approach === "pushback" ? 60 : approach === "document" ? 55 : 35;
+  if (careful) changeEnergy(-getSurveyReportEnergyCost(approach === "pushback" ? 2 : 3));
+  state.flags.surveyComplete = true;
+  state.flags.surveyApproach = approach;
+  state.flags.prototypeSummaryViewed = false;
+  setClock(`${state.clock.slice(0, 3)} ${approach === "trust" ? "2:06" : "2:21"} PM`);
+  if (!state.flags.surveyPaid) {
+    state.cash += 72;
+    state.flags.surveyPaid = true;
+  }
+  if (!state.flags.surveyProgressAwarded) {
+    awardCareerProgress({
+      xp,
+      reputation: careful
+        ? { clients: 2, coworkers: 1, management: -1 }
+        : { clients: 0, coworkers: 0, management: 1 },
+      source: content.surveyDispatch.title,
+    });
+    state.flags.surveyProgressAwarded = true;
+  }
+  if (!state.flags.surveyStatsRecorded) {
+    state.stats.surveysCompleted += 1;
+    if (careful) state.stats.accessRisksDocumented += 1;
+    else state.stats.quotesTrustedAnyway += 1;
+    state.flags.surveyStatsRecorded = true;
+  }
+  addLog(careful
+    ? "Documented the University City access problem before it became an install-day problem."
+    : "Marked the University City survey complete without adding the access problem to the quote.");
+  render();
+  showModal({
+    kicker: "Site Survey Complete",
+    title: approach === "pushback" ? "The Quote Is Paused Before The Damage" : approach === "document" ? "The Constraint Is Now Somebody's Email" : "The Quote Remains Basically Approved",
+    body: `
+      <div class="results-grid">
+        <span>Survey wages</span><strong>+$72</strong>
+        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Experience</span><strong>+${xp} XP</strong>
+        <span>Preparation</span><strong>${getSurveyPreparationLabel()}</strong>
+        <span>Report</span><strong>${approach === "pushback" ? "Sales called directly" : approach === "document" ? "Access risk documented" : "Quoted plan accepted"}</strong>
+      </div>
+      ${approach === "trust"
+        ? `<blockquote>Management note: "Thanks for keeping the survey efficient. Installation can confirm final access conditions onsite."</blockquote>`
+        : `<blockquote>Management note: "Please avoid introducing unnecessary complexity after sales has aligned the client around a solution."</blockquote>`}
+    `,
+    actions: [{
+      label: "Return To Broomall Shop",
+      onClick: () => {
+        addLog("Returned to the Broomall shop after the University City survey.");
+        enterScene("shop");
+      },
+    }],
   });
 }
 
@@ -1387,6 +1621,51 @@ function getInteractions() {
     ];
   }
 
+  if (state.sceneId === "universitySurvey") {
+    const allChecked = state.surveyInspections.length === content.surveyDispatch.inspections.length;
+    return [
+      {
+        x: 310, y: 185, label: allChecked ? "File survey report" : "Talk to facilities contact", npc: "CLIENT",
+        action: () => {
+          if (allChecked) return showSurveyReportChoice();
+          if (state.flags.surveyBrief) return notify('Facilities contact: "The wall is upstairs. The elevator is the reason I called twice."');
+          state.flags.surveyBrief = true;
+          addLog("Facilities asked whether the quoted display can actually reach the classroom.");
+          showModal({
+            kicker: "Facilities Contact",
+            title: "The Wall Was Measured",
+            body: `
+              <p>"Sales sent us a sketch for a new classroom display. The wall is fine. I asked whether anybody checked the elevator and they said your survey would confirm final conditions."</p>
+              <p class="muted">Inspect the freight elevator opening, hallway turn, and intended display wall.</p>
+            `,
+            actions: [{ label: "Start Site Survey", onClick: render }],
+          });
+        },
+      },
+      {
+        x: 700, y: 235, label: "Inspect freight elevator opening",
+        action: () => {
+          if (!state.flags.surveyBrief) return notify("Check in with the facilities contact first.");
+          inspectSurveyConstraint("elevator");
+        },
+      },
+      {
+        x: 475, y: 275, label: "Inspect hallway turn",
+        action: () => {
+          if (!state.flags.surveyBrief) return notify("Check in with the facilities contact first.");
+          inspectSurveyConstraint("hallway");
+        },
+      },
+      {
+        x: 750, y: 465, label: "Inspect classroom display wall",
+        action: () => {
+          if (!state.flags.surveyBrief) return notify("Check in with the facilities contact first.");
+          inspectSurveyConstraint("wall");
+        },
+      },
+    ];
+  }
+
   return [
     ...(!state.flags.roomBrief && !state.flags.supervisorLeft ? [{
       x: 320, y: 185, label: "Talk to supervisor", npc: "SUP",
@@ -1477,8 +1756,9 @@ function getObjective() {
     if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) return "Talk to Josh about the Conshohocken callback.";
     if (state.flags.serviceComplete && !state.flags.joshServiceDebriefed) return "Check in with Josh at the workbench.";
     if (state.flags.serviceComplete && hasPendingTraining()) return "Choose a field-training focus from the career clipboard.";
-    if (state.flags.serviceComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
-    if (state.flags.serviceComplete) return "Current prototype complete. Explore the shop.";
+    if (state.flags.serviceComplete && !state.flags.surveyComplete) return "Review the University City site survey on the dispatch board.";
+    if (state.flags.surveyComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
+    if (state.flags.surveyComplete) return "Current prototype complete. Explore the shop.";
     if (state.flags.finished) return "Prepare for the Conshohocken service call.";
     if (!state.flags.shopBrief) return "Find your supervisor.";
     if (state.loaded.length < content.tutorial.shopLoad.length) return `Load staged equipment into Van #3 (${state.loaded.length}/3).`;
@@ -1497,6 +1777,13 @@ function getObjective() {
     if (!state.flags.serviceInspected) return "Inspect the failed display.";
     if (state.flags.serviceComplete) return "Review the completed service call.";
     return `Install replacement gear (${state.serviceInstalled.length}/${content.serviceDispatch.swapItems.length}).`;
+  }
+  if (state.sceneId === "universitySurvey") {
+    if (!state.flags.surveyBrief) return "Check in with the facilities contact.";
+    if (state.surveyInspections.length < content.surveyDispatch.inspections.length) {
+      return `Inspect the campus access path (${state.surveyInspections.length}/${content.surveyDispatch.inspections.length}).`;
+    }
+    return "Return to the facilities contact and file the survey report.";
   }
   if (!state.flags.roomBrief) return "Ask the supervisor how to start the cart build.";
   if (state.assembled.length < 2) return `Assemble Cart 1 with your supervisor (${state.assembled.length}/2).`;
@@ -1666,17 +1953,25 @@ function render() {
   elements.sceneName.textContent = scene.name;
   elements.clock.textContent = state.clock;
   const serviceActive = state.sceneId === "serviceOffice";
-  elements.jobStatus.textContent = serviceActive
-    ? "SERVICE CALL"
-    : state.flags.serviceComplete
-      ? "DISPATCH COMPLETE"
+  const surveyActive = state.sceneId === "universitySurvey";
+  const activeDispatch = surveyActive || state.flags.surveyStarted || state.flags.surveyComplete
+    ? content.surveyDispatch
+    : serviceActive || state.flags.serviceStarted || state.flags.serviceComplete
+      ? content.serviceDispatch
+      : { title: "Two Quick Carts", summary: "Build two mobile video conferencing carts at a Center City East office." };
+  elements.jobStatus.textContent = surveyActive
+    ? "SITE SURVEY"
+    : serviceActive
+      ? "SERVICE CALL"
+      : state.flags.surveyComplete
+        ? "DISPATCH COMPLETE"
+        : state.flags.serviceComplete
+          ? "SHOP HUB"
       : state.flags.finished
         ? "SHOP HUB"
         : "FIRST DAY";
-  elements.dispatchTitle.textContent = serviceActive ? content.serviceDispatch.title : "Two Quick Carts";
-  elements.dispatchSummary.textContent = serviceActive
-    ? content.serviceDispatch.summary
-    : "Build two mobile video conferencing carts at a Center City East office.";
+  elements.dispatchTitle.textContent = activeDispatch.title;
+  elements.dispatchSummary.textContent = activeDispatch.summary;
   elements.objective.textContent = getObjective();
   elements.taskCopy.textContent = getObjective();
   renderDecor();

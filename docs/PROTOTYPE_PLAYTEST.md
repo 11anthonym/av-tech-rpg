@@ -15,7 +15,9 @@ The playable slice now has:
    tool payoffs, and a possible callback.
 3. A walkable shop hub with rest, purchases, career XP, reputation, one training
    focus, and a small Josh relationship milestone.
-4. A completion card with a career snapshot, nearby locked work, and playtest
+4. A University City site survey with three observations, a short preparation
+   choice, and a management-versus-field-judgment report decision.
+5. A completion card with a career snapshot, nearby locked work, and playtest
    questions.
 
 ## Playtest Questions
@@ -28,17 +30,18 @@ Watch a player complete the current build before expanding it. Look for:
 - Does the preparation choice feel like a small plan rather than a menu tax?
 - Is verifying the signal path clearly different from trusting the ticket?
 - Does the shop feel like a place worth returning to?
+- Does the site survey feel different from install and service work?
+- Is the confidence-based sales pushback option a satisfying training payoff?
 - Are the AV jokes legible to newcomers and recognizable to working techs?
 - Does the completion card make players curious about one more dispatch?
 
 Keep notes on hesitation, missed interactions, and repeated actions. Prefer
 fixing unclear or tedious moments before adding systems.
 
-## Next Content Experiment
+## Current Content Experiment
 
-After one short playtest pass, add only the **University City Site Survey**.
-This is the best third dispatch because it tests a different job family without
-needing a deeper simulation.
+The **University City Site Survey** is the third dispatch. It tests a different
+job family without needing a deeper simulation.
 
 Keep it compact:
 
@@ -50,15 +53,17 @@ Keep it compact:
 5. Return with a short result that affects client, coworker, or management
    reputation.
 
-The survey should reward observation and calm pushback. It should not add a
+The survey rewards observation and calm pushback. It deliberately avoids a
 measurement minigame, a new inventory screen, another Josh arc, or a large map.
+
+## Next Experiment
+
+After a playtest pass, build only the **South Philadelphia Commissioning**
+dispatch if the survey proves that a second non-install job family is fun. Use
+it to test incomplete-site troubleshooting.
 
 ## Later Experiments
 
-Only build these after the survey proves that a second non-install job family is
-fun:
-
-- **South Philadelphia Commissioning:** Test incomplete-site troubleshooting.
 - **Warehouse Run:** Test shop exploration and van organization as a short
   change of pace.
 - **Second technician profile:** Test whether starting stats create a meaningfully

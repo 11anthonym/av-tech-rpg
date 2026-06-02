@@ -127,11 +127,32 @@ window.GAME_CONTENT = {
     ],
   },
 
+  surveyDispatch: {
+    title: "University City Site Survey",
+    summary: "Confirm whether a quoted classroom display can reach its intended wall.",
+    inspections: [
+      {
+        id: "elevator",
+        label: "Freight elevator opening",
+        log: "the proposed display carton is wider than the clear opening",
+        detail: "The freight elevator is functional and reasonably clean. Its clear opening is narrower than the unopened 98-inch display carton shown on the sales sketch.",
+      },
+      {
+        id: "hallway",
+        label: "Hallway turn",
+        log: "the corner removes the optimistic diagonal approach",
+        detail: "The hallway makes a tight turn immediately after the elevator. Angling the carton might have been a theory in a larger hallway. This is not that hallway.",
+      },
+      {
+        id: "wall",
+        label: "Classroom display wall",
+        log: "the wall works, which is how the access problem escaped the quote",
+        detail: "The intended wall has enough space and nearby power. Sales measured this part correctly, then apparently stopped walking.",
+      },
+    ],
+  },
+
   upcomingDispatches: [
-    {
-      title: "University City Site Survey",
-      summary: "Sales measured the wall. The elevator opening is still a developing story.",
-    },
     {
       title: "South Philadelphia Commissioning",
       summary: "The room is marked ready for commissioning. Three ceiling speakers disagree.",
@@ -204,6 +225,19 @@ window.GAME_CONTENT = {
         { type: "boxes", x: 92, y: 315, w: 175, h: 92, text: "REPLACEMENT GEAR", solid: true },
         { type: "build", x: 680, y: 135, w: 180, h: 155, text: "FAILED DISPLAY", solid: true },
         { type: "floor-note", x: 390, y: 380, w: 210, h: 30, text: "CABLES LABELED: MOSTLY" },
+      ],
+    },
+    universitySurvey: {
+      name: "Campus Classroom Access",
+      kicker: "University City, Philadelphia",
+      playerStart: { x: 120, y: 430 },
+      decor: [
+        { type: "label", x: 45, y: 36, w: 270, h: 38, text: "CAMPUS CLASSROOM ACCESS" },
+        { type: "desk", x: 82, y: 112, w: 190, h: 92, text: "FACILITIES DESK", solid: true },
+        { type: "elevator", x: 735, y: 90, w: 155, h: 185, text: "FREIGHT ELEVATOR", solid: true },
+        { type: "build", x: 645, y: 350, w: 225, h: 88, text: "DISPLAY WALL", solid: true },
+        { type: "floor-note", x: 390, y: 235, w: 175, h: 32, text: "TIGHT HALLWAY TURN" },
+        { type: "floor-note", x: 385, y: 390, w: 190, h: 30, text: "SALES SKETCH: ONE ARROW" },
       ],
     },
   },

@@ -13,7 +13,7 @@ game engine.
 ## Save Data
 
 The browser prototype autosaves career progress to local storage under
-`av-tech-rpg-save-v1`. The internal save format is currently version `6`. The
+`av-tech-rpg-save-v1`. The internal save format is currently version `7`. The
 save records the technician, tools, scene, position, carried items, tutorial
 progress, fatigue, cash, experience, reputation, field training, flags, and
 field log. It also stores a compact career ledger for completed-job statistics.
@@ -79,9 +79,10 @@ supply counter. Keep the tool's `price` at `0`, give the relationship a readable
 reputation requirement in `data.js`, and award the stable tool ID from the
 shop interaction after the requirement is met.
 
-The Conshohocken dispatch also has one lightweight preparation choice before
-travel. Keep preparation effects small and legible: one saved flag, one visible
-payoff during the job, and no separate inventory screen.
+The Conshohocken dispatch and University City survey each have one lightweight
+preparation choice before travel. Keep preparation effects small and legible:
+one saved flag, one visible payoff during the job, and no separate inventory
+screen.
 
 Add future job ideas to `upcomingDispatches` in `data.js` before implementing
 them. The current-prototype summary renders these as locked previews so players

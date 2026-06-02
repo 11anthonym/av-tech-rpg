@@ -42,9 +42,13 @@ coworker relationship arc and a practical hand-me-down tool while management
 continues to blame him for problems created by the shop's own planning. Before
 the service dispatch, the player can make one lightweight preparation choice:
 review the work order, pack lunch, buy coffee, ask Josh for advice, or leave
-immediately. The shop clipboard records a compact career ledger, and the current
-prototype ends with a snapshot of the player's progress plus locked previews of
-future dispatches.
+immediately. The shop clipboard records a compact career ledger. A University
+City site survey then asks the player to check an elevator, hallway turn, and
+classroom wall after sales measured only the dimension that made the quote look
+straightforward. The player can document the access problem, use confidence
+training to push back calmly, or keep management happy by leaving the problem
+for install day. The slice ends with a snapshot of the player's progress plus
+locked previews of future dispatches.
 
 ## Design Notes
 
