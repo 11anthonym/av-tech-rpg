@@ -209,11 +209,32 @@ window.GAME_CONTENT = {
     ],
   },
 
+  secureAccessDispatch: {
+    title: "Navy Yard Secure Access",
+    summary: "Deliver a small rack update to a secure building after dispatch sends the wrong access note.",
+    checks: [
+      {
+        id: "gate",
+        label: "Security gate",
+        log: "the guard has the company name but not today's visitor list",
+        detail: "The guard recognizes the company because Josh was here last month, which is not the same as having your name on today's visitor list.",
+      },
+      {
+        id: "building",
+        label: "Building number",
+        log: "the dispatch ticket and the security booth disagree by one building",
+        detail: "Dispatch wrote Building 12. Security says the work order is for Building 13. The buildings are close enough to be annoying and far enough to matter.",
+      },
+      {
+        id: "escort",
+        label: "Escort requirement",
+        log: "the telecom room requires an escort who is currently in another meeting",
+        detail: "The telecom room is behind a badge reader and a policy nobody attached to the ticket. The escort is available after a meeting labeled 'quick sync.'",
+      },
+    ],
+  },
+
   upcomingDispatches: [
-    {
-      title: "Navy Yard Secure Access",
-      summary: "Dispatch has a building number. The security booth has a second building number.",
-    },
     {
       title: "Cherry Hill Return Toll",
       summary: "Dispatch accounted for the bridge on the way there.",
@@ -309,6 +330,20 @@ window.GAME_CONTENT = {
         { type: "floor-note", x: 430, y: 250, w: 185, h: 30, text: "TEST TONE: 2 OF 3" },
         { type: "floor-note", x: 300, y: 395, w: 230, h: 30, text: "CLOSEOUT DRAWING / ROOM 3A?" },
         { type: "floor-note", x: 690, y: 465, w: 170, h: 30, text: "TICKET STATUS: CLOSED" },
+      ],
+    },
+    navyYardAccess: {
+      name: "Secure Loading Dock",
+      kicker: "Navy Yard, Philadelphia",
+      playerStart: { x: 120, y: 430 },
+      decor: [
+        { type: "label", x: 45, y: 36, w: 250, h: 38, text: "NAVY YARD SECURE ACCESS" },
+        { type: "desk", x: 78, y: 112, w: 185, h: 92, text: "SECURITY BOOTH", solid: true },
+        { type: "elevator", x: 735, y: 90, w: 155, h: 185, text: "LOADING DOCK", solid: true },
+        { type: "build", x: 630, y: 345, w: 225, h: 88, text: "TELECOM ROOM", solid: true },
+        { type: "floor-note", x: 360, y: 240, w: 190, h: 32, text: "BUILDING 12 / 13?" },
+        { type: "floor-note", x: 410, y: 390, w: 210, h: 30, text: "ESCORT REQUIRED" },
+        { type: "floor-note", x: 685, y: 465, w: 175, h: 30, text: "ETA: STILL OPTIMISTIC" },
       ],
     },
   },

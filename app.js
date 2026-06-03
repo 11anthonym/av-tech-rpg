@@ -18,6 +18,7 @@ function createInitialState() {
     surveyInspections: [],
     commissioningChecks: [],
     warehouseChecks: [],
+    secureAccessChecks: [],
     energy: 100,
     burnout: 0,
     cash: 0,
@@ -43,6 +44,9 @@ function createInitialState() {
       warehouseRunsCompleted: 0,
       stockroomLabelsFixed: 0,
       mysteryBoxesLeft: 0,
+      secureAccessJobsCompleted: 0,
+      accessDelaysDocumented: 0,
+      unpaidDelaysAbsorbed: 0,
     },
     clock: "MON 7:11 AM",
     flags: {},
@@ -124,7 +128,8 @@ function inferSavedXp(savedGame) {
     + (savedGame.flags?.serviceComplete ? (savedGame.flags.serviceApproach === "verify" ? 50 : 40) : 0)
     + (savedGame.flags?.surveyComplete ? (savedGame.flags.surveyApproach === "pushback" ? 60 : savedGame.flags.surveyApproach === "document" ? 55 : 35) : 0)
     + (savedGame.flags?.commissioningComplete ? (savedGame.flags.commissioningApproach === "craft" ? 65 : savedGame.flags.commissioningApproach === "repair" ? 60 : 40) : 0)
-    + (savedGame.flags?.warehouseComplete ? (savedGame.flags.warehouseApproach === "label" ? 50 : 35) : 0);
+    + (savedGame.flags?.warehouseComplete ? (savedGame.flags.warehouseApproach === "label" ? 50 : 35) : 0)
+    + (savedGame.flags?.secureAccessComplete ? (savedGame.flags.secureAccessApproach === "pushback" ? 60 : savedGame.flags.secureAccessApproach === "document" ? 55 : 35) : 0);
 }
 
 function inferSavedReputation(savedGame) {
@@ -173,6 +178,15 @@ function inferSavedReputation(savedGame) {
       reputation.management += 1;
     }
   }
+  if (savedGame.flags?.secureAccessComplete) {
+    if (savedGame.flags.secureAccessApproach === "absorb") {
+      reputation.management += 1;
+    } else {
+      reputation.clients += 1;
+      reputation.coworkers += 1;
+      reputation.management += savedGame.flags.secureAccessApproach === "pushback" ? -2 : -1;
+    }
+  }
   return reputation;
 }
 
@@ -195,6 +209,9 @@ function inferSavedStats(savedGame) {
     warehouseRunsCompleted: 0,
     stockroomLabelsFixed: 0,
     mysteryBoxesLeft: 0,
+    secureAccessJobsCompleted: 0,
+    accessDelaysDocumented: 0,
+    unpaidDelaysAbsorbed: 0,
   };
   if (savedGame.stats) return { ...stats, ...savedGame.stats };
   if (savedGame.flags?.finished) {
@@ -228,6 +245,11 @@ function inferSavedStats(savedGame) {
     stats.warehouseRunsCompleted += 1;
     if (savedGame.flags.warehouseApproach === "label") stats.stockroomLabelsFixed += 1;
     else stats.mysteryBoxesLeft += 1;
+  }
+  if (savedGame.flags?.secureAccessComplete) {
+    stats.secureAccessJobsCompleted += 1;
+    if (savedGame.flags.secureAccessApproach === "absorb") stats.unpaidDelaysAbsorbed += 1;
+    else stats.accessDelaysDocumented += 1;
   }
   return stats;
 }
@@ -267,7 +289,7 @@ function refreshTitleScreen() {
 
 function serializeGame() {
   return {
-    version: 9,
+    version: 10,
     technicianId: state.technician.id,
     sceneId: state.sceneId,
     player: state.player,
@@ -281,6 +303,7 @@ function serializeGame() {
     surveyInspections: state.surveyInspections,
     commissioningChecks: state.commissioningChecks,
     warehouseChecks: state.warehouseChecks,
+    secureAccessChecks: state.secureAccessChecks,
     energy: state.energy,
     burnout: state.burnout,
     cash: state.cash,
@@ -443,6 +466,7 @@ function continueGame() {
   if (flags.surveyComplete) flags.surveyProgressAwarded = true;
   if (flags.commissioningComplete) flags.commissioningProgressAwarded = true;
   if (flags.warehouseComplete) flags.warehouseProgressAwarded = true;
+  if (flags.secureAccessComplete) flags.secureAccessProgressAwarded = true;
   if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
     flags.serviceCallbackPending = true;
   }
@@ -455,9 +479,10 @@ function continueGame() {
     surveyInspections: savedGame.surveyInspections || [],
     commissioningChecks: savedGame.commissioningChecks || [],
     warehouseChecks: savedGame.warehouseChecks || [],
+    secureAccessChecks: savedGame.secureAccessChecks || [],
     cash: migratedCash,
     xp: migratedXp,
-    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0) + (flags.warehouseComplete ? 1 : 0),
+    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0) + (flags.warehouseComplete ? 1 : 0) + (flags.secureAccessComplete ? 1 : 0),
     reputation: migratedReputation,
     training: savedGame.training || [],
     stats: migratedStats,
@@ -491,6 +516,9 @@ function resumeRequiredPrompt() {
   }
   if (state.sceneId === "shop" && state.flags.warehouseStarted && state.warehouseChecks.length === content.warehouseDispatch.checks.length && !state.flags.warehouseComplete) {
     return showWarehouseChoice();
+  }
+  if (state.sceneId === "navyYardAccess" && state.secureAccessChecks.length === content.secureAccessDispatch.checks.length && !state.flags.secureAccessComplete) {
+    return showSecureAccessChoice();
   }
 }
 
@@ -838,6 +866,9 @@ function getCareerLedgerMarkup() {
       <span>Warehouse runs completed</span><strong>${state.stats.warehouseRunsCompleted}</strong>
       <span>Stockroom labels corrected</span><strong>${state.stats.stockroomLabelsFixed}</strong>
       <span>Mystery boxes left alone</span><strong>${state.stats.mysteryBoxesLeft}</strong>
+      <span>Secure-access jobs completed</span><strong>${state.stats.secureAccessJobsCompleted}</strong>
+      <span>Access delays documented</span><strong>${state.stats.accessDelaysDocumented}</strong>
+      <span>Unpaid delays absorbed</span><strong>${state.stats.unpaidDelaysAbsorbed}</strong>
     </div>
   `;
 }
@@ -1042,8 +1073,11 @@ function takeBreak() {
 }
 
 function showDispatchPreview() {
-  if (state.flags.warehouseComplete) {
+  if (state.flags.secureAccessComplete) {
     return showPrototypeSummary();
+  }
+  if (state.flags.warehouseComplete) {
+    return showSecureAccessDispatchPreview();
   }
   if (state.flags.commissioningComplete) {
     if (hasPendingTraining()) return notify("Mark your new field-training focus on the clipboard before closing out the prototype.");
@@ -1094,14 +1128,14 @@ function showPrototypeSummary() {
       </div>
       <p><strong>Career ledger:</strong></p>
       ${getCareerLedgerMarkup()}
-      <p><strong>Upcoming dispatches:</strong></p>
+      <p><strong>Upcoming dispatch:</strong></p>
       <ul class="modal-list">
         ${content.upcomingDispatches.map((dispatch) => `<li><strong>[LOCKED] ${dispatch.title}</strong><span>${dispatch.summary}</span></li>`).join("")}
       </ul>
       <p><strong>Prototype playtest questions:</strong></p>
       <ul class="modal-list">
         <li><strong>Did the walking stay purposeful?</strong><span>Loading and carrying should explain the job without becoming repetitive.</span></li>
-        <li><strong>Did your choices feel visible?</strong><span>Your tools, preparation, diagnosis, survey report, commissioning notes, and stockroom decision should change how the workday plays.</span></li>
+        <li><strong>Did your choices feel visible?</strong><span>Your tools, preparation, diagnosis, survey report, commissioning notes, stockroom decision, and access-delay report should change how the workday plays.</span></li>
         <li><strong>Did progression make you curious?</strong><span>The shop, clipboard, and locked dispatches should make one more workday sound appealing.</span></li>
       </ul>
       <blockquote>Dispatch note: "Please remain flexible. Several schedules are currently being finalized retroactively."</blockquote>
@@ -1235,6 +1269,204 @@ function finishWarehouseRun(approach) {
         : `<blockquote>Management note: "Thanks for keeping the warehouse run efficient."</blockquote>`}
     `,
     actions: [{ label: "Return To Shop", onClick: render }],
+  });
+}
+
+function showSecureAccessDispatchPreview() {
+  showModal({
+    kicker: "Dispatch Board",
+    title: content.secureAccessDispatch.title,
+    body: `
+      <p><strong>Access Quest:</strong> Drop off a small rack update at a Navy Yard building with secure access.</p>
+      <p>The ticket says Building 12. The forwarded email subject says Building 13. Dispatch says that is probably "campus language."</p>
+      ${state.flags.secureAccessPreparation ? `<p class="muted">Preparation selected: ${getSecureAccessPreparationLabel()}</p>` : ""}
+      <blockquote>Management note: "Please do not let access delays affect today's schedule."</blockquote>
+    `,
+    actions: [
+      { label: "Accept Navy Yard Job", onClick: () => state.flags.secureAccessPreparation ? promptSecureAccessTravel() : showSecureAccessPreparation() },
+      { label: "Return to Shop", className: "secondary-button" },
+    ],
+  });
+}
+
+function getSecureAccessPreparationLabel() {
+  return {
+    review: "Reviewed access email",
+    contact: "Called listed site contact",
+    none: "Trusted dispatch notes",
+  }[state.flags.secureAccessPreparation] || "None";
+}
+
+function showSecureAccessPreparation() {
+  showModal({
+    kicker: "Before You Leave",
+    title: "Prepare For Secure Access",
+    body: `
+      <p>The work order has a building number, a badge note, and a forwarded email chain where everyone spells the client acronym differently.</p>
+      <p class="muted">Take one small preparation step before leaving Broomall.</p>
+    `,
+    actions: [
+      { label: "Review the access email", onClick: () => chooseSecureAccessPreparation("review") },
+      { label: "Call the listed site contact", className: "secondary-button", onClick: () => chooseSecureAccessPreparation("contact") },
+      { label: "Trust dispatch notes", className: "secondary-button", onClick: () => chooseSecureAccessPreparation("none") },
+    ],
+  });
+}
+
+function chooseSecureAccessPreparation(preparation) {
+  state.flags.secureAccessPreparation = preparation;
+  let title = "The Ticket Will Have To Do";
+  let body = `<p>The dispatch note says "security aware," which is doing a heroic amount of work for two words.</p>`;
+  if (preparation === "review") {
+    title = "Access Email Reviewed";
+    body = `
+      <p>The email chain confirms the secure escort requirement. It also confirms nobody put your name in the visitor portal.</p>
+      <p class="muted">Each access check will cost 1 less energy.</p>
+    `;
+    addLog("Reviewed the Navy Yard access email and found the missing visitor-portal step.");
+  }
+  if (preparation === "contact") {
+    title = "Site Contact Reached";
+    body = `
+      <p>The site contact answers between meetings and confirms Building 13. They cannot add you to the visitor list until security sees the work order.</p>
+      <p class="muted">Documenting the access delay will cost 1 less energy.</p>
+    `;
+    addLog("Called the Navy Yard site contact and confirmed the building mismatch.");
+  }
+  if (preparation === "none") addLog("Left for Navy Yard trusting the dispatch notes.");
+  render();
+  showModal({
+    kicker: "Preparation Selected",
+    title,
+    body,
+    actions: [{ label: "Head To Navy Yard", onClick: promptSecureAccessTravel }],
+  });
+}
+
+function promptSecureAccessTravel() {
+  showModal({
+    kicker: "Route Summary",
+    title: "Broomall -> Navy Yard",
+    body: `
+      <p><strong>Dispatch estimate:</strong> Quick rack update. Security already knows you are coming.</p>
+      <p class="muted">Security may have received that information in a different timeline.</p>
+      <div class="route-line"><span>BROOMALL</span><i></i><span>NAVY YARD</span></div>
+    `,
+    actions: [{
+      label: "Drive To Security Gate",
+      onClick: () => {
+        state.flags.secureAccessStarted = true;
+        state.flags.prototypeSummaryViewed = false;
+        setClock(`${state.clock.slice(0, 3)} 5:08 PM`);
+        addLog("Arrived at Navy Yard security with a building number and a bad feeling.");
+        enterScene("navyYardAccess");
+      },
+    }],
+  });
+}
+
+function getSecureAccessCheckEnergyCost() {
+  return Math.max(0, 3 - (state.flags.secureAccessPreparation === "review" ? 1 : 0));
+}
+
+function getSecureAccessReportEnergyCost(baseCost) {
+  return Math.max(0, baseCost - (state.flags.secureAccessPreparation === "contact" ? 1 : 0));
+}
+
+function inspectSecureAccessCondition(checkId) {
+  const check = content.secureAccessDispatch.checks.find((item) => item.id === checkId);
+  if (!check || state.secureAccessChecks.includes(checkId)) return notify(`${check?.label || "That access issue"} is already in your notes.`);
+  state.secureAccessChecks.push(checkId);
+  changeEnergy(-getSecureAccessCheckEnergyCost());
+  addLog(`${check.label} checked: ${check.log}`);
+  render();
+  const allChecked = state.secureAccessChecks.length === content.secureAccessDispatch.checks.length;
+  showModal({
+    kicker: "Access Note",
+    title: check.label,
+    body: `
+      <p>${check.detail}</p>
+      ${allChecked ? `<p class="muted">You have enough facts to explain why the quick rack update is no longer quick.</p>` : ""}
+    `,
+    actions: [{ label: allChecked ? "Review Access Delay" : "Keep Sorting Access", onClick: allChecked ? showSecureAccessChoice : render }],
+  });
+}
+
+function showSecureAccessChoice() {
+  showModal({
+    kicker: "Access Decision",
+    title: "The Delay Is Real, The Schedule Is Fiction",
+    body: `
+      <p>Security, the building number, and the escort policy all disagree with the dispatch estimate. The rack update itself is small; getting permission to reach it is the job.</p>
+      <p>Management wants the ticket kept clean. The client would prefer an honest ETA over another vague "tech onsite" update.</p>
+    `,
+    actions: [
+      { label: `Document access delay and update ETA (-${getSecureAccessReportEnergyCost(4)} energy)`, onClick: () => finishSecureAccess("document") },
+      ...(getConfidence() >= 2 ? [{
+        label: `Push dispatch to own the access miss (-${getSecureAccessReportEnergyCost(3)} energy)`,
+        className: "secondary-button",
+        onClick: () => finishSecureAccess("pushback"),
+      }] : []),
+      { label: "Eat the delay and mark arrival on time", className: "secondary-button", onClick: () => finishSecureAccess("absorb") },
+    ],
+  });
+}
+
+function finishSecureAccess(approach) {
+  const honest = approach !== "absorb";
+  const xp = approach === "pushback" ? 60 : approach === "document" ? 55 : 35;
+  if (honest) changeEnergy(-getSecureAccessReportEnergyCost(approach === "pushback" ? 3 : 4));
+  else state.burnout += 1;
+  state.flags.secureAccessComplete = true;
+  state.flags.secureAccessApproach = approach;
+  state.flags.prototypeSummaryViewed = false;
+  setClock(`${state.clock.slice(0, 3)} ${approach === "absorb" ? "6:02" : "6:18"} PM`);
+  if (!state.flags.secureAccessPaid) {
+    state.cash += honest ? 92 : 76;
+    state.flags.secureAccessPaid = true;
+  }
+  if (!state.flags.secureAccessProgressAwarded) {
+    awardCareerProgress({
+      xp,
+      reputation: honest
+        ? { clients: 1, coworkers: 1, management: approach === "pushback" ? -2 : -1 }
+        : { clients: 0, coworkers: 0, management: 1 },
+      source: content.secureAccessDispatch.title,
+    });
+    state.flags.secureAccessProgressAwarded = true;
+  }
+  if (!state.flags.secureAccessStatsRecorded) {
+    state.stats.secureAccessJobsCompleted += 1;
+    if (honest) state.stats.accessDelaysDocumented += 1;
+    else state.stats.unpaidDelaysAbsorbed += 1;
+    state.flags.secureAccessStatsRecorded = true;
+  }
+  addLog(honest
+    ? "Documented the Navy Yard access delay before the schedule could pretend it never happened."
+    : "Absorbed the Navy Yard access delay and marked the arrival time clean.");
+  render();
+  showModal({
+    kicker: "Secure Access Complete",
+    title: approach === "pushback" ? "The Access Miss Has An Owner" : approach === "document" ? "The Delay Has A Paper Trail" : "The Schedule Looks Fine If Nobody Asks",
+    body: `
+      <div class="results-grid">
+        <span>Access job wages</span><strong>+$${honest ? 92 : 76}</strong>
+        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Experience</span><strong>+${xp} XP</strong>
+        <span>Preparation</span><strong>${getSecureAccessPreparationLabel()}</strong>
+        <span>Closeout</span><strong>${approach === "pushback" ? "Dispatch access miss escalated" : approach === "document" ? "Delay documented" : "Delay absorbed"}</strong>
+      </div>
+      ${honest
+        ? `<blockquote>Management note: "Please avoid creating client-facing narratives around internal scheduling friction."</blockquote>`
+        : `<blockquote>Management note: "Thanks for keeping the ticket clean. Please improve onsite arrival efficiency."</blockquote>`}
+    `,
+    actions: [{
+      label: "Return To Broomall Shop",
+      onClick: () => {
+        addLog("Returned to the Broomall shop after the Navy Yard access job.");
+        enterScene("shop");
+      },
+    }],
   });
 }
 
@@ -2067,6 +2299,48 @@ function getInteractions() {
     ];
   }
 
+  if (state.sceneId === "navyYardAccess") {
+    const allChecked = state.secureAccessChecks.length === content.secureAccessDispatch.checks.length;
+    return [
+      {
+        x: 300, y: 185, label: allChecked ? "Close out access delay" : "Check in with security", npc: "SEC",
+        action: () => {
+          if (allChecked) return showSecureAccessChoice();
+          if (state.flags.secureAccessBrief) return notify('Security: "I can see the company in the system. I cannot see you in the system."');
+          state.flags.secureAccessBrief = true;
+          addLog("Security confirmed the company is expected and you personally are not.");
+          showModal({
+            kicker: "Security Booth",
+            title: "Expected Adjacent",
+            body: `<p>"I have the company name, but not your visitor entry. Also this says Building 12. The work order I have says 13."</p>`,
+            actions: [{ label: "Start Sorting Access", onClick: render }],
+          });
+        },
+      },
+      {
+        x: 430, y: 255, label: "Check building number",
+        action: () => {
+          if (!state.flags.secureAccessBrief) return notify("Check in with security first.");
+          inspectSecureAccessCondition("building");
+        },
+      },
+      {
+        x: 785, y: 205, label: "Check loading dock",
+        action: () => {
+          if (!state.flags.secureAccessBrief) return notify("Check in with security first.");
+          inspectSecureAccessCondition("gate");
+        },
+      },
+      {
+        x: 745, y: 385, label: "Check telecom room escort",
+        action: () => {
+          if (!state.flags.secureAccessBrief) return notify("Check in with security first.");
+          inspectSecureAccessCondition("escort");
+        },
+      },
+    ];
+  }
+
   return [
     ...(!state.flags.roomBrief && !state.flags.supervisorLeft ? [{
       x: 320, y: 185, label: "Talk to supervisor", npc: "SUP",
@@ -2164,8 +2438,9 @@ function getObjective() {
       return `Search the shop for the replacement power supply (${state.warehouseChecks.length}/${content.warehouseDispatch.checks.length}).`;
     }
     if (state.flags.commissioningComplete && !state.flags.warehouseComplete) return "Review the warehouse run on the dispatch board.";
-    if (state.flags.warehouseComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
-    if (state.flags.warehouseComplete) return "Current prototype complete. Explore the shop.";
+    if (state.flags.warehouseComplete && !state.flags.secureAccessComplete) return "Review the Navy Yard secure-access job on the dispatch board.";
+    if (state.flags.secureAccessComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
+    if (state.flags.secureAccessComplete) return "Current prototype complete. Explore the shop.";
     if (state.flags.finished) return "Prepare for the Conshohocken service call.";
     if (!state.flags.shopBrief) return "Find your supervisor.";
     if (state.loaded.length < content.tutorial.shopLoad.length) return `Load staged equipment into Van #3 (${state.loaded.length}/3).`;
@@ -2198,6 +2473,13 @@ function getObjective() {
       return `Commission the training room (${state.commissioningChecks.length}/${content.commissioningDispatch.checks.length}).`;
     }
     return "Return to the client contact and close out the commissioning visit.";
+  }
+  if (state.sceneId === "navyYardAccess") {
+    if (!state.flags.secureAccessBrief) return "Check in with security.";
+    if (state.secureAccessChecks.length < content.secureAccessDispatch.checks.length) {
+      return `Sort out secure access (${state.secureAccessChecks.length}/${content.secureAccessDispatch.checks.length}).`;
+    }
+    return "Return to security and close out the access delay.";
   }
   if (!state.flags.roomBrief) return "Ask the supervisor how to start the cart build.";
   if (state.assembled.length < 2) return `Assemble Cart 1 with your supervisor (${state.assembled.length}/2).`;
@@ -2370,8 +2652,11 @@ function render() {
   const serviceActive = state.sceneId === "serviceOffice";
   const surveyActive = state.sceneId === "universitySurvey";
   const commissioningActive = state.sceneId === "southPhillyCommissioning";
+  const secureAccessActive = state.sceneId === "navyYardAccess";
   const warehouseActive = state.flags.warehouseStarted && !state.flags.warehouseComplete;
-  const activeDispatch = state.flags.warehouseStarted || state.flags.warehouseComplete
+  const activeDispatch = secureAccessActive || state.flags.secureAccessStarted || state.flags.secureAccessComplete || (state.flags.warehouseComplete && !state.flags.secureAccessComplete)
+    ? content.secureAccessDispatch
+    : state.flags.warehouseStarted || state.flags.warehouseComplete
     ? content.warehouseDispatch
     : commissioningActive || state.flags.commissioningStarted || state.flags.commissioningComplete
       ? content.commissioningDispatch
@@ -2382,14 +2667,18 @@ function render() {
       : { title: "Two Quick Carts", summary: "Build two mobile video conferencing carts at a Center City East office." };
   elements.jobStatus.textContent = warehouseActive
     ? "WAREHOUSE RUN"
-    : commissioningActive
+    : secureAccessActive
+      ? "SECURE ACCESS"
+      : commissioningActive
       ? "COMMISSIONING"
       : surveyActive
       ? "SITE SURVEY"
       : serviceActive
       ? "SERVICE CALL"
-      : state.flags.warehouseComplete
+      : state.flags.secureAccessComplete
         ? "DISPATCH COMPLETE"
+        : state.flags.warehouseComplete
+          ? "SHOP HUB"
         : state.flags.commissioningComplete
           ? "SHOP HUB"
       : state.flags.finished

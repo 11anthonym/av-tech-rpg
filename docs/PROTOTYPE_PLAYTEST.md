@@ -23,7 +23,9 @@ The playable slice now has:
    room, and a craftsmanship-based punch-list option.
 7. A short Broomall warehouse run that reuses the shop map and tests whether
    stockroom exploration works as a change of pace.
-8. A completion card with a career snapshot, nearby locked work, and playtest
+8. A Navy Yard secure-access job with a preparation choice, three access checks,
+   and a bad-company closeout decision.
+9. A completion card with a career snapshot, nearby locked work, and playtest
    questions.
 
 ## Playtest Questions
@@ -44,6 +46,10 @@ Watch a player complete the current build before expanding it. Look for:
   room without becoming a technical quiz?
 - Is the craftsmanship-based punch-list option a satisfying training payoff?
 - Does the warehouse run feel like a brisk change of pace rather than a detour?
+- Does the Navy Yard access job feel like a real field-tech problem instead of
+  just a dialogue joke?
+- Does documenting a delay feel meaningfully different from keeping the ticket
+  clean for management?
 - Are the AV jokes legible to newcomers and recognizable to working techs?
 - Does the completion card make players curious about one more dispatch?
 
@@ -80,6 +86,13 @@ The **Warehouse Run** tests shop exploration and van organization as a short
 change of pace. It reuses the Broomall map, asks the player to search three
 existing hotspots, and ends with one stockroom-cleanup decision.
 
+## Current Access Experiment
+
+The **Navy Yard Secure Access** dispatch tests whether a job can be about access
+friction rather than installing gear. It uses one preparation choice, three
+onsite access checks, and a closeout decision between honest documentation,
+confident pushback, or absorbing the delay to keep the ticket clean.
+
 ## Current Replay Experiment
 
 The **Organized Rookie** profile starts with a tool bag, slightly more energy,
@@ -94,7 +107,6 @@ play.
 
 ## Later Experiments
 
-- **Navy Yard Secure Access:** Test a small access complication.
 - **Cherry Hill Return Toll:** Test one readable travel-cost decision.
 
 ## Prototype Guardrail
