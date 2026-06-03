@@ -1198,17 +1198,44 @@ function showDispatchPreview() {
   showModal({
     kicker: "Dispatch Board",
     title: "One Quick Display Swap",
-    body: `
-      <p><strong>Service Call:</strong> Conference-room display issue in Conshohocken.</p>
-      <p>Sales says the replacement display is already onsite. The client says the room is booked again this afternoon.</p>
-      ${state.flags.servicePreparation ? `<p class="muted">Preparation selected: ${getServicePreparationLabel()}</p>` : ""}
-      <p class="muted">Use the supply counter, inspect your kit, or take an unpaid recovery day before leaving.</p>
-    `,
+    body: getDispatchBoardMarkup({
+      type: "Service Call",
+      setup: "Conference-room display issue in Conshohocken. Sales says the replacement display is already onsite. The client says the room is booked again this afternoon.",
+      why: "Unlocked after your first install day. The shop wants to see whether you can handle a small service call without turning it into a meeting.",
+      stakes: [
+        "Preparation changes diagnosis, energy, or arrival stamina.",
+        "Verifying the signal path can prevent callback debt.",
+        "Rushing can help management now and cost you later.",
+      ],
+      note: "Use the supply counter, inspect your kit, or take an unpaid recovery day before leaving.",
+      managementNote: "Please keep this quick. The client has another meeting, and the quote says replacement.",
+      prep: state.flags.servicePreparation ? `Preparation selected: ${getServicePreparationLabel()}` : "",
+    }),
     actions: [
       { label: "Accept Service Call", onClick: () => state.flags.servicePreparation ? promptServiceTravel() : showServicePreparation() },
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
+}
+
+function getDispatchBoardMarkup({ type, setup, why, stakes, note, managementNote, prep = "" }) {
+  return `
+    <p><strong>${type}:</strong> ${setup}</p>
+    <ul class="modal-list">
+      <li><strong>Why this is on the board</strong><span>${why}</span></li>
+      <li><strong>Stakes</strong><span>${stakes.join(" ")}</span></li>
+      ${prep ? `<li><strong>Prep</strong><span>${prep}</span></li>` : ""}
+      <li><strong>Locked next work</strong><span>${getUpcomingDispatchText()}</span></li>
+    </ul>
+    ${note ? `<p class="muted">${note}</p>` : ""}
+    <blockquote>Management note: "${managementNote}"</blockquote>
+  `;
+}
+
+function getUpcomingDispatchText() {
+  return content.upcomingDispatches.length
+    ? content.upcomingDispatches.map((dispatch) => `[LOCKED] ${dispatch.title}: ${dispatch.summary}`).join(" ")
+    : "More erasable-marker work will be added after this prototype pass.";
 }
 
 function showPrototypeSummary() {
@@ -1253,11 +1280,18 @@ function showWarehouseDispatchPreview() {
   showModal({
     kicker: "Dispatch Board",
     title: content.warehouseDispatch.title,
-    body: `
-      <p><strong>Warehouse Run:</strong> Find a replacement power supply before another technician leaves for a service call.</p>
-      <p>Dispatch says it was stored in one of the vans. Van #2 is already offsite, and the key board says its key is with SALES.</p>
-      <blockquote>Management note: "This should only take a minute. Please check the obvious places before escalating."</blockquote>
-    `,
+    body: getDispatchBoardMarkup({
+      type: "Warehouse Run",
+      setup: "Find a replacement power supply before another technician leaves for a service call. Dispatch says it was stored in one of the vans.",
+      why: "Unlocked after commissioning. The shop needs a quick change of pace that tests whether messy inventory can become gameplay.",
+      stakes: [
+        "Searching costs energy.",
+        "Fixing the bin label helps coworkers and annoys management.",
+        "Leaving the pile alone keeps the task efficient and the next search worse.",
+      ],
+      note: "Van #2 is already offsite, and the key board says its key is with SALES.",
+      managementNote: "This should only take a minute. Please check the obvious places before escalating.",
+    }),
     actions: [
       { label: "Start Looking", onClick: startWarehouseRun },
       { label: "Return to Shop", className: "secondary-button" },
@@ -1377,12 +1411,19 @@ function showSecureAccessDispatchPreview() {
   showModal({
     kicker: "Dispatch Board",
     title: content.secureAccessDispatch.title,
-    body: `
-      <p><strong>Access Quest:</strong> Drop off a small rack update at a Navy Yard building with secure access.</p>
-      <p>The ticket says Building 12. The forwarded email subject says Building 13. Dispatch says that is probably "campus language."</p>
-      ${state.flags.secureAccessPreparation ? `<p class="muted">Preparation selected: ${getSecureAccessPreparationLabel()}</p>` : ""}
-      <blockquote>Management note: "Please do not let access delays affect today's schedule."</blockquote>
-    `,
+    body: getDispatchBoardMarkup({
+      type: "Access Quest",
+      setup: "Drop off a small rack update at a Navy Yard building with secure access. The ticket says Building 12. The forwarded email subject says Building 13.",
+      why: "Unlocked after the warehouse run. Dispatch has moved from missing parts to missing access details.",
+      stakes: [
+        "Preparation can reduce access-check or report costs.",
+        "Documenting the delay builds the documentation habit.",
+        "Absorbing the delay protects the ticket and adds burnout.",
+      ],
+      note: "Dispatch says the building mismatch is probably campus language.",
+      managementNote: "Please do not let access delays affect today's schedule.",
+      prep: state.flags.secureAccessPreparation ? `Preparation selected: ${getSecureAccessPreparationLabel()}` : "",
+    }),
     actions: [
       { label: "Accept Navy Yard Job", onClick: () => state.flags.secureAccessPreparation ? promptSecureAccessTravel() : showSecureAccessPreparation() },
       { label: "Return to Shop", className: "secondary-button" },
@@ -1577,12 +1618,18 @@ function showCallbackCleanupDispatchPreview() {
   showModal({
     kicker: "Dispatch Board",
     title: content.callbackCleanupDispatch.title,
-    body: `
-      <p><strong>Return Trip:</strong> A callback is still sitting in the career ledger, and dispatch wants it cleaned up before anyone says warranty hours out loud.</p>
-      <p>The client says the room was marked complete, then immediately started acting like it read the closeout note.</p>
-      <p class="muted">Unresolved callbacks: ${getUnresolvedCallbackCount()}</p>
-      <blockquote>Management note: "Please determine whether this is truly a callback or simply extended closeout support."</blockquote>
-    `,
+    body: getDispatchBoardMarkup({
+      type: "Return Trip",
+      setup: "A callback is still sitting in the career ledger, and dispatch wants it cleaned up before anyone says warranty hours out loud.",
+      why: `Triggered by unresolved callback debt. Current unresolved callbacks: ${getUnresolvedCallbackCount()}.`,
+      stakes: [
+        "A real fix resolves callback debt and helps client trust.",
+        "A quick bandage keeps warranty hours contained.",
+        "Craftsmanship can turn the cleanup into a better handoff.",
+      ],
+      note: "The client says the room was marked complete, then immediately started acting like it read the closeout note.",
+      managementNote: "Please determine whether this is truly a callback or simply extended closeout support.",
+    }),
     actions: [
       { label: "Accept Warranty Return", onClick: promptCallbackCleanupTravel },
       { label: "Return to Shop", className: "secondary-button" },
@@ -1725,11 +1772,20 @@ function showHandoffDispatchPreview() {
   showModal({
     kicker: "Dispatch Board",
     title: content.handoffDispatch.title,
-    body: `
-      <p><strong>Client Handoff:</strong> The room works, but the client needs to run the same meeting without becoming an unpaid AV tech.</p>
-      <p>Dispatch says this is just a quick demo. The client says the executive assistant has actual questions.</p>
-      <blockquote>Management note: "Please keep training concise. The system is designed to be intuitive."</blockquote>
-    `,
+    body: getDispatchBoardMarkup({
+      type: "Client Handoff",
+      setup: "The room works, but the client needs to run the same meeting without becoming an unpaid AV tech.",
+      why: state.flags.callbackCleanupComplete
+        ? "Unlocked after the warranty return. The room is quieter now; the client still needs the human version."
+        : "Clean callback ledger skipped the warranty return, so dispatch moved you to a handoff.",
+      stakes: [
+        "Confidence can unlock a better cheat-sheet option.",
+        "Documentation habit reduces handoff prep costs.",
+        "A quick demo keeps management happy and leaves a training gap.",
+      ],
+      note: "Dispatch says this is just a quick demo. The client says the executive assistant has actual questions.",
+      managementNote: "Please keep training concise. The system is designed to be intuitive.",
+    }),
     actions: [
       { label: "Accept Handoff", onClick: promptHandoffTravel },
       { label: "Return to Shop", className: "secondary-button" },
@@ -1866,11 +1922,18 @@ function showCommissioningDispatchPreview() {
   showModal({
     kicker: "Dispatch Board",
     title: content.commissioningDispatch.title,
-    body: `
-      <p><strong>Commissioning:</strong> Verify a small South Philadelphia training room before client handoff.</p>
-      <p>The installation ticket is closed. The client says one side of the room sounds quieter than the other.</p>
-      <blockquote>Project note: "Room complete except final commissioning. Please avoid creating a punch list unless necessary."</blockquote>
-    `,
+    body: getDispatchBoardMarkup({
+      type: "Commissioning",
+      setup: "Verify a small South Philadelphia training room before client handoff. The installation ticket is closed, but the client says one side of the room sounds quieter.",
+      why: "Unlocked after the University City survey. The prototype is testing incomplete-site troubleshooting.",
+      stakes: [
+        "Craftsmanship can unlock a cleaner punch-list option.",
+        "Passing the room protects management's schedule.",
+        "Documenting the fault improves client and coworker trust.",
+      ],
+      note: "The completion sheet has already been signed internally.",
+      managementNote: "Room complete except final commissioning. Please avoid creating a punch list unless necessary.",
+    }),
     actions: [
       { label: "Accept Commissioning Visit", onClick: promptCommissioningTravel },
       { label: "Return to Shop", className: "secondary-button" },
@@ -2013,12 +2076,19 @@ function showSurveyDispatchPreview() {
   showModal({
     kicker: "Dispatch Board",
     title: content.surveyDispatch.title,
-    body: `
-      <p><strong>Site Survey:</strong> Confirm access and mounting conditions for a University City classroom display.</p>
-      <p>Sales already measured the wall. The facilities contact asked whether the quoted display will fit through the building.</p>
-      ${state.flags.surveyPreparation ? `<p class="muted">Preparation selected: ${getSurveyPreparationLabel()}</p>` : ""}
-      <blockquote>Sales note: "Should be straightforward. Same basic idea as a display we installed somewhere else."</blockquote>
-    `,
+    body: getDispatchBoardMarkup({
+      type: "Site Survey",
+      setup: "Confirm access and mounting conditions for a University City classroom display. Sales already measured the wall.",
+      why: "Unlocked after the service call and Josh debrief. The game is testing whether field judgment matters before install day.",
+      stakes: [
+        "Preparation lowers inspection or report costs.",
+        "Confidence can unlock a direct sales pushback.",
+        "Trusting the quote helps management and may create future pain.",
+      ],
+      note: "The facilities contact asked whether the quoted display will fit through the building.",
+      managementNote: "Should be straightforward. Same basic idea as a display we installed somewhere else.",
+      prep: state.flags.surveyPreparation ? `Preparation selected: ${getSurveyPreparationLabel()}` : "",
+    }),
     actions: [
       { label: "Accept Site Survey", onClick: () => state.flags.surveyPreparation ? promptSurveyTravel() : showSurveyPreparation() },
       { label: "Return to Shop", className: "secondary-button" },

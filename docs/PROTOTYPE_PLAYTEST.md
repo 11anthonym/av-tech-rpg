@@ -31,7 +31,9 @@ The playable slice now has:
    unresolved work.
 11. An executive handoff that tests whether confidence, documentation, and
    client-facing choices matter when the room already works.
-12. A completion card with a career snapshot, nearby locked work, and playtest
+12. A clearer dispatch board that explains why the next job is available, what
+   choices can affect, and what future work is still locked.
+13. A completion card with a career snapshot, nearby locked work, and playtest
    questions.
 
 ## Playtest Questions
@@ -62,6 +64,7 @@ Watch a player complete the current build before expanding it. Look for:
   feel remembered?
 - Does the executive handoff make "can the client use it?" feel like a real AV
   success condition?
+- Does the dispatch board make consequences and skipped/triggered work obvious?
 - Are the AV jokes legible to newcomers and recognizable to working techs?
 - Does the completion card make players curious about one more dispatch?
 
@@ -135,6 +138,13 @@ system works, but the client needs the daily meeting path explained in human
 language. The player can run a patient walkthrough, use confidence to rewrite a
 cheat sheet, or do a fast demo that keeps management happy and leaves a training
 gap.
+
+## Current Board Clarity Experiment
+
+The dispatch board now explains each available job with four pieces of
+information: why it is on the board, what the stakes are, any prep already
+selected, and the locked future work. This should make the prototype feel less
+like a fixed script and more like a career reacting to the ledger.
 
 ## Current Replay Experiment
 
