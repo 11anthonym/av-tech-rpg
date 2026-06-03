@@ -74,6 +74,13 @@ Jobs award experience and reputation in `app.js` when their result is recorded.
 Keep those awards guarded by a saved flag so reopening a result modal cannot
 grant the same progression twice.
 
+Career ledger stats can also create small future effects. Keep these effects
+readable and visible on the career clipboard. The current examples are:
+
+- repeated documented access issues reduce report/access-delay paperwork costs
+- repeated careful finishes reduce repair/punch-list costs
+- unresolved callbacks add a small energy penalty to later access checks
+
 Coworker relationship milestones can grant a tool without stocking it at the
 supply counter. Keep the tool's `price` at `0`, give the relationship a readable
 reputation requirement in `data.js`, and award the stable tool ID from the

@@ -349,6 +349,18 @@ function getConfidence() {
   return state.technician.stats.confidence + getTrainingModifier("confidence");
 }
 
+function getDocumentationHabitReduction() {
+  return state.stats.accessRisksDocumented + state.stats.accessDelaysDocumented >= 2 ? 1 : 0;
+}
+
+function getCarefulWorkReduction() {
+  return state.stats.carefulFinishes >= 2 ? 1 : 0;
+}
+
+function getOpenCallbackPenalty() {
+  return Math.min(1, Math.max(0, state.stats.callbacks - state.stats.callbacksResolved));
+}
+
 function getCarryCapacity(sceneId = state.sceneId) {
   return ["garage", "serviceOffice"].includes(sceneId) ? 1 + getToolModifier("garageCarryCapacityBonus") : 1;
 }
@@ -827,6 +839,8 @@ function showCareerClipboard() {
       <ul class="modal-list">
         ${getCareerMilestones().map((milestone) => `<li><strong>${milestone.status} ${milestone.name}</strong><span>${milestone.description}</span></li>`).join("")}
       </ul>
+      <p><strong>Active career effects:</strong></p>
+      ${getCareerEffectsMarkup()}
       <p><strong>Career ledger:</strong></p>
       ${getCareerLedgerMarkup()}
       <p class="muted">${pendingTraining
@@ -844,6 +858,31 @@ function showCareerClipboard() {
       { label: "Return Clipboard" },
     ],
   });
+}
+
+function getCareerEffectsMarkup() {
+  const effects = [
+    {
+      active: getDocumentationHabitReduction() > 0,
+      name: "Documentation habit",
+      description: "Documenting access problems twice reduces future report and access-delay paperwork by 1 energy.",
+    },
+    {
+      active: getCarefulWorkReduction() > 0,
+      name: "Careful-work rhythm",
+      description: "Two careful finishes reduce future repair and punch-list energy by 1.",
+    },
+    {
+      active: getOpenCallbackPenalty() > 0,
+      name: "Open callback drag",
+      description: "Unresolved callbacks add 1 energy to access checks until the career ledger catches up.",
+    },
+  ];
+  return `
+    <ul class="modal-list">
+      ${effects.map((effect) => `<li><strong>${effect.active ? "[ACTIVE]" : "[LOCKED]"} ${effect.name}</strong><span>${effect.description}</span></li>`).join("")}
+    </ul>
+  `;
 }
 
 function getCareerLedgerMarkup() {
@@ -1366,11 +1405,11 @@ function promptSecureAccessTravel() {
 }
 
 function getSecureAccessCheckEnergyCost() {
-  return Math.max(0, 3 - (state.flags.secureAccessPreparation === "review" ? 1 : 0));
+  return Math.max(0, 3 - (state.flags.secureAccessPreparation === "review" ? 1 : 0) + getOpenCallbackPenalty());
 }
 
 function getSecureAccessReportEnergyCost(baseCost) {
-  return Math.max(0, baseCost - (state.flags.secureAccessPreparation === "contact" ? 1 : 0));
+  return Math.max(0, baseCost - (state.flags.secureAccessPreparation === "contact" ? 1 : 0) - getDocumentationHabitReduction());
 }
 
 function inspectSecureAccessCondition(checkId) {
@@ -1399,6 +1438,8 @@ function showSecureAccessChoice() {
     body: `
       <p>Security, the building number, and the escort policy all disagree with the dispatch estimate. The rack update itself is small; getting permission to reach it is the job.</p>
       <p>Management wants the ticket kept clean. The client would prefer an honest ETA over another vague "tech onsite" update.</p>
+      ${getDocumentationHabitReduction() ? `<p class="muted">Your documentation habit makes the access-delay note faster to write.</p>` : ""}
+      ${getOpenCallbackPenalty() ? `<p class="muted">The open callback still on the ledger made today's access shuffle feel heavier.</p>` : ""}
     `,
     actions: [
       { label: `Document access delay and update ETA (-${getSecureAccessReportEnergyCost(4)} energy)`, onClick: () => finishSecureAccess("document") },
@@ -1512,7 +1553,7 @@ function getCommissioningCheckEnergyCost() {
 }
 
 function getCommissioningRepairEnergyCost(baseCost) {
-  return getVerificationEnergyCost(baseCost);
+  return Math.max(0, getVerificationEnergyCost(baseCost) - getCarefulWorkReduction());
 }
 
 function inspectCommissioningCondition(checkId) {
@@ -1542,6 +1583,7 @@ function showCommissioningChoice() {
     body: `
       <p>The third ceiling speaker is silent because its termination is loose. The drawing is for a mirrored room across the hall, which explains why the closed ticket was so confident.</p>
       <p>The client would like the room working. Project management would like the completion sheet to remain emotionally undisturbed.</p>
+      ${getCarefulWorkReduction() ? `<p class="muted">Your careful finishes are paying off: repair and punch-list work costs 1 less energy.</p>` : ""}
     `,
     actions: [
       { label: `Repair termination and document discrepancy (-${getCommissioningRepairEnergyCost(6)} energy)`, onClick: () => finishCommissioning("repair") },
@@ -1712,7 +1754,7 @@ function getSurveyInspectionEnergyCost() {
 }
 
 function getSurveyReportEnergyCost(baseCost) {
-  return Math.max(0, baseCost - (state.flags.surveyPreparation === "sketch" ? 1 : 0));
+  return Math.max(0, baseCost - (state.flags.surveyPreparation === "sketch" ? 1 : 0) - getDocumentationHabitReduction());
 }
 
 function inspectSurveyConstraint(inspectionId) {
@@ -1741,6 +1783,7 @@ function showSurveyReportChoice() {
     body: `
       <p>The 98-inch display fits on the classroom wall. It does not fit through the elevator opening, and the hallway turn offers no useful miracle.</p>
       <p>Sales wants the survey closed today because the quote is "basically approved."</p>
+      ${getDocumentationHabitReduction() ? `<p class="muted">Your documentation habit makes this report cost 1 less energy.</p>` : ""}
     `,
     actions: [
       { label: `Document the access constraint (-${getSurveyReportEnergyCost(3)} energy)`, onClick: () => finishSurvey("document") },

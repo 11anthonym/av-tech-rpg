@@ -25,7 +25,9 @@ The playable slice now has:
    stockroom exploration works as a change of pace.
 8. A Navy Yard secure-access job with a preparation choice, three access checks,
    and a bad-company closeout decision.
-9. A completion card with a career snapshot, nearby locked work, and playtest
+9. Lightweight career effects where repeated documentation, careful finishes,
+   and unresolved callbacks change future energy costs.
+10. A completion card with a career snapshot, nearby locked work, and playtest
    questions.
 
 ## Playtest Questions
@@ -50,6 +52,8 @@ Watch a player complete the current build before expanding it. Look for:
   just a dialogue joke?
 - Does documenting a delay feel meaningfully different from keeping the ticket
   clean for management?
+- Do players notice when ledger stats become active career effects?
+- Are the stat effects helpful enough to matter without becoming a spreadsheet?
 - Are the AV jokes legible to newcomers and recognizable to working techs?
 - Does the completion card make players curious about one more dispatch?
 
@@ -92,6 +96,19 @@ The **Navy Yard Secure Access** dispatch tests whether a job can be about access
 friction rather than installing gear. It uses one preparation choice, three
 onsite access checks, and a closeout decision between honest documentation,
 confident pushback, or absorbing the delay to keep the ticket clean.
+
+## Current Consequence Experiment
+
+The ledger now has a few direct gameplay effects:
+
+- Two documented access issues activate a documentation habit that lowers future
+  report and access-delay paperwork costs.
+- Two careful finishes activate a careful-work rhythm that lowers future repair
+  and punch-list costs.
+- Unresolved callbacks add a small drag to later access checks.
+
+These effects should make choices feel remembered while staying small enough for
+the prototype.
 
 ## Current Replay Experiment
 
