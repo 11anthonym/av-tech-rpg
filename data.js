@@ -259,6 +259,31 @@ window.GAME_CONTENT = {
     ],
   },
 
+  handoffDispatch: {
+    title: "Executive Handoff",
+    summary: "Teach a client how to use a room that technically works but explains itself poorly.",
+    checks: [
+      {
+        id: "control-panel",
+        label: "Control panel labels",
+        log: "the panel labels are technically words, just not the client's words",
+        detail: "The panel has buttons named PRESENT, PC, SHARE, and AUX. The client asks which one starts the meeting. This is the correct question.",
+      },
+      {
+        id: "daily-use",
+        label: "Daily user path",
+        log: "the common path is three steps if you already know the secret fourth step",
+        detail: "Starting a normal meeting requires display power, laptop input, room audio, and the mute state nobody notices until the first sentence disappears.",
+      },
+      {
+        id: "client-need",
+        label: "Client's actual need",
+        log: "the executive assistant needs repeatability more than feature coverage",
+        detail: "The client does not need a tour of every input. They need the same morning meeting to work every time without texting facilities.",
+      },
+    ],
+  },
+
   upcomingDispatches: [
     {
       title: "Cherry Hill Return Toll",
@@ -383,6 +408,20 @@ window.GAME_CONTENT = {
         { type: "floor-note", x: 430, y: 250, w: 185, h: 30, text: "TESTED GOOD?" },
         { type: "floor-note", x: 300, y: 395, w: 235, h: 30, text: "PREVIOUS CLOSEOUT NOTE: BRIEF" },
         { type: "floor-note", x: 690, y: 465, w: 170, h: 30, text: "WARRANTY HOURS: WATCHED" },
+      ],
+    },
+    executiveHandoff: {
+      name: "Executive Boardroom",
+      kicker: "Client Handoff",
+      playerStart: { x: 120, y: 430 },
+      decor: [
+        { type: "label", x: 45, y: 36, w: 230, h: 38, text: "EXECUTIVE BOARDROOM" },
+        { type: "desk", x: 78, y: 110, w: 185, h: 92, text: "CLIENT TABLE", solid: true },
+        { type: "counter", x: 665, y: 325, w: 205, h: 105, text: "CREDENZA / LAPTOP", solid: true },
+        { type: "build", x: 650, y: 110, w: 205, h: 110, text: "DISPLAY WALL", solid: true },
+        { type: "floor-note", x: 410, y: 245, w: 210, h: 30, text: "TOUCH PANEL: PRESENT" },
+        { type: "floor-note", x: 315, y: 390, w: 250, h: 30, text: "CHEAT SHEET: NOT PROVIDED" },
+        { type: "floor-note", x: 690, y: 465, w: 175, h: 30, text: "MEETING IN 22 MIN" },
       ],
     },
   },

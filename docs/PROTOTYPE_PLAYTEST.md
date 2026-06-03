@@ -29,7 +29,9 @@ The playable slice now has:
    and unresolved callbacks change future energy costs.
 10. A conditional warranty return that appears only when the callback ledger has
    unresolved work.
-11. A completion card with a career snapshot, nearby locked work, and playtest
+11. An executive handoff that tests whether confidence, documentation, and
+   client-facing choices matter when the room already works.
+12. A completion card with a career snapshot, nearby locked work, and playtest
    questions.
 
 ## Playtest Questions
@@ -58,6 +60,8 @@ Watch a player complete the current build before expanding it. Look for:
 - Are the stat effects helpful enough to matter without becoming a spreadsheet?
 - Does the conditional warranty return make earlier rushed or patched choices
   feel remembered?
+- Does the executive handoff make "can the client use it?" feel like a real AV
+  success condition?
 - Are the AV jokes legible to newcomers and recognizable to working techs?
 - Does the completion card make players curious about one more dispatch?
 
@@ -123,6 +127,14 @@ fix that resolves callback debt or a quick bandage that keeps management happy.
 
 This is the first prototype test of previous outcomes changing which quests
 appear at all.
+
+## Current Handoff Experiment
+
+The **Executive Handoff** dispatch tests a non-technical success condition. The
+system works, but the client needs the daily meeting path explained in human
+language. The player can run a patient walkthrough, use confidence to rewrite a
+cheat sheet, or do a fast demo that keeps management happy and leaves a training
+gap.
 
 ## Current Replay Experiment
 

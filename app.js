@@ -20,6 +20,7 @@ function createInitialState() {
     warehouseChecks: [],
     secureAccessChecks: [],
     callbackCleanupChecks: [],
+    handoffChecks: [],
     energy: 100,
     burnout: 0,
     cash: 0,
@@ -50,6 +51,8 @@ function createInitialState() {
       unpaidDelaysAbsorbed: 0,
       warrantyReturnsCompleted: 0,
       warrantyBandagesApplied: 0,
+      clientHandoffsCompleted: 0,
+      trainingGapsLeft: 0,
     },
     clock: "MON 7:11 AM",
     flags: {},
@@ -133,7 +136,8 @@ function inferSavedXp(savedGame) {
     + (savedGame.flags?.commissioningComplete ? (savedGame.flags.commissioningApproach === "craft" ? 65 : savedGame.flags.commissioningApproach === "repair" ? 60 : 40) : 0)
     + (savedGame.flags?.warehouseComplete ? (savedGame.flags.warehouseApproach === "label" ? 50 : 35) : 0)
     + (savedGame.flags?.secureAccessComplete ? (savedGame.flags.secureAccessApproach === "pushback" ? 60 : savedGame.flags.secureAccessApproach === "document" ? 55 : 35) : 0)
-    + (savedGame.flags?.callbackCleanupComplete ? (savedGame.flags.callbackCleanupApproach === "craft" ? 65 : savedGame.flags.callbackCleanupApproach === "root" ? 55 : 35) : 0);
+    + (savedGame.flags?.callbackCleanupComplete ? (savedGame.flags.callbackCleanupApproach === "craft" ? 65 : savedGame.flags.callbackCleanupApproach === "root" ? 55 : 35) : 0)
+    + (savedGame.flags?.handoffComplete ? (savedGame.flags.handoffApproach === "cheat" ? 60 : savedGame.flags.handoffApproach === "patient" ? 50 : 30) : 0);
 }
 
 function inferSavedReputation(savedGame) {
@@ -200,6 +204,15 @@ function inferSavedReputation(savedGame) {
       reputation.management -= 1;
     }
   }
+  if (savedGame.flags?.handoffComplete) {
+    if (savedGame.flags.handoffApproach === "quick") {
+      reputation.management += 1;
+    } else {
+      reputation.clients += savedGame.flags.handoffApproach === "cheat" ? 3 : 2;
+      reputation.coworkers += 1;
+      reputation.management -= 1;
+    }
+  }
   return reputation;
 }
 
@@ -227,6 +240,8 @@ function inferSavedStats(savedGame) {
     unpaidDelaysAbsorbed: 0,
     warrantyReturnsCompleted: 0,
     warrantyBandagesApplied: 0,
+    clientHandoffsCompleted: 0,
+    trainingGapsLeft: 0,
   };
   if (savedGame.stats) return { ...stats, ...savedGame.stats };
   if (savedGame.flags?.finished) {
@@ -271,6 +286,11 @@ function inferSavedStats(savedGame) {
     if (savedGame.flags.callbackCleanupApproach === "bandage") stats.warrantyBandagesApplied += 1;
     else stats.callbacksResolved += 1;
   }
+  if (savedGame.flags?.handoffComplete) {
+    stats.clientHandoffsCompleted += 1;
+    if (savedGame.flags.handoffApproach === "quick") stats.trainingGapsLeft += 1;
+    else stats.carefulFinishes += 1;
+  }
   return stats;
 }
 
@@ -309,7 +329,7 @@ function refreshTitleScreen() {
 
 function serializeGame() {
   return {
-    version: 11,
+    version: 12,
     technicianId: state.technician.id,
     sceneId: state.sceneId,
     player: state.player,
@@ -325,6 +345,7 @@ function serializeGame() {
     warehouseChecks: state.warehouseChecks,
     secureAccessChecks: state.secureAccessChecks,
     callbackCleanupChecks: state.callbackCleanupChecks,
+    handoffChecks: state.handoffChecks,
     energy: state.energy,
     burnout: state.burnout,
     cash: state.cash,
@@ -505,6 +526,7 @@ function continueGame() {
   if (flags.warehouseComplete) flags.warehouseProgressAwarded = true;
   if (flags.secureAccessComplete) flags.secureAccessProgressAwarded = true;
   if (flags.callbackCleanupComplete) flags.callbackCleanupProgressAwarded = true;
+  if (flags.handoffComplete) flags.handoffProgressAwarded = true;
   if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
     flags.serviceCallbackPending = true;
   }
@@ -519,9 +541,10 @@ function continueGame() {
     warehouseChecks: savedGame.warehouseChecks || [],
     secureAccessChecks: savedGame.secureAccessChecks || [],
     callbackCleanupChecks: savedGame.callbackCleanupChecks || [],
+    handoffChecks: savedGame.handoffChecks || [],
     cash: migratedCash,
     xp: migratedXp,
-    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0) + (flags.warehouseComplete ? 1 : 0) + (flags.secureAccessComplete ? 1 : 0) + (flags.callbackCleanupComplete ? 1 : 0),
+    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0) + (flags.warehouseComplete ? 1 : 0) + (flags.secureAccessComplete ? 1 : 0) + (flags.callbackCleanupComplete ? 1 : 0) + (flags.handoffComplete ? 1 : 0),
     reputation: migratedReputation,
     training: savedGame.training || [],
     stats: migratedStats,
@@ -561,6 +584,9 @@ function resumeRequiredPrompt() {
   }
   if (state.sceneId === "warrantyReturn" && state.callbackCleanupChecks.length === content.callbackCleanupDispatch.checks.length && !state.flags.callbackCleanupComplete) {
     return showCallbackCleanupChoice();
+  }
+  if (state.sceneId === "executiveHandoff" && state.handoffChecks.length === content.handoffDispatch.checks.length && !state.flags.handoffComplete) {
+    return showHandoffChoice();
   }
 }
 
@@ -940,6 +966,8 @@ function getCareerLedgerMarkup() {
       <span>Unpaid delays absorbed</span><strong>${state.stats.unpaidDelaysAbsorbed}</strong>
       <span>Warranty returns completed</span><strong>${state.stats.warrantyReturnsCompleted}</strong>
       <span>Warranty bandages applied</span><strong>${state.stats.warrantyBandagesApplied}</strong>
+      <span>Client handoffs completed</span><strong>${state.stats.clientHandoffsCompleted}</strong>
+      <span>Training gaps left</span><strong>${state.stats.trainingGapsLeft}</strong>
     </div>
   `;
 }
@@ -1146,6 +1174,7 @@ function takeBreak() {
 function showDispatchPreview() {
   if (state.flags.secureAccessComplete) {
     if (!state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0) return showCallbackCleanupDispatchPreview();
+    if (!state.flags.handoffComplete) return showHandoffDispatchPreview();
     return showPrototypeSummary();
   }
   if (state.flags.warehouseComplete) {
@@ -1686,6 +1715,147 @@ function finishCallbackCleanup(approach) {
       label: "Return To Broomall Shop",
       onClick: () => {
         addLog("Returned to the Broomall shop after the warranty return.");
+        enterScene("shop");
+      },
+    }],
+  });
+}
+
+function showHandoffDispatchPreview() {
+  showModal({
+    kicker: "Dispatch Board",
+    title: content.handoffDispatch.title,
+    body: `
+      <p><strong>Client Handoff:</strong> The room works, but the client needs to run the same meeting without becoming an unpaid AV tech.</p>
+      <p>Dispatch says this is just a quick demo. The client says the executive assistant has actual questions.</p>
+      <blockquote>Management note: "Please keep training concise. The system is designed to be intuitive."</blockquote>
+    `,
+    actions: [
+      { label: "Accept Handoff", onClick: promptHandoffTravel },
+      { label: "Return to Shop", className: "secondary-button" },
+    ],
+  });
+}
+
+function promptHandoffTravel() {
+  showModal({
+    kicker: "Route Summary",
+    title: "Broomall -> Executive Boardroom",
+    body: `
+      <p><strong>Dispatch estimate:</strong> Five-minute walkthrough. No technical work expected.</p>
+      <p class="muted">No technical work expected is also what they said about the warranty return.</p>
+      <div class="route-line"><span>BROOMALL</span><i></i><span>BOARDROOM</span></div>
+    `,
+    actions: [{
+      label: "Drive To Handoff",
+      onClick: () => {
+        state.flags.handoffStarted = true;
+        state.flags.prototypeSummaryViewed = false;
+        setClock(`${state.clock.slice(0, 3)} 1:42 PM`);
+        addLog("Arrived for a client handoff where the room works and the labels do not.");
+        enterScene("executiveHandoff");
+      },
+    }],
+  });
+}
+
+function getHandoffCheckEnergyCost() {
+  return Math.max(0, 2 - getDocumentationHabitReduction());
+}
+
+function getHandoffEnergyCost(baseCost) {
+  return Math.max(0, baseCost - getDocumentationHabitReduction());
+}
+
+function inspectHandoffCondition(checkId) {
+  const check = content.handoffDispatch.checks.find((item) => item.id === checkId);
+  if (!check || state.handoffChecks.includes(checkId)) return notify(`${check?.label || "That handoff note"} is already checked.`);
+  state.handoffChecks.push(checkId);
+  changeEnergy(-getHandoffCheckEnergyCost());
+  addLog(`${check.label} checked: ${check.log}`);
+  render();
+  const allChecked = state.handoffChecks.length === content.handoffDispatch.checks.length;
+  showModal({
+    kicker: "Handoff Note",
+    title: check.label,
+    body: `
+      <p>${check.detail}</p>
+      ${allChecked ? `<p class="muted">You know enough to decide whether this is a real handoff or a fast button tour.</p>` : ""}
+    `,
+    actions: [{ label: allChecked ? "Review Handoff Plan" : "Keep Preparing Handoff", onClick: allChecked ? showHandoffChoice : render }],
+  });
+}
+
+function showHandoffChoice() {
+  showModal({
+    kicker: "Client Handoff",
+    title: "The Room Works If Someone Explains It",
+    body: `
+      <p>The client does not need every feature. They need the morning meeting to start without a group of executives silently watching a laptop search for audio.</p>
+      ${getDocumentationHabitReduction() ? `<p class="muted">Your documentation habit makes the walkthrough notes and cheat sheet faster to prepare.</p>` : ""}
+    `,
+    actions: [
+      { label: `Patient walkthrough of the daily path (-${getHandoffEnergyCost(4)} energy)`, onClick: () => finishHandoff("patient") },
+      ...(getConfidence() >= 2 ? [{
+        label: `Rewrite the cheat sheet in client language (-${getHandoffEnergyCost(3)} energy)`,
+        className: "secondary-button",
+        onClick: () => finishHandoff("cheat"),
+      }] : []),
+      { label: "Quick demo and leave before questions", className: "secondary-button", onClick: () => finishHandoff("quick") },
+    ],
+  });
+}
+
+function finishHandoff(approach) {
+  const helpful = approach !== "quick";
+  const xp = approach === "cheat" ? 60 : approach === "patient" ? 50 : 30;
+  if (helpful) changeEnergy(-getHandoffEnergyCost(approach === "cheat" ? 3 : 4));
+  state.flags.handoffComplete = true;
+  state.flags.handoffApproach = approach;
+  state.flags.prototypeSummaryViewed = false;
+  setClock(`${state.clock.slice(0, 3)} ${helpful ? "2:28" : "2:03"} PM`);
+  if (!state.flags.handoffPaid) {
+    state.cash += helpful ? 64 : 48;
+    state.flags.handoffPaid = true;
+  }
+  if (!state.flags.handoffProgressAwarded) {
+    awardCareerProgress({
+      xp,
+      reputation: helpful
+        ? { clients: approach === "cheat" ? 3 : 2, coworkers: 1, management: -1 }
+        : { clients: 0, coworkers: 0, management: 1 },
+      source: content.handoffDispatch.title,
+    });
+    state.flags.handoffProgressAwarded = true;
+  }
+  if (!state.flags.handoffStatsRecorded) {
+    state.stats.clientHandoffsCompleted += 1;
+    if (helpful) state.stats.carefulFinishes += 1;
+    else state.stats.trainingGapsLeft += 1;
+    state.flags.handoffStatsRecorded = true;
+  }
+  addLog(helpful
+    ? "Completed the handoff in client language instead of button-label language."
+    : "Completed a quick demo. The client now knows enough to ask better questions later.");
+  render();
+  showModal({
+    kicker: "Handoff Complete",
+    title: approach === "cheat" ? "The Cheat Sheet Makes Sense To Humans" : approach === "patient" ? "The Client Can Start The Meeting" : "The Demo Was Technically A Demo",
+    body: `
+      <div class="results-grid">
+        <span>Handoff wages</span><strong>+$${helpful ? 64 : 48}</strong>
+        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Experience</span><strong>+${xp} XP</strong>
+        <span>Client outcome</span><strong>${approach === "cheat" ? "Cheat sheet rewritten" : approach === "patient" ? "Daily path practiced" : "Training gap left"}</strong>
+      </div>
+      ${helpful
+        ? `<blockquote>Management note: "Please avoid expanding simple handoffs into undocumented training sessions."</blockquote>`
+        : `<blockquote>Management note: "Thanks for keeping the handoff efficient."</blockquote>`}
+    `,
+    actions: [{
+      label: "Return To Broomall Shop",
+      onClick: () => {
+        addLog("Returned to the Broomall shop after the executive handoff.");
         enterScene("shop");
       },
     }],
@@ -2568,6 +2738,51 @@ function getInteractions() {
     ];
   }
 
+  if (state.sceneId === "executiveHandoff") {
+    const allChecked = state.handoffChecks.length === content.handoffDispatch.checks.length;
+    return [
+      {
+        x: 300, y: 185, label: allChecked ? "Close out client handoff" : "Talk to client contact", npc: "CLIENT",
+        action: () => {
+          if (allChecked) return showHandoffChoice();
+          if (state.flags.handoffBrief) return notify('Client: "I mostly need to know what to press when the CEO is already looking at me."');
+          state.flags.handoffBrief = true;
+          addLog("Client asked for the version of the system explanation that works during an actual meeting.");
+          showModal({
+            kicker: "Client Contact",
+            title: "Show Me The Normal Way",
+            body: `
+              <p>"Everyone says the room is simple. I just need to start the weekly meeting without guessing whether PRESENT means present my laptop or present my resignation."</p>
+              <p class="muted">Review the control panel labels, daily user path, and what the client actually needs.</p>
+            `,
+            actions: [{ label: "Start Handoff Prep", onClick: render }],
+          });
+        },
+      },
+      {
+        x: 480, y: 260, label: "Review control panel labels",
+        action: () => {
+          if (!state.flags.handoffBrief) return notify("Check in with the client contact first.");
+          inspectHandoffCondition("control-panel");
+        },
+      },
+      {
+        x: 760, y: 300, label: "Practice daily user path",
+        action: () => {
+          if (!state.flags.handoffBrief) return notify("Check in with the client contact first.");
+          inspectHandoffCondition("daily-use");
+        },
+      },
+      {
+        x: 760, y: 180, label: "Ask what the client actually needs",
+        action: () => {
+          if (!state.flags.handoffBrief) return notify("Check in with the client contact first.");
+          inspectHandoffCondition("client-need");
+        },
+      },
+    ];
+  }
+
   if (state.sceneId === "navyYardAccess") {
     const allChecked = state.secureAccessChecks.length === content.secureAccessDispatch.checks.length;
     return [
@@ -2709,6 +2924,7 @@ function getObjective() {
     if (state.flags.commissioningComplete && !state.flags.warehouseComplete) return "Review the warehouse run on the dispatch board.";
     if (state.flags.warehouseComplete && !state.flags.secureAccessComplete) return "Review the Navy Yard secure-access job on the dispatch board.";
     if (state.flags.secureAccessComplete && !state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0) return "Review the warranty return on the dispatch board.";
+    if (state.flags.secureAccessComplete && !state.flags.handoffComplete) return "Review the executive handoff on the dispatch board.";
     if (state.flags.secureAccessComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
     if (state.flags.secureAccessComplete) return "Current prototype complete. Explore the shop.";
     if (state.flags.finished) return "Prepare for the Conshohocken service call.";
@@ -2750,6 +2966,13 @@ function getObjective() {
       return `Troubleshoot the warranty return (${state.callbackCleanupChecks.length}/${content.callbackCleanupDispatch.checks.length}).`;
     }
     return "Return to the client contact and close out the warranty return.";
+  }
+  if (state.sceneId === "executiveHandoff") {
+    if (!state.flags.handoffBrief) return "Check in with the client contact.";
+    if (state.handoffChecks.length < content.handoffDispatch.checks.length) {
+      return `Prepare the client handoff (${state.handoffChecks.length}/${content.handoffDispatch.checks.length}).`;
+    }
+    return "Return to the client contact and choose the handoff style.";
   }
   if (state.sceneId === "navyYardAccess") {
     if (!state.flags.secureAccessBrief) return "Check in with security.";
@@ -2931,8 +3154,11 @@ function render() {
   const commissioningActive = state.sceneId === "southPhillyCommissioning";
   const secureAccessActive = state.sceneId === "navyYardAccess";
   const callbackCleanupActive = state.sceneId === "warrantyReturn";
+  const handoffActive = state.sceneId === "executiveHandoff";
   const warehouseActive = state.flags.warehouseStarted && !state.flags.warehouseComplete;
-  const activeDispatch = callbackCleanupActive || state.flags.callbackCleanupStarted || state.flags.callbackCleanupComplete || (state.flags.secureAccessComplete && !state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0)
+  const activeDispatch = handoffActive || state.flags.handoffStarted || state.flags.handoffComplete || (state.flags.secureAccessComplete && (state.flags.callbackCleanupComplete || getUnresolvedCallbackCount() === 0) && !state.flags.handoffComplete)
+    ? content.handoffDispatch
+    : callbackCleanupActive || state.flags.callbackCleanupStarted || state.flags.callbackCleanupComplete || (state.flags.secureAccessComplete && !state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0)
     ? content.callbackCleanupDispatch
     : secureAccessActive || state.flags.secureAccessStarted || state.flags.secureAccessComplete || (state.flags.warehouseComplete && !state.flags.secureAccessComplete)
     ? content.secureAccessDispatch
@@ -2947,6 +3173,8 @@ function render() {
       : { title: "Two Quick Carts", summary: "Build two mobile video conferencing carts at a Center City East office." };
   elements.jobStatus.textContent = warehouseActive
     ? "WAREHOUSE RUN"
+    : handoffActive
+      ? "CLIENT HANDOFF"
     : callbackCleanupActive
       ? "WARRANTY RETURN"
     : secureAccessActive
