@@ -13,7 +13,7 @@ game engine.
 ## Save Data
 
 The browser prototype autosaves career progress to local storage under
-`av-tech-rpg-save-v1`. The internal save format is currently version `9`. The
+`av-tech-rpg-save-v1`. The internal save format is currently version `12`. The
 save records the technician, tools, scene, position, carried items, tutorial
 progress, fatigue, cash, experience, reputation, field training, flags, and
 field log. It also stores a compact career ledger for completed-job statistics.
@@ -74,6 +74,13 @@ Jobs award experience and reputation in `app.js` when their result is recorded.
 Keep those awards guarded by a saved flag so reopening a result modal cannot
 grant the same progression twice.
 
+Career ledger stats can also create small future effects. Keep these effects
+readable and visible on the career clipboard. The current examples are:
+
+- repeated documented access issues reduce report/access-delay paperwork costs
+- repeated careful finishes reduce repair/punch-list costs
+- unresolved callbacks add a small energy penalty to later access checks
+
 Coworker relationship milestones can grant a tool without stocking it at the
 supply counter. Keep the tool's `price` at `0`, give the relationship a readable
 reputation requirement in `data.js`, and award the stable tool ID from the
@@ -103,6 +110,57 @@ Add another entry inside `technicians`:
 ```
 
 The selection screen will render the new profile automatically.
+If a technician starts with a tool that is normally offered after the tutorial,
+the reward screen automatically filters out already-owned tools.
+
+Optional technician fields can make characters more distinct without changing
+the selection UI:
+
+- `role`
+- `description`
+- `strengths`
+- `weaknesses`
+- `playstyle`
+- `difficulty`
+- `trait`
+- `tendency`
+- `characterStats`
+- `traits`
+
+Use `characterStats` for lightweight tradeoffs such as `install`,
+`toolPreparedness`, `improvisation`, `documentation`, `commercialProcess`,
+`networking`, `dspAudio`, `controlSystems`, and `clientCommunication`. These are
+not a full skill tree; use them only when a scene needs a small gate or modifier.
+
+Use `traits` for simple hooks such as unlocking a special choice, changing a
+line, or recording a flag. Current examples include Wiley's
+`circuitHutPartsBrain`, `makeThatWork`, and `residentialInstinct`.
+
+## Add Character-Specific Lines
+
+`data.js` has a `characterLines` object keyed by technician ID. Scene logic can
+call `getCharacterLine("lineId", fallback)` and safely fall back to default text
+when the active character has no custom line.
+
+Keep these lines short and practical. A good line should add flavor or clarify a
+choice; it should not turn a character into a one-liner machine.
+
+Current early line IDs include:
+
+- `accessoryTote`
+- `inspectVan`
+- `finishChoice`
+- `workaroundLog`
+- `partsBrainQuote`
+- `serviceInspect`
+- `surveyWall`
+
+## Add Shortcut Risk
+
+For quick-workaround versus proper-process choices, record future risk through
+`recordReturnTripRisk(riskId, detail)`. The current prototype stores those risks
+inside save `flags` so later dispatches can reference them without adding a new
+inventory or issue-tracker system.
 
 ## Add a Vehicle
 

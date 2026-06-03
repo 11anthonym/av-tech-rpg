@@ -50,6 +50,7 @@ section + section { margin-top: 22px; }
 .technician-card p { min-height: 48px; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .tech-stats { display: flex; gap: 11px; margin: 22px 0; color: var(--muted); font-size: 11px; text-transform: uppercase; }
 .tech-stats strong { color: var(--accent); }
+.technician-card .starting-kit { min-height: 0; margin: -6px 0 18px; color: var(--text); }
 .selection-back { margin-top: 22px; }
 
 .game-layout { display: grid; grid-template-columns: 190px 780px 220px; gap: 14px; width: 1232px; min-height: calc(100vh - 84px); margin: 0 auto; padding: 16px; }

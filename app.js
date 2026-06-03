@@ -18,6 +18,9 @@ function createInitialState() {
     surveyInspections: [],
     commissioningChecks: [],
     warehouseChecks: [],
+    secureAccessChecks: [],
+    callbackCleanupChecks: [],
+    handoffChecks: [],
     energy: 100,
     burnout: 0,
     cash: 0,
@@ -43,6 +46,13 @@ function createInitialState() {
       warehouseRunsCompleted: 0,
       stockroomLabelsFixed: 0,
       mysteryBoxesLeft: 0,
+      secureAccessJobsCompleted: 0,
+      accessDelaysDocumented: 0,
+      unpaidDelaysAbsorbed: 0,
+      warrantyReturnsCompleted: 0,
+      warrantyBandagesApplied: 0,
+      clientHandoffsCompleted: 0,
+      trainingGapsLeft: 0,
     },
     clock: "MON 7:11 AM",
     flags: {},
@@ -124,7 +134,10 @@ function inferSavedXp(savedGame) {
     + (savedGame.flags?.serviceComplete ? (savedGame.flags.serviceApproach === "verify" ? 50 : 40) : 0)
     + (savedGame.flags?.surveyComplete ? (savedGame.flags.surveyApproach === "pushback" ? 60 : savedGame.flags.surveyApproach === "document" ? 55 : 35) : 0)
     + (savedGame.flags?.commissioningComplete ? (savedGame.flags.commissioningApproach === "craft" ? 65 : savedGame.flags.commissioningApproach === "repair" ? 60 : 40) : 0)
-    + (savedGame.flags?.warehouseComplete ? (savedGame.flags.warehouseApproach === "label" ? 50 : 35) : 0);
+    + (savedGame.flags?.warehouseComplete ? (savedGame.flags.warehouseApproach === "label" ? 50 : 35) : 0)
+    + (savedGame.flags?.secureAccessComplete ? (savedGame.flags.secureAccessApproach === "pushback" ? 60 : savedGame.flags.secureAccessApproach === "document" ? 55 : 35) : 0)
+    + (savedGame.flags?.callbackCleanupComplete ? (savedGame.flags.callbackCleanupApproach === "craft" ? 65 : savedGame.flags.callbackCleanupApproach === "root" ? 55 : 35) : 0)
+    + (savedGame.flags?.handoffComplete ? (savedGame.flags.handoffApproach === "cheat" ? 60 : savedGame.flags.handoffApproach === "patient" ? 50 : 30) : 0);
 }
 
 function inferSavedReputation(savedGame) {
@@ -135,6 +148,10 @@ function inferSavedReputation(savedGame) {
       reputation.clients += 2;
       reputation.coworkers += 1;
       reputation.management -= 1;
+    } else if (savedGame.flags.finishChoice === "wiley-workaround") {
+      reputation.clients += 1;
+      reputation.coworkers -= 1;
+      reputation.management += 1;
     } else {
       reputation.management += 1;
     }
@@ -173,6 +190,33 @@ function inferSavedReputation(savedGame) {
       reputation.management += 1;
     }
   }
+  if (savedGame.flags?.secureAccessComplete) {
+    if (savedGame.flags.secureAccessApproach === "absorb") {
+      reputation.management += 1;
+    } else {
+      reputation.clients += 1;
+      reputation.coworkers += 1;
+      reputation.management += savedGame.flags.secureAccessApproach === "pushback" ? -2 : -1;
+    }
+  }
+  if (savedGame.flags?.callbackCleanupComplete) {
+    if (savedGame.flags.callbackCleanupApproach === "bandage") {
+      reputation.management += 1;
+    } else {
+      reputation.clients += 2;
+      reputation.coworkers += savedGame.flags.callbackCleanupApproach === "craft" ? 2 : 1;
+      reputation.management -= 1;
+    }
+  }
+  if (savedGame.flags?.handoffComplete) {
+    if (savedGame.flags.handoffApproach === "quick") {
+      reputation.management += 1;
+    } else {
+      reputation.clients += savedGame.flags.handoffApproach === "cheat" ? 3 : 2;
+      reputation.coworkers += 1;
+      reputation.management -= 1;
+    }
+  }
   return reputation;
 }
 
@@ -195,11 +239,19 @@ function inferSavedStats(savedGame) {
     warehouseRunsCompleted: 0,
     stockroomLabelsFixed: 0,
     mysteryBoxesLeft: 0,
+    secureAccessJobsCompleted: 0,
+    accessDelaysDocumented: 0,
+    unpaidDelaysAbsorbed: 0,
+    warrantyReturnsCompleted: 0,
+    warrantyBandagesApplied: 0,
+    clientHandoffsCompleted: 0,
+    trainingGapsLeft: 0,
   };
   if (savedGame.stats) return { ...stats, ...savedGame.stats };
   if (savedGame.flags?.finished) {
     stats.overtimeDays += 1;
     if (savedGame.flags.finishChoice === "tidy") stats.carefulFinishes += 1;
+    if (savedGame.flags.finishChoice === "wiley-workaround") stats.callbacks += 1;
   }
   if (savedGame.flags?.serviceComplete) {
     if (savedGame.flags.serviceApproach === "verify") stats.carefulFinishes += 1;
@@ -228,6 +280,21 @@ function inferSavedStats(savedGame) {
     stats.warehouseRunsCompleted += 1;
     if (savedGame.flags.warehouseApproach === "label") stats.stockroomLabelsFixed += 1;
     else stats.mysteryBoxesLeft += 1;
+  }
+  if (savedGame.flags?.secureAccessComplete) {
+    stats.secureAccessJobsCompleted += 1;
+    if (savedGame.flags.secureAccessApproach === "absorb") stats.unpaidDelaysAbsorbed += 1;
+    else stats.accessDelaysDocumented += 1;
+  }
+  if (savedGame.flags?.callbackCleanupComplete) {
+    stats.warrantyReturnsCompleted += 1;
+    if (savedGame.flags.callbackCleanupApproach === "bandage") stats.warrantyBandagesApplied += 1;
+    else stats.callbacksResolved += 1;
+  }
+  if (savedGame.flags?.handoffComplete) {
+    stats.clientHandoffsCompleted += 1;
+    if (savedGame.flags.handoffApproach === "quick") stats.trainingGapsLeft += 1;
+    else stats.carefulFinishes += 1;
   }
   return stats;
 }
@@ -267,7 +334,7 @@ function refreshTitleScreen() {
 
 function serializeGame() {
   return {
-    version: 9,
+    version: 12,
     technicianId: state.technician.id,
     sceneId: state.sceneId,
     player: state.player,
@@ -281,6 +348,9 @@ function serializeGame() {
     surveyInspections: state.surveyInspections,
     commissioningChecks: state.commissioningChecks,
     warehouseChecks: state.warehouseChecks,
+    secureAccessChecks: state.secureAccessChecks,
+    callbackCleanupChecks: state.callbackCleanupChecks,
+    handoffChecks: state.handoffChecks,
     energy: state.energy,
     burnout: state.burnout,
     cash: state.cash,
@@ -308,6 +378,66 @@ function getToolModifier(modifier) {
   return state.tools.reduce((total, toolId) => total + (content.tools[toolId]?.modifiers?.[modifier] || 0), 0);
 }
 
+function getCharacterLine(lineId, fallback = "") {
+  if (!state.technician) return fallback;
+  return content.characterLines?.[state.technician.id]?.[lineId] || fallback;
+}
+
+function hasSeenCharacterLine(lineId) {
+  state.flags.characterLinesSeen ||= {};
+  return Boolean(state.flags.characterLinesSeen[lineId]);
+}
+
+function markCharacterLineSeen(lineId) {
+  state.flags.characterLinesSeen ||= {};
+  state.flags.characterLinesSeen[lineId] = true;
+}
+
+function hasCharacterTrait(traitId) {
+  return state.technician?.traits?.includes(traitId) || false;
+}
+
+function getCharacterStat(statId) {
+  return state.technician?.characterStats?.[statId] || 0;
+}
+
+function recordReturnTripRisk(riskId, detail) {
+  state.flags.returnTripRisks ||= {};
+  state.flags.returnTripRisks[riskId] = detail;
+}
+
+function getCurrentDispatchKey() {
+  if (state.sceneId === "executiveHandoff" || state.flags.handoffStarted || state.flags.handoffComplete) return "handoff";
+  if (state.sceneId === "warrantyReturn" || state.flags.callbackCleanupStarted || state.flags.callbackCleanupComplete) return "warranty";
+  if (state.sceneId === "navyYardAccess" || state.flags.secureAccessStarted || state.flags.secureAccessComplete || (state.flags.warehouseComplete && !state.flags.secureAccessComplete)) return "secureAccess";
+  if (state.flags.warehouseStarted || state.flags.warehouseComplete) return "warehouse";
+  if (state.sceneId === "southPhillyCommissioning" || state.flags.commissioningStarted || state.flags.commissioningComplete) return "commissioning";
+  if (state.sceneId === "universitySurvey" || state.flags.surveyStarted || state.flags.surveyComplete) return "survey";
+  if (state.sceneId === "serviceOffice" || state.flags.serviceStarted || state.flags.serviceComplete || state.flags.finished) return "service";
+  return "tutorial";
+}
+
+function getUsedPartsBrainDispatches() {
+  state.flags.partsBrainDispatches ||= {};
+  return state.flags.partsBrainDispatches;
+}
+
+function getPartsBrainFind() {
+  const finds = content.tools.circuitHutOrganizer.finds;
+  const index = getCurrentDispatchKey()
+    .split("")
+    .reduce((total, char) => total + char.charCodeAt(0), 0) % finds.length;
+  return finds[index];
+}
+
+function hasActivePartsBrainFind() {
+  return ownsTool("circuitHutOrganizer") && Boolean(getUsedPartsBrainDispatches()[getCurrentDispatchKey()]);
+}
+
+function canUsePartsBrain() {
+  return hasCharacterTrait("circuitHutPartsBrain") && ownsTool("circuitHutOrganizer") && !hasActivePartsBrainFind();
+}
+
 function getTrainingModifier(modifier) {
   return state.training.reduce((total, trainingId) => (
     total + (content.career.trainingChoices.find((choice) => choice.id === trainingId)?.modifiers?.[modifier] || 0)
@@ -326,6 +456,26 @@ function getConfidence() {
   return state.technician.stats.confidence + getTrainingModifier("confidence");
 }
 
+function canUseMakeThatWorkShortcut() {
+  return hasCharacterTrait("makeThatWork") && getCharacterStat("improvisation") >= 4;
+}
+
+function getDocumentationHabitReduction() {
+  return state.stats.accessRisksDocumented + state.stats.accessDelaysDocumented >= 2 ? 1 : 0;
+}
+
+function getCarefulWorkReduction() {
+  return state.stats.carefulFinishes >= 2 ? 1 : 0;
+}
+
+function getOpenCallbackPenalty() {
+  return Math.min(1, Math.max(0, state.stats.callbacks - state.stats.callbacksResolved));
+}
+
+function getUnresolvedCallbackCount() {
+  return Math.max(0, state.stats.callbacks - state.stats.callbacksResolved);
+}
+
 function getCarryCapacity(sceneId = state.sceneId) {
   return ["garage", "serviceOffice"].includes(sceneId) ? 1 + getToolModifier("garageCarryCapacityBonus") : 1;
 }
@@ -339,7 +489,8 @@ function getAssemblyEnergyCost(baseCost) {
 }
 
 function getVerificationEnergyCost(baseCost) {
-  return Math.max(0, baseCost - getToolModifier("verificationEnergyReduction"));
+  const partsBrainReduction = hasActivePartsBrainFind() ? getToolModifier("partsBrainVerificationReduction") : 0;
+  return Math.max(0, baseCost - getToolModifier("verificationEnergyReduction") - partsBrainReduction);
 }
 
 function getServiceDiagnosisEnergyCost(baseCost) {
@@ -443,6 +594,9 @@ function continueGame() {
   if (flags.surveyComplete) flags.surveyProgressAwarded = true;
   if (flags.commissioningComplete) flags.commissioningProgressAwarded = true;
   if (flags.warehouseComplete) flags.warehouseProgressAwarded = true;
+  if (flags.secureAccessComplete) flags.secureAccessProgressAwarded = true;
+  if (flags.callbackCleanupComplete) flags.callbackCleanupProgressAwarded = true;
+  if (flags.handoffComplete) flags.handoffProgressAwarded = true;
   if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
     flags.serviceCallbackPending = true;
   }
@@ -455,9 +609,12 @@ function continueGame() {
     surveyInspections: savedGame.surveyInspections || [],
     commissioningChecks: savedGame.commissioningChecks || [],
     warehouseChecks: savedGame.warehouseChecks || [],
+    secureAccessChecks: savedGame.secureAccessChecks || [],
+    callbackCleanupChecks: savedGame.callbackCleanupChecks || [],
+    handoffChecks: savedGame.handoffChecks || [],
     cash: migratedCash,
     xp: migratedXp,
-    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0) + (flags.warehouseComplete ? 1 : 0),
+    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0) + (flags.warehouseComplete ? 1 : 0) + (flags.secureAccessComplete ? 1 : 0) + (flags.callbackCleanupComplete ? 1 : 0) + (flags.handoffComplete ? 1 : 0),
     reputation: migratedReputation,
     training: savedGame.training || [],
     stats: migratedStats,
@@ -491,6 +648,15 @@ function resumeRequiredPrompt() {
   }
   if (state.sceneId === "shop" && state.flags.warehouseStarted && state.warehouseChecks.length === content.warehouseDispatch.checks.length && !state.flags.warehouseComplete) {
     return showWarehouseChoice();
+  }
+  if (state.sceneId === "navyYardAccess" && state.secureAccessChecks.length === content.secureAccessDispatch.checks.length && !state.flags.secureAccessComplete) {
+    return showSecureAccessChoice();
+  }
+  if (state.sceneId === "warrantyReturn" && state.callbackCleanupChecks.length === content.callbackCleanupDispatch.checks.length && !state.flags.callbackCleanupComplete) {
+    return showCallbackCleanupChoice();
+  }
+  if (state.sceneId === "executiveHandoff" && state.handoffChecks.length === content.handoffDispatch.checks.length && !state.flags.handoffComplete) {
+    return showHandoffChoice();
   }
 }
 
@@ -649,10 +815,16 @@ function showFinishChoice() {
     title: "Cart 2 Works. The Cables Do Not Look Happy.",
     body: `
       <p>Dispatch expected you to be done hours ago. You can clean up the cable routing or leave before traffic gets worse.</p>
+      ${canUseMakeThatWorkShortcut() ? `<p class="muted">${getCharacterLine("finishChoice", "You can make the awkward path work for now. The question is whether it deserves to become the install.")}</p>` : ""}
       <p><strong>Energy:</strong> ${state.energy}/${getMaxEnergy()}</p>
     `,
     actions: [
       { label: "Dress the cables properly (+35 min)", onClick: () => finishJob("tidy") },
+      ...(canUseMakeThatWorkShortcut() ? [{
+        label: "Use the adapter workaround and leave",
+        className: "secondary-button",
+        onClick: () => finishJob("wiley-workaround"),
+      }] : []),
       { label: "Use three zip ties and leave", className: "secondary-button", onClick: () => finishJob("rush") },
     ],
   });
@@ -666,6 +838,16 @@ function finishJob(choice) {
     state.burnout += 1;
     setClock("MON 6:21 PM");
     addLog("Cable routing cleaned up. Client is happy. Management notices the clock.");
+  } else if (choice === "wiley-workaround") {
+    changeEnergy(-2);
+    setClock("MON 5:49 PM");
+    state.stats.callbacks += 1;
+    state.flags.wileyUsedTemporaryFix = true;
+    recordReturnTripRisk("usedTemporaryAdapterPermanently", {
+      source: "Two Quick Carts",
+      detail: "Adapter workaround used as final install path.",
+    });
+    addLog(getCharacterLine("workaroundLog", "Made the adapter path work for now. The closeout notes did not get smarter."));
   } else {
     changeEnergy(-4);
     setClock("MON 5:54 PM");
@@ -680,6 +862,8 @@ function finishJob(choice) {
       xp: 40,
       reputation: choice === "tidy"
         ? { clients: 2, coworkers: 1, management: -1 }
+        : choice === "wiley-workaround"
+        ? { clients: 1, coworkers: -1, management: 1 }
         : { clients: 0, coworkers: 0, management: 1 },
       source: "Two Quick Carts",
     });
@@ -696,6 +880,7 @@ function finishJob(choice) {
 function showResults() {
   const tidy = state.flags.finishChoice === "tidy";
   const netPay = tidy ? 152 : 141;
+  const rewardTools = content.tutorial.rewardTools.filter((toolId) => !ownsTool(toolId));
   showModal({
     kicker: "End of Day",
     title: "Two Quick Carts: Complete",
@@ -712,18 +897,26 @@ function showResults() {
         <span>Experience</span><strong>+40 XP</strong>
       </div>
       <blockquote>Management note: "Please improve time management and plan parking more efficiently."</blockquote>
-      <p>You survived your first week early. Choose one starter upgrade.</p>
+      <p>You survived your first week early. ${rewardTools.length ? "Choose one starter upgrade." : "Your starter kit already covers the current upgrade choices."}</p>
     `,
-    actions: content.tutorial.rewardTools.map((toolId) => ({
+    actions: rewardTools.length ? rewardTools.map((toolId) => ({
       label: content.tools[toolId].name,
       className: "secondary-button",
       onClick: () => chooseReward(toolId),
-    })),
+    })) : [{
+      label: "Return to Broomall Shop",
+      onClick: () => {
+        state.flags.reward = "starter-kit";
+        state.carry = [];
+        addLog("Starter kit already included the current upgrade choices.");
+        enterScene("shop");
+      },
+    }],
   });
 }
 
 function chooseReward(toolId) {
-  state.tools.push(toolId);
+  if (!ownsTool(toolId)) state.tools.push(toolId);
   state.flags.reward = toolId;
   showModal({
     kicker: "Personal Tool Added",
@@ -746,6 +939,7 @@ function chooseReward(toolId) {
 
 function showPersonalKit() {
   const ownedTools = state.tools.map((toolId) => content.tools[toolId]);
+  const partsBrainActive = hasActivePartsBrainFind();
   showModal({
     kicker: "Personal Kit",
     title: "Your Tools",
@@ -756,8 +950,34 @@ function showPersonalKit() {
       <p class="muted">Garage carry capacity: ${getCarryCapacity("garage")} equipment group${getCarryCapacity("garage") === 1 ? "" : "s"}</p>
       <p class="muted">Assembly energy cost: ${getAssemblyEnergyCost(7)} per cart component</p>
       <p class="muted">Signal-path verification energy cost: ${getVerificationEnergyCost(4)}</p>
+      ${ownsTool("circuitHutOrganizer") ? `<p class="muted">Circuit Hut Parts Brain: ${partsBrainActive ? `active this dispatch (${getUsedPartsBrainDispatches()[getCurrentDispatchKey()]})` : "unused for this dispatch"}</p>` : ""}
     `,
-    actions: [{ label: "Close Tool Bag" }],
+    actions: [
+      ...(canUsePartsBrain() ? [{
+        label: "Check Circuit Hut Organizer",
+        className: "secondary-button",
+        onClick: useCircuitHutPartsBrain,
+      }] : []),
+      { label: "Close Tool Bag" },
+    ],
+  });
+}
+
+function useCircuitHutPartsBrain() {
+  if (!canUsePartsBrain()) return showPersonalKit();
+  const dispatchKey = getCurrentDispatchKey();
+  const find = getPartsBrainFind();
+  getUsedPartsBrainDispatches()[dispatchKey] = find;
+  addLog(`Wiley checked the Circuit Hut organizer and found a ${find}.`);
+  showModal({
+    kicker: "Circuit Hut Parts Brain",
+    title: "Small Part, Big Judgment Call",
+    body: `
+      <p>Wiley digs through the old parts organizer and finds a <strong>${find}</strong>.</p>
+      <p>This can help with testing during the current dispatch. It does not automatically make the workaround acceptable for final closeout.</p>
+      <blockquote>${state.technician.name}: "${getCharacterLine("partsBrainQuote", "This is fine for testing. Permanent is where the paperwork starts.")}"</blockquote>
+    `,
+    actions: [{ label: "Pocket It For Testing", onClick: render }],
   });
 }
 
@@ -790,6 +1010,8 @@ function showCareerClipboard() {
       <ul class="modal-list">
         ${getCareerMilestones().map((milestone) => `<li><strong>${milestone.status} ${milestone.name}</strong><span>${milestone.description}</span></li>`).join("")}
       </ul>
+      <p><strong>Active career effects:</strong></p>
+      ${getCareerEffectsMarkup()}
       <p><strong>Career ledger:</strong></p>
       ${getCareerLedgerMarkup()}
       <p class="muted">${pendingTraining
@@ -807,6 +1029,31 @@ function showCareerClipboard() {
       { label: "Return Clipboard" },
     ],
   });
+}
+
+function getCareerEffectsMarkup() {
+  const effects = [
+    {
+      active: getDocumentationHabitReduction() > 0,
+      name: "Documentation habit",
+      description: "Documenting access problems twice reduces future report and access-delay paperwork by 1 energy.",
+    },
+    {
+      active: getCarefulWorkReduction() > 0,
+      name: "Careful-work rhythm",
+      description: "Two careful finishes reduce future repair and punch-list energy by 1.",
+    },
+    {
+      active: getOpenCallbackPenalty() > 0,
+      name: "Open callback drag",
+      description: "Unresolved callbacks add 1 energy to access checks until the career ledger catches up.",
+    },
+  ];
+  return `
+    <ul class="modal-list">
+      ${effects.map((effect) => `<li><strong>${effect.active ? "[ACTIVE]" : "[LOCKED]"} ${effect.name}</strong><span>${effect.description}</span></li>`).join("")}
+    </ul>
+  `;
 }
 
 function getCareerLedgerMarkup() {
@@ -829,6 +1076,13 @@ function getCareerLedgerMarkup() {
       <span>Warehouse runs completed</span><strong>${state.stats.warehouseRunsCompleted}</strong>
       <span>Stockroom labels corrected</span><strong>${state.stats.stockroomLabelsFixed}</strong>
       <span>Mystery boxes left alone</span><strong>${state.stats.mysteryBoxesLeft}</strong>
+      <span>Secure-access jobs completed</span><strong>${state.stats.secureAccessJobsCompleted}</strong>
+      <span>Access delays documented</span><strong>${state.stats.accessDelaysDocumented}</strong>
+      <span>Unpaid delays absorbed</span><strong>${state.stats.unpaidDelaysAbsorbed}</strong>
+      <span>Warranty returns completed</span><strong>${state.stats.warrantyReturnsCompleted}</strong>
+      <span>Warranty bandages applied</span><strong>${state.stats.warrantyBandagesApplied}</strong>
+      <span>Client handoffs completed</span><strong>${state.stats.clientHandoffsCompleted}</strong>
+      <span>Training gaps left</span><strong>${state.stats.trainingGapsLeft}</strong>
     </div>
   `;
 }
@@ -1033,8 +1287,13 @@ function takeBreak() {
 }
 
 function showDispatchPreview() {
-  if (state.flags.warehouseComplete) {
+  if (state.flags.secureAccessComplete) {
+    if (!state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0) return showCallbackCleanupDispatchPreview();
+    if (!state.flags.handoffComplete) return showHandoffDispatchPreview();
     return showPrototypeSummary();
+  }
+  if (state.flags.warehouseComplete) {
+    return showSecureAccessDispatchPreview();
   }
   if (state.flags.commissioningComplete) {
     if (hasPendingTraining()) return notify("Mark your new field-training focus on the clipboard before closing out the prototype.");
@@ -1054,17 +1313,44 @@ function showDispatchPreview() {
   showModal({
     kicker: "Dispatch Board",
     title: "One Quick Display Swap",
-    body: `
-      <p><strong>Service Call:</strong> Conference-room display issue in Conshohocken.</p>
-      <p>Sales says the replacement display is already onsite. The client says the room is booked again this afternoon.</p>
-      ${state.flags.servicePreparation ? `<p class="muted">Preparation selected: ${getServicePreparationLabel()}</p>` : ""}
-      <p class="muted">Use the supply counter, inspect your kit, or take an unpaid recovery day before leaving.</p>
-    `,
+    body: getDispatchBoardMarkup({
+      type: "Service Call",
+      setup: "Conference-room display issue in Conshohocken. Sales says the replacement display is already onsite. The client says the room is booked again this afternoon.",
+      why: "Unlocked after your first install day. The shop wants to see whether you can handle a small service call without turning it into a meeting.",
+      stakes: [
+        "Preparation changes diagnosis, energy, or arrival stamina.",
+        "Verifying the signal path can prevent callback debt.",
+        "Rushing can help management now and cost you later.",
+      ],
+      note: "Use the supply counter, inspect your kit, or take an unpaid recovery day before leaving.",
+      managementNote: "Please keep this quick. The client has another meeting, and the quote says replacement.",
+      prep: state.flags.servicePreparation ? `Preparation selected: ${getServicePreparationLabel()}` : "",
+    }),
     actions: [
       { label: "Accept Service Call", onClick: () => state.flags.servicePreparation ? promptServiceTravel() : showServicePreparation() },
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
+}
+
+function getDispatchBoardMarkup({ type, setup, why, stakes, note, managementNote, prep = "" }) {
+  return `
+    <p><strong>${type}:</strong> ${setup}</p>
+    <ul class="modal-list">
+      <li><strong>Why this is on the board</strong><span>${why}</span></li>
+      <li><strong>Stakes</strong><span>${stakes.join(" ")}</span></li>
+      ${prep ? `<li><strong>Prep</strong><span>${prep}</span></li>` : ""}
+      <li><strong>Locked next work</strong><span>${getUpcomingDispatchText()}</span></li>
+    </ul>
+    ${note ? `<p class="muted">${note}</p>` : ""}
+    <blockquote>Management note: "${managementNote}"</blockquote>
+  `;
+}
+
+function getUpcomingDispatchText() {
+  return content.upcomingDispatches.length
+    ? content.upcomingDispatches.map((dispatch) => `[LOCKED] ${dispatch.title}: ${dispatch.summary}`).join(" ")
+    : "More erasable-marker work will be added after this prototype pass.";
 }
 
 function showPrototypeSummary() {
@@ -1085,14 +1371,14 @@ function showPrototypeSummary() {
       </div>
       <p><strong>Career ledger:</strong></p>
       ${getCareerLedgerMarkup()}
-      <p><strong>Upcoming dispatches:</strong></p>
+      <p><strong>Upcoming dispatch:</strong></p>
       <ul class="modal-list">
         ${content.upcomingDispatches.map((dispatch) => `<li><strong>[LOCKED] ${dispatch.title}</strong><span>${dispatch.summary}</span></li>`).join("")}
       </ul>
       <p><strong>Prototype playtest questions:</strong></p>
       <ul class="modal-list">
         <li><strong>Did the walking stay purposeful?</strong><span>Loading and carrying should explain the job without becoming repetitive.</span></li>
-        <li><strong>Did your choices feel visible?</strong><span>Your tools, preparation, diagnosis, survey report, commissioning notes, and stockroom decision should change how the workday plays.</span></li>
+        <li><strong>Did your choices feel visible?</strong><span>Your tools, preparation, diagnosis, survey report, commissioning notes, stockroom decision, and access-delay report should change how the workday plays.</span></li>
         <li><strong>Did progression make you curious?</strong><span>The shop, clipboard, and locked dispatches should make one more workday sound appealing.</span></li>
       </ul>
       <blockquote>Dispatch note: "Please remain flexible. Several schedules are currently being finalized retroactively."</blockquote>
@@ -1109,11 +1395,18 @@ function showWarehouseDispatchPreview() {
   showModal({
     kicker: "Dispatch Board",
     title: content.warehouseDispatch.title,
-    body: `
-      <p><strong>Warehouse Run:</strong> Find a replacement power supply before another technician leaves for a service call.</p>
-      <p>Dispatch says it was stored in one of the vans. Van #2 is already offsite, and the key board says its key is with SALES.</p>
-      <blockquote>Management note: "This should only take a minute. Please check the obvious places before escalating."</blockquote>
-    `,
+    body: getDispatchBoardMarkup({
+      type: "Warehouse Run",
+      setup: "Find a replacement power supply before another technician leaves for a service call. Dispatch says it was stored in one of the vans.",
+      why: "Unlocked after commissioning. The shop needs a quick change of pace that tests whether messy inventory can become gameplay.",
+      stakes: [
+        "Searching costs energy.",
+        "Fixing the bin label helps coworkers and annoys management.",
+        "Leaving the pile alone keeps the task efficient and the next search worse.",
+      ],
+      note: "Van #2 is already offsite, and the key board says its key is with SALES.",
+      managementNote: "This should only take a minute. Please check the obvious places before escalating.",
+    }),
     actions: [
       { label: "Start Looking", onClick: startWarehouseRun },
       { label: "Return to Shop", className: "secondary-button" },
@@ -1229,15 +1522,533 @@ function finishWarehouseRun(approach) {
   });
 }
 
+function showSecureAccessDispatchPreview() {
+  showModal({
+    kicker: "Dispatch Board",
+    title: content.secureAccessDispatch.title,
+    body: getDispatchBoardMarkup({
+      type: "Access Quest",
+      setup: "Drop off a small rack update at a Navy Yard building with secure access. The ticket says Building 12. The forwarded email subject says Building 13.",
+      why: "Unlocked after the warehouse run. Dispatch has moved from missing parts to missing access details.",
+      stakes: [
+        "Preparation can reduce access-check or report costs.",
+        "Documenting the delay builds the documentation habit.",
+        "Absorbing the delay protects the ticket and adds burnout.",
+      ],
+      note: "Dispatch says the building mismatch is probably campus language.",
+      managementNote: "Please do not let access delays affect today's schedule.",
+      prep: state.flags.secureAccessPreparation ? `Preparation selected: ${getSecureAccessPreparationLabel()}` : "",
+    }),
+    actions: [
+      { label: "Accept Navy Yard Job", onClick: () => state.flags.secureAccessPreparation ? promptSecureAccessTravel() : showSecureAccessPreparation() },
+      { label: "Return to Shop", className: "secondary-button" },
+    ],
+  });
+}
+
+function getSecureAccessPreparationLabel() {
+  return {
+    review: "Reviewed access email",
+    contact: "Called listed site contact",
+    none: "Trusted dispatch notes",
+  }[state.flags.secureAccessPreparation] || "None";
+}
+
+function showSecureAccessPreparation() {
+  showModal({
+    kicker: "Before You Leave",
+    title: "Prepare For Secure Access",
+    body: `
+      <p>The work order has a building number, a badge note, and a forwarded email chain where everyone spells the client acronym differently.</p>
+      <p class="muted">Take one small preparation step before leaving Broomall.</p>
+    `,
+    actions: [
+      { label: "Review the access email", onClick: () => chooseSecureAccessPreparation("review") },
+      { label: "Call the listed site contact", className: "secondary-button", onClick: () => chooseSecureAccessPreparation("contact") },
+      { label: "Trust dispatch notes", className: "secondary-button", onClick: () => chooseSecureAccessPreparation("none") },
+    ],
+  });
+}
+
+function chooseSecureAccessPreparation(preparation) {
+  state.flags.secureAccessPreparation = preparation;
+  let title = "The Ticket Will Have To Do";
+  let body = `<p>The dispatch note says "security aware," which is doing a heroic amount of work for two words.</p>`;
+  if (preparation === "review") {
+    title = "Access Email Reviewed";
+    body = `
+      <p>The email chain confirms the secure escort requirement. It also confirms nobody put your name in the visitor portal.</p>
+      <p class="muted">Each access check will cost 1 less energy.</p>
+    `;
+    addLog("Reviewed the Navy Yard access email and found the missing visitor-portal step.");
+  }
+  if (preparation === "contact") {
+    title = "Site Contact Reached";
+    body = `
+      <p>The site contact answers between meetings and confirms Building 13. They cannot add you to the visitor list until security sees the work order.</p>
+      <p class="muted">Documenting the access delay will cost 1 less energy.</p>
+    `;
+    addLog("Called the Navy Yard site contact and confirmed the building mismatch.");
+  }
+  if (preparation === "none") addLog("Left for Navy Yard trusting the dispatch notes.");
+  render();
+  showModal({
+    kicker: "Preparation Selected",
+    title,
+    body,
+    actions: [{ label: "Head To Navy Yard", onClick: promptSecureAccessTravel }],
+  });
+}
+
+function promptSecureAccessTravel() {
+  showModal({
+    kicker: "Route Summary",
+    title: "Broomall -> Navy Yard",
+    body: `
+      <p><strong>Dispatch estimate:</strong> Quick rack update. Security already knows you are coming.</p>
+      <p class="muted">Security may have received that information in a different timeline.</p>
+      <div class="route-line"><span>BROOMALL</span><i></i><span>NAVY YARD</span></div>
+    `,
+    actions: [{
+      label: "Drive To Security Gate",
+      onClick: () => {
+        state.flags.secureAccessStarted = true;
+        state.flags.prototypeSummaryViewed = false;
+        setClock(`${state.clock.slice(0, 3)} 5:08 PM`);
+        addLog("Arrived at Navy Yard security with a building number and a bad feeling.");
+        enterScene("navyYardAccess");
+      },
+    }],
+  });
+}
+
+function getSecureAccessCheckEnergyCost() {
+  return Math.max(0, 3 - (state.flags.secureAccessPreparation === "review" ? 1 : 0) + getOpenCallbackPenalty());
+}
+
+function getSecureAccessReportEnergyCost(baseCost) {
+  return Math.max(0, baseCost - (state.flags.secureAccessPreparation === "contact" ? 1 : 0) - getDocumentationHabitReduction());
+}
+
+function inspectSecureAccessCondition(checkId) {
+  const check = content.secureAccessDispatch.checks.find((item) => item.id === checkId);
+  if (!check || state.secureAccessChecks.includes(checkId)) return notify(`${check?.label || "That access issue"} is already in your notes.`);
+  state.secureAccessChecks.push(checkId);
+  changeEnergy(-getSecureAccessCheckEnergyCost());
+  addLog(`${check.label} checked: ${check.log}`);
+  render();
+  const allChecked = state.secureAccessChecks.length === content.secureAccessDispatch.checks.length;
+  showModal({
+    kicker: "Access Note",
+    title: check.label,
+    body: `
+      <p>${check.detail}</p>
+      ${allChecked ? `<p class="muted">You have enough facts to explain why the quick rack update is no longer quick.</p>` : ""}
+    `,
+    actions: [{ label: allChecked ? "Review Access Delay" : "Keep Sorting Access", onClick: allChecked ? showSecureAccessChoice : render }],
+  });
+}
+
+function showSecureAccessChoice() {
+  showModal({
+    kicker: "Access Decision",
+    title: "The Delay Is Real, The Schedule Is Fiction",
+    body: `
+      <p>Security, the building number, and the escort policy all disagree with the dispatch estimate. The rack update itself is small; getting permission to reach it is the job.</p>
+      <p>Management wants the ticket kept clean. The client would prefer an honest ETA over another vague "tech onsite" update.</p>
+      ${getDocumentationHabitReduction() ? `<p class="muted">Your documentation habit makes the access-delay note faster to write.</p>` : ""}
+      ${getOpenCallbackPenalty() ? `<p class="muted">The open callback still on the ledger made today's access shuffle feel heavier.</p>` : ""}
+    `,
+    actions: [
+      { label: `Document access delay and update ETA (-${getSecureAccessReportEnergyCost(4)} energy)`, onClick: () => finishSecureAccess("document") },
+      ...(getConfidence() >= 2 ? [{
+        label: `Push dispatch to own the access miss (-${getSecureAccessReportEnergyCost(3)} energy)`,
+        className: "secondary-button",
+        onClick: () => finishSecureAccess("pushback"),
+      }] : []),
+      { label: "Eat the delay and mark arrival on time", className: "secondary-button", onClick: () => finishSecureAccess("absorb") },
+    ],
+  });
+}
+
+function finishSecureAccess(approach) {
+  const honest = approach !== "absorb";
+  const xp = approach === "pushback" ? 60 : approach === "document" ? 55 : 35;
+  if (honest) changeEnergy(-getSecureAccessReportEnergyCost(approach === "pushback" ? 3 : 4));
+  else state.burnout += 1;
+  state.flags.secureAccessComplete = true;
+  state.flags.secureAccessApproach = approach;
+  state.flags.prototypeSummaryViewed = false;
+  setClock(`${state.clock.slice(0, 3)} ${approach === "absorb" ? "6:02" : "6:18"} PM`);
+  if (!state.flags.secureAccessPaid) {
+    state.cash += honest ? 92 : 76;
+    state.flags.secureAccessPaid = true;
+  }
+  if (!state.flags.secureAccessProgressAwarded) {
+    awardCareerProgress({
+      xp,
+      reputation: honest
+        ? { clients: 1, coworkers: 1, management: approach === "pushback" ? -2 : -1 }
+        : { clients: 0, coworkers: 0, management: 1 },
+      source: content.secureAccessDispatch.title,
+    });
+    state.flags.secureAccessProgressAwarded = true;
+  }
+  if (!state.flags.secureAccessStatsRecorded) {
+    state.stats.secureAccessJobsCompleted += 1;
+    if (honest) state.stats.accessDelaysDocumented += 1;
+    else state.stats.unpaidDelaysAbsorbed += 1;
+    state.flags.secureAccessStatsRecorded = true;
+  }
+  addLog(honest
+    ? "Documented the Navy Yard access delay before the schedule could pretend it never happened."
+    : "Absorbed the Navy Yard access delay and marked the arrival time clean.");
+  render();
+  showModal({
+    kicker: "Secure Access Complete",
+    title: approach === "pushback" ? "The Access Miss Has An Owner" : approach === "document" ? "The Delay Has A Paper Trail" : "The Schedule Looks Fine If Nobody Asks",
+    body: `
+      <div class="results-grid">
+        <span>Access job wages</span><strong>+$${honest ? 92 : 76}</strong>
+        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Experience</span><strong>+${xp} XP</strong>
+        <span>Preparation</span><strong>${getSecureAccessPreparationLabel()}</strong>
+        <span>Closeout</span><strong>${approach === "pushback" ? "Dispatch access miss escalated" : approach === "document" ? "Delay documented" : "Delay absorbed"}</strong>
+      </div>
+      ${honest
+        ? `<blockquote>Management note: "Please avoid creating client-facing narratives around internal scheduling friction."</blockquote>`
+        : `<blockquote>Management note: "Thanks for keeping the ticket clean. Please improve onsite arrival efficiency."</blockquote>`}
+    `,
+    actions: [{
+      label: "Return To Broomall Shop",
+      onClick: () => {
+        addLog("Returned to the Broomall shop after the Navy Yard access job.");
+        enterScene("shop");
+      },
+    }],
+  });
+}
+
+function showCallbackCleanupDispatchPreview() {
+  showModal({
+    kicker: "Dispatch Board",
+    title: content.callbackCleanupDispatch.title,
+    body: getDispatchBoardMarkup({
+      type: "Return Trip",
+      setup: "A callback is still sitting in the career ledger, and dispatch wants it cleaned up before anyone says warranty hours out loud.",
+      why: `Triggered by unresolved callback debt. Current unresolved callbacks: ${getUnresolvedCallbackCount()}.`,
+      stakes: [
+        "A real fix resolves callback debt and helps client trust.",
+        "A quick bandage keeps warranty hours contained.",
+        "Craftsmanship can turn the cleanup into a better handoff.",
+      ],
+      note: "The client says the room was marked complete, then immediately started acting like it read the closeout note.",
+      managementNote: "Please determine whether this is truly a callback or simply extended closeout support.",
+    }),
+    actions: [
+      { label: "Accept Warranty Return", onClick: promptCallbackCleanupTravel },
+      { label: "Return to Shop", className: "secondary-button" },
+    ],
+  });
+}
+
+function promptCallbackCleanupTravel() {
+  showModal({
+    kicker: "Route Summary",
+    title: "Broomall -> Callback Site",
+    body: `
+      <p><strong>Dispatch estimate:</strong> Confirm user concern, restore confidence, avoid assigning blame in writing.</p>
+      <p class="muted">The previous closeout note is short enough to remember accidentally.</p>
+      <div class="route-line"><span>BROOMALL</span><i></i><span>CALLBACK SITE</span></div>
+    `,
+    actions: [{
+      label: "Drive To Warranty Return",
+      onClick: () => {
+        state.flags.callbackCleanupStarted = true;
+        state.flags.prototypeSummaryViewed = false;
+        setClock(`${state.clock.slice(0, 3)} 9:34 AM`);
+        addLog("Arrived for a warranty return created by the career ledger, not the marketing brochure.");
+        enterScene("warrantyReturn");
+      },
+    }],
+  });
+}
+
+function getCallbackCleanupCheckEnergyCost() {
+  return getVerificationEnergyCost(3);
+}
+
+function getCallbackCleanupRepairEnergyCost(baseCost) {
+  return Math.max(0, getVerificationEnergyCost(baseCost) - getCarefulWorkReduction());
+}
+
+function inspectCallbackCleanupCondition(checkId) {
+  const check = content.callbackCleanupDispatch.checks.find((item) => item.id === checkId);
+  if (!check || state.callbackCleanupChecks.includes(checkId)) return notify(`${check?.label || "That callback note"} is already checked.`);
+  state.callbackCleanupChecks.push(checkId);
+  changeEnergy(-getCallbackCleanupCheckEnergyCost());
+  addLog(`${check.label} checked: ${check.log}`);
+  render();
+  const allChecked = state.callbackCleanupChecks.length === content.callbackCleanupDispatch.checks.length;
+  showModal({
+    kicker: "Callback Note",
+    title: check.label,
+    body: `
+      <p>${check.detail}</p>
+      ${allChecked ? `<p class="muted">You found enough to decide whether this becomes a real fix or another quiet bandage.</p>` : ""}
+    `,
+    actions: [{ label: allChecked ? "Review Warranty Fix" : "Keep Troubleshooting", onClick: allChecked ? showCallbackCleanupChoice : render }],
+  });
+}
+
+function showCallbackCleanupChoice() {
+  showModal({
+    kicker: "Warranty Decision",
+    title: "The Callback Has A Cause",
+    body: `
+      <p>The issue came back because the previous closeout skipped the boring verification. The room can be fixed, documented, and removed from the callback ledger, or it can be made quiet enough for the ticket to close again.</p>
+      ${getCarefulWorkReduction() ? `<p class="muted">Your careful-work rhythm reduces the proper fix cost by 1 energy.</p>` : ""}
+    `,
+    actions: [
+      { label: `Fix root cause and update notes (-${getCallbackCleanupRepairEnergyCost(6)} energy)`, onClick: () => finishCallbackCleanup("root") },
+      ...(getCraftsmanship() >= 3 ? [{
+        label: `Clean repair and teach the client what changed (-${getCallbackCleanupRepairEnergyCost(5)} energy)`,
+        className: "secondary-button",
+        onClick: () => finishCallbackCleanup("craft"),
+      }] : []),
+      { label: "Bandage it and close the warranty ticket", className: "secondary-button", onClick: () => finishCallbackCleanup("bandage") },
+    ],
+  });
+}
+
+function finishCallbackCleanup(approach) {
+  const resolved = approach !== "bandage";
+  const xp = approach === "craft" ? 65 : approach === "root" ? 55 : 35;
+  if (resolved) changeEnergy(-getCallbackCleanupRepairEnergyCost(approach === "craft" ? 5 : 6));
+  else state.burnout += 1;
+  state.flags.callbackCleanupComplete = true;
+  state.flags.callbackCleanupApproach = approach;
+  state.flags.prototypeSummaryViewed = false;
+  setClock(`${state.clock.slice(0, 3)} ${resolved ? "11:16" : "10:38"} AM`);
+  if (!state.flags.callbackCleanupPaid) {
+    state.cash += resolved ? 68 : 54;
+    state.flags.callbackCleanupPaid = true;
+  }
+  if (!state.flags.callbackCleanupProgressAwarded) {
+    awardCareerProgress({
+      xp,
+      reputation: resolved
+        ? { clients: 2, coworkers: approach === "craft" ? 2 : 1, management: -1 }
+        : { clients: 0, coworkers: 0, management: 1 },
+      source: content.callbackCleanupDispatch.title,
+    });
+    state.flags.callbackCleanupProgressAwarded = true;
+  }
+  if (!state.flags.callbackCleanupStatsRecorded) {
+    state.stats.warrantyReturnsCompleted += 1;
+    if (resolved) {
+      state.stats.callbacksResolved += 1;
+      state.stats.carefulFinishes += 1;
+    } else {
+      state.stats.warrantyBandagesApplied += 1;
+    }
+    state.flags.callbackCleanupStatsRecorded = true;
+  }
+  addLog(resolved
+    ? "Resolved the warranty return and wrote notes the next tech can actually use."
+    : "Closed the warranty ticket with a bandage. The callback ledger remains spiritually aware.");
+  render();
+  showModal({
+    kicker: "Warranty Return Complete",
+    title: approach === "craft" ? "The Room And The Client Are Both Calmer" : approach === "root" ? "The Callback Has Real Notes Now" : "The Ticket Is Quiet For Now",
+    body: `
+      <div class="results-grid">
+        <span>Warranty wages</span><strong>+$${resolved ? 68 : 54}</strong>
+        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Experience</span><strong>+${xp} XP</strong>
+        <span>Callback ledger</span><strong>${resolved ? "Callback resolved" : "Callback debt remains"}</strong>
+        <span>Unresolved callbacks</span><strong>${getUnresolvedCallbackCount()}</strong>
+      </div>
+      ${resolved
+        ? `<blockquote>Management note: "Please avoid implying previous closeout was incomplete when documenting warranty support."</blockquote>`
+        : `<blockquote>Management note: "Thanks for keeping warranty hours contained."</blockquote>`}
+    `,
+    actions: [{
+      label: "Return To Broomall Shop",
+      onClick: () => {
+        addLog("Returned to the Broomall shop after the warranty return.");
+        enterScene("shop");
+      },
+    }],
+  });
+}
+
+function showHandoffDispatchPreview() {
+  showModal({
+    kicker: "Dispatch Board",
+    title: content.handoffDispatch.title,
+    body: getDispatchBoardMarkup({
+      type: "Client Handoff",
+      setup: "The room works, but the client needs to run the same meeting without becoming an unpaid AV tech.",
+      why: state.flags.callbackCleanupComplete
+        ? "Unlocked after the warranty return. The room is quieter now; the client still needs the human version."
+        : "Clean callback ledger skipped the warranty return, so dispatch moved you to a handoff.",
+      stakes: [
+        "Confidence can unlock a better cheat-sheet option.",
+        "Documentation habit reduces handoff prep costs.",
+        "A quick demo keeps management happy and leaves a training gap.",
+      ],
+      note: "Dispatch says this is just a quick demo. The client says the executive assistant has actual questions.",
+      managementNote: "Please keep training concise. The system is designed to be intuitive.",
+    }),
+    actions: [
+      { label: "Accept Handoff", onClick: promptHandoffTravel },
+      { label: "Return to Shop", className: "secondary-button" },
+    ],
+  });
+}
+
+function promptHandoffTravel() {
+  showModal({
+    kicker: "Route Summary",
+    title: "Broomall -> Executive Boardroom",
+    body: `
+      <p><strong>Dispatch estimate:</strong> Five-minute walkthrough. No technical work expected.</p>
+      <p class="muted">No technical work expected is also what they said about the warranty return.</p>
+      <div class="route-line"><span>BROOMALL</span><i></i><span>BOARDROOM</span></div>
+    `,
+    actions: [{
+      label: "Drive To Handoff",
+      onClick: () => {
+        state.flags.handoffStarted = true;
+        state.flags.prototypeSummaryViewed = false;
+        setClock(`${state.clock.slice(0, 3)} 1:42 PM`);
+        addLog("Arrived for a client handoff where the room works and the labels do not.");
+        enterScene("executiveHandoff");
+      },
+    }],
+  });
+}
+
+function getHandoffCheckEnergyCost() {
+  return Math.max(0, 2 - getDocumentationHabitReduction());
+}
+
+function getHandoffEnergyCost(baseCost) {
+  return Math.max(0, baseCost - getDocumentationHabitReduction());
+}
+
+function inspectHandoffCondition(checkId) {
+  const check = content.handoffDispatch.checks.find((item) => item.id === checkId);
+  if (!check || state.handoffChecks.includes(checkId)) return notify(`${check?.label || "That handoff note"} is already checked.`);
+  state.handoffChecks.push(checkId);
+  changeEnergy(-getHandoffCheckEnergyCost());
+  addLog(`${check.label} checked: ${check.log}`);
+  render();
+  const allChecked = state.handoffChecks.length === content.handoffDispatch.checks.length;
+  showModal({
+    kicker: "Handoff Note",
+    title: check.label,
+    body: `
+      <p>${check.detail}</p>
+      ${allChecked ? `<p class="muted">You know enough to decide whether this is a real handoff or a fast button tour.</p>` : ""}
+    `,
+    actions: [{ label: allChecked ? "Review Handoff Plan" : "Keep Preparing Handoff", onClick: allChecked ? showHandoffChoice : render }],
+  });
+}
+
+function showHandoffChoice() {
+  showModal({
+    kicker: "Client Handoff",
+    title: "The Room Works If Someone Explains It",
+    body: `
+      <p>The client does not need every feature. They need the morning meeting to start without a group of executives silently watching a laptop search for audio.</p>
+      ${getDocumentationHabitReduction() ? `<p class="muted">Your documentation habit makes the walkthrough notes and cheat sheet faster to prepare.</p>` : ""}
+    `,
+    actions: [
+      { label: `Patient walkthrough of the daily path (-${getHandoffEnergyCost(4)} energy)`, onClick: () => finishHandoff("patient") },
+      ...(getConfidence() >= 2 ? [{
+        label: `Rewrite the cheat sheet in client language (-${getHandoffEnergyCost(3)} energy)`,
+        className: "secondary-button",
+        onClick: () => finishHandoff("cheat"),
+      }] : []),
+      { label: "Quick demo and leave before questions", className: "secondary-button", onClick: () => finishHandoff("quick") },
+    ],
+  });
+}
+
+function finishHandoff(approach) {
+  const helpful = approach !== "quick";
+  const xp = approach === "cheat" ? 60 : approach === "patient" ? 50 : 30;
+  if (helpful) changeEnergy(-getHandoffEnergyCost(approach === "cheat" ? 3 : 4));
+  state.flags.handoffComplete = true;
+  state.flags.handoffApproach = approach;
+  state.flags.prototypeSummaryViewed = false;
+  setClock(`${state.clock.slice(0, 3)} ${helpful ? "2:28" : "2:03"} PM`);
+  if (!state.flags.handoffPaid) {
+    state.cash += helpful ? 64 : 48;
+    state.flags.handoffPaid = true;
+  }
+  if (!state.flags.handoffProgressAwarded) {
+    awardCareerProgress({
+      xp,
+      reputation: helpful
+        ? { clients: approach === "cheat" ? 3 : 2, coworkers: 1, management: -1 }
+        : { clients: 0, coworkers: 0, management: 1 },
+      source: content.handoffDispatch.title,
+    });
+    state.flags.handoffProgressAwarded = true;
+  }
+  if (!state.flags.handoffStatsRecorded) {
+    state.stats.clientHandoffsCompleted += 1;
+    if (helpful) state.stats.carefulFinishes += 1;
+    else state.stats.trainingGapsLeft += 1;
+    state.flags.handoffStatsRecorded = true;
+  }
+  addLog(helpful
+    ? "Completed the handoff in client language instead of button-label language."
+    : "Completed a quick demo. The client now knows enough to ask better questions later.");
+  render();
+  showModal({
+    kicker: "Handoff Complete",
+    title: approach === "cheat" ? "The Cheat Sheet Makes Sense To Humans" : approach === "patient" ? "The Client Can Start The Meeting" : "The Demo Was Technically A Demo",
+    body: `
+      <div class="results-grid">
+        <span>Handoff wages</span><strong>+$${helpful ? 64 : 48}</strong>
+        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Experience</span><strong>+${xp} XP</strong>
+        <span>Client outcome</span><strong>${approach === "cheat" ? "Cheat sheet rewritten" : approach === "patient" ? "Daily path practiced" : "Training gap left"}</strong>
+      </div>
+      ${helpful
+        ? `<blockquote>Management note: "Please avoid expanding simple handoffs into undocumented training sessions."</blockquote>`
+        : `<blockquote>Management note: "Thanks for keeping the handoff efficient."</blockquote>`}
+    `,
+    actions: [{
+      label: "Return To Broomall Shop",
+      onClick: () => {
+        addLog("Returned to the Broomall shop after the executive handoff.");
+        enterScene("shop");
+      },
+    }],
+  });
+}
+
 function showCommissioningDispatchPreview() {
   showModal({
     kicker: "Dispatch Board",
     title: content.commissioningDispatch.title,
-    body: `
-      <p><strong>Commissioning:</strong> Verify a small South Philadelphia training room before client handoff.</p>
-      <p>The installation ticket is closed. The client says one side of the room sounds quieter than the other.</p>
-      <blockquote>Project note: "Room complete except final commissioning. Please avoid creating a punch list unless necessary."</blockquote>
-    `,
+    body: getDispatchBoardMarkup({
+      type: "Commissioning",
+      setup: "Verify a small South Philadelphia training room before client handoff. The installation ticket is closed, but the client says one side of the room sounds quieter.",
+      why: "Unlocked after the University City survey. The prototype is testing incomplete-site troubleshooting.",
+      stakes: [
+        "Craftsmanship can unlock a cleaner punch-list option.",
+        "Passing the room protects management's schedule.",
+        "Documenting the fault improves client and coworker trust.",
+      ],
+      note: "The completion sheet has already been signed internally.",
+      managementNote: "Room complete except final commissioning. Please avoid creating a punch list unless necessary.",
+    }),
     actions: [
       { label: "Accept Commissioning Visit", onClick: promptCommissioningTravel },
       { label: "Return to Shop", className: "secondary-button" },
@@ -1271,7 +2082,7 @@ function getCommissioningCheckEnergyCost() {
 }
 
 function getCommissioningRepairEnergyCost(baseCost) {
-  return getVerificationEnergyCost(baseCost);
+  return Math.max(0, getVerificationEnergyCost(baseCost) - getCarefulWorkReduction());
 }
 
 function inspectCommissioningCondition(checkId) {
@@ -1301,6 +2112,7 @@ function showCommissioningChoice() {
     body: `
       <p>The third ceiling speaker is silent because its termination is loose. The drawing is for a mirrored room across the hall, which explains why the closed ticket was so confident.</p>
       <p>The client would like the room working. Project management would like the completion sheet to remain emotionally undisturbed.</p>
+      ${getCarefulWorkReduction() ? `<p class="muted">Your careful finishes are paying off: repair and punch-list work costs 1 less energy.</p>` : ""}
     `,
     actions: [
       { label: `Repair termination and document discrepancy (-${getCommissioningRepairEnergyCost(6)} energy)`, onClick: () => finishCommissioning("repair") },
@@ -1379,12 +2191,19 @@ function showSurveyDispatchPreview() {
   showModal({
     kicker: "Dispatch Board",
     title: content.surveyDispatch.title,
-    body: `
-      <p><strong>Site Survey:</strong> Confirm access and mounting conditions for a University City classroom display.</p>
-      <p>Sales already measured the wall. The facilities contact asked whether the quoted display will fit through the building.</p>
-      ${state.flags.surveyPreparation ? `<p class="muted">Preparation selected: ${getSurveyPreparationLabel()}</p>` : ""}
-      <blockquote>Sales note: "Should be straightforward. Same basic idea as a display we installed somewhere else."</blockquote>
-    `,
+    body: getDispatchBoardMarkup({
+      type: "Site Survey",
+      setup: "Confirm access and mounting conditions for a University City classroom display. Sales already measured the wall.",
+      why: "Unlocked after the service call and Josh debrief. The game is testing whether field judgment matters before install day.",
+      stakes: [
+        "Preparation lowers inspection or report costs.",
+        "Confidence can unlock a direct sales pushback.",
+        "Trusting the quote helps management and may create future pain.",
+      ],
+      note: "The facilities contact asked whether the quoted display will fit through the building.",
+      managementNote: "Should be straightforward. Same basic idea as a display we installed somewhere else.",
+      prep: state.flags.surveyPreparation ? `Preparation selected: ${getSurveyPreparationLabel()}` : "",
+    }),
     actions: [
       { label: "Accept Site Survey", onClick: () => state.flags.surveyPreparation ? promptSurveyTravel() : showSurveyPreparation() },
       { label: "Return to Shop", className: "secondary-button" },
@@ -1471,7 +2290,7 @@ function getSurveyInspectionEnergyCost() {
 }
 
 function getSurveyReportEnergyCost(baseCost) {
-  return Math.max(0, baseCost - (state.flags.surveyPreparation === "sketch" ? 1 : 0));
+  return Math.max(0, baseCost - (state.flags.surveyPreparation === "sketch" ? 1 : 0) - getDocumentationHabitReduction());
 }
 
 function inspectSurveyConstraint(inspectionId) {
@@ -1487,6 +2306,7 @@ function inspectSurveyConstraint(inspectionId) {
     title: inspection.label,
     body: `
       <p>${inspection.detail}</p>
+      ${inspection.id === "wall" && getCharacterLine("surveyWall") ? `<p class="muted">${getCharacterLine("surveyWall")}</p>` : ""}
       ${allChecked ? `<p class="muted">You have enough information. Return to the facilities contact and file the survey report.</p>` : ""}
     `,
     actions: [{ label: allChecked ? "Return To Facilities Contact" : "Keep Surveying", onClick: render }],
@@ -1500,6 +2320,7 @@ function showSurveyReportChoice() {
     body: `
       <p>The 98-inch display fits on the classroom wall. It does not fit through the elevator opening, and the hallway turn offers no useful miracle.</p>
       <p>Sales wants the survey closed today because the quote is "basically approved."</p>
+      ${getDocumentationHabitReduction() ? `<p class="muted">Your documentation habit makes this report cost 1 less energy.</p>` : ""}
     `,
     actions: [
       { label: `Document the access constraint (-${getSurveyReportEnergyCost(3)} energy)`, onClick: () => finishSurvey("document") },
@@ -1777,6 +2598,10 @@ function getInteractions() {
           state.carry = [next];
           changeEnergy(-getEquipmentEnergyCost(2));
           addLog(`Picked up ${next}.`);
+          if (getCharacterLine("accessoryTote") && next === "Accessory tote" && !hasSeenCharacterLine("accessoryTote")) {
+            markCharacterLineSeen("accessoryTote");
+            addLog(getCharacterLine("accessoryTote"));
+          }
           render();
         },
       },
@@ -1818,7 +2643,7 @@ function getInteractions() {
             }
             return render();
           }
-          if (state.flags.finished) return notify("Van #3 is parked. Future dispatches will start here.");
+          if (state.flags.finished) return notify(getCharacterLine("inspectVan", "Van #3 is parked. Future dispatches will start here."));
           if (state.loaded.length === content.tutorial.shopLoad.length && state.flags.shopBrief) return promptTravel();
           notify("Company Van #3: limited cargo, poor organization, questionable reliability.");
         },
@@ -1939,6 +2764,7 @@ function getInteractions() {
               body: `
                 <p>The display itself is failing. The replacement screen and hardware tote are onsite.</p>
                 <p>There is also an unlabeled coupler behind the credenza. You can verify the signal path now or trust the service ticket and start swapping equipment.</p>
+                ${getCharacterLine("serviceInspect") ? `<p class="muted">${getCharacterLine("serviceInspect")}</p>` : ""}
                 ${state.flags.servicePreparation === "review" ? `<p class="muted">Reviewing the forwarded email chain saved time during diagnosis.</p>` : ""}
               `,
               actions: [
@@ -2058,6 +2884,138 @@ function getInteractions() {
     ];
   }
 
+  if (state.sceneId === "warrantyReturn") {
+    const allChecked = state.callbackCleanupChecks.length === content.callbackCleanupDispatch.checks.length;
+    return [
+      {
+        x: 300, y: 185, label: allChecked ? "Close out warranty return" : "Talk to client contact", npc: "CLIENT",
+        action: () => {
+          if (allChecked) return showCallbackCleanupChoice();
+          if (state.flags.callbackCleanupBrief) return notify('Client: "It worked after the last visit, then stopped working when people started using the room."');
+          state.flags.callbackCleanupBrief = true;
+          addLog("Client explained that the issue survived the previous closeout note.");
+          showModal({
+            kicker: "Client Contact",
+            title: "The Problem Came Back",
+            body: `
+              <p>"The last ticket says tested good. It did work for a bit. Then the same issue came back during the next meeting."</p>
+              <p class="muted">Review the complaint notes, ticket history, and actual fault before deciding how honest the fix gets to be.</p>
+            `,
+            actions: [{ label: "Start Warranty Troubleshooting", onClick: render }],
+          });
+        },
+      },
+      {
+        x: 420, y: 375, label: "Review ticket history",
+        action: () => {
+          if (!state.flags.callbackCleanupBrief) return notify("Check in with the client contact first.");
+          inspectCallbackCleanupCondition("ticket-history");
+        },
+      },
+      {
+        x: 485, y: 220, label: "Test actual fault",
+        action: () => {
+          if (!state.flags.callbackCleanupBrief) return notify("Check in with the client contact first.");
+          inspectCallbackCleanupCondition("actual-fault");
+        },
+      },
+      {
+        x: 760, y: 300, label: "Read client complaint notes",
+        action: () => {
+          if (!state.flags.callbackCleanupBrief) return notify("Check in with the client contact first.");
+          inspectCallbackCleanupCondition("client-notes");
+        },
+      },
+    ];
+  }
+
+  if (state.sceneId === "executiveHandoff") {
+    const allChecked = state.handoffChecks.length === content.handoffDispatch.checks.length;
+    return [
+      {
+        x: 300, y: 185, label: allChecked ? "Close out client handoff" : "Talk to client contact", npc: "CLIENT",
+        action: () => {
+          if (allChecked) return showHandoffChoice();
+          if (state.flags.handoffBrief) return notify('Client: "I mostly need to know what to press when the CEO is already looking at me."');
+          state.flags.handoffBrief = true;
+          addLog("Client asked for the version of the system explanation that works during an actual meeting.");
+          showModal({
+            kicker: "Client Contact",
+            title: "Show Me The Normal Way",
+            body: `
+              <p>"Everyone says the room is simple. I just need to start the weekly meeting without guessing whether PRESENT means present my laptop or present my resignation."</p>
+              <p class="muted">Review the control panel labels, daily user path, and what the client actually needs.</p>
+            `,
+            actions: [{ label: "Start Handoff Prep", onClick: render }],
+          });
+        },
+      },
+      {
+        x: 480, y: 260, label: "Review control panel labels",
+        action: () => {
+          if (!state.flags.handoffBrief) return notify("Check in with the client contact first.");
+          inspectHandoffCondition("control-panel");
+        },
+      },
+      {
+        x: 760, y: 300, label: "Practice daily user path",
+        action: () => {
+          if (!state.flags.handoffBrief) return notify("Check in with the client contact first.");
+          inspectHandoffCondition("daily-use");
+        },
+      },
+      {
+        x: 760, y: 180, label: "Ask what the client actually needs",
+        action: () => {
+          if (!state.flags.handoffBrief) return notify("Check in with the client contact first.");
+          inspectHandoffCondition("client-need");
+        },
+      },
+    ];
+  }
+
+  if (state.sceneId === "navyYardAccess") {
+    const allChecked = state.secureAccessChecks.length === content.secureAccessDispatch.checks.length;
+    return [
+      {
+        x: 300, y: 185, label: allChecked ? "Close out access delay" : "Check in with security", npc: "SEC",
+        action: () => {
+          if (allChecked) return showSecureAccessChoice();
+          if (state.flags.secureAccessBrief) return notify('Security: "I can see the company in the system. I cannot see you in the system."');
+          state.flags.secureAccessBrief = true;
+          addLog("Security confirmed the company is expected and you personally are not.");
+          showModal({
+            kicker: "Security Booth",
+            title: "Expected Adjacent",
+            body: `<p>"I have the company name, but not your visitor entry. Also this says Building 12. The work order I have says 13."</p>`,
+            actions: [{ label: "Start Sorting Access", onClick: render }],
+          });
+        },
+      },
+      {
+        x: 430, y: 255, label: "Check building number",
+        action: () => {
+          if (!state.flags.secureAccessBrief) return notify("Check in with security first.");
+          inspectSecureAccessCondition("building");
+        },
+      },
+      {
+        x: 785, y: 205, label: "Check loading dock",
+        action: () => {
+          if (!state.flags.secureAccessBrief) return notify("Check in with security first.");
+          inspectSecureAccessCondition("gate");
+        },
+      },
+      {
+        x: 745, y: 385, label: "Check telecom room escort",
+        action: () => {
+          if (!state.flags.secureAccessBrief) return notify("Check in with security first.");
+          inspectSecureAccessCondition("escort");
+        },
+      },
+    ];
+  }
+
   return [
     ...(!state.flags.roomBrief && !state.flags.supervisorLeft ? [{
       x: 320, y: 185, label: "Talk to supervisor", npc: "SUP",
@@ -2155,8 +3113,11 @@ function getObjective() {
       return `Search the shop for the replacement power supply (${state.warehouseChecks.length}/${content.warehouseDispatch.checks.length}).`;
     }
     if (state.flags.commissioningComplete && !state.flags.warehouseComplete) return "Review the warehouse run on the dispatch board.";
-    if (state.flags.warehouseComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
-    if (state.flags.warehouseComplete) return "Current prototype complete. Explore the shop.";
+    if (state.flags.warehouseComplete && !state.flags.secureAccessComplete) return "Review the Navy Yard secure-access job on the dispatch board.";
+    if (state.flags.secureAccessComplete && !state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0) return "Review the warranty return on the dispatch board.";
+    if (state.flags.secureAccessComplete && !state.flags.handoffComplete) return "Review the executive handoff on the dispatch board.";
+    if (state.flags.secureAccessComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
+    if (state.flags.secureAccessComplete) return "Current prototype complete. Explore the shop.";
     if (state.flags.finished) return "Prepare for the Conshohocken service call.";
     if (!state.flags.shopBrief) return "Find your supervisor.";
     if (state.loaded.length < content.tutorial.shopLoad.length) return `Load staged equipment into Van #3 (${state.loaded.length}/3).`;
@@ -2189,6 +3150,27 @@ function getObjective() {
       return `Commission the training room (${state.commissioningChecks.length}/${content.commissioningDispatch.checks.length}).`;
     }
     return "Return to the client contact and close out the commissioning visit.";
+  }
+  if (state.sceneId === "warrantyReturn") {
+    if (!state.flags.callbackCleanupBrief) return "Check in with the client contact.";
+    if (state.callbackCleanupChecks.length < content.callbackCleanupDispatch.checks.length) {
+      return `Troubleshoot the warranty return (${state.callbackCleanupChecks.length}/${content.callbackCleanupDispatch.checks.length}).`;
+    }
+    return "Return to the client contact and close out the warranty return.";
+  }
+  if (state.sceneId === "executiveHandoff") {
+    if (!state.flags.handoffBrief) return "Check in with the client contact.";
+    if (state.handoffChecks.length < content.handoffDispatch.checks.length) {
+      return `Prepare the client handoff (${state.handoffChecks.length}/${content.handoffDispatch.checks.length}).`;
+    }
+    return "Return to the client contact and choose the handoff style.";
+  }
+  if (state.sceneId === "navyYardAccess") {
+    if (!state.flags.secureAccessBrief) return "Check in with security.";
+    if (state.secureAccessChecks.length < content.secureAccessDispatch.checks.length) {
+      return `Sort out secure access (${state.secureAccessChecks.length}/${content.secureAccessDispatch.checks.length}).`;
+    }
+    return "Return to security and close out the access delay.";
   }
   if (!state.flags.roomBrief) return "Ask the supervisor how to start the cart build.";
   if (state.assembled.length < 2) return `Assemble Cart 1 with your supervisor (${state.assembled.length}/2).`;
@@ -2256,14 +3238,23 @@ function renderSelection() {
       const card = document.createElement("article");
       card.className = "technician-card";
       card.innerHTML = `
-        <p class="eyebrow">Placeholder Profile</p>
+        <p class="eyebrow">Technician Profile</p>
         <h3>${technician.name}</h3>
+        ${technician.role ? `<p class="muted">${technician.role}</p>` : ""}
         <p>${technician.tagline}</p>
+        ${technician.description ? `<p>${technician.description}</p>` : ""}
         <div class="tech-stats">
           <span>Energy <strong>${technician.stats.energy}</strong></span>
           <span>Craft <strong>${technician.stats.craftsmanship}</strong></span>
           <span>Confidence <strong>${technician.stats.confidence}</strong></span>
         </div>
+        ${technician.strengths ? `<p class="starting-kit"><strong>Strengths:</strong> ${technician.strengths.join(", ")}</p>` : ""}
+        ${technician.weaknesses ? `<p class="starting-kit"><strong>Growth areas:</strong> ${technician.weaknesses.join(", ")}</p>` : ""}
+        ${technician.playstyle ? `<p class="starting-kit"><strong>Playstyle:</strong> ${technician.playstyle}</p>` : ""}
+        ${technician.difficulty ? `<p class="starting-kit"><strong>Difficulty:</strong> ${technician.difficulty}</p>` : ""}
+        ${technician.trait ? `<p class="starting-kit"><strong>Trait:</strong> ${technician.trait}</p>` : ""}
+        ${technician.tendency ? `<p class="starting-kit"><strong>Tendency:</strong> ${technician.tendency}</p>` : ""}
+        <p class="starting-kit"><strong>Starting kit:</strong> ${technician.startingTools.map((toolId) => content.tools[toolId]?.name || toolId).join(", ")}</p>
       `;
       card.append(makeButton("Start First Day", () => startGame(technician.id)));
       return card;
@@ -2360,8 +3351,17 @@ function render() {
   const serviceActive = state.sceneId === "serviceOffice";
   const surveyActive = state.sceneId === "universitySurvey";
   const commissioningActive = state.sceneId === "southPhillyCommissioning";
+  const secureAccessActive = state.sceneId === "navyYardAccess";
+  const callbackCleanupActive = state.sceneId === "warrantyReturn";
+  const handoffActive = state.sceneId === "executiveHandoff";
   const warehouseActive = state.flags.warehouseStarted && !state.flags.warehouseComplete;
-  const activeDispatch = state.flags.warehouseStarted || state.flags.warehouseComplete
+  const activeDispatch = handoffActive || state.flags.handoffStarted || state.flags.handoffComplete || (state.flags.secureAccessComplete && (state.flags.callbackCleanupComplete || getUnresolvedCallbackCount() === 0) && !state.flags.handoffComplete)
+    ? content.handoffDispatch
+    : callbackCleanupActive || state.flags.callbackCleanupStarted || state.flags.callbackCleanupComplete || (state.flags.secureAccessComplete && !state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0)
+    ? content.callbackCleanupDispatch
+    : secureAccessActive || state.flags.secureAccessStarted || state.flags.secureAccessComplete || (state.flags.warehouseComplete && !state.flags.secureAccessComplete)
+    ? content.secureAccessDispatch
+    : state.flags.warehouseStarted || state.flags.warehouseComplete
     ? content.warehouseDispatch
     : commissioningActive || state.flags.commissioningStarted || state.flags.commissioningComplete
       ? content.commissioningDispatch
@@ -2372,14 +3372,22 @@ function render() {
       : { title: "Two Quick Carts", summary: "Build two mobile video conferencing carts at a Center City East office." };
   elements.jobStatus.textContent = warehouseActive
     ? "WAREHOUSE RUN"
-    : commissioningActive
+    : handoffActive
+      ? "CLIENT HANDOFF"
+    : callbackCleanupActive
+      ? "WARRANTY RETURN"
+    : secureAccessActive
+      ? "SECURE ACCESS"
+      : commissioningActive
       ? "COMMISSIONING"
       : surveyActive
       ? "SITE SURVEY"
       : serviceActive
       ? "SERVICE CALL"
-      : state.flags.warehouseComplete
+      : state.flags.secureAccessComplete
         ? "DISPATCH COMPLETE"
+        : state.flags.warehouseComplete
+          ? "SHOP HUB"
         : state.flags.commissioningComplete
           ? "SHOP HUB"
       : state.flags.finished

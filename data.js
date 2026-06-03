@@ -8,7 +8,56 @@ window.GAME_CONTENT = {
       stats: { energy: 100, burnout: 0, craftsmanship: 2, confidence: 1 },
       startingTools: ["screwdriver"],
     },
+    {
+      id: "organized-rookie",
+      name: "Organized Rookie",
+      tagline: "Brought a tool bag, snacks, and a dangerous belief in written notes.",
+      stats: { energy: 105, burnout: 0, craftsmanship: 2, confidence: 0 },
+      startingTools: ["screwdriver", "toolBag"],
+    },
+    {
+      id: "wiley",
+      name: "Wiley",
+      role: "Residential Install Tech",
+      tagline: "Former Circuit Hut counter guy. Fast with tools, new to commercial process.",
+      description: "Wiley spent years mounting TVs, fishing wires, cleaning up racks, tracing mystery speaker lines, replacing remotes, and making bad homeowner purchases work just well enough to survive the day.",
+      strengths: ["Physical install", "Retrofit paths", "Small parts", "Practical troubleshooting"],
+      weaknesses: ["Commercial process", "Documentation", "DSP/control", "Networking"],
+      playstyle: "Fast hands-on installer with strong improvisation, but must learn commercial process.",
+      difficulty: "Medium",
+      trait: "Circuit Hut Parts Brain",
+      tendency: "I Can Make That Work",
+      stats: { energy: 105, burnout: 0, craftsmanship: 3, confidence: 0 },
+      characterStats: {
+        install: 5,
+        toolPreparedness: 5,
+        improvisation: 5,
+        residentialKnowledge: 5,
+        practicalTroubleshooting: 4,
+        clientCommunication: 3,
+        commercialProcess: 1,
+        documentation: 1,
+        dspAudio: 1,
+        controlSystems: 1,
+        networking: 1,
+        burnoutResistance: 3,
+      },
+      traits: ["circuitHutPartsBrain", "makeThatWork", "residentialInstinct"],
+      startingTools: ["screwdriver", "toolBag", "circuitHutOrganizer"],
+    },
   ],
+
+  characterLines: {
+    wiley: {
+      accessoryTote: 'Wiley clocked the accessory tote first. "Adapters are where simple jobs go to negotiate."',
+      inspectVan: 'Wiley checks the van bins. "I found three cables we do not need and zero of the one we do. Classic."',
+      finishChoice: "Wiley can make the awkward adapter path work for now. The question is whether it deserves to become the install.",
+      workaroundLog: "Wiley made the adapter path work for now. The closeout notes did not get smarter.",
+      partsBrainQuote: "I can make it work. I'm just asking whether we want it to keep working.",
+      serviceInspect: 'Wiley eyes the coupler behind the credenza. "I trust this adapter for testing. I do not trust it with my reputation."',
+      surveyWall: 'Wiley checks the wall like someone who has met plaster before. "Before we drill, let us find out if this wall is drywall, brick, or a lawsuit."',
+    },
+  },
 
   tools: {
     screwdriver: {
@@ -48,6 +97,24 @@ window.GAME_CONTENT = {
       description: "Josh repaired the feed roller and wrote your name inside the battery cover.",
       effect: "Reduce energy spent verifying signal paths by 2.",
       modifiers: { verificationEnergyReduction: 2 },
+      price: 0,
+    },
+    circuitHutOrganizer: {
+      id: "circuitHutOrganizer",
+      name: "Circuit Hut Parts Organizer",
+      description: "A battered small-parts case from Wiley's counter days. It contains useful adapters, odd connectors, and several things that should never become permanent.",
+      effect: "Once per dispatch, search for a small testing part. If used, reduce verification and testing energy by 1 for that dispatch.",
+      modifiers: { partsBrainVerificationReduction: 1 },
+      finds: [
+        "right-angle HDMI adapter",
+        "HDMI coupler",
+        "Phoenix connector with one suspicious screw",
+        "short patch cable",
+        "keystone coupler",
+        "IR emitter",
+        "fresh batteries",
+        "label scraps",
+      ],
       price: 0,
     },
   },
@@ -202,11 +269,82 @@ window.GAME_CONTENT = {
     ],
   },
 
+  secureAccessDispatch: {
+    title: "Navy Yard Secure Access",
+    summary: "Deliver a small rack update to a secure building after dispatch sends the wrong access note.",
+    checks: [
+      {
+        id: "gate",
+        label: "Security gate",
+        log: "the guard has the company name but not today's visitor list",
+        detail: "The guard recognizes the company because Josh was here last month, which is not the same as having your name on today's visitor list.",
+      },
+      {
+        id: "building",
+        label: "Building number",
+        log: "the dispatch ticket and the security booth disagree by one building",
+        detail: "Dispatch wrote Building 12. Security says the work order is for Building 13. The buildings are close enough to be annoying and far enough to matter.",
+      },
+      {
+        id: "escort",
+        label: "Escort requirement",
+        log: "the telecom room requires an escort who is currently in another meeting",
+        detail: "The telecom room is behind a badge reader and a policy nobody attached to the ticket. The escort is available after a meeting labeled 'quick sync.'",
+      },
+    ],
+  },
+
+  callbackCleanupDispatch: {
+    title: "Warranty Return",
+    summary: "Revisit a room that was marked complete before the callback ledger agreed.",
+    checks: [
+      {
+        id: "client-notes",
+        label: "Client complaint notes",
+        log: "the complaint says intermittent, which is a word tickets use when they want company",
+        detail: "The client reported that the issue comes back whenever the room is actually used. The ticket summary says 'user error?' with the question mark doing a lot of legal work.",
+      },
+      {
+        id: "ticket-history",
+        label: "Ticket history",
+        log: "the previous closeout note is technically short enough to fit on a receipt",
+        detail: "The closeout note says 'tested good.' It does not say what was tested, how long it was tested, or why the client immediately reopened the ticket.",
+      },
+      {
+        id: "actual-fault",
+        label: "Actual fault",
+        log: "the original issue is still present behind a very confident status update",
+        detail: "The fault is not exotic. It is a loose path, a bad assumption, and a room that got called complete before the boring verification happened.",
+      },
+    ],
+  },
+
+  handoffDispatch: {
+    title: "Executive Handoff",
+    summary: "Teach a client how to use a room that technically works but explains itself poorly.",
+    checks: [
+      {
+        id: "control-panel",
+        label: "Control panel labels",
+        log: "the panel labels are technically words, just not the client's words",
+        detail: "The panel has buttons named PRESENT, PC, SHARE, and AUX. The client asks which one starts the meeting. This is the correct question.",
+      },
+      {
+        id: "daily-use",
+        label: "Daily user path",
+        log: "the common path is three steps if you already know the secret fourth step",
+        detail: "Starting a normal meeting requires display power, laptop input, room audio, and the mute state nobody notices until the first sentence disappears.",
+      },
+      {
+        id: "client-need",
+        label: "Client's actual need",
+        log: "the executive assistant needs repeatability more than feature coverage",
+        detail: "The client does not need a tour of every input. They need the same morning meeting to work every time without texting facilities.",
+      },
+    ],
+  },
+
   upcomingDispatches: [
-    {
-      title: "Navy Yard Secure Access",
-      summary: "Dispatch has a building number. The security booth has a second building number.",
-    },
     {
       title: "Cherry Hill Return Toll",
       summary: "Dispatch accounted for the bridge on the way there.",
@@ -302,6 +440,48 @@ window.GAME_CONTENT = {
         { type: "floor-note", x: 430, y: 250, w: 185, h: 30, text: "TEST TONE: 2 OF 3" },
         { type: "floor-note", x: 300, y: 395, w: 230, h: 30, text: "CLOSEOUT DRAWING / ROOM 3A?" },
         { type: "floor-note", x: 690, y: 465, w: 170, h: 30, text: "TICKET STATUS: CLOSED" },
+      ],
+    },
+    navyYardAccess: {
+      name: "Secure Loading Dock",
+      kicker: "Navy Yard, Philadelphia",
+      playerStart: { x: 120, y: 430 },
+      decor: [
+        { type: "label", x: 45, y: 36, w: 250, h: 38, text: "NAVY YARD SECURE ACCESS" },
+        { type: "desk", x: 78, y: 112, w: 185, h: 92, text: "SECURITY BOOTH", solid: true },
+        { type: "elevator", x: 735, y: 90, w: 155, h: 185, text: "LOADING DOCK", solid: true },
+        { type: "build", x: 630, y: 345, w: 225, h: 88, text: "TELECOM ROOM", solid: true },
+        { type: "floor-note", x: 360, y: 240, w: 190, h: 32, text: "BUILDING 12 / 13?" },
+        { type: "floor-note", x: 410, y: 390, w: 210, h: 30, text: "ESCORT REQUIRED" },
+        { type: "floor-note", x: 685, y: 465, w: 175, h: 30, text: "ETA: STILL OPTIMISTIC" },
+      ],
+    },
+    warrantyReturn: {
+      name: "Callback Room",
+      kicker: "Warranty Return Visit",
+      playerStart: { x: 120, y: 430 },
+      decor: [
+        { type: "label", x: 45, y: 36, w: 230, h: 38, text: "CALLBACK / WARRANTY RETURN" },
+        { type: "desk", x: 78, y: 110, w: 185, h: 92, text: "CLIENT TABLE", solid: true },
+        { type: "counter", x: 665, y: 325, w: 205, h: 105, text: "AV CREDENZA", solid: true },
+        { type: "build", x: 390, y: 105, w: 185, h: 82, text: "SYSTEM OUTPUT" },
+        { type: "floor-note", x: 430, y: 250, w: 185, h: 30, text: "TESTED GOOD?" },
+        { type: "floor-note", x: 300, y: 395, w: 235, h: 30, text: "PREVIOUS CLOSEOUT NOTE: BRIEF" },
+        { type: "floor-note", x: 690, y: 465, w: 170, h: 30, text: "WARRANTY HOURS: WATCHED" },
+      ],
+    },
+    executiveHandoff: {
+      name: "Executive Boardroom",
+      kicker: "Client Handoff",
+      playerStart: { x: 120, y: 430 },
+      decor: [
+        { type: "label", x: 45, y: 36, w: 230, h: 38, text: "EXECUTIVE BOARDROOM" },
+        { type: "desk", x: 78, y: 110, w: 185, h: 92, text: "CLIENT TABLE", solid: true },
+        { type: "counter", x: 665, y: 325, w: 205, h: 105, text: "CREDENZA / LAPTOP", solid: true },
+        { type: "build", x: 650, y: 110, w: 205, h: 110, text: "DISPLAY WALL", solid: true },
+        { type: "floor-note", x: 410, y: 245, w: 210, h: 30, text: "TOUCH PANEL: PRESENT" },
+        { type: "floor-note", x: 315, y: 390, w: 250, h: 30, text: "CHEAT SHEET: NOT PROVIDED" },
+        { type: "floor-note", x: 690, y: 465, w: 175, h: 30, text: "MEETING IN 22 MIN" },
       ],
     },
   },

@@ -30,10 +30,11 @@ Build one small playable career loop:
 The prototype should answer one question: is it funny and satisfying to survive
 a badly managed AV workday while gradually becoming a more capable technician?
 
-The current browser prototype includes technician selection, a walkable Broomall
-shop, van loading, a scripted Center City East trip, garage unloading, client
-check-in, the two-cart tutorial, fatigue, a starter tool reward, and a
-post-tutorial shop hub for recovery and personal-tool purchases. A second
+The current browser prototype includes a small technician selection with two
+starting profiles, a walkable Broomall shop, van loading, a scripted Center City
+East trip, garage unloading, client check-in, the two-cart tutorial, fatigue, a
+starter tool reward, and a post-tutorial shop hub for recovery and
+personal-tool purchases. A second
 Conshohocken service dispatch turns a reported display issue into a replacement
 job, adds a small diagnosis-versus-speed decision, and lets the player's early
 tool choices reduce the work involved. Completed work now awards experience and
