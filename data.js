@@ -234,6 +234,31 @@ window.GAME_CONTENT = {
     ],
   },
 
+  callbackCleanupDispatch: {
+    title: "Warranty Return",
+    summary: "Revisit a room that was marked complete before the callback ledger agreed.",
+    checks: [
+      {
+        id: "client-notes",
+        label: "Client complaint notes",
+        log: "the complaint says intermittent, which is a word tickets use when they want company",
+        detail: "The client reported that the issue comes back whenever the room is actually used. The ticket summary says 'user error?' with the question mark doing a lot of legal work.",
+      },
+      {
+        id: "ticket-history",
+        label: "Ticket history",
+        log: "the previous closeout note is technically short enough to fit on a receipt",
+        detail: "The closeout note says 'tested good.' It does not say what was tested, how long it was tested, or why the client immediately reopened the ticket.",
+      },
+      {
+        id: "actual-fault",
+        label: "Actual fault",
+        log: "the original issue is still present behind a very confident status update",
+        detail: "The fault is not exotic. It is a loose path, a bad assumption, and a room that got called complete before the boring verification happened.",
+      },
+    ],
+  },
+
   upcomingDispatches: [
     {
       title: "Cherry Hill Return Toll",
@@ -344,6 +369,20 @@ window.GAME_CONTENT = {
         { type: "floor-note", x: 360, y: 240, w: 190, h: 32, text: "BUILDING 12 / 13?" },
         { type: "floor-note", x: 410, y: 390, w: 210, h: 30, text: "ESCORT REQUIRED" },
         { type: "floor-note", x: 685, y: 465, w: 175, h: 30, text: "ETA: STILL OPTIMISTIC" },
+      ],
+    },
+    warrantyReturn: {
+      name: "Callback Room",
+      kicker: "Warranty Return Visit",
+      playerStart: { x: 120, y: 430 },
+      decor: [
+        { type: "label", x: 45, y: 36, w: 230, h: 38, text: "CALLBACK / WARRANTY RETURN" },
+        { type: "desk", x: 78, y: 110, w: 185, h: 92, text: "CLIENT TABLE", solid: true },
+        { type: "counter", x: 665, y: 325, w: 205, h: 105, text: "AV CREDENZA", solid: true },
+        { type: "build", x: 390, y: 105, w: 185, h: 82, text: "SYSTEM OUTPUT" },
+        { type: "floor-note", x: 430, y: 250, w: 185, h: 30, text: "TESTED GOOD?" },
+        { type: "floor-note", x: 300, y: 395, w: 235, h: 30, text: "PREVIOUS CLOSEOUT NOTE: BRIEF" },
+        { type: "floor-note", x: 690, y: 465, w: 170, h: 30, text: "WARRANTY HOURS: WATCHED" },
       ],
     },
   },

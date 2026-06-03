@@ -19,6 +19,7 @@ function createInitialState() {
     commissioningChecks: [],
     warehouseChecks: [],
     secureAccessChecks: [],
+    callbackCleanupChecks: [],
     energy: 100,
     burnout: 0,
     cash: 0,
@@ -47,6 +48,8 @@ function createInitialState() {
       secureAccessJobsCompleted: 0,
       accessDelaysDocumented: 0,
       unpaidDelaysAbsorbed: 0,
+      warrantyReturnsCompleted: 0,
+      warrantyBandagesApplied: 0,
     },
     clock: "MON 7:11 AM",
     flags: {},
@@ -129,7 +132,8 @@ function inferSavedXp(savedGame) {
     + (savedGame.flags?.surveyComplete ? (savedGame.flags.surveyApproach === "pushback" ? 60 : savedGame.flags.surveyApproach === "document" ? 55 : 35) : 0)
     + (savedGame.flags?.commissioningComplete ? (savedGame.flags.commissioningApproach === "craft" ? 65 : savedGame.flags.commissioningApproach === "repair" ? 60 : 40) : 0)
     + (savedGame.flags?.warehouseComplete ? (savedGame.flags.warehouseApproach === "label" ? 50 : 35) : 0)
-    + (savedGame.flags?.secureAccessComplete ? (savedGame.flags.secureAccessApproach === "pushback" ? 60 : savedGame.flags.secureAccessApproach === "document" ? 55 : 35) : 0);
+    + (savedGame.flags?.secureAccessComplete ? (savedGame.flags.secureAccessApproach === "pushback" ? 60 : savedGame.flags.secureAccessApproach === "document" ? 55 : 35) : 0)
+    + (savedGame.flags?.callbackCleanupComplete ? (savedGame.flags.callbackCleanupApproach === "craft" ? 65 : savedGame.flags.callbackCleanupApproach === "root" ? 55 : 35) : 0);
 }
 
 function inferSavedReputation(savedGame) {
@@ -187,6 +191,15 @@ function inferSavedReputation(savedGame) {
       reputation.management += savedGame.flags.secureAccessApproach === "pushback" ? -2 : -1;
     }
   }
+  if (savedGame.flags?.callbackCleanupComplete) {
+    if (savedGame.flags.callbackCleanupApproach === "bandage") {
+      reputation.management += 1;
+    } else {
+      reputation.clients += 2;
+      reputation.coworkers += savedGame.flags.callbackCleanupApproach === "craft" ? 2 : 1;
+      reputation.management -= 1;
+    }
+  }
   return reputation;
 }
 
@@ -212,6 +225,8 @@ function inferSavedStats(savedGame) {
     secureAccessJobsCompleted: 0,
     accessDelaysDocumented: 0,
     unpaidDelaysAbsorbed: 0,
+    warrantyReturnsCompleted: 0,
+    warrantyBandagesApplied: 0,
   };
   if (savedGame.stats) return { ...stats, ...savedGame.stats };
   if (savedGame.flags?.finished) {
@@ -251,6 +266,11 @@ function inferSavedStats(savedGame) {
     if (savedGame.flags.secureAccessApproach === "absorb") stats.unpaidDelaysAbsorbed += 1;
     else stats.accessDelaysDocumented += 1;
   }
+  if (savedGame.flags?.callbackCleanupComplete) {
+    stats.warrantyReturnsCompleted += 1;
+    if (savedGame.flags.callbackCleanupApproach === "bandage") stats.warrantyBandagesApplied += 1;
+    else stats.callbacksResolved += 1;
+  }
   return stats;
 }
 
@@ -289,7 +309,7 @@ function refreshTitleScreen() {
 
 function serializeGame() {
   return {
-    version: 10,
+    version: 11,
     technicianId: state.technician.id,
     sceneId: state.sceneId,
     player: state.player,
@@ -304,6 +324,7 @@ function serializeGame() {
     commissioningChecks: state.commissioningChecks,
     warehouseChecks: state.warehouseChecks,
     secureAccessChecks: state.secureAccessChecks,
+    callbackCleanupChecks: state.callbackCleanupChecks,
     energy: state.energy,
     burnout: state.burnout,
     cash: state.cash,
@@ -359,6 +380,10 @@ function getCarefulWorkReduction() {
 
 function getOpenCallbackPenalty() {
   return Math.min(1, Math.max(0, state.stats.callbacks - state.stats.callbacksResolved));
+}
+
+function getUnresolvedCallbackCount() {
+  return Math.max(0, state.stats.callbacks - state.stats.callbacksResolved);
 }
 
 function getCarryCapacity(sceneId = state.sceneId) {
@@ -479,6 +504,7 @@ function continueGame() {
   if (flags.commissioningComplete) flags.commissioningProgressAwarded = true;
   if (flags.warehouseComplete) flags.warehouseProgressAwarded = true;
   if (flags.secureAccessComplete) flags.secureAccessProgressAwarded = true;
+  if (flags.callbackCleanupComplete) flags.callbackCleanupProgressAwarded = true;
   if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
     flags.serviceCallbackPending = true;
   }
@@ -492,9 +518,10 @@ function continueGame() {
     commissioningChecks: savedGame.commissioningChecks || [],
     warehouseChecks: savedGame.warehouseChecks || [],
     secureAccessChecks: savedGame.secureAccessChecks || [],
+    callbackCleanupChecks: savedGame.callbackCleanupChecks || [],
     cash: migratedCash,
     xp: migratedXp,
-    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0) + (flags.warehouseComplete ? 1 : 0) + (flags.secureAccessComplete ? 1 : 0),
+    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0) + (flags.warehouseComplete ? 1 : 0) + (flags.secureAccessComplete ? 1 : 0) + (flags.callbackCleanupComplete ? 1 : 0),
     reputation: migratedReputation,
     training: savedGame.training || [],
     stats: migratedStats,
@@ -531,6 +558,9 @@ function resumeRequiredPrompt() {
   }
   if (state.sceneId === "navyYardAccess" && state.secureAccessChecks.length === content.secureAccessDispatch.checks.length && !state.flags.secureAccessComplete) {
     return showSecureAccessChoice();
+  }
+  if (state.sceneId === "warrantyReturn" && state.callbackCleanupChecks.length === content.callbackCleanupDispatch.checks.length && !state.flags.callbackCleanupComplete) {
+    return showCallbackCleanupChoice();
   }
 }
 
@@ -908,6 +938,8 @@ function getCareerLedgerMarkup() {
       <span>Secure-access jobs completed</span><strong>${state.stats.secureAccessJobsCompleted}</strong>
       <span>Access delays documented</span><strong>${state.stats.accessDelaysDocumented}</strong>
       <span>Unpaid delays absorbed</span><strong>${state.stats.unpaidDelaysAbsorbed}</strong>
+      <span>Warranty returns completed</span><strong>${state.stats.warrantyReturnsCompleted}</strong>
+      <span>Warranty bandages applied</span><strong>${state.stats.warrantyBandagesApplied}</strong>
     </div>
   `;
 }
@@ -1113,6 +1145,7 @@ function takeBreak() {
 
 function showDispatchPreview() {
   if (state.flags.secureAccessComplete) {
+    if (!state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0) return showCallbackCleanupDispatchPreview();
     return showPrototypeSummary();
   }
   if (state.flags.warehouseComplete) {
@@ -1505,6 +1538,154 @@ function finishSecureAccess(approach) {
       label: "Return To Broomall Shop",
       onClick: () => {
         addLog("Returned to the Broomall shop after the Navy Yard access job.");
+        enterScene("shop");
+      },
+    }],
+  });
+}
+
+function showCallbackCleanupDispatchPreview() {
+  showModal({
+    kicker: "Dispatch Board",
+    title: content.callbackCleanupDispatch.title,
+    body: `
+      <p><strong>Return Trip:</strong> A callback is still sitting in the career ledger, and dispatch wants it cleaned up before anyone says warranty hours out loud.</p>
+      <p>The client says the room was marked complete, then immediately started acting like it read the closeout note.</p>
+      <p class="muted">Unresolved callbacks: ${getUnresolvedCallbackCount()}</p>
+      <blockquote>Management note: "Please determine whether this is truly a callback or simply extended closeout support."</blockquote>
+    `,
+    actions: [
+      { label: "Accept Warranty Return", onClick: promptCallbackCleanupTravel },
+      { label: "Return to Shop", className: "secondary-button" },
+    ],
+  });
+}
+
+function promptCallbackCleanupTravel() {
+  showModal({
+    kicker: "Route Summary",
+    title: "Broomall -> Callback Site",
+    body: `
+      <p><strong>Dispatch estimate:</strong> Confirm user concern, restore confidence, avoid assigning blame in writing.</p>
+      <p class="muted">The previous closeout note is short enough to remember accidentally.</p>
+      <div class="route-line"><span>BROOMALL</span><i></i><span>CALLBACK SITE</span></div>
+    `,
+    actions: [{
+      label: "Drive To Warranty Return",
+      onClick: () => {
+        state.flags.callbackCleanupStarted = true;
+        state.flags.prototypeSummaryViewed = false;
+        setClock(`${state.clock.slice(0, 3)} 9:34 AM`);
+        addLog("Arrived for a warranty return created by the career ledger, not the marketing brochure.");
+        enterScene("warrantyReturn");
+      },
+    }],
+  });
+}
+
+function getCallbackCleanupCheckEnergyCost() {
+  return getVerificationEnergyCost(3);
+}
+
+function getCallbackCleanupRepairEnergyCost(baseCost) {
+  return Math.max(0, getVerificationEnergyCost(baseCost) - getCarefulWorkReduction());
+}
+
+function inspectCallbackCleanupCondition(checkId) {
+  const check = content.callbackCleanupDispatch.checks.find((item) => item.id === checkId);
+  if (!check || state.callbackCleanupChecks.includes(checkId)) return notify(`${check?.label || "That callback note"} is already checked.`);
+  state.callbackCleanupChecks.push(checkId);
+  changeEnergy(-getCallbackCleanupCheckEnergyCost());
+  addLog(`${check.label} checked: ${check.log}`);
+  render();
+  const allChecked = state.callbackCleanupChecks.length === content.callbackCleanupDispatch.checks.length;
+  showModal({
+    kicker: "Callback Note",
+    title: check.label,
+    body: `
+      <p>${check.detail}</p>
+      ${allChecked ? `<p class="muted">You found enough to decide whether this becomes a real fix or another quiet bandage.</p>` : ""}
+    `,
+    actions: [{ label: allChecked ? "Review Warranty Fix" : "Keep Troubleshooting", onClick: allChecked ? showCallbackCleanupChoice : render }],
+  });
+}
+
+function showCallbackCleanupChoice() {
+  showModal({
+    kicker: "Warranty Decision",
+    title: "The Callback Has A Cause",
+    body: `
+      <p>The issue came back because the previous closeout skipped the boring verification. The room can be fixed, documented, and removed from the callback ledger, or it can be made quiet enough for the ticket to close again.</p>
+      ${getCarefulWorkReduction() ? `<p class="muted">Your careful-work rhythm reduces the proper fix cost by 1 energy.</p>` : ""}
+    `,
+    actions: [
+      { label: `Fix root cause and update notes (-${getCallbackCleanupRepairEnergyCost(6)} energy)`, onClick: () => finishCallbackCleanup("root") },
+      ...(getCraftsmanship() >= 3 ? [{
+        label: `Clean repair and teach the client what changed (-${getCallbackCleanupRepairEnergyCost(5)} energy)`,
+        className: "secondary-button",
+        onClick: () => finishCallbackCleanup("craft"),
+      }] : []),
+      { label: "Bandage it and close the warranty ticket", className: "secondary-button", onClick: () => finishCallbackCleanup("bandage") },
+    ],
+  });
+}
+
+function finishCallbackCleanup(approach) {
+  const resolved = approach !== "bandage";
+  const xp = approach === "craft" ? 65 : approach === "root" ? 55 : 35;
+  if (resolved) changeEnergy(-getCallbackCleanupRepairEnergyCost(approach === "craft" ? 5 : 6));
+  else state.burnout += 1;
+  state.flags.callbackCleanupComplete = true;
+  state.flags.callbackCleanupApproach = approach;
+  state.flags.prototypeSummaryViewed = false;
+  setClock(`${state.clock.slice(0, 3)} ${resolved ? "11:16" : "10:38"} AM`);
+  if (!state.flags.callbackCleanupPaid) {
+    state.cash += resolved ? 68 : 54;
+    state.flags.callbackCleanupPaid = true;
+  }
+  if (!state.flags.callbackCleanupProgressAwarded) {
+    awardCareerProgress({
+      xp,
+      reputation: resolved
+        ? { clients: 2, coworkers: approach === "craft" ? 2 : 1, management: -1 }
+        : { clients: 0, coworkers: 0, management: 1 },
+      source: content.callbackCleanupDispatch.title,
+    });
+    state.flags.callbackCleanupProgressAwarded = true;
+  }
+  if (!state.flags.callbackCleanupStatsRecorded) {
+    state.stats.warrantyReturnsCompleted += 1;
+    if (resolved) {
+      state.stats.callbacksResolved += 1;
+      state.stats.carefulFinishes += 1;
+    } else {
+      state.stats.warrantyBandagesApplied += 1;
+    }
+    state.flags.callbackCleanupStatsRecorded = true;
+  }
+  addLog(resolved
+    ? "Resolved the warranty return and wrote notes the next tech can actually use."
+    : "Closed the warranty ticket with a bandage. The callback ledger remains spiritually aware.");
+  render();
+  showModal({
+    kicker: "Warranty Return Complete",
+    title: approach === "craft" ? "The Room And The Client Are Both Calmer" : approach === "root" ? "The Callback Has Real Notes Now" : "The Ticket Is Quiet For Now",
+    body: `
+      <div class="results-grid">
+        <span>Warranty wages</span><strong>+$${resolved ? 68 : 54}</strong>
+        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Experience</span><strong>+${xp} XP</strong>
+        <span>Callback ledger</span><strong>${resolved ? "Callback resolved" : "Callback debt remains"}</strong>
+        <span>Unresolved callbacks</span><strong>${getUnresolvedCallbackCount()}</strong>
+      </div>
+      ${resolved
+        ? `<blockquote>Management note: "Please avoid implying previous closeout was incomplete when documenting warranty support."</blockquote>`
+        : `<blockquote>Management note: "Thanks for keeping warranty hours contained."</blockquote>`}
+    `,
+    actions: [{
+      label: "Return To Broomall Shop",
+      onClick: () => {
+        addLog("Returned to the Broomall shop after the warranty return.");
         enterScene("shop");
       },
     }],
@@ -2342,6 +2523,51 @@ function getInteractions() {
     ];
   }
 
+  if (state.sceneId === "warrantyReturn") {
+    const allChecked = state.callbackCleanupChecks.length === content.callbackCleanupDispatch.checks.length;
+    return [
+      {
+        x: 300, y: 185, label: allChecked ? "Close out warranty return" : "Talk to client contact", npc: "CLIENT",
+        action: () => {
+          if (allChecked) return showCallbackCleanupChoice();
+          if (state.flags.callbackCleanupBrief) return notify('Client: "It worked after the last visit, then stopped working when people started using the room."');
+          state.flags.callbackCleanupBrief = true;
+          addLog("Client explained that the issue survived the previous closeout note.");
+          showModal({
+            kicker: "Client Contact",
+            title: "The Problem Came Back",
+            body: `
+              <p>"The last ticket says tested good. It did work for a bit. Then the same issue came back during the next meeting."</p>
+              <p class="muted">Review the complaint notes, ticket history, and actual fault before deciding how honest the fix gets to be.</p>
+            `,
+            actions: [{ label: "Start Warranty Troubleshooting", onClick: render }],
+          });
+        },
+      },
+      {
+        x: 420, y: 375, label: "Review ticket history",
+        action: () => {
+          if (!state.flags.callbackCleanupBrief) return notify("Check in with the client contact first.");
+          inspectCallbackCleanupCondition("ticket-history");
+        },
+      },
+      {
+        x: 485, y: 220, label: "Test actual fault",
+        action: () => {
+          if (!state.flags.callbackCleanupBrief) return notify("Check in with the client contact first.");
+          inspectCallbackCleanupCondition("actual-fault");
+        },
+      },
+      {
+        x: 760, y: 300, label: "Read client complaint notes",
+        action: () => {
+          if (!state.flags.callbackCleanupBrief) return notify("Check in with the client contact first.");
+          inspectCallbackCleanupCondition("client-notes");
+        },
+      },
+    ];
+  }
+
   if (state.sceneId === "navyYardAccess") {
     const allChecked = state.secureAccessChecks.length === content.secureAccessDispatch.checks.length;
     return [
@@ -2482,6 +2708,7 @@ function getObjective() {
     }
     if (state.flags.commissioningComplete && !state.flags.warehouseComplete) return "Review the warehouse run on the dispatch board.";
     if (state.flags.warehouseComplete && !state.flags.secureAccessComplete) return "Review the Navy Yard secure-access job on the dispatch board.";
+    if (state.flags.secureAccessComplete && !state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0) return "Review the warranty return on the dispatch board.";
     if (state.flags.secureAccessComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
     if (state.flags.secureAccessComplete) return "Current prototype complete. Explore the shop.";
     if (state.flags.finished) return "Prepare for the Conshohocken service call.";
@@ -2516,6 +2743,13 @@ function getObjective() {
       return `Commission the training room (${state.commissioningChecks.length}/${content.commissioningDispatch.checks.length}).`;
     }
     return "Return to the client contact and close out the commissioning visit.";
+  }
+  if (state.sceneId === "warrantyReturn") {
+    if (!state.flags.callbackCleanupBrief) return "Check in with the client contact.";
+    if (state.callbackCleanupChecks.length < content.callbackCleanupDispatch.checks.length) {
+      return `Troubleshoot the warranty return (${state.callbackCleanupChecks.length}/${content.callbackCleanupDispatch.checks.length}).`;
+    }
+    return "Return to the client contact and close out the warranty return.";
   }
   if (state.sceneId === "navyYardAccess") {
     if (!state.flags.secureAccessBrief) return "Check in with security.";
@@ -2696,8 +2930,11 @@ function render() {
   const surveyActive = state.sceneId === "universitySurvey";
   const commissioningActive = state.sceneId === "southPhillyCommissioning";
   const secureAccessActive = state.sceneId === "navyYardAccess";
+  const callbackCleanupActive = state.sceneId === "warrantyReturn";
   const warehouseActive = state.flags.warehouseStarted && !state.flags.warehouseComplete;
-  const activeDispatch = secureAccessActive || state.flags.secureAccessStarted || state.flags.secureAccessComplete || (state.flags.warehouseComplete && !state.flags.secureAccessComplete)
+  const activeDispatch = callbackCleanupActive || state.flags.callbackCleanupStarted || state.flags.callbackCleanupComplete || (state.flags.secureAccessComplete && !state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0)
+    ? content.callbackCleanupDispatch
+    : secureAccessActive || state.flags.secureAccessStarted || state.flags.secureAccessComplete || (state.flags.warehouseComplete && !state.flags.secureAccessComplete)
     ? content.secureAccessDispatch
     : state.flags.warehouseStarted || state.flags.warehouseComplete
     ? content.warehouseDispatch
@@ -2710,6 +2947,8 @@ function render() {
       : { title: "Two Quick Carts", summary: "Build two mobile video conferencing carts at a Center City East office." };
   elements.jobStatus.textContent = warehouseActive
     ? "WAREHOUSE RUN"
+    : callbackCleanupActive
+      ? "WARRANTY RETURN"
     : secureAccessActive
       ? "SECURE ACCESS"
       : commissioningActive

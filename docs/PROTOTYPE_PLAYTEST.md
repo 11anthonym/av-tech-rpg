@@ -27,7 +27,9 @@ The playable slice now has:
    and a bad-company closeout decision.
 9. Lightweight career effects where repeated documentation, careful finishes,
    and unresolved callbacks change future energy costs.
-10. A completion card with a career snapshot, nearby locked work, and playtest
+10. A conditional warranty return that appears only when the callback ledger has
+   unresolved work.
+11. A completion card with a career snapshot, nearby locked work, and playtest
    questions.
 
 ## Playtest Questions
@@ -54,6 +56,8 @@ Watch a player complete the current build before expanding it. Look for:
   clean for management?
 - Do players notice when ledger stats become active career effects?
 - Are the stat effects helpful enough to matter without becoming a spreadsheet?
+- Does the conditional warranty return make earlier rushed or patched choices
+  feel remembered?
 - Are the AV jokes legible to newcomers and recognizable to working techs?
 - Does the completion card make players curious about one more dispatch?
 
@@ -109,6 +113,16 @@ The ledger now has a few direct gameplay effects:
 
 These effects should make choices feel remembered while staying small enough for
 the prototype.
+
+## Current Return-Trip Experiment
+
+The **Warranty Return** dispatch appears only when callbacks exceed resolved
+callbacks after the Navy Yard work. It asks the player to inspect the client
+complaint, previous ticket history, and actual fault, then choose between a real
+fix that resolves callback debt or a quick bandage that keeps management happy.
+
+This is the first prototype test of previous outcomes changing which quests
+appear at all.
 
 ## Current Replay Experiment
 
