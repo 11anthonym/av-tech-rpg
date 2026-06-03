@@ -8,6 +8,13 @@ window.GAME_CONTENT = {
       stats: { energy: 100, burnout: 0, craftsmanship: 2, confidence: 1 },
       startingTools: ["screwdriver"],
     },
+    {
+      id: "organized-rookie",
+      name: "Organized Rookie",
+      tagline: "Brought a tool bag, snacks, and a dangerous belief in written notes.",
+      stats: { energy: 105, burnout: 0, craftsmanship: 2, confidence: 0 },
+      startingTools: ["screwdriver", "toolBag"],
+    },
   ],
 
   tools: {

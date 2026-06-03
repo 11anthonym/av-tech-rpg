@@ -696,6 +696,7 @@ function finishJob(choice) {
 function showResults() {
   const tidy = state.flags.finishChoice === "tidy";
   const netPay = tidy ? 152 : 141;
+  const rewardTools = content.tutorial.rewardTools.filter((toolId) => !ownsTool(toolId));
   showModal({
     kicker: "End of Day",
     title: "Two Quick Carts: Complete",
@@ -712,18 +713,26 @@ function showResults() {
         <span>Experience</span><strong>+40 XP</strong>
       </div>
       <blockquote>Management note: "Please improve time management and plan parking more efficiently."</blockquote>
-      <p>You survived your first week early. Choose one starter upgrade.</p>
+      <p>You survived your first week early. ${rewardTools.length ? "Choose one starter upgrade." : "Your starter kit already covers the current upgrade choices."}</p>
     `,
-    actions: content.tutorial.rewardTools.map((toolId) => ({
+    actions: rewardTools.length ? rewardTools.map((toolId) => ({
       label: content.tools[toolId].name,
       className: "secondary-button",
       onClick: () => chooseReward(toolId),
-    })),
+    })) : [{
+      label: "Return to Broomall Shop",
+      onClick: () => {
+        state.flags.reward = "starter-kit";
+        state.carry = [];
+        addLog("Starter kit already included the current upgrade choices.");
+        enterScene("shop");
+      },
+    }],
   });
 }
 
 function chooseReward(toolId) {
-  state.tools.push(toolId);
+  if (!ownsTool(toolId)) state.tools.push(toolId);
   state.flags.reward = toolId;
   showModal({
     kicker: "Personal Tool Added",
@@ -2256,7 +2265,7 @@ function renderSelection() {
       const card = document.createElement("article");
       card.className = "technician-card";
       card.innerHTML = `
-        <p class="eyebrow">Placeholder Profile</p>
+        <p class="eyebrow">Technician Profile</p>
         <h3>${technician.name}</h3>
         <p>${technician.tagline}</p>
         <div class="tech-stats">
@@ -2264,6 +2273,7 @@ function renderSelection() {
           <span>Craft <strong>${technician.stats.craftsmanship}</strong></span>
           <span>Confidence <strong>${technician.stats.confidence}</strong></span>
         </div>
+        <p class="starting-kit"><strong>Starting kit:</strong> ${technician.startingTools.map((toolId) => content.tools[toolId]?.name || toolId).join(", ")}</p>
       `;
       card.append(makeButton("Start First Day", () => startGame(technician.id)));
       return card;

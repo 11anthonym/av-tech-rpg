@@ -103,6 +103,8 @@ Add another entry inside `technicians`:
 ```
 
 The selection screen will render the new profile automatically.
+If a technician starts with a tool that is normally offered after the tutorial,
+the reward screen automatically filters out already-owned tools.
 
 ## Add a Vehicle
 

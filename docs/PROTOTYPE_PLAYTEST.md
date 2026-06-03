@@ -11,17 +11,19 @@ The playable slice now has:
 
 1. A first-day install tutorial with walking, loading, carrying, assembly, and a
    starter-tool reward.
-2. A short service call with one morning-preparation choice, a diagnosis choice,
+2. Two starting technician profiles that test whether a starter tool and weaker
+   confidence make the same dispatch sequence replay differently.
+3. A short service call with one morning-preparation choice, a diagnosis choice,
    tool payoffs, and a possible callback.
-3. A walkable shop hub with rest, purchases, career XP, reputation, one training
+4. A walkable shop hub with rest, purchases, career XP, reputation, one training
    focus, and a small Josh relationship milestone.
-4. A University City site survey with three observations, a short preparation
+5. A University City site survey with three observations, a short preparation
    choice, and a management-versus-field-judgment report decision.
-5. A South Philadelphia commissioning visit with three checks, an incomplete
+6. A South Philadelphia commissioning visit with three checks, an incomplete
    room, and a craftsmanship-based punch-list option.
-6. A short Broomall warehouse run that reuses the shop map and tests whether
+7. A short Broomall warehouse run that reuses the shop map and tests whether
    stockroom exploration works as a change of pace.
-7. A completion card with a career snapshot, nearby locked work, and playtest
+8. A completion card with a career snapshot, nearby locked work, and playtest
    questions.
 
 ## Playtest Questions
@@ -29,6 +31,8 @@ The playable slice now has:
 Watch a player complete the current build before expanding it. Look for:
 
 - Do players understand where to walk and what to interact with?
+- Does the second technician profile make the same workday feel meaningfully
+  different without needing a character creator?
 - Does carrying establish the field-logistics fantasy without becoming chores?
 - Do players notice how their starter tool changes the service call?
 - Does the preparation choice feel like a small plan rather than a menu tax?
@@ -76,11 +80,17 @@ The **Warehouse Run** tests shop exploration and van organization as a short
 change of pace. It reuses the Broomall map, asks the player to search three
 existing hotspots, and ends with one stockroom-cleanup decision.
 
+## Current Replay Experiment
+
+The **Organized Rookie** profile starts with a tool bag, slightly more energy,
+and weaker confidence. It tests whether starting stats and tools create a
+meaningfully different replay without changing the dispatch sequence.
+
 ## Next Experiment
 
-After a playtest pass, add only a **second technician profile** if the full
-prototype still feels brisk. Use it to test whether starting stats create a
-meaningfully different replay without changing the dispatch sequence.
+After a playtest pass, add only one small quality pass: tighten any confusing
+objective text, result screen, or too-slow walking/carrying beat found during
+play.
 
 ## Later Experiments
 
