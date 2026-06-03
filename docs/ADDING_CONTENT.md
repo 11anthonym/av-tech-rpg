@@ -113,6 +113,55 @@ The selection screen will render the new profile automatically.
 If a technician starts with a tool that is normally offered after the tutorial,
 the reward screen automatically filters out already-owned tools.
 
+Optional technician fields can make characters more distinct without changing
+the selection UI:
+
+- `role`
+- `description`
+- `strengths`
+- `weaknesses`
+- `playstyle`
+- `difficulty`
+- `trait`
+- `tendency`
+- `characterStats`
+- `traits`
+
+Use `characterStats` for lightweight tradeoffs such as `install`,
+`toolPreparedness`, `improvisation`, `documentation`, `commercialProcess`,
+`networking`, `dspAudio`, `controlSystems`, and `clientCommunication`. These are
+not a full skill tree; use them only when a scene needs a small gate or modifier.
+
+Use `traits` for simple hooks such as unlocking a special choice, changing a
+line, or recording a flag. Current examples include Wiley's
+`circuitHutPartsBrain`, `makeThatWork`, and `residentialInstinct`.
+
+## Add Character-Specific Lines
+
+`data.js` has a `characterLines` object keyed by technician ID. Scene logic can
+call `getCharacterLine("lineId", fallback)` and safely fall back to default text
+when the active character has no custom line.
+
+Keep these lines short and practical. A good line should add flavor or clarify a
+choice; it should not turn a character into a one-liner machine.
+
+Current early line IDs include:
+
+- `accessoryTote`
+- `inspectVan`
+- `finishChoice`
+- `workaroundLog`
+- `partsBrainQuote`
+- `serviceInspect`
+- `surveyWall`
+
+## Add Shortcut Risk
+
+For quick-workaround versus proper-process choices, record future risk through
+`recordReturnTripRisk(riskId, detail)`. The current prototype stores those risks
+inside save `flags` so later dispatches can reference them without adding a new
+inventory or issue-tracker system.
+
 ## Add a Vehicle
 
 Add another entry inside `vehicles`:

@@ -378,6 +378,34 @@ function getToolModifier(modifier) {
   return state.tools.reduce((total, toolId) => total + (content.tools[toolId]?.modifiers?.[modifier] || 0), 0);
 }
 
+function getCharacterLine(lineId, fallback = "") {
+  if (!state.technician) return fallback;
+  return content.characterLines?.[state.technician.id]?.[lineId] || fallback;
+}
+
+function hasSeenCharacterLine(lineId) {
+  state.flags.characterLinesSeen ||= {};
+  return Boolean(state.flags.characterLinesSeen[lineId]);
+}
+
+function markCharacterLineSeen(lineId) {
+  state.flags.characterLinesSeen ||= {};
+  state.flags.characterLinesSeen[lineId] = true;
+}
+
+function hasCharacterTrait(traitId) {
+  return state.technician?.traits?.includes(traitId) || false;
+}
+
+function getCharacterStat(statId) {
+  return state.technician?.characterStats?.[statId] || 0;
+}
+
+function recordReturnTripRisk(riskId, detail) {
+  state.flags.returnTripRisks ||= {};
+  state.flags.returnTripRisks[riskId] = detail;
+}
+
 function getCurrentDispatchKey() {
   if (state.sceneId === "executiveHandoff" || state.flags.handoffStarted || state.flags.handoffComplete) return "handoff";
   if (state.sceneId === "warrantyReturn" || state.flags.callbackCleanupStarted || state.flags.callbackCleanupComplete) return "warranty";
@@ -407,7 +435,7 @@ function hasActivePartsBrainFind() {
 }
 
 function canUsePartsBrain() {
-  return ownsTool("circuitHutOrganizer") && !hasActivePartsBrainFind();
+  return hasCharacterTrait("circuitHutPartsBrain") && ownsTool("circuitHutOrganizer") && !hasActivePartsBrainFind();
 }
 
 function getTrainingModifier(modifier) {
@@ -428,8 +456,8 @@ function getConfidence() {
   return state.technician.stats.confidence + getTrainingModifier("confidence");
 }
 
-function isWiley() {
-  return state.technician?.id === "wiley";
+function canUseMakeThatWorkShortcut() {
+  return hasCharacterTrait("makeThatWork") && getCharacterStat("improvisation") >= 4;
 }
 
 function getDocumentationHabitReduction() {
@@ -787,12 +815,12 @@ function showFinishChoice() {
     title: "Cart 2 Works. The Cables Do Not Look Happy.",
     body: `
       <p>Dispatch expected you to be done hours ago. You can clean up the cable routing or leave before traffic gets worse.</p>
-      ${isWiley() ? `<p class="muted">Wiley can make the awkward adapter path work for now. The question is whether it deserves to become the install.</p>` : ""}
+      ${canUseMakeThatWorkShortcut() ? `<p class="muted">${getCharacterLine("finishChoice", "You can make the awkward path work for now. The question is whether it deserves to become the install.")}</p>` : ""}
       <p><strong>Energy:</strong> ${state.energy}/${getMaxEnergy()}</p>
     `,
     actions: [
       { label: "Dress the cables properly (+35 min)", onClick: () => finishJob("tidy") },
-      ...(isWiley() ? [{
+      ...(canUseMakeThatWorkShortcut() ? [{
         label: "Use the adapter workaround and leave",
         className: "secondary-button",
         onClick: () => finishJob("wiley-workaround"),
@@ -815,7 +843,11 @@ function finishJob(choice) {
     setClock("MON 5:49 PM");
     state.stats.callbacks += 1;
     state.flags.wileyUsedTemporaryFix = true;
-    addLog("Wiley made the adapter path work for now. The closeout notes did not get smarter.");
+    recordReturnTripRisk("usedTemporaryAdapterPermanently", {
+      source: "Two Quick Carts",
+      detail: "Adapter workaround used as final install path.",
+    });
+    addLog(getCharacterLine("workaroundLog", "Made the adapter path work for now. The closeout notes did not get smarter."));
   } else {
     changeEnergy(-4);
     setClock("MON 5:54 PM");
@@ -943,7 +975,7 @@ function useCircuitHutPartsBrain() {
     body: `
       <p>Wiley digs through the old parts organizer and finds a <strong>${find}</strong>.</p>
       <p>This can help with testing during the current dispatch. It does not automatically make the workaround acceptable for final closeout.</p>
-      <blockquote>Wiley: "I can make it work. I'm just asking whether we want it to keep working."</blockquote>
+      <blockquote>${state.technician.name}: "${getCharacterLine("partsBrainQuote", "This is fine for testing. Permanent is where the paperwork starts.")}"</blockquote>
     `,
     actions: [{ label: "Pocket It For Testing", onClick: render }],
   });
@@ -2274,6 +2306,7 @@ function inspectSurveyConstraint(inspectionId) {
     title: inspection.label,
     body: `
       <p>${inspection.detail}</p>
+      ${inspection.id === "wall" && getCharacterLine("surveyWall") ? `<p class="muted">${getCharacterLine("surveyWall")}</p>` : ""}
       ${allChecked ? `<p class="muted">You have enough information. Return to the facilities contact and file the survey report.</p>` : ""}
     `,
     actions: [{ label: allChecked ? "Return To Facilities Contact" : "Keep Surveying", onClick: render }],
@@ -2565,9 +2598,9 @@ function getInteractions() {
           state.carry = [next];
           changeEnergy(-getEquipmentEnergyCost(2));
           addLog(`Picked up ${next}.`);
-          if (isWiley() && next === "Accessory tote" && !state.flags.wileyClockedSmallParts) {
-            state.flags.wileyClockedSmallParts = true;
-            addLog('Wiley clocked the accessory tote first. "Adapters are where simple jobs go to negotiate."');
+          if (getCharacterLine("accessoryTote") && next === "Accessory tote" && !hasSeenCharacterLine("accessoryTote")) {
+            markCharacterLineSeen("accessoryTote");
+            addLog(getCharacterLine("accessoryTote"));
           }
           render();
         },
@@ -2610,7 +2643,7 @@ function getInteractions() {
             }
             return render();
           }
-          if (state.flags.finished) return notify("Van #3 is parked. Future dispatches will start here.");
+          if (state.flags.finished) return notify(getCharacterLine("inspectVan", "Van #3 is parked. Future dispatches will start here."));
           if (state.loaded.length === content.tutorial.shopLoad.length && state.flags.shopBrief) return promptTravel();
           notify("Company Van #3: limited cargo, poor organization, questionable reliability.");
         },
@@ -2731,6 +2764,7 @@ function getInteractions() {
               body: `
                 <p>The display itself is failing. The replacement screen and hardware tote are onsite.</p>
                 <p>There is also an unlabeled coupler behind the credenza. You can verify the signal path now or trust the service ticket and start swapping equipment.</p>
+                ${getCharacterLine("serviceInspect") ? `<p class="muted">${getCharacterLine("serviceInspect")}</p>` : ""}
                 ${state.flags.servicePreparation === "review" ? `<p class="muted">Reviewing the forwarded email chain saved time during diagnosis.</p>` : ""}
               `,
               actions: [
@@ -3216,6 +3250,8 @@ function renderSelection() {
         </div>
         ${technician.strengths ? `<p class="starting-kit"><strong>Strengths:</strong> ${technician.strengths.join(", ")}</p>` : ""}
         ${technician.weaknesses ? `<p class="starting-kit"><strong>Growth areas:</strong> ${technician.weaknesses.join(", ")}</p>` : ""}
+        ${technician.playstyle ? `<p class="starting-kit"><strong>Playstyle:</strong> ${technician.playstyle}</p>` : ""}
+        ${technician.difficulty ? `<p class="starting-kit"><strong>Difficulty:</strong> ${technician.difficulty}</p>` : ""}
         ${technician.trait ? `<p class="starting-kit"><strong>Trait:</strong> ${technician.trait}</p>` : ""}
         ${technician.tendency ? `<p class="starting-kit"><strong>Tendency:</strong> ${technician.tendency}</p>` : ""}
         <p class="starting-kit"><strong>Starting kit:</strong> ${technician.startingTools.map((toolId) => content.tools[toolId]?.name || toolId).join(", ")}</p>

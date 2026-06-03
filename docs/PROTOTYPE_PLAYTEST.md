@@ -34,7 +34,9 @@ The playable slice now has:
    client-facing choices matter when the room already works.
 12. A clearer dispatch board that explains why the next job is available, what
    choices can affect, and what future work is still locked.
-13. A completion card with a career snapshot, nearby locked work, and playtest
+13. Reusable character hooks for character-specific lines, simple traits,
+   lightweight character stats, and return-trip risk flags.
+14. A completion card with a career snapshot, nearby locked work, and playtest
    questions.
 
 ## Playtest Questions
@@ -48,6 +50,8 @@ Watch a player complete the current build before expanding it. Look for:
   process, rather than a weak or joke character?
 - Does Circuit Hut Parts Brain feel useful without becoming a free solution?
 - Does Wiley's workaround option make the quick-vs-clean tension clearer?
+- Do character-specific lines add flavor without hiding the default scene logic?
+- Do traits and character stats feel readable rather than spreadsheet-like?
 - Does carrying establish the field-logistics fantasy without becoming chores?
 - Do players notice how their starter tool changes the service call?
 - Does the preparation choice feel like a small plan rather than a menu tax?
@@ -162,6 +166,11 @@ hands-on craft, lower commercial confidence, and a Circuit Hut parts organizer.
 His first-pass experiment is small: he can choose to search the organizer once
 per dispatch for a testing aid, and he gets an early tempting workaround option
 that saves time while creating callback debt.
+
+The current character-support pass keeps Wiley data-driven where possible:
+character-specific lines live in `characterLines`, optional `characterStats` and
+`traits` can gate small choices, and quick-workaround choices can record
+return-trip risk flags for future callbacks.
 
 ## Next Experiment
 

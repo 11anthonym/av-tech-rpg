@@ -23,12 +23,41 @@ window.GAME_CONTENT = {
       description: "Wiley spent years mounting TVs, fishing wires, cleaning up racks, tracing mystery speaker lines, replacing remotes, and making bad homeowner purchases work just well enough to survive the day.",
       strengths: ["Physical install", "Retrofit paths", "Small parts", "Practical troubleshooting"],
       weaknesses: ["Commercial process", "Documentation", "DSP/control", "Networking"],
+      playstyle: "Fast hands-on installer with strong improvisation, but must learn commercial process.",
+      difficulty: "Medium",
       trait: "Circuit Hut Parts Brain",
       tendency: "I Can Make That Work",
       stats: { energy: 105, burnout: 0, craftsmanship: 3, confidence: 0 },
+      characterStats: {
+        install: 5,
+        toolPreparedness: 5,
+        improvisation: 5,
+        residentialKnowledge: 5,
+        practicalTroubleshooting: 4,
+        clientCommunication: 3,
+        commercialProcess: 1,
+        documentation: 1,
+        dspAudio: 1,
+        controlSystems: 1,
+        networking: 1,
+        burnoutResistance: 3,
+      },
+      traits: ["circuitHutPartsBrain", "makeThatWork", "residentialInstinct"],
       startingTools: ["screwdriver", "toolBag", "circuitHutOrganizer"],
     },
   ],
+
+  characterLines: {
+    wiley: {
+      accessoryTote: 'Wiley clocked the accessory tote first. "Adapters are where simple jobs go to negotiate."',
+      inspectVan: 'Wiley checks the van bins. "I found three cables we do not need and zero of the one we do. Classic."',
+      finishChoice: "Wiley can make the awkward adapter path work for now. The question is whether it deserves to become the install.",
+      workaroundLog: "Wiley made the adapter path work for now. The closeout notes did not get smarter.",
+      partsBrainQuote: "I can make it work. I'm just asking whether we want it to keep working.",
+      serviceInspect: 'Wiley eyes the coupler behind the credenza. "I trust this adapter for testing. I do not trust it with my reputation."',
+      surveyWall: 'Wiley checks the wall like someone who has met plaster before. "Before we drill, let us find out if this wall is drywall, brick, or a lawsuit."',
+    },
+  },
 
   tools: {
     screwdriver: {
