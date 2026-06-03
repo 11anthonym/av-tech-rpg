@@ -148,6 +148,10 @@ function inferSavedReputation(savedGame) {
       reputation.clients += 2;
       reputation.coworkers += 1;
       reputation.management -= 1;
+    } else if (savedGame.flags.finishChoice === "wiley-workaround") {
+      reputation.clients += 1;
+      reputation.coworkers -= 1;
+      reputation.management += 1;
     } else {
       reputation.management += 1;
     }
@@ -247,6 +251,7 @@ function inferSavedStats(savedGame) {
   if (savedGame.flags?.finished) {
     stats.overtimeDays += 1;
     if (savedGame.flags.finishChoice === "tidy") stats.carefulFinishes += 1;
+    if (savedGame.flags.finishChoice === "wiley-workaround") stats.callbacks += 1;
   }
   if (savedGame.flags?.serviceComplete) {
     if (savedGame.flags.serviceApproach === "verify") stats.carefulFinishes += 1;
@@ -373,6 +378,38 @@ function getToolModifier(modifier) {
   return state.tools.reduce((total, toolId) => total + (content.tools[toolId]?.modifiers?.[modifier] || 0), 0);
 }
 
+function getCurrentDispatchKey() {
+  if (state.sceneId === "executiveHandoff" || state.flags.handoffStarted || state.flags.handoffComplete) return "handoff";
+  if (state.sceneId === "warrantyReturn" || state.flags.callbackCleanupStarted || state.flags.callbackCleanupComplete) return "warranty";
+  if (state.sceneId === "navyYardAccess" || state.flags.secureAccessStarted || state.flags.secureAccessComplete || (state.flags.warehouseComplete && !state.flags.secureAccessComplete)) return "secureAccess";
+  if (state.flags.warehouseStarted || state.flags.warehouseComplete) return "warehouse";
+  if (state.sceneId === "southPhillyCommissioning" || state.flags.commissioningStarted || state.flags.commissioningComplete) return "commissioning";
+  if (state.sceneId === "universitySurvey" || state.flags.surveyStarted || state.flags.surveyComplete) return "survey";
+  if (state.sceneId === "serviceOffice" || state.flags.serviceStarted || state.flags.serviceComplete || state.flags.finished) return "service";
+  return "tutorial";
+}
+
+function getUsedPartsBrainDispatches() {
+  state.flags.partsBrainDispatches ||= {};
+  return state.flags.partsBrainDispatches;
+}
+
+function getPartsBrainFind() {
+  const finds = content.tools.circuitHutOrganizer.finds;
+  const index = getCurrentDispatchKey()
+    .split("")
+    .reduce((total, char) => total + char.charCodeAt(0), 0) % finds.length;
+  return finds[index];
+}
+
+function hasActivePartsBrainFind() {
+  return ownsTool("circuitHutOrganizer") && Boolean(getUsedPartsBrainDispatches()[getCurrentDispatchKey()]);
+}
+
+function canUsePartsBrain() {
+  return ownsTool("circuitHutOrganizer") && !hasActivePartsBrainFind();
+}
+
 function getTrainingModifier(modifier) {
   return state.training.reduce((total, trainingId) => (
     total + (content.career.trainingChoices.find((choice) => choice.id === trainingId)?.modifiers?.[modifier] || 0)
@@ -389,6 +426,10 @@ function getCraftsmanship() {
 
 function getConfidence() {
   return state.technician.stats.confidence + getTrainingModifier("confidence");
+}
+
+function isWiley() {
+  return state.technician?.id === "wiley";
 }
 
 function getDocumentationHabitReduction() {
@@ -420,7 +461,8 @@ function getAssemblyEnergyCost(baseCost) {
 }
 
 function getVerificationEnergyCost(baseCost) {
-  return Math.max(0, baseCost - getToolModifier("verificationEnergyReduction"));
+  const partsBrainReduction = hasActivePartsBrainFind() ? getToolModifier("partsBrainVerificationReduction") : 0;
+  return Math.max(0, baseCost - getToolModifier("verificationEnergyReduction") - partsBrainReduction);
 }
 
 function getServiceDiagnosisEnergyCost(baseCost) {
@@ -745,10 +787,16 @@ function showFinishChoice() {
     title: "Cart 2 Works. The Cables Do Not Look Happy.",
     body: `
       <p>Dispatch expected you to be done hours ago. You can clean up the cable routing or leave before traffic gets worse.</p>
+      ${isWiley() ? `<p class="muted">Wiley can make the awkward adapter path work for now. The question is whether it deserves to become the install.</p>` : ""}
       <p><strong>Energy:</strong> ${state.energy}/${getMaxEnergy()}</p>
     `,
     actions: [
       { label: "Dress the cables properly (+35 min)", onClick: () => finishJob("tidy") },
+      ...(isWiley() ? [{
+        label: "Use the adapter workaround and leave",
+        className: "secondary-button",
+        onClick: () => finishJob("wiley-workaround"),
+      }] : []),
       { label: "Use three zip ties and leave", className: "secondary-button", onClick: () => finishJob("rush") },
     ],
   });
@@ -762,6 +810,12 @@ function finishJob(choice) {
     state.burnout += 1;
     setClock("MON 6:21 PM");
     addLog("Cable routing cleaned up. Client is happy. Management notices the clock.");
+  } else if (choice === "wiley-workaround") {
+    changeEnergy(-2);
+    setClock("MON 5:49 PM");
+    state.stats.callbacks += 1;
+    state.flags.wileyUsedTemporaryFix = true;
+    addLog("Wiley made the adapter path work for now. The closeout notes did not get smarter.");
   } else {
     changeEnergy(-4);
     setClock("MON 5:54 PM");
@@ -776,6 +830,8 @@ function finishJob(choice) {
       xp: 40,
       reputation: choice === "tidy"
         ? { clients: 2, coworkers: 1, management: -1 }
+        : choice === "wiley-workaround"
+        ? { clients: 1, coworkers: -1, management: 1 }
         : { clients: 0, coworkers: 0, management: 1 },
       source: "Two Quick Carts",
     });
@@ -851,6 +907,7 @@ function chooseReward(toolId) {
 
 function showPersonalKit() {
   const ownedTools = state.tools.map((toolId) => content.tools[toolId]);
+  const partsBrainActive = hasActivePartsBrainFind();
   showModal({
     kicker: "Personal Kit",
     title: "Your Tools",
@@ -861,8 +918,34 @@ function showPersonalKit() {
       <p class="muted">Garage carry capacity: ${getCarryCapacity("garage")} equipment group${getCarryCapacity("garage") === 1 ? "" : "s"}</p>
       <p class="muted">Assembly energy cost: ${getAssemblyEnergyCost(7)} per cart component</p>
       <p class="muted">Signal-path verification energy cost: ${getVerificationEnergyCost(4)}</p>
+      ${ownsTool("circuitHutOrganizer") ? `<p class="muted">Circuit Hut Parts Brain: ${partsBrainActive ? `active this dispatch (${getUsedPartsBrainDispatches()[getCurrentDispatchKey()]})` : "unused for this dispatch"}</p>` : ""}
     `,
-    actions: [{ label: "Close Tool Bag" }],
+    actions: [
+      ...(canUsePartsBrain() ? [{
+        label: "Check Circuit Hut Organizer",
+        className: "secondary-button",
+        onClick: useCircuitHutPartsBrain,
+      }] : []),
+      { label: "Close Tool Bag" },
+    ],
+  });
+}
+
+function useCircuitHutPartsBrain() {
+  if (!canUsePartsBrain()) return showPersonalKit();
+  const dispatchKey = getCurrentDispatchKey();
+  const find = getPartsBrainFind();
+  getUsedPartsBrainDispatches()[dispatchKey] = find;
+  addLog(`Wiley checked the Circuit Hut organizer and found a ${find}.`);
+  showModal({
+    kicker: "Circuit Hut Parts Brain",
+    title: "Small Part, Big Judgment Call",
+    body: `
+      <p>Wiley digs through the old parts organizer and finds a <strong>${find}</strong>.</p>
+      <p>This can help with testing during the current dispatch. It does not automatically make the workaround acceptable for final closeout.</p>
+      <blockquote>Wiley: "I can make it work. I'm just asking whether we want it to keep working."</blockquote>
+    `,
+    actions: [{ label: "Pocket It For Testing", onClick: render }],
   });
 }
 
@@ -2482,6 +2565,10 @@ function getInteractions() {
           state.carry = [next];
           changeEnergy(-getEquipmentEnergyCost(2));
           addLog(`Picked up ${next}.`);
+          if (isWiley() && next === "Accessory tote" && !state.flags.wileyClockedSmallParts) {
+            state.flags.wileyClockedSmallParts = true;
+            addLog('Wiley clocked the accessory tote first. "Adapters are where simple jobs go to negotiate."');
+          }
           render();
         },
       },
@@ -3119,12 +3206,18 @@ function renderSelection() {
       card.innerHTML = `
         <p class="eyebrow">Technician Profile</p>
         <h3>${technician.name}</h3>
+        ${technician.role ? `<p class="muted">${technician.role}</p>` : ""}
         <p>${technician.tagline}</p>
+        ${technician.description ? `<p>${technician.description}</p>` : ""}
         <div class="tech-stats">
           <span>Energy <strong>${technician.stats.energy}</strong></span>
           <span>Craft <strong>${technician.stats.craftsmanship}</strong></span>
           <span>Confidence <strong>${technician.stats.confidence}</strong></span>
         </div>
+        ${technician.strengths ? `<p class="starting-kit"><strong>Strengths:</strong> ${technician.strengths.join(", ")}</p>` : ""}
+        ${technician.weaknesses ? `<p class="starting-kit"><strong>Growth areas:</strong> ${technician.weaknesses.join(", ")}</p>` : ""}
+        ${technician.trait ? `<p class="starting-kit"><strong>Trait:</strong> ${technician.trait}</p>` : ""}
+        ${technician.tendency ? `<p class="starting-kit"><strong>Tendency:</strong> ${technician.tendency}</p>` : ""}
         <p class="starting-kit"><strong>Starting kit:</strong> ${technician.startingTools.map((toolId) => content.tools[toolId]?.name || toolId).join(", ")}</p>
       `;
       card.append(makeButton("Start First Day", () => startGame(technician.id)));
