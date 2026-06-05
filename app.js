@@ -53,6 +53,8 @@ function createInitialState() {
       warrantyBandagesApplied: 0,
       clientHandoffsCompleted: 0,
       trainingGapsLeft: 0,
+      skillChecksPassed: 0,
+      skillChecksStrained: 0,
     },
     clock: "MON 7:11 AM",
     flags: {},
@@ -91,6 +93,7 @@ const elements = {
   clientRepValue: document.querySelector("#client-rep-value"),
   coworkerRepValue: document.querySelector("#coworker-rep-value"),
   managementRepValue: document.querySelector("#management-rep-value"),
+  skillList: document.querySelector("#skill-list"),
   carryCard: document.querySelector("#carry-card"),
   carryBubble: document.querySelector("#carry-bubble"),
   toolList: document.querySelector("#tool-list"),
@@ -246,6 +249,8 @@ function inferSavedStats(savedGame) {
     warrantyBandagesApplied: 0,
     clientHandoffsCompleted: 0,
     trainingGapsLeft: 0,
+    skillChecksPassed: 0,
+    skillChecksStrained: 0,
   };
   if (savedGame.stats) return { ...stats, ...savedGame.stats };
   if (savedGame.flags?.finished) {
@@ -334,7 +339,7 @@ function refreshTitleScreen() {
 
 function serializeGame() {
   return {
-    version: 12,
+    version: 13,
     technicianId: state.technician.id,
     sceneId: state.sceneId,
     player: state.player,
@@ -399,6 +404,89 @@ function hasCharacterTrait(traitId) {
 
 function getCharacterStat(statId) {
   return state.technician?.characterStats?.[statId] || 0;
+}
+
+function getSkillDefinitions() {
+  return content.career.skills || [];
+}
+
+function getSkillDefinition(skillId) {
+  return getSkillDefinitions().find((skill) => skill.id === skillId);
+}
+
+function getFallbackSkillValue(skillId) {
+  if (!state.technician) return 0;
+  if (skillId === "install") return Math.max(1, state.technician.stats.craftsmanship || 0);
+  if (skillId === "troubleshooting") return Math.max(1, (state.technician.stats.confidence || 0) + 1);
+  if (skillId === "documentation") return Math.max(1, state.technician.stats.confidence || 0);
+  if (skillId === "clientCommunication") return Math.max(1, (state.technician.stats.confidence || 0) + 1);
+  if (skillId === "fieldcraft") return Math.max(1, Math.floor((state.technician.stats.energy || 100) / 45));
+  return 0;
+}
+
+function getTrainingSkillBonus(skillId) {
+  return state.training.reduce((total, trainingId) => {
+    const choice = content.career.trainingChoices.find((item) => item.id === trainingId);
+    return total + (choice?.skillBonuses?.[skillId] || 0);
+  }, 0);
+}
+
+function getToolSkillBonus(skillId) {
+  if (skillId === "install") return (ownsTool("drill") ? 1 : 0);
+  if (skillId === "documentation") return (ownsTool("labeler") ? 1 : 0);
+  if (skillId === "troubleshooting") return (hasActivePartsBrainFind() ? 1 : 0);
+  if (skillId === "fieldcraft") return (ownsTool("toolBag") ? 1 : 0) + (ownsTool("handTruck") ? 1 : 0);
+  return 0;
+}
+
+function getSkillValue(skillId) {
+  return (getCharacterStat(skillId) || getFallbackSkillValue(skillId))
+    + getTrainingSkillBonus(skillId)
+    + getToolSkillBonus(skillId);
+}
+
+function getSkillCheckResult({ skillId, difficulty, contextBonus = 0 }) {
+  const score = getSkillValue(skillId) + contextBonus;
+  const margin = score - difficulty;
+  const tier = margin >= 2 ? "clean" : margin >= 0 ? "solid" : margin === -1 ? "strained" : "miss";
+  return {
+    skillId,
+    difficulty,
+    score,
+    margin,
+    tier,
+    successful: margin >= 0,
+  };
+}
+
+function resolveSkillCheck(flagKey, options) {
+  state.flags.skillChecks ||= {};
+  if (state.flags.skillChecks[flagKey]) return state.flags.skillChecks[flagKey];
+  const result = getSkillCheckResult(options);
+  state.flags.skillChecks[flagKey] = result;
+  if (result.successful) state.stats.skillChecksPassed += 1;
+  else state.stats.skillChecksStrained += 1;
+  return result;
+}
+
+function getSkillCheckLabel(result) {
+  const skill = getSkillDefinition(result.skillId);
+  const status = result.tier === "clean" ? "clean" : result.tier === "solid" ? "solid" : result.tier === "strained" ? "strained" : "messy";
+  return `${skill?.name || result.skillId} ${result.score}/${result.difficulty} (${status})`;
+}
+
+function getSkillCheckMarkup(result) {
+  return `<p class="muted">Skill check: ${getSkillCheckLabel(result)}.</p>`;
+}
+
+function getSkillSummaryMarkup() {
+  return `
+    <ul class="modal-list">
+      ${getSkillDefinitions().map((skill) => `
+        <li><strong>${skill.branch}: ${skill.name} ${getSkillValue(skill.id)}</strong><span>${skill.description}</span></li>
+      `).join("")}
+    </ul>
+  `;
 }
 
 function recordReturnTripRisk(riskId, detail) {
@@ -816,6 +904,7 @@ function showFinishChoice() {
     body: `
       <p>Dispatch expected you to be done hours ago. You can clean up the cable routing or leave before traffic gets worse.</p>
       ${canUseMakeThatWorkShortcut() ? `<p class="muted">${getCharacterLine("finishChoice", "You can make the awkward path work for now. The question is whether it deserves to become the install.")}</p>` : ""}
+      ${state.flags.cartAssemblyStrained ? `<p class="muted">Some assembly checks were strained. Dressing the cables properly also gives you time to catch the shaky details.</p>` : ""}
       <p><strong>Energy:</strong> ${state.energy}/${getMaxEnergy()}</p>
     `,
     actions: [
@@ -851,6 +940,10 @@ function finishJob(choice) {
   } else {
     changeEnergy(-4);
     setClock("MON 5:54 PM");
+    if (state.flags.cartAssemblyStrained) {
+      state.stats.callbacks += 1;
+      state.flags.tutorialAssemblyCallbackRisk = true;
+    }
     addLog("You left before traffic got worse. The second cart may become a callback.");
   }
   if (!state.flags.tutorialPaid) {
@@ -1000,10 +1093,12 @@ function showCareerClipboard() {
         <span>Coworker reputation</span><strong>${formatReputation(state.reputation.coworkers)}</strong>
         <span>Management reputation</span><strong>${formatReputation(state.reputation.management)}</strong>
       </div>
+      <p><strong>Skill tree:</strong></p>
+      ${getSkillSummaryMarkup()}
       ${selectedTraining.length ? `
         <p><strong>Training completed:</strong></p>
         <ul class="modal-list">
-          ${selectedTraining.map((choice) => `<li><strong>${choice.name}</strong><span>${choice.effect}</span></li>`).join("")}
+          ${selectedTraining.map((choice) => `<li><strong>${choice.branch || "Training"}: ${choice.name}</strong><span>${choice.effect}</span></li>`).join("")}
         </ul>
       ` : ""}
       <p><strong>Milestone preview:</strong></p>
@@ -1022,7 +1117,7 @@ function showCareerClipboard() {
       ...(pendingTraining ? content.career.trainingChoices
         .filter((choice) => !state.training.includes(choice.id))
         .map((choice) => ({
-        label: `${choice.name}: ${choice.effect}`,
+        label: `${choice.branch || "Training"} - ${choice.name}`,
         className: "secondary-button",
         onClick: () => chooseTraining(choice.id),
       })) : []),
@@ -1083,6 +1178,8 @@ function getCareerLedgerMarkup() {
       <span>Warranty bandages applied</span><strong>${state.stats.warrantyBandagesApplied}</strong>
       <span>Client handoffs completed</span><strong>${state.stats.clientHandoffsCompleted}</strong>
       <span>Training gaps left</span><strong>${state.stats.trainingGapsLeft}</strong>
+      <span>Passed skill checks</span><strong>${state.stats.skillChecksPassed}</strong>
+      <span>Strained skill checks</span><strong>${state.stats.skillChecksStrained}</strong>
     </div>
   `;
 }
@@ -1123,7 +1220,7 @@ function chooseTraining(trainingId) {
   showModal({
     kicker: "Field Training Added",
     title: choice.name,
-    body: `<p>${choice.description}</p><p class="muted">${choice.effect}</p>`,
+    body: `<p>${choice.description}</p><p class="muted">${choice.effect}</p><p><strong>Current skill tree:</strong></p>${getSkillSummaryMarkup()}`,
     actions: [{ label: "Return to Shop", onClick: render }],
   });
 }
@@ -1443,8 +1540,15 @@ function inspectWarehouseLocation(checkId) {
   const check = content.warehouseDispatch.checks.find((item) => item.id === checkId);
   if (!check || state.warehouseChecks.includes(checkId)) return notify(`${check?.label || "That location"} is already checked.`);
   state.warehouseChecks.push(checkId);
-  changeEnergy(-getWarehouseSearchEnergyCost());
+  const skillCheck = resolveSkillCheck(`warehouse-${checkId}`, {
+    skillId: "fieldcraft",
+    difficulty: checkId === "returns" ? 4 : 3,
+    contextBonus: state.flags.warehouseStarted ? 0 : -1,
+  });
+  const energyCost = Math.max(0, getWarehouseSearchEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
+  changeEnergy(-energyCost);
   addLog(`${check.label} checked: ${check.log}`);
+  if (!skillCheck.successful) addLog(`Fieldcraft check strained on ${check.label}; the search took extra energy.`);
   render();
   const allChecked = state.warehouseChecks.length === content.warehouseDispatch.checks.length;
   showModal({
@@ -1452,6 +1556,7 @@ function inspectWarehouseLocation(checkId) {
     title: check.label,
     body: `
       <p>${check.detail}</p>
+      ${getSkillCheckMarkup(skillCheck)}
       ${allChecked ? `<p class="muted">The matching power supply is in the mystery-return pile beneath a handwritten question mark. Decide how much cleanup dispatch is willing to survive.</p>` : ""}
     `,
     actions: [{ label: allChecked ? "Review Found Power Supply" : "Keep Looking", onClick: allChecked ? showWarehouseChoice : render }],
@@ -1634,8 +1739,16 @@ function inspectSecureAccessCondition(checkId) {
   const check = content.secureAccessDispatch.checks.find((item) => item.id === checkId);
   if (!check || state.secureAccessChecks.includes(checkId)) return notify(`${check?.label || "That access issue"} is already in your notes.`);
   state.secureAccessChecks.push(checkId);
-  changeEnergy(-getSecureAccessCheckEnergyCost());
+  const skillCheck = resolveSkillCheck(`secure-access-${checkId}`, {
+    skillId: checkId === "escort" ? "clientCommunication" : "documentation",
+    difficulty: checkId === "escort" ? 4 : 3,
+    contextBonus: state.flags.secureAccessPreparation === "review" ? 1 : 0,
+  });
+  const energyCost = Math.max(0, getSecureAccessCheckEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
+  changeEnergy(-energyCost);
+  if (!skillCheck.successful) state.flags.secureAccessNotesStrained = true;
   addLog(`${check.label} checked: ${check.log}`);
+  if (!skillCheck.successful) addLog(`Access skill check strained on ${check.label}; the note will be easier for management to downplay.`);
   render();
   const allChecked = state.secureAccessChecks.length === content.secureAccessDispatch.checks.length;
   showModal({
@@ -1643,6 +1756,7 @@ function inspectSecureAccessCondition(checkId) {
     title: check.label,
     body: `
       <p>${check.detail}</p>
+      ${getSkillCheckMarkup(skillCheck)}
       ${allChecked ? `<p class="muted">You have enough facts to explain why the quick rack update is no longer quick.</p>` : ""}
     `,
     actions: [{ label: allChecked ? "Review Access Delay" : "Keep Sorting Access", onClick: allChecked ? showSecureAccessChoice : render }],
@@ -1673,7 +1787,8 @@ function showSecureAccessChoice() {
 
 function finishSecureAccess(approach) {
   const honest = approach !== "absorb";
-  const xp = approach === "pushback" ? 60 : approach === "document" ? 55 : 35;
+  const strainedNotes = Boolean(state.flags.secureAccessNotesStrained) && approach === "document";
+  const xp = (approach === "pushback" ? 60 : approach === "document" ? 55 : 35) - (strainedNotes ? 5 : 0);
   if (honest) changeEnergy(-getSecureAccessReportEnergyCost(approach === "pushback" ? 3 : 4));
   else state.burnout += 1;
   state.flags.secureAccessComplete = true;
@@ -1688,7 +1803,7 @@ function finishSecureAccess(approach) {
     awardCareerProgress({
       xp,
       reputation: honest
-        ? { clients: 1, coworkers: 1, management: approach === "pushback" ? -2 : -1 }
+        ? { clients: strainedNotes ? 0 : 1, coworkers: 1, management: approach === "pushback" ? -2 : -1 }
         : { clients: 0, coworkers: 0, management: 1 },
       source: content.secureAccessDispatch.title,
     });
@@ -1714,6 +1829,7 @@ function finishSecureAccess(approach) {
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Preparation</span><strong>${getSecureAccessPreparationLabel()}</strong>
         <span>Closeout</span><strong>${approach === "pushback" ? "Dispatch access miss escalated" : approach === "document" ? "Delay documented" : "Delay absorbed"}</strong>
+        ${strainedNotes ? `<span>Skill consequence</span><strong>Thin access notes limited client trust</strong>` : ""}
       </div>
       ${honest
         ? `<blockquote>Management note: "Please avoid creating client-facing narratives around internal scheduling friction."</blockquote>`
@@ -1786,8 +1902,15 @@ function inspectCallbackCleanupCondition(checkId) {
   const check = content.callbackCleanupDispatch.checks.find((item) => item.id === checkId);
   if (!check || state.callbackCleanupChecks.includes(checkId)) return notify(`${check?.label || "That callback note"} is already checked.`);
   state.callbackCleanupChecks.push(checkId);
-  changeEnergy(-getCallbackCleanupCheckEnergyCost());
+  const skillCheck = resolveSkillCheck(`callback-${checkId}`, {
+    skillId: checkId === "actual-fault" ? "troubleshooting" : "documentation",
+    difficulty: checkId === "actual-fault" ? 4 : 3,
+  });
+  const energyCost = Math.max(0, getCallbackCleanupCheckEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
+  changeEnergy(-energyCost);
+  if (!skillCheck.successful) state.flags.callbackTroubleshootingStrained = true;
   addLog(`${check.label} checked: ${check.log}`);
+  if (!skillCheck.successful) addLog(`Callback skill check strained on ${check.label}; the fix will take more discipline to close cleanly.`);
   render();
   const allChecked = state.callbackCleanupChecks.length === content.callbackCleanupDispatch.checks.length;
   showModal({
@@ -1795,6 +1918,7 @@ function inspectCallbackCleanupCondition(checkId) {
     title: check.label,
     body: `
       <p>${check.detail}</p>
+      ${getSkillCheckMarkup(skillCheck)}
       ${allChecked ? `<p class="muted">You found enough to decide whether this becomes a real fix or another quiet bandage.</p>` : ""}
     `,
     actions: [{ label: allChecked ? "Review Warranty Fix" : "Keep Troubleshooting", onClick: allChecked ? showCallbackCleanupChoice : render }],
@@ -1823,8 +1947,9 @@ function showCallbackCleanupChoice() {
 
 function finishCallbackCleanup(approach) {
   const resolved = approach !== "bandage";
-  const xp = approach === "craft" ? 65 : approach === "root" ? 55 : 35;
-  if (resolved) changeEnergy(-getCallbackCleanupRepairEnergyCost(approach === "craft" ? 5 : 6));
+  const strainedFix = Boolean(state.flags.callbackTroubleshootingStrained) && approach === "root";
+  const xp = (approach === "craft" ? 65 : approach === "root" ? 55 : 35) - (strainedFix ? 5 : 0);
+  if (resolved) changeEnergy(-(getCallbackCleanupRepairEnergyCost(approach === "craft" ? 5 : 6) + (strainedFix ? 2 : 0)));
   else state.burnout += 1;
   state.flags.callbackCleanupComplete = true;
   state.flags.callbackCleanupApproach = approach;
@@ -1838,7 +1963,7 @@ function finishCallbackCleanup(approach) {
     awardCareerProgress({
       xp,
       reputation: resolved
-        ? { clients: 2, coworkers: approach === "craft" ? 2 : 1, management: -1 }
+        ? { clients: strainedFix ? 1 : 2, coworkers: approach === "craft" ? 2 : 1, management: -1 }
         : { clients: 0, coworkers: 0, management: 1 },
       source: content.callbackCleanupDispatch.title,
     });
@@ -1868,6 +1993,7 @@ function finishCallbackCleanup(approach) {
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Callback ledger</span><strong>${resolved ? "Callback resolved" : "Callback debt remains"}</strong>
         <span>Unresolved callbacks</span><strong>${getUnresolvedCallbackCount()}</strong>
+        ${strainedFix ? `<span>Skill consequence</span><strong>Root cause fixed, notes needed extra cleanup</strong>` : ""}
       </div>
       ${resolved
         ? `<blockquote>Management note: "Please avoid implying previous closeout was incomplete when documenting warranty support."</blockquote>`
@@ -1942,8 +2068,16 @@ function inspectHandoffCondition(checkId) {
   const check = content.handoffDispatch.checks.find((item) => item.id === checkId);
   if (!check || state.handoffChecks.includes(checkId)) return notify(`${check?.label || "That handoff note"} is already checked.`);
   state.handoffChecks.push(checkId);
-  changeEnergy(-getHandoffCheckEnergyCost());
+  const skillCheck = resolveSkillCheck(`handoff-${checkId}`, {
+    skillId: checkId === "client-need" ? "clientCommunication" : "documentation",
+    difficulty: checkId === "client-need" ? 4 : 3,
+    contextBonus: getDocumentationHabitReduction(),
+  });
+  const energyCost = Math.max(0, getHandoffCheckEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
+  changeEnergy(-energyCost);
+  if (!skillCheck.successful) state.flags.handoffPrepStrained = true;
   addLog(`${check.label} checked: ${check.log}`);
+  if (!skillCheck.successful) addLog(`Handoff skill check strained on ${check.label}; the walkthrough risks sounding like button labels.`);
   render();
   const allChecked = state.handoffChecks.length === content.handoffDispatch.checks.length;
   showModal({
@@ -1951,6 +2085,7 @@ function inspectHandoffCondition(checkId) {
     title: check.label,
     body: `
       <p>${check.detail}</p>
+      ${getSkillCheckMarkup(skillCheck)}
       ${allChecked ? `<p class="muted">You know enough to decide whether this is a real handoff or a fast button tour.</p>` : ""}
     `,
     actions: [{ label: allChecked ? "Review Handoff Plan" : "Keep Preparing Handoff", onClick: allChecked ? showHandoffChoice : render }],
@@ -1979,7 +2114,8 @@ function showHandoffChoice() {
 
 function finishHandoff(approach) {
   const helpful = approach !== "quick";
-  const xp = approach === "cheat" ? 60 : approach === "patient" ? 50 : 30;
+  const strainedPrep = Boolean(state.flags.handoffPrepStrained) && approach === "patient";
+  const xp = (approach === "cheat" ? 60 : approach === "patient" ? 50 : 30) - (strainedPrep ? 5 : 0);
   if (helpful) changeEnergy(-getHandoffEnergyCost(approach === "cheat" ? 3 : 4));
   state.flags.handoffComplete = true;
   state.flags.handoffApproach = approach;
@@ -1993,7 +2129,7 @@ function finishHandoff(approach) {
     awardCareerProgress({
       xp,
       reputation: helpful
-        ? { clients: approach === "cheat" ? 3 : 2, coworkers: 1, management: -1 }
+        ? { clients: approach === "cheat" ? 3 : strainedPrep ? 1 : 2, coworkers: 1, management: -1 }
         : { clients: 0, coworkers: 0, management: 1 },
       source: content.handoffDispatch.title,
     });
@@ -2089,8 +2225,17 @@ function inspectCommissioningCondition(checkId) {
   const check = content.commissioningDispatch.checks.find((item) => item.id === checkId);
   if (!check || state.commissioningChecks.includes(checkId)) return notify(`${check?.label || "That condition"} is already in your notes.`);
   state.commissioningChecks.push(checkId);
-  changeEnergy(-getCommissioningCheckEnergyCost());
+  const skillCheck = resolveSkillCheck(`commissioning-${checkId}`, {
+    skillId: checkId === "termination" ? "install" : checkId === "drawing" ? "documentation" : "troubleshooting",
+    difficulty: checkId === "termination" ? 4 : 3,
+    contextBonus: checkId === "termination" && ownsTool("labeler") ? 1 : 0,
+  });
+  const energyCost = Math.max(0, getCommissioningCheckEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
+  changeEnergy(-energyCost);
+  if (checkId === "termination" && !skillCheck.successful) state.flags.terminationSkillStrained = true;
+  if (checkId === "drawing" && !skillCheck.successful) state.flags.commissioningNotesStrained = true;
   addLog(`${check.label} checked: ${check.log}`);
+  if (!skillCheck.successful) addLog(`Commissioning skill check strained on ${check.label}; the closeout will need a stronger choice to stay clean.`);
   render();
   const allChecked = state.commissioningChecks.length === content.commissioningDispatch.checks.length;
   showModal({
@@ -2098,6 +2243,7 @@ function inspectCommissioningCondition(checkId) {
     title: check.label,
     body: `
       <p>${check.detail}</p>
+      ${getSkillCheckMarkup(skillCheck)}
       ${ownsTool("labeler") ? `<p class="muted">Josh's rebuilt labeler makes it easier to leave the suspect path readable.</p>` : ""}
       ${allChecked ? `<p class="muted">You found the room issue. Return to the client contact and close out the visit.</p>` : ""}
     `,
@@ -2106,6 +2252,7 @@ function inspectCommissioningCondition(checkId) {
 }
 
 function showCommissioningChoice() {
+  const canCleanTerminate = getSkillValue("install") >= 4 || getCraftsmanship() >= 3;
   showModal({
     kicker: "Commissioning Decision",
     title: "The Room Is Complete On Paper",
@@ -2113,10 +2260,11 @@ function showCommissioningChoice() {
       <p>The third ceiling speaker is silent because its termination is loose. The drawing is for a mirrored room across the hall, which explains why the closed ticket was so confident.</p>
       <p>The client would like the room working. Project management would like the completion sheet to remain emotionally undisturbed.</p>
       ${getCarefulWorkReduction() ? `<p class="muted">Your careful finishes are paying off: repair and punch-list work costs 1 less energy.</p>` : ""}
+      ${state.flags.terminationSkillStrained ? `<p class="muted">Your termination check was strained. A basic repair can still work, but a cleaner skill-tree branch avoids callback risk.</p>` : ""}
     `,
     actions: [
       { label: `Repair termination and document discrepancy (-${getCommissioningRepairEnergyCost(6)} energy)`, onClick: () => finishCommissioning("repair") },
-      ...(getCraftsmanship() >= 3 ? [{
+      ...(canCleanTerminate ? [{
         label: `Redress termination and issue clean punch list (-${getCommissioningRepairEnergyCost(5)} energy)`,
         className: "secondary-button",
         onClick: () => finishCommissioning("craft"),
@@ -2128,8 +2276,9 @@ function showCommissioningChoice() {
 
 function finishCommissioning(approach) {
   const careful = approach !== "pass";
-  const xp = approach === "craft" ? 65 : approach === "repair" ? 60 : 40;
-  if (careful) changeEnergy(-getCommissioningRepairEnergyCost(approach === "craft" ? 5 : 6));
+  const strainedRepair = Boolean(state.flags.terminationSkillStrained) && approach === "repair";
+  const xp = (approach === "craft" ? 65 : approach === "repair" ? 60 : 40) - (strainedRepair ? 5 : 0);
+  if (careful) changeEnergy(-(getCommissioningRepairEnergyCost(approach === "craft" ? 5 : 6) + (strainedRepair ? 2 : 0)));
   state.flags.commissioningComplete = true;
   state.flags.commissioningApproach = approach;
   state.flags.prototypeSummaryViewed = false;
@@ -2142,7 +2291,7 @@ function finishCommissioning(approach) {
     awardCareerProgress({
       xp,
       reputation: careful
-        ? { clients: 2, coworkers: approach === "craft" ? 2 : 1, management: -1 }
+        ? { clients: strainedRepair ? 1 : 2, coworkers: approach === "craft" ? 2 : 1, management: -1 }
         : { clients: 0, coworkers: 0, management: 1 },
       source: content.commissioningDispatch.title,
     });
@@ -2153,6 +2302,7 @@ function finishCommissioning(approach) {
     if (careful) {
       state.stats.incompleteRoomsDocumented += 1;
       state.stats.carefulFinishes += 1;
+      if (strainedRepair) state.stats.callbacks += 1;
     } else {
       state.stats.roomsPassedAnyway += 1;
       state.stats.callbacks += 1;
@@ -2172,6 +2322,7 @@ function finishCommissioning(approach) {
         <span>Cash balance</span><strong>$${state.cash}</strong>
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Closeout</span><strong>${approach === "craft" ? "Clean punch list issued" : approach === "repair" ? "Issue repaired and documented" : "Room marked passed"}</strong>
+        ${strainedRepair ? `<span>Skill consequence</span><strong>Termination repaired under strain; callback risk added</strong>` : ""}
       </div>
       ${careful
         ? `<blockquote>Management note: "Please distinguish between commissioning and reopening completed installation work."</blockquote>`
@@ -2297,8 +2448,16 @@ function inspectSurveyConstraint(inspectionId) {
   const inspection = content.surveyDispatch.inspections.find((item) => item.id === inspectionId);
   if (!inspection || state.surveyInspections.includes(inspectionId)) return notify(`${inspection?.label || "That condition"} is already in your notes.`);
   state.surveyInspections.push(inspectionId);
-  changeEnergy(-getSurveyInspectionEnergyCost());
+  const skillCheck = resolveSkillCheck(`survey-${inspectionId}`, {
+    skillId: inspectionId === "wall" ? "install" : "documentation",
+    difficulty: inspectionId === "wall" ? 3 : 4,
+    contextBonus: state.flags.surveyPreparation === "measure" ? 1 : 0,
+  });
+  const energyCost = Math.max(0, getSurveyInspectionEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
+  changeEnergy(-energyCost);
+  if (!skillCheck.successful && inspectionId !== "wall") state.flags.surveyDocumentationStrained = true;
   addLog(`${inspection.label} checked: ${inspection.log}`);
+  if (!skillCheck.successful) addLog(`Survey skill check strained on ${inspection.label}; the report will need a clearer closeout choice.`);
   render();
   const allChecked = state.surveyInspections.length === content.surveyDispatch.inspections.length;
   showModal({
@@ -2306,6 +2465,7 @@ function inspectSurveyConstraint(inspectionId) {
     title: inspection.label,
     body: `
       <p>${inspection.detail}</p>
+      ${getSkillCheckMarkup(skillCheck)}
       ${inspection.id === "wall" && getCharacterLine("surveyWall") ? `<p class="muted">${getCharacterLine("surveyWall")}</p>` : ""}
       ${allChecked ? `<p class="muted">You have enough information. Return to the facilities contact and file the survey report.</p>` : ""}
     `,
@@ -2321,6 +2481,7 @@ function showSurveyReportChoice() {
       <p>The 98-inch display fits on the classroom wall. It does not fit through the elevator opening, and the hallway turn offers no useful miracle.</p>
       <p>Sales wants the survey closed today because the quote is "basically approved."</p>
       ${getDocumentationHabitReduction() ? `<p class="muted">Your documentation habit makes this report cost 1 less energy.</p>` : ""}
+      ${state.flags.surveyDocumentationStrained ? `<p class="muted">Your access notes are thin. Documenting still helps, but calling sales directly prevents the weak notes from being buried.</p>` : ""}
     `,
     actions: [
       { label: `Document the access constraint (-${getSurveyReportEnergyCost(3)} energy)`, onClick: () => finishSurvey("document") },
@@ -2336,7 +2497,8 @@ function showSurveyReportChoice() {
 
 function finishSurvey(approach) {
   const careful = approach !== "trust";
-  const xp = approach === "pushback" ? 60 : approach === "document" ? 55 : 35;
+  const strainedDocument = Boolean(state.flags.surveyDocumentationStrained) && approach === "document";
+  const xp = (approach === "pushback" ? 60 : approach === "document" ? 55 : 35) - (strainedDocument ? 5 : 0);
   if (careful) changeEnergy(-getSurveyReportEnergyCost(approach === "pushback" ? 2 : 3));
   state.flags.surveyComplete = true;
   state.flags.surveyApproach = approach;
@@ -2350,7 +2512,7 @@ function finishSurvey(approach) {
     awardCareerProgress({
       xp,
       reputation: careful
-        ? { clients: 2, coworkers: 1, management: -1 }
+        ? { clients: strainedDocument ? 1 : 2, coworkers: strainedDocument ? 0 : 1, management: -1 }
         : { clients: 0, coworkers: 0, management: 1 },
       source: content.surveyDispatch.title,
     });
@@ -2376,6 +2538,7 @@ function finishSurvey(approach) {
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Preparation</span><strong>${getSurveyPreparationLabel()}</strong>
         <span>Report</span><strong>${approach === "pushback" ? "Sales called directly" : approach === "document" ? "Access risk documented" : "Quoted plan accepted"}</strong>
+        ${strainedDocument ? `<span>Skill consequence</span><strong>Thin notes softened the coworker/client gain</strong>` : ""}
       </div>
       ${approach === "trust"
         ? `<blockquote>Management note: "Thanks for keeping the survey efficient. Installation can confirm final access conditions onsite."</blockquote>`
@@ -2497,7 +2660,10 @@ function promptServiceTravel() {
 }
 
 function showServiceResults() {
-  const checkedSignalPath = state.flags.serviceApproach === "verify";
+  const verifiedSignalPath = state.flags.serviceApproach === "verify";
+  const checkedSignalPath = verifiedSignalPath && !state.flags.serviceVerificationStrained;
+  const strainedVerification = verifiedSignalPath && state.flags.serviceVerificationStrained;
+  const xp = checkedSignalPath ? 50 : strainedVerification ? 45 : 40;
   state.flags.serviceComplete = true;
   state.carry = [];
   setClock(`${state.clock.slice(0, 3)} ${checkedSignalPath ? "11:26" : "11:44"} AM`);
@@ -2507,9 +2673,11 @@ function showServiceResults() {
   }
   if (!state.flags.serviceProgressAwarded) {
     awardCareerProgress({
-      xp: checkedSignalPath ? 50 : 40,
+      xp,
       reputation: checkedSignalPath
         ? { clients: 2, coworkers: 1, management: 0 }
+        : strainedVerification
+        ? { clients: 1, coworkers: 0, management: 0 }
         : { clients: 0, coworkers: 0, management: 1 },
       source: "One Quick Display Swap",
     });
@@ -2531,11 +2699,11 @@ function showServiceResults() {
         <span>Cash balance</span><strong>$${state.cash}</strong>
         <span>Energy remaining</span><strong>${state.energy}/${getMaxEnergy()}</strong>
         <span>Burnout</span><strong>${state.burnout}</strong>
-        <span>Experience</span><strong>+${checkedSignalPath ? 50 : 40} XP</strong>
+        <span>Experience</span><strong>+${xp} XP</strong>
         <span>Preparation</span><strong>${getServicePreparationLabel()}</strong>
-        <span>Diagnosis</span><strong>${checkedSignalPath ? "Signal path verified" : "Rework required"}</strong>
+        <span>Diagnosis</span><strong>${checkedSignalPath ? "Signal path verified" : strainedVerification ? "Verified under strain" : "Rework required"}</strong>
       </div>
-      <blockquote>Client note: "Thank you for fixing the display before the afternoon meeting.${checkedSignalPath ? " The cable notes are helpful." : ""}"</blockquote>
+      <blockquote>Client note: "Thank you for fixing the display before the afternoon meeting.${checkedSignalPath ? " The cable notes are helpful." : strainedVerification ? " The room is working, though the notes are light." : ""}"</blockquote>
     `,
     actions: [{
       label: "Return to Broomall Shop",
@@ -3051,8 +3219,17 @@ function getInteractions() {
 function chooseServiceApproach(approach) {
   state.flags.serviceApproach = approach;
   if (approach === "verify") {
-    changeEnergy(-getServiceVerificationEnergyCost(4));
-    addLog("Verified the signal path and marked the unlabeled coupler before the swap.");
+    const skillCheck = resolveSkillCheck("service-signal-path", {
+      skillId: "troubleshooting",
+      difficulty: 4,
+      contextBonus: (state.flags.servicePreparation === "review" ? 1 : 0) + (state.flags.servicePreparation === "josh" ? 1 : 0),
+    });
+    const energyCost = Math.max(0, getServiceVerificationEnergyCost(4) + (skillCheck.successful ? 0 : 2) - (skillCheck.tier === "clean" ? 1 : 0));
+    changeEnergy(-energyCost);
+    if (!skillCheck.successful) state.flags.serviceVerificationStrained = true;
+    addLog(skillCheck.successful
+      ? `Verified the signal path and marked the unlabeled coupler. ${getSkillCheckLabel(skillCheck)}.`
+      : `Tried to verify the signal path, but the diagnosis stayed thin. ${getSkillCheckLabel(skillCheck)}.`);
   } else {
     addLog("Trusted the service ticket and started the display swap immediately.");
   }
@@ -3062,15 +3239,23 @@ function chooseServiceApproach(approach) {
 function installServicePart() {
   if (!hasCarriedItems()) return notify("Pick up replacement gear from the boxes.");
   const items = [...state.carry];
+  const skillCheck = resolveSkillCheck(`service-install-${items.join("-")}`, {
+    skillId: "install",
+    difficulty: items.includes("replacement-display") ? 4 : 3,
+  });
   state.serviceDelivered.push(...items);
   state.serviceInstalled.push(...items);
   state.carry = [];
-  changeEnergy(-getAssemblyEnergyCost(10));
-  addLog(`${getServiceItemLabels(items).join(" and ")} installed ${ownsTool("drill") ? "with your drill" : "with your screwdriver"}.`);
+  const energyCost = Math.max(0, getAssemblyEnergyCost(10) + (skillCheck.successful ? 0 : 2) - (skillCheck.tier === "clean" ? 1 : 0));
+  changeEnergy(-energyCost);
+  if (!skillCheck.successful) state.flags.serviceInstallStrained = true;
+  addLog(`${getServiceItemLabels(items).join(" and ")} installed ${ownsTool("drill") ? "with your drill" : "with your screwdriver"}. ${getSkillCheckLabel(skillCheck)}.`);
   if (state.serviceInstalled.length === content.serviceDispatch.swapItems.length) {
-    if (state.flags.serviceApproach !== "verify") {
+    if (state.flags.serviceApproach !== "verify" || state.flags.serviceInstallStrained) {
       changeEnergy(-6);
-      addLog("Reopened the connection panel after the unlabeled coupler caused a dropout.");
+      addLog(state.flags.serviceInstallStrained
+        ? "Reopened the connection panel after the display install tested flaky under load."
+        : "Reopened the connection panel after the unlabeled coupler caused a dropout.");
     }
     return showServiceResults();
   }
@@ -3085,10 +3270,16 @@ function installCartPart(destination) {
   if (!hasCarriedItems()) return notify("Pick up the next cart component from the delivered boxes.");
   const part = content.tutorial.assembly.find((item) => item.id === state.carry[0]);
   if (!part || part.destination !== destination) return notify(`${part?.label || "That component"} belongs on the other cart.`);
+  const skillCheck = resolveSkillCheck(`cart-${part.id}`, {
+    skillId: "install",
+    difficulty: part.id.includes("display") ? 4 : 3,
+  });
   state.assembled.push(part.id);
   state.carry = [];
-  changeEnergy(-getAssemblyEnergyCost(7));
-  addLog(`${part.label} installed ${ownsTool("drill") ? "with your drill" : "with your screwdriver"}.`);
+  const energyCost = Math.max(0, getAssemblyEnergyCost(7) + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
+  changeEnergy(-energyCost);
+  if (!skillCheck.successful) state.flags.cartAssemblyStrained = true;
+  addLog(`${part.label} installed ${ownsTool("drill") ? "with your drill" : "with your screwdriver"}. ${getSkillCheckLabel(skillCheck)}.`);
   const cart1Done = state.assembled.filter((id) => id.startsWith("cart-1")).length === 2;
   const cart2Done = state.assembled.filter((id) => id.startsWith("cart-2")).length === 2;
   if (cart1Done && !state.flags.supervisorLeft) return showSupervisorDeparture();
@@ -3248,6 +3439,7 @@ function renderSelection() {
           <span>Craft <strong>${technician.stats.craftsmanship}</strong></span>
           <span>Confidence <strong>${technician.stats.confidence}</strong></span>
         </div>
+        <p class="starting-kit"><strong>Core skills:</strong> ${getTechnicianSkillPreview(technician)}</p>
         ${technician.strengths ? `<p class="starting-kit"><strong>Strengths:</strong> ${technician.strengths.join(", ")}</p>` : ""}
         ${technician.weaknesses ? `<p class="starting-kit"><strong>Growth areas:</strong> ${technician.weaknesses.join(", ")}</p>` : ""}
         ${technician.playstyle ? `<p class="starting-kit"><strong>Playstyle:</strong> ${technician.playstyle}</p>` : ""}
@@ -3260,6 +3452,19 @@ function renderSelection() {
       return card;
     }),
   );
+}
+
+function getTechnicianSkillPreview(technician) {
+  return getSkillDefinitions().map((skill) => {
+    const value = technician.characterStats?.[skill.id]
+      || (skill.id === "install" ? Math.max(1, technician.stats.craftsmanship || 0)
+      : skill.id === "troubleshooting" ? Math.max(1, (technician.stats.confidence || 0) + 1)
+      : skill.id === "documentation" ? Math.max(1, technician.stats.confidence || 0)
+      : skill.id === "clientCommunication" ? Math.max(1, (technician.stats.confidence || 0) + 1)
+      : skill.id === "fieldcraft" ? Math.max(1, Math.floor((technician.stats.energy || 100) / 45))
+      : 0);
+    return `${skill.name} ${value}`;
+  }).join(", ");
 }
 
 function renderDecor() {
@@ -3317,6 +3522,11 @@ function renderHud() {
   elements.clientRepValue.textContent = formatReputation(state.reputation.clients);
   elements.coworkerRepValue.textContent = formatReputation(state.reputation.coworkers);
   elements.managementRepValue.textContent = formatReputation(state.reputation.management);
+  elements.skillList.replaceChildren(...getSkillDefinitions().map((skill) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<strong>${skill.name} ${getSkillValue(skill.id)}</strong><small>${skill.branch}</small>`;
+    return li;
+  }));
   elements.carryCard.textContent = hasCarriedItems()
     ? `${getCarriedLabels().join(" + ")} (${state.carry.length}/${getCarryCapacity()})`
     : `Nothing (0/${getCarryCapacity()})`;

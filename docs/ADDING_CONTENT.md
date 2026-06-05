@@ -60,15 +60,40 @@ through `getToolModifier()` in `app.js`, and keep the tool ID stable.
 
 ## Add Career Progression
 
-`data.js` contains the early career ranks and field-training choices. Each rank
-has a level, display name, and experience requirement. Each training choice has
-a stable ID, description, readable effect, and modifier map.
+`data.js` contains the early career ranks, skill tree, and field-training
+choices. Each rank has a level, display name, and experience requirement. Each
+skill has a stable ID, readable branch, display name, and description. Each
+training choice has a stable ID, branch, description, readable effect, modifier
+map, and optional `skillBonuses` map.
+
+The current reusable skill IDs are:
+
+- `install`
+- `troubleshooting`
+- `documentation`
+- `clientCommunication`
+- `fieldcraft`
 
 The first reusable training modifiers are:
 
 - `craftsmanship`
 - `confidence`
 - `maxEnergy`
+
+Skills affect deterministic task checks in `app.js`. A task compares the
+active technician's skill value plus tools, training, and small prep bonuses
+against a difficulty. Results are visible in the field log or modal text. A
+passed check can reduce energy or protect the closeout; a strained check can
+cost extra energy, soften reputation gains, lower XP, add callback risk, or
+make a later choice more important.
+
+When adding a new task check:
+
+1. Add or reuse a skill in `data.js`.
+2. Call `resolveSkillCheck("stable-flag-key", { skillId, difficulty, contextBonus })`.
+3. Show `getSkillCheckMarkup(result)` in the modal when useful.
+4. Record consequences through existing energy, reputation, XP, callback, and
+   ledger fields instead of adding a separate hidden system.
 
 Jobs award experience and reputation in `app.js` when their result is recorded.
 Keep those awards guarded by a saved flag so reopening a result modal cannot
@@ -127,10 +152,12 @@ the selection UI:
 - `characterStats`
 - `traits`
 
-Use `characterStats` for lightweight tradeoffs such as `install`,
-`toolPreparedness`, `improvisation`, `documentation`, `commercialProcess`,
-`networking`, `dspAudio`, `controlSystems`, and `clientCommunication`. These are
-not a full skill tree; use them only when a scene needs a small gate or modifier.
+Use `characterStats` for skill-tree baselines such as `install`,
+`troubleshooting`, `documentation`, `clientCommunication`, and `fieldcraft`, and
+for character-specific flavor stats such as `toolPreparedness`,
+`improvisation`, `commercialProcess`, `networking`, `dspAudio`, and
+`controlSystems`. Skill-tree baselines should create tradeoffs, not a profile
+that is best at everything.
 
 Use `traits` for simple hooks such as unlocking a special choice, changing a
 line, or recording a flag. Current examples include Wiley's
