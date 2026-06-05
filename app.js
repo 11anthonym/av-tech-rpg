@@ -56,6 +56,9 @@ function createInitialState() {
       trainingGapsLeft: 0,
       skillChecksPassed: 0,
       skillChecksStrained: 0,
+      fieldTaskChoicesMade: 0,
+      cleanTerminations: 0,
+      documentedTaskRisks: 0,
       shiftsCompleted: 0,
       overnightRests: 0,
       sameDayBreaks: 0,
@@ -258,6 +261,9 @@ function inferSavedStats(savedGame) {
     trainingGapsLeft: 0,
     skillChecksPassed: 0,
     skillChecksStrained: 0,
+    fieldTaskChoicesMade: 0,
+    cleanTerminations: 0,
+    documentedTaskRisks: 0,
     shiftsCompleted: 0,
     overnightRests: 0,
     sameDayBreaks: 0,
@@ -352,7 +358,7 @@ function refreshTitleScreen() {
 
 function serializeGame() {
   return {
-    version: 14,
+    version: 15,
     technicianId: state.technician.id,
     sceneId: state.sceneId,
     player: state.player,
@@ -506,6 +512,16 @@ function getSkillSummaryMarkup() {
 function recordReturnTripRisk(riskId, detail) {
   state.flags.returnTripRisks ||= {};
   state.flags.returnTripRisks[riskId] = detail;
+}
+
+function getReturnTripRiskEntries() {
+  return Object.values(state.flags.returnTripRisks || {});
+}
+
+function getOpenReturnTripRiskSummary() {
+  const risks = getReturnTripRiskEntries();
+  if (!risks.length) return "";
+  return risks.map((risk) => `${risk.source}: ${risk.detail}`).join(" ");
 }
 
 function getCurrentDispatchKey() {
@@ -747,6 +763,7 @@ function resumeRequiredPrompt() {
     return showSurveyReportChoice();
   }
   if (state.sceneId === "southPhillyCommissioning" && state.commissioningChecks.length === content.commissioningDispatch.checks.length && !state.flags.commissioningComplete) {
+    if (!state.flags.commissioningTerminationAction) return showCommissioningTerminationChoice();
     return showCommissioningChoice();
   }
   if (state.sceneId === "shop" && state.flags.warehouseStarted && state.warehouseChecks.length === content.warehouseDispatch.checks.length && !state.flags.warehouseComplete) {
@@ -1436,6 +1453,9 @@ function getCareerLedgerMarkup() {
       <span>Training gaps left</span><strong>${state.stats.trainingGapsLeft}</strong>
       <span>Passed skill checks</span><strong>${state.stats.skillChecksPassed}</strong>
       <span>Strained skill checks</span><strong>${state.stats.skillChecksStrained}</strong>
+      <span>Field task choices</span><strong>${state.stats.fieldTaskChoicesMade}</strong>
+      <span>Clean terminations</span><strong>${state.stats.cleanTerminations}</strong>
+      <span>Documented task risks</span><strong>${state.stats.documentedTaskRisks}</strong>
     </div>
   `;
 }
@@ -1463,6 +1483,10 @@ function getCareerMilestones() {
 
 function formatReputation(value) {
   return value > 0 ? `+${value}` : `${value}`;
+}
+
+function formatReputationDelta(reputation) {
+  return `Client ${formatReputation(reputation.clients || 0)} / Team ${formatReputation(reputation.coworkers || 0)} / Mgmt ${formatReputation(reputation.management || 0)}`;
 }
 
 function chooseTraining(trainingId) {
@@ -1679,7 +1703,22 @@ function showDispatchPreview() {
   });
 }
 
-function getDispatchBoardMarkup({ type, setup, why, stakes, note, managementNote, prep = "" }) {
+function getDispatchTaskCardsMarkup(taskCards = []) {
+  if (!taskCards.length) return "";
+  return `
+    <div class="dispatch-task-grid">
+      ${taskCards.map((card) => `
+        <div class="dispatch-task-card">
+          <strong>${card.title}</strong>
+          <span>${card.skill}</span>
+          <small>${card.outcome}</small>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function getDispatchBoardMarkup({ type, setup, why, stakes, note, managementNote, prep = "", taskCards = [] }) {
   return `
     <p><strong>${type}:</strong> ${setup}</p>
     <ul class="modal-list">
@@ -1689,6 +1728,7 @@ function getDispatchBoardMarkup({ type, setup, why, stakes, note, managementNote
       ${state.flags.shiftPrepActive ? `<li><strong>Next-shift prep</strong><span>Stayed late last shift: +1 Fieldcraft and +1 Documentation until this dispatch closes.</span></li>` : ""}
       <li><strong>Locked next work</strong><span>${getUpcomingDispatchText()}</span></li>
     </ul>
+    ${getDispatchTaskCardsMarkup(taskCards)}
     ${note ? `<p class="muted">${note}</p>` : ""}
     <blockquote>Management note: "${managementNote}"</blockquote>
   `;
@@ -2095,13 +2135,14 @@ function finishSecureAccess(approach) {
 }
 
 function showCallbackCleanupDispatchPreview() {
+  const returnTripSummary = getOpenReturnTripRiskSummary();
   showModal({
     kicker: "Dispatch Board",
     title: content.callbackCleanupDispatch.title,
     body: getDispatchBoardMarkup({
       type: "Return Trip",
       setup: "A callback is still sitting in the career ledger, and dispatch wants it cleaned up before anyone says warranty hours out loud.",
-      why: `Triggered by unresolved callback debt. Current unresolved callbacks: ${getUnresolvedCallbackCount()}.`,
+      why: `Triggered by unresolved callback debt. Current unresolved callbacks: ${getUnresolvedCallbackCount()}.${returnTripSummary ? ` ${returnTripSummary}` : ""}`,
       stakes: [
         "A real fix resolves callback debt and helps client trust.",
         "A quick bandage keeps warranty hours contained.",
@@ -2109,6 +2150,11 @@ function showCallbackCleanupDispatchPreview() {
       ],
       note: "The client says the room was marked complete, then immediately started acting like it read the closeout note.",
       managementNote: "Please determine whether this is truly a callback or simply extended closeout support.",
+      taskCards: returnTripSummary ? [{
+        title: "Open Return-Trip Risk",
+        skill: "Troubleshooting 4",
+        outcome: returnTripSummary,
+      }] : [],
     }),
     actions: [
       { label: "Accept Warranty Return", onClick: promptCallbackCleanupTravel },
@@ -2429,6 +2475,7 @@ function showCommissioningDispatchPreview() {
       ],
       note: "The completion sheet has already been signed internally.",
       managementNote: "Room complete except final commissioning. Please avoid creating a punch list unless necessary.",
+      taskCards: content.commissioningDispatch.taskCards,
     }),
     actions: [
       { label: "Accept Commissioning Visit", onClick: promptCommissioningTravel },
@@ -2467,6 +2514,187 @@ function getCommissioningRepairEnergyCost(baseCost) {
   return Math.max(0, getVerificationEnergyCost(baseCost) - getCarefulWorkReduction());
 }
 
+function getCommissioningTerminationTaskEnergyCost(action) {
+  const baseCosts = { quick: 2, clean: 5, label: 4, document: 3 };
+  const carefulDiscount = action === "quick" ? 0 : getCarefulWorkReduction();
+  return Math.max(0, getVerificationEnergyCost(baseCosts[action] || 3) - carefulDiscount);
+}
+
+function getCommissioningCloseoutEnergyCost(approach) {
+  if (approach === "pass") return 0;
+  const hasTaskAction = Boolean(state.flags.commissioningTerminationAction);
+  const baseCost = hasTaskAction ? (approach === "craft" ? 3 : 2) : (approach === "craft" ? 5 : 6);
+  const riskPenalty = state.flags.commissioningTerminationCallbackRisk && approach === "repair" ? 1 : 0;
+  return getCommissioningRepairEnergyCost(baseCost) + riskPenalty;
+}
+
+function getCommissioningTerminationTaskLabel(action = state.flags.commissioningTerminationAction) {
+  const labels = {
+    quick: "Re-landed fast",
+    clean: "Re-terminated cleanly",
+    label: "Traced and labeled",
+    document: "Documented before touching",
+  };
+  return labels[action] || "No termination task selected";
+}
+
+function getCommissioningTerminationQualityLabel(quality = state.flags.commissioningTerminationQuality) {
+  const labels = {
+    temporary: "Works now, weak strain relief",
+    functional: "Functional termination",
+    clean: "Clean termination",
+    strained: "Functional under strain",
+    documented: "Readable path documented",
+    "documented-clean": "Labeled cleanly",
+    "thin-notes": "Notes are thin",
+    "reopen-documented": "Mismatch documented",
+    "reopen-thin": "Mismatch noted thinly",
+  };
+  return labels[quality] || "No task outcome yet";
+}
+
+function isCommissioningTerminationClean() {
+  return ["clean", "documented-clean"].includes(state.flags.commissioningTerminationQuality);
+}
+
+function isCommissioningTerminationStable() {
+  return ["functional", "clean", "documented", "documented-clean", "reopen-documented"].includes(state.flags.commissioningTerminationQuality);
+}
+
+function isCommissioningRiskDocumented(approach) {
+  return approach === "craft" || ["label", "document"].includes(state.flags.commissioningTerminationAction);
+}
+
+function shouldAddCommissioningCallback(approach) {
+  if (approach === "pass") return !isCommissioningTerminationStable();
+  if (approach === "craft") return false;
+  if (state.flags.commissioningTerminationCallbackRisk) return true;
+  return Boolean(state.flags.terminationSkillStrained) && !state.flags.commissioningTerminationAction;
+}
+
+function getCommissioningCallbackDetail(approach) {
+  if (approach === "pass") return "Silent speaker was passed as complete.";
+  if (state.flags.commissioningTerminationAction === "quick") return "Loose speaker line was re-landed quickly without enough strain relief.";
+  if (state.flags.commissioningTerminationCallbackRisk) return `Termination task outcome: ${getCommissioningTerminationQualityLabel()}.`;
+  return "Commissioning closeout left a known speaker-path risk.";
+}
+
+function getCommissioningTerminationTaskSummaryMarkup() {
+  if (!state.flags.commissioningTerminationAction) return "";
+  return `
+    <div class="results-grid">
+      <span>Termination task</span><strong>${getCommissioningTerminationTaskLabel()}</strong>
+      <span>Task outcome</span><strong>${getCommissioningTerminationQualityLabel()}</strong>
+      <span>Return-trip risk</span><strong>${state.flags.commissioningTerminationCallbackRisk ? "Possible unless documented cleanly" : "Controlled"}</strong>
+    </div>
+  `;
+}
+
+function getCommissioningTerminationSkillCheck(action) {
+  if (action === "quick") return null;
+  if (action === "clean") {
+    return resolveSkillCheck("commissioning-termination-action-clean", {
+      skillId: "install",
+      difficulty: state.flags.terminationSkillStrained ? 5 : 4,
+      contextBonus: getCarefulWorkReduction(),
+    });
+  }
+  if (action === "label") {
+    return resolveSkillCheck("commissioning-termination-action-label", {
+      skillId: "documentation",
+      difficulty: 4,
+      contextBonus: ownsTool("labeler") ? 2 : 0,
+    });
+  }
+  return resolveSkillCheck("commissioning-termination-action-document", {
+    skillId: "clientCommunication",
+    difficulty: 3,
+    contextBonus: getDocumentationHabitReduction(),
+  });
+}
+
+function resolveCommissioningTerminationTask(action) {
+  if (state.flags.commissioningTerminationAction) return notify("The termination task is already in your closeout notes.");
+  const energyCost = getCommissioningTerminationTaskEnergyCost(action);
+  const skillCheck = getCommissioningTerminationSkillCheck(action);
+  let quality = "temporary";
+  let callbackRisk = false;
+  let outcome = "The speaker plays again, but the path still deserves a better closeout.";
+
+  changeEnergy(-energyCost);
+  if (action === "quick") {
+    quality = "temporary";
+    callbackRisk = true;
+    outcome = "The test tone comes back immediately. The cable has not become more trustworthy.";
+  } else if (action === "clean") {
+    quality = skillCheck.successful ? (skillCheck.tier === "clean" ? "clean" : "functional") : "strained";
+    callbackRisk = !skillCheck.successful;
+    outcome = skillCheck.successful
+      ? "The conductor is landed cleanly enough that the room can be trusted."
+      : "The speaker works, but the termination fought you and deserves an honest closeout.";
+  } else if (action === "label") {
+    quality = skillCheck.successful ? (skillCheck.tier === "clean" ? "documented-clean" : "documented") : "thin-notes";
+    callbackRisk = !skillCheck.successful && Boolean(state.flags.terminationSkillStrained);
+    outcome = skillCheck.successful
+      ? "The signal path is readable now. The next tech will not have to rediscover the room."
+      : "The path is less mysterious, but the notes are not strong enough to protect a sloppy closeout.";
+  } else {
+    quality = skillCheck.successful ? "reopen-documented" : "reopen-thin";
+    callbackRisk = false;
+    outcome = skillCheck.successful
+      ? "The mismatch is documented before the room gets another confident status update."
+      : "The concern is on paper, but the explanation is thin enough for management to argue with.";
+  }
+
+  state.flags.commissioningTerminationAction = action;
+  state.flags.commissioningTerminationQuality = quality;
+  state.flags.commissioningTerminationCallbackRisk = callbackRisk;
+  state.flags.commissioningTerminationTaskOutcome = outcome;
+  state.stats.fieldTaskChoicesMade += 1;
+  addLog(`${getCommissioningTerminationTaskLabel(action)}: ${outcome}`);
+  render();
+  showModal({
+    kicker: "Field Task Result",
+    title: getCommissioningTerminationTaskLabel(action),
+    body: `
+      <p>${outcome}</p>
+      ${skillCheck ? getSkillCheckMarkup(skillCheck) : `<p class="muted">Skill check: none. Fast work creates a return-trip risk instead.</p>`}
+      <div class="results-grid">
+        <span>Energy spent</span><strong>${energyCost}</strong>
+        <span>Task outcome</span><strong>${getCommissioningTerminationQualityLabel(quality)}</strong>
+        <span>Return-trip risk</span><strong>${callbackRisk ? "Possible" : "Controlled"}</strong>
+      </div>
+    `,
+    actions: [{ label: "Return To Commissioning", onClick: render }],
+  });
+}
+
+function showCommissioningTerminationChoice() {
+  showModal({
+    kicker: "Field Task",
+    title: "The Loose Speaker Line Needs A Choice",
+    body: `
+      <p>The third speaker line is loose at the output block. This is the moment where skill matters: a fast re-land can make the room quiet enough to pass, but the next person may inherit the same fault.</p>
+      <ul class="modal-list">
+        <li><strong>Install ${getSkillValue("install")}</strong><span>Clean re-termination tests your physical install skill.</span></li>
+        <li><strong>Documentation ${getSkillValue("documentation")}</strong><span>Readable labels and notes protect the next tech from the mirrored drawing.</span></li>
+        <li><strong>Client Communication ${getSkillValue("clientCommunication")}</strong><span>Explaining the mismatch can protect trust while hurting schedule optics.</span></li>
+      </ul>
+      ${ownsTool("labeler") ? `<p class="muted">Josh's rebuilt labeler unlocks a stronger trace-and-label path.</p>` : `<p class="muted">A labeler would make the documentation path stronger here.</p>`}
+    `,
+    actions: [
+      { label: `Re-land it fast (-${getCommissioningTerminationTaskEnergyCost("quick")} energy)`, onClick: () => resolveCommissioningTerminationTask("quick") },
+      { label: `Re-terminate it cleanly (-${getCommissioningTerminationTaskEnergyCost("clean")} energy)`, onClick: () => resolveCommissioningTerminationTask("clean") },
+      ...(ownsTool("labeler") ? [{
+        label: `Trace and label both ends (-${getCommissioningTerminationTaskEnergyCost("label")} energy)`,
+        className: "secondary-button",
+        onClick: () => resolveCommissioningTerminationTask("label"),
+      }] : []),
+      { label: `Document mismatch before touching it (-${getCommissioningTerminationTaskEnergyCost("document")} energy)`, className: "secondary-button", onClick: () => resolveCommissioningTerminationTask("document") },
+    ],
+  });
+}
+
 function inspectCommissioningCondition(checkId) {
   const check = content.commissioningDispatch.checks.find((item) => item.id === checkId);
   if (!check || state.commissioningChecks.includes(checkId)) return notify(`${check?.label || "That condition"} is already in your notes.`);
@@ -2484,6 +2712,7 @@ function inspectCommissioningCondition(checkId) {
   if (!skillCheck.successful) addLog(`Commissioning skill check strained on ${check.label}; the closeout will need a stronger choice to stay clean.`);
   render();
   const allChecked = state.commissioningChecks.length === content.commissioningDispatch.checks.length;
+  const needsTerminationTask = state.commissioningChecks.includes("termination") && !state.flags.commissioningTerminationAction;
   showModal({
     kicker: "Commissioning Note",
     title: check.label,
@@ -2491,44 +2720,75 @@ function inspectCommissioningCondition(checkId) {
       <p>${check.detail}</p>
       ${getSkillCheckMarkup(skillCheck)}
       ${ownsTool("labeler") ? `<p class="muted">Josh's rebuilt labeler makes it easier to leave the suspect path readable.</p>` : ""}
+      ${checkId === "termination" ? `<p class="muted">The loose line now needs a field-task choice before the closeout can be trusted.</p>` : ""}
       ${allChecked ? `<p class="muted">You found the room issue. Return to the client contact and close out the visit.</p>` : ""}
     `,
-    actions: [{ label: allChecked ? "Return To Client Contact" : "Keep Testing", onClick: render }],
+    actions: [{
+      label: needsTerminationTask ? "Choose Termination Task" : allChecked ? "Return To Client Contact" : "Keep Testing",
+      onClick: needsTerminationTask ? showCommissioningTerminationChoice : allChecked ? showCommissioningChoice : render,
+    }],
   });
 }
 
 function showCommissioningChoice() {
-  const canCleanTerminate = getSkillValue("install") >= 4 || getCraftsmanship() >= 3;
+  if (!state.flags.commissioningTerminationAction && state.commissioningChecks.includes("termination")) return showCommissioningTerminationChoice();
+  const canCleanTerminate = isCommissioningTerminationClean()
+    || ["label", "document"].includes(state.flags.commissioningTerminationAction)
+    || getSkillValue("install") >= 4
+    || getCraftsmanship() >= 3;
   showModal({
     kicker: "Commissioning Decision",
     title: "The Room Is Complete On Paper",
     body: `
       <p>The third ceiling speaker is silent because its termination is loose. The drawing is for a mirrored room across the hall, which explains why the closed ticket was so confident.</p>
       <p>The client would like the room working. Project management would like the completion sheet to remain emotionally undisturbed.</p>
+      ${getCommissioningTerminationTaskSummaryMarkup()}
       ${getCarefulWorkReduction() ? `<p class="muted">Your careful finishes are paying off: repair and punch-list work costs 1 less energy.</p>` : ""}
-      ${state.flags.terminationSkillStrained ? `<p class="muted">Your termination check was strained. A basic repair can still work, but a cleaner skill-tree branch avoids callback risk.</p>` : ""}
+      ${state.flags.commissioningTerminationCallbackRisk ? `<p class="muted">The field task left a return-trip risk. A clean punch-list closeout can expose it before it becomes a surprise callback.</p>` : ""}
     `,
     actions: [
-      { label: `Repair termination and document discrepancy (-${getCommissioningRepairEnergyCost(6)} energy)`, onClick: () => finishCommissioning("repair") },
+      { label: `Tell client it is repaired and document discrepancy (-${getCommissioningCloseoutEnergyCost("repair")} energy)`, onClick: () => finishCommissioning("repair") },
       ...(canCleanTerminate ? [{
-        label: `Redress termination and issue clean punch list (-${getCommissioningRepairEnergyCost(5)} energy)`,
+        label: `Issue clean punch list and own the mismatch (-${getCommissioningCloseoutEnergyCost("craft")} energy)`,
         className: "secondary-button",
         onClick: () => finishCommissioning("craft"),
       }] : []),
-      { label: "Patch around it and mark room passed", className: "secondary-button", onClick: () => finishCommissioning("pass") },
+      { label: "Mark room passed with current task notes", className: "secondary-button", onClick: () => finishCommissioning("pass") },
     ],
   });
 }
 
 function finishCommissioning(approach) {
+  if (!state.flags.commissioningTerminationAction && state.commissioningChecks.includes("termination")) return showCommissioningTerminationChoice();
   const careful = approach !== "pass";
-  const strainedRepair = Boolean(state.flags.terminationSkillStrained) && approach === "repair";
-  const xp = (approach === "craft" ? 65 : approach === "repair" ? 60 : 40) - (strainedRepair ? 5 : 0);
-  if (careful) changeEnergy(-(getCommissioningRepairEnergyCost(approach === "craft" ? 5 : 6) + (strainedRepair ? 2 : 0)));
+  const cleanTask = isCommissioningTerminationClean();
+  const stableTask = isCommissioningTerminationStable();
+  const callbackRiskAdded = shouldAddCommissioningCallback(approach);
+  const documentedRisk = isCommissioningRiskDocumented(approach);
+  const strainedRepair = Boolean(state.flags.terminationSkillStrained) && approach === "repair" && !state.flags.commissioningTerminationAction;
+  const taskBonus = cleanTask && careful ? 5 : approach === "pass" && cleanTask ? 3 : 0;
+  const taskPenalty = callbackRiskAdded && careful ? 5 : 0;
+  const xp = Math.max(25, (approach === "craft" ? 65 : approach === "repair" ? 58 : 40) + taskBonus - taskPenalty - (strainedRepair ? 5 : 0));
+  const reputation = careful
+    ? {
+      clients: Math.max(0, (approach === "craft" ? 2 : 1) + (cleanTask && !callbackRiskAdded ? 1 : 0) - (callbackRiskAdded ? 1 : 0)),
+      coworkers: approach === "craft" || documentedRisk ? 2 : 1,
+      management: approach === "craft" ? -2 : -1,
+    }
+    : {
+      clients: stableTask ? 1 : 0,
+      coworkers: stableTask ? 0 : -1,
+      management: 1,
+    };
+  const callbackDetail = callbackRiskAdded ? getCommissioningCallbackDetail(approach) : "";
+
+  if (careful) changeEnergy(-getCommissioningCloseoutEnergyCost(approach));
   state.flags.commissioningComplete = true;
   state.flags.commissioningApproach = approach;
+  state.flags.commissioningCallbackRiskAdded = callbackRiskAdded;
+  state.flags.commissioningRiskDocumented = documentedRisk;
   state.flags.prototypeSummaryViewed = false;
-  setClock(`${state.clock.slice(0, 3)} ${approach === "pass" ? "3:39" : "4:06"} PM`);
+  setClock(`${state.clock.slice(0, 3)} ${approach === "pass" ? (cleanTask ? "3:47" : "3:39") : approach === "craft" ? "4:12" : "4:03"} PM`);
   if (!state.flags.commissioningPaid) {
     state.cash += 84;
     state.flags.commissioningPaid = true;
@@ -2536,9 +2796,7 @@ function finishCommissioning(approach) {
   if (!state.flags.commissioningProgressAwarded) {
     awardCareerProgress({
       xp,
-      reputation: careful
-        ? { clients: strainedRepair ? 1 : 2, coworkers: approach === "craft" ? 2 : 1, management: -1 }
-        : { clients: 0, coworkers: 0, management: 1 },
+      reputation,
       source: content.commissioningDispatch.title,
     });
     state.flags.commissioningProgressAwarded = true;
@@ -2548,31 +2806,44 @@ function finishCommissioning(approach) {
     if (careful) {
       state.stats.incompleteRoomsDocumented += 1;
       state.stats.carefulFinishes += 1;
-      if (strainedRepair) state.stats.callbacks += 1;
     } else {
       state.stats.roomsPassedAnyway += 1;
+    }
+    if (cleanTask) state.stats.cleanTerminations += 1;
+    if (documentedRisk) state.stats.documentedTaskRisks += 1;
+    if (callbackRiskAdded) {
       state.stats.callbacks += 1;
+      recordReturnTripRisk("southPhillySpeakerTermination", {
+        source: content.commissioningDispatch.title,
+        detail: callbackDetail,
+      });
     }
     state.flags.commissioningStatsRecorded = true;
   }
   addLog(careful
-    ? "Repaired the South Philadelphia speaker termination and documented the mirrored drawing."
-    : "Marked the South Philadelphia room passed. The silent speaker remains a future service call.");
+    ? `${getCommissioningTerminationTaskLabel()} and closed the South Philadelphia room with ${approach === "craft" ? "a clean punch list" : "a documented repair"}.`
+    : `Marked the South Philadelphia room passed after: ${getCommissioningTerminationTaskLabel()}.`);
+  if (callbackRiskAdded) addLog(`Return-trip risk recorded: ${callbackDetail}`);
   render();
   showModal({
     kicker: "Commissioning Visit Complete",
-    title: approach === "craft" ? "The Room Works And The Notes Do Too" : approach === "repair" ? "The Room Works Despite The Ticket" : "The Completion Sheet Remains Complete",
+    title: approach === "craft" ? "The Room Works And The Notes Do Too" : approach === "repair" ? "The Room Works Despite The Ticket" : stableTask ? "The Room Passes Because The Work Actually Did" : "The Completion Sheet Remains Complete",
     body: `
       <div class="results-grid">
         <span>Commissioning wages</span><strong>+$84</strong>
         <span>Cash balance</span><strong>$${state.cash}</strong>
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Closeout</span><strong>${approach === "craft" ? "Clean punch list issued" : approach === "repair" ? "Issue repaired and documented" : "Room marked passed"}</strong>
-        ${strainedRepair ? `<span>Skill consequence</span><strong>Termination repaired under strain; callback risk added</strong>` : ""}
+        <span>Technical task</span><strong>${getCommissioningTerminationTaskLabel()}</strong>
+        <span>Task outcome</span><strong>${getCommissioningTerminationQualityLabel()}</strong>
+        <span>Reputation</span><strong>${formatReputationDelta(reputation)}</strong>
+        <span>Callback ledger</span><strong>${callbackRiskAdded ? callbackDetail : stableTask ? "No speaker callback created" : "Risk documented before callback"}</strong>
       </div>
       ${careful
         ? `<blockquote>Management note: "Please distinguish between commissioning and reopening completed installation work."</blockquote>`
-        : `<blockquote>Management note: "Thanks for keeping closeout moving. Service can address any user-reported concerns."</blockquote>`}
+        : callbackRiskAdded
+          ? `<blockquote>Management note: "Thanks for keeping closeout moving. Service can address any user-reported concerns."</blockquote>`
+          : `<blockquote>Management note: "Thanks for protecting the schedule. Please update drawings when time allows."</blockquote>`}
     `,
     actions: [{
       label: "Return To Broomall Shop",
@@ -3257,11 +3528,15 @@ function getInteractions() {
 
   if (state.sceneId === "southPhillyCommissioning") {
     const allChecked = state.commissioningChecks.length === content.commissioningDispatch.checks.length;
+    const terminationChecked = state.commissioningChecks.includes("termination");
+    const needsTerminationTask = terminationChecked && !state.flags.commissioningTerminationAction;
+    const readyForCloseout = allChecked && !needsTerminationTask;
     return [
       {
-        x: 300, y: 185, label: allChecked ? "Close out commissioning visit" : "Talk to client contact", npc: "CLIENT",
+        x: 300, y: 185, label: readyForCloseout ? "Close out commissioning visit" : needsTerminationTask ? "Client waiting on technical answer" : "Talk to client contact", npc: "CLIENT",
         action: () => {
-          if (allChecked) return showCommissioningChoice();
+          if (readyForCloseout) return showCommissioningChoice();
+          if (needsTerminationTask) return notify("Handle the loose termination at the credenza before closeout.");
           if (state.flags.commissioningBrief) return notify('Client: "The back of the room is still quieter. The installer said commissioning would tune it."');
           state.flags.commissioningBrief = true;
           addLog("Client reported that one side of the completed room still sounds quieter.");
@@ -3284,9 +3559,11 @@ function getInteractions() {
         },
       },
       {
-        x: 760, y: 300, label: "Inspect credenza termination",
+        x: 760, y: 300, label: terminationChecked ? state.flags.commissioningTerminationAction ? "Review termination task" : "Choose termination task" : "Inspect credenza termination",
         action: () => {
           if (!state.flags.commissioningBrief) return notify("Check in with the client contact first.");
+          if (terminationChecked && !state.flags.commissioningTerminationAction) return showCommissioningTerminationChoice();
+          if (state.flags.commissioningTerminationAction) return notify(`${getCommissioningTerminationTaskLabel()}: ${getCommissioningTerminationQualityLabel()}.`);
           inspectCommissioningCondition("termination");
         },
       },
@@ -3586,6 +3863,9 @@ function getObjective() {
   }
   if (state.sceneId === "southPhillyCommissioning") {
     if (!state.flags.commissioningBrief) return "Check in with the client contact.";
+    if (state.commissioningChecks.includes("termination") && !state.flags.commissioningTerminationAction) {
+      return "Choose how to handle the loose credenza termination.";
+    }
     if (state.commissioningChecks.length < content.commissioningDispatch.checks.length) {
       return `Commission the training room (${state.commissioningChecks.length}/${content.commissioningDispatch.checks.length}).`;
     }

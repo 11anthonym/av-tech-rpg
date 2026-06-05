@@ -139,6 +139,12 @@ kbd { padding: 2px 5px; border: 1px solid #53615e; border-radius: 3px; color: va
 .modal-list strong, .modal-list span { display: block; }
 .modal-list strong { color: var(--text); }
 .modal-list span { color: var(--muted); }
+.dispatch-task-grid { display: grid; gap: 9px; margin: 14px 0; }
+.dispatch-task-card { padding: 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel-alt); }
+.dispatch-task-card strong, .dispatch-task-card span, .dispatch-task-card small { display: block; }
+.dispatch-task-card strong { color: var(--text); }
+.dispatch-task-card span { margin-top: 4px; color: var(--accent); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+.dispatch-task-card small { margin-top: 6px; color: var(--muted); line-height: 1.45; }
 blockquote { margin: 14px 0; padding: 10px 12px; border-left: 3px solid var(--accent); color: #d9c395; background: rgba(239, 182, 78, .06); }
 
 @media (max-width: 900px) {

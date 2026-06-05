@@ -95,6 +95,13 @@ When adding a new task check:
 4. Record consequences through existing energy, reputation, XP, callback, and
    ledger fields instead of adding a separate hidden system.
 
+For richer jobs, separate the inspection from the field-task choice. The South
+Philadelphia commissioning visit does this with the loose credenza termination:
+inspection identifies the fault, then the player chooses whether to re-land it
+fast, re-terminate cleanly, trace it with the labeler, or document the mismatch.
+The chosen task stores its own saved flags and then changes the final closeout,
+reputation, XP, callback debt, and career ledger.
+
 Jobs award experience and reputation in `app.js` when their result is recorded.
 Keep those awards guarded by a saved flag so reopening a result modal cannot
 grant the same progression twice.

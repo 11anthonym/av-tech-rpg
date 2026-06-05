@@ -102,7 +102,12 @@ measurement minigame, a new inventory screen, another Josh arc, or a large map.
 
 The **South Philadelphia Commissioning** dispatch tests incomplete-site
 troubleshooting. The room is marked ready, but a silent speaker, loose
-termination, and mirrored drawing disagree.
+termination, and mirrored drawing disagree. The loose termination now branches
+into a field-task choice after inspection. Try at least two approaches:
+re-land it fast to create concrete return-trip risk, or use a cleaner
+re-termination/documentation path to protect client trust and the callback
+ledger. Josh's labeler should show up as a stronger tool-specific option if the
+player earned it earlier.
 
 ## Current Warehouse Experiment
 

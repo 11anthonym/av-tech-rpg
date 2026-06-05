@@ -276,6 +276,23 @@ window.GAME_CONTENT = {
   commissioningDispatch: {
     title: "South Philadelphia Commissioning",
     summary: "Commission a training room that is more complete on paper than in person.",
+    taskCards: [
+      {
+        title: "Speaker Zone Test",
+        skill: "Troubleshooting 3",
+        outcome: "Confirms whether the quiet side is a real fault or a tuning complaint.",
+      },
+      {
+        title: "Credenza Termination",
+        skill: "Install 4",
+        outcome: "Unlocks the re-land, re-terminate, and labeler task paths.",
+      },
+      {
+        title: "Closeout Drawing",
+        skill: "Documentation 3",
+        outcome: "Decides whether the next tech gets usable notes or a mystery.",
+      },
+    ],
     checks: [
       {
         id: "speaker-zone",
