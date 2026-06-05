@@ -126,6 +126,9 @@ The ledger now has a few direct gameplay effects:
 - Two careful finishes activate a careful-work rhythm that lowers future repair
   and punch-list costs.
 - Unresolved callbacks add a small drag to later access checks.
+- Closing a shift restores energy overnight, with burnout reducing ordinary
+  recovery. Staying late, helping Josh, and taking recovery days create small
+  tradeoffs before the next dispatch unlocks.
 
 These effects should make choices feel remembered while staying small enough for
 the prototype.

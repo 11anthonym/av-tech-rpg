@@ -99,6 +99,18 @@ Jobs award experience and reputation in `app.js` when their result is recorded.
 Keep those awards guarded by a saved flag so reopening a result modal cannot
 grant the same progression twice.
 
+Completed dispatches should return through `returnToShopAfterDispatch()` or,
+for shop-based jobs, `finishWarehouseShift()`. Those helpers set up the
+end-of-shift closeout so the next dispatch does not unlock until the player
+clocks out, stays late to prep, helps Josh, or takes a recovery day. Ordinary
+overnight rest restores energy with a burnout penalty; recovery days restore
+more but cost management reputation.
+
+The break area is for same-day choices. `showBreakArea()` supports short breaks,
+packed lunch, coffee, and unpaid recovery days. Packed lunch uses the shared
+`packedLunchReady` flag and is consumed by `consumePackedLunch()` when a
+dispatch starts.
+
 Career ledger stats can also create small future effects. Keep these effects
 readable and visible on the career clipboard. The current examples are:
 

@@ -34,28 +34,30 @@ The current browser prototype includes a small technician selection with two
 starting profiles, a walkable Broomall shop, van loading, a scripted Center City
 East trip, garage unloading, client check-in, the two-cart tutorial, fatigue, a
 starter tool reward, and a post-tutorial shop hub for recovery and
-personal-tool purchases. A second
-Conshohocken service dispatch turns a reported display issue into a replacement
-job, adds a small diagnosis-versus-speed decision, and lets the player's early
-tool choices reduce the work involved. Completed work now awards experience and
-reputation, with an early rank-up and field-training choice available from the
-walkable shop hub. Josh, the company's patient lead technician, adds an early
-coworker relationship arc and a practical hand-me-down tool while management
-continues to blame him for problems created by the shop's own planning. Before
-the service dispatch, the player can make one lightweight preparation choice:
-review the work order, pack lunch, buy coffee, ask Josh for advice, or leave
-immediately. The shop clipboard records a compact career ledger. A University
-City site survey then asks the player to check an elevator, hallway turn, and
-classroom wall after sales measured only the dimension that made the quote look
-straightforward. The player can document the access problem, use confidence
-training to push back calmly, or keep management happy by leaving the problem
-for install day. A South Philadelphia commissioning visit follows: the room is
-closed on paper, one ceiling speaker is silent, and the closeout drawing belongs
-to the mirrored room across the hall. A short Broomall warehouse run closes the
-slice by sending the player through Van #3, the staging shelf, and the
-mystery-return pile for a replacement power supply reportedly stored in one of
-the vans. The slice ends with a snapshot of the player's progress plus locked
-previews of future dispatches.
+personal-tool purchases. Completed dispatches now return to an end-of-shift
+closeout where the player can clock out, stay late to prep, help Josh, or take a
+recovery day before the next job unlocks. A second Conshohocken service dispatch
+turns a reported display issue into a replacement job, adds a small
+diagnosis-versus-speed decision, and lets the player's early tool choices reduce
+the work involved. Completed work awards experience and reputation, with an
+early rank-up and field-training choice available from the walkable shop hub.
+Josh, the company's patient lead technician, adds an early coworker relationship
+arc and a practical hand-me-down tool while management continues to blame him
+for problems created by the shop's own planning. Before the service dispatch,
+the player can make one lightweight preparation choice: review the work order,
+pack lunch, buy coffee, ask Josh for advice, or leave immediately. The shop
+clipboard records a compact career ledger. A University City site survey then
+asks the player to check an elevator, hallway turn, and classroom wall after
+sales measured only the dimension that made the quote look straightforward. The
+player can document the access problem, use confidence training to push back
+calmly, or keep management happy by leaving the problem for install day. A South
+Philadelphia commissioning visit follows: the room is closed on paper, one
+ceiling speaker is silent, and the closeout drawing belongs to the mirrored room
+across the hall. A short Broomall warehouse run closes the slice by sending the
+player through Van #3, the staging shelf, and the mystery-return pile for a
+replacement power supply reportedly stored in one of the vans. The slice ends
+with a snapshot of the player's progress plus locked previews of future
+dispatches.
 
 ## Design Notes
 

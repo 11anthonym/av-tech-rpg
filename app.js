@@ -2,6 +2,7 @@ const content = window.GAME_CONTENT;
 const keys = new Set();
 const PLAYER_SPEED = 8;
 const SAVE_KEY = "av-tech-rpg-save-v1";
+const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
 function createInitialState() {
   return {
@@ -55,6 +56,12 @@ function createInitialState() {
       trainingGapsLeft: 0,
       skillChecksPassed: 0,
       skillChecksStrained: 0,
+      shiftsCompleted: 0,
+      overnightRests: 0,
+      sameDayBreaks: 0,
+      coffeeBreaks: 0,
+      stayLatePrepDays: 0,
+      shopHelpDays: 0,
     },
     clock: "MON 7:11 AM",
     flags: {},
@@ -251,6 +258,12 @@ function inferSavedStats(savedGame) {
     trainingGapsLeft: 0,
     skillChecksPassed: 0,
     skillChecksStrained: 0,
+    shiftsCompleted: 0,
+    overnightRests: 0,
+    sameDayBreaks: 0,
+    coffeeBreaks: 0,
+    stayLatePrepDays: 0,
+    shopHelpDays: 0,
   };
   if (savedGame.stats) return { ...stats, ...savedGame.stats };
   if (savedGame.flags?.finished) {
@@ -339,7 +352,7 @@ function refreshTitleScreen() {
 
 function serializeGame() {
   return {
-    version: 13,
+    version: 14,
     technicianId: state.technician.id,
     sceneId: state.sceneId,
     player: state.player,
@@ -442,7 +455,8 @@ function getToolSkillBonus(skillId) {
 function getSkillValue(skillId) {
   return (getCharacterStat(skillId) || getFallbackSkillValue(skillId))
     + getTrainingSkillBonus(skillId)
-    + getToolSkillBonus(skillId);
+    + getToolSkillBonus(skillId)
+    + getShiftPrepSkillBonus(skillId);
 }
 
 function getSkillCheckResult({ skillId, difficulty, contextBonus = 0 }) {
@@ -718,6 +732,7 @@ function continueGame() {
 }
 
 function resumeRequiredPrompt() {
+  if (state.flags.endShiftPending) return showEndShiftModal();
   if (state.flags.finished && !state.flags.reward) return showResults();
   if (state.sceneId === "garage" && state.delivered.length === content.tutorial.garageUnload.length) {
     return showLobbyTransition();
@@ -791,6 +806,238 @@ function setClock(clock) {
   state.clock = clock;
 }
 
+function getClockParts(clock = state.clock) {
+  const match = clock.match(/^([A-Z]{3}) (\d{1,2}):(\d{2}) (AM|PM)$/);
+  if (!match) return { day: clock.slice(0, 3), hour: 7, minute: 22, period: "AM" };
+  return {
+    day: match[1],
+    hour: Number(match[2]),
+    minute: Number(match[3]),
+    period: match[4],
+  };
+}
+
+function formatClockParts({ day, hour, minute, period }) {
+  return `${day} ${hour}:${String(minute).padStart(2, "0")} ${period}`;
+}
+
+function getNextWeekday(day = state.clock.slice(0, 3), days = 1) {
+  const index = WEEKDAYS.indexOf(day);
+  return WEEKDAYS[((index >= 0 ? index : 0) + days) % WEEKDAYS.length];
+}
+
+function advanceClockMinutes(minutes) {
+  const parts = getClockParts();
+  let hour24 = parts.hour % 12;
+  if (parts.period === "PM") hour24 += 12;
+  let total = hour24 * 60 + parts.minute + minutes;
+  let dayOffset = 0;
+  while (total >= 24 * 60) {
+    total -= 24 * 60;
+    dayOffset += 1;
+  }
+  while (total < 0) {
+    total += 24 * 60;
+    dayOffset -= 1;
+  }
+  const nextHour24 = Math.floor(total / 60);
+  const hour = nextHour24 % 12 || 12;
+  setClock(formatClockParts({
+    day: getNextWeekday(parts.day, dayOffset),
+    hour,
+    minute: total % 60,
+    period: nextHour24 >= 12 ? "PM" : "AM",
+  }));
+}
+
+function advanceToNextMorning(days = 1) {
+  const day = getNextWeekday(state.clock.slice(0, 3), days);
+  setClock(`${day} 7:18 AM`);
+}
+
+function getOvernightRecovery({ stayedLate = false } = {}) {
+  const enduranceBonus = state.training.includes("endurance") ? 10 : 0;
+  const burnoutPenalty = state.burnout * 10;
+  const latePenalty = stayedLate ? 10 : 0;
+  return Math.max(28, 65 + enduranceBonus - burnoutPenalty - latePenalty);
+}
+
+function applyOvernightRecovery({ stayedLate = false, recoveryDay = false } = {}) {
+  const beforeEnergy = state.energy;
+  const beforeBurnout = state.burnout;
+  const recovery = recoveryDay ? getMaxEnergy() : getOvernightRecovery({ stayedLate });
+  state.energy = recoveryDay ? getMaxEnergy() : Math.min(getMaxEnergy(), state.energy + recovery);
+  if (recoveryDay) {
+    state.burnout = Math.max(0, state.burnout - 2);
+  } else if (state.energy >= Math.ceil(getMaxEnergy() * 0.75)) {
+    state.burnout = Math.max(0, state.burnout - 1);
+  }
+  return {
+    energyRecovered: state.energy - beforeEnergy,
+    burnoutRecovered: beforeBurnout - state.burnout,
+    recovery,
+  };
+}
+
+function clearEndShiftState() {
+  state.flags.endShiftPending = false;
+  state.flags.endShiftSource = null;
+  state.flags.endShiftSummaryShown = false;
+}
+
+function startEndShift(source) {
+  state.flags.endShiftPending = true;
+  state.flags.endShiftSource = source;
+  state.flags.shiftPrepActive = false;
+  state.flags.endShiftSummaryShown = false;
+}
+
+function returnToShopAfterDispatch(source, message) {
+  state.carry = [];
+  startEndShift(source);
+  if (message) addLog(message);
+  enterScene("shop");
+  showEndShiftModal();
+}
+
+function finishWarehouseShift(source) {
+  startEndShift(source);
+  render();
+  showEndShiftModal();
+}
+
+function showEndShiftModal() {
+  const source = state.flags.endShiftSource || "today's dispatch";
+  const ordinaryRecovery = getOvernightRecovery();
+  const lateRecovery = getOvernightRecovery({ stayedLate: true });
+  showModal({
+    kicker: "End Of Shift",
+    title: "Close Out The Workday",
+    body: `
+      <p>${source} is wrapped. Dispatch has more work, but the next job should start after an actual shift reset.</p>
+      <div class="results-grid">
+        <span>Current time</span><strong>${state.clock}</strong>
+        <span>Energy</span><strong>${state.energy}/${getMaxEnergy()}</strong>
+        <span>Burnout</span><strong>${state.burnout}</strong>
+        <span>Overnight recovery</span><strong>+${ordinaryRecovery} energy${state.burnout ? " after burnout penalty" : ""}</strong>
+      </div>
+      <p class="muted">Burnout reduces ordinary overnight recovery. Recovery days restore more, but management notices the schedule gap.</p>
+    `,
+    actions: [
+      { label: `Clock out and go home (+${ordinaryRecovery} energy overnight)`, onClick: () => completeShift("clock-out") },
+      { label: `Stay late to prep tomorrow (-8 energy, +1 Fieldcraft/Documentation next shift)`, className: "secondary-button", onClick: () => completeShift("prep") },
+      { label: "Help Josh clean up notes (-6 energy, +1 coworker rep)", className: "secondary-button", onClick: () => completeShift("help-josh") },
+      { label: "Take a recovery day (full energy, -1 management rep)", className: "secondary-button", onClick: () => completeShift("recovery-day") },
+      { label: "Not Yet", className: "text-button", onClick: render },
+    ],
+  });
+}
+
+function completeShift(choice) {
+  const source = state.flags.endShiftSource || "Shift";
+  let stayedLate = false;
+  let days = 1;
+  if (choice === "prep") {
+    changeEnergy(-8);
+    stayedLate = true;
+    state.flags.shiftPrepActive = true;
+    state.stats.stayLatePrepDays += 1;
+    addLog("Stayed late to prep tomorrow's first dispatch. Fieldcraft and documentation get a small next-shift boost.");
+  } else if (choice === "help-josh") {
+    changeEnergy(-6);
+    stayedLate = true;
+    state.reputation.coworkers += 1;
+    state.stats.shopHelpDays += 1;
+    addLog("Helped Josh clean up notes and labels before clocking out. Coworker reputation improved.");
+  } else if (choice === "recovery-day") {
+    days = 2;
+    state.reputation.management -= 1;
+    state.stats.recoveryDays += 1;
+    addLog("Took a recovery day instead of accepting the next dispatch. Management reputation took a small hit.");
+  } else {
+    state.flags.shiftPrepActive = false;
+    addLog("Clocked out and went home instead of turning the next dispatch into the same tired day.");
+  }
+  const recovery = applyOvernightRecovery({ stayedLate, recoveryDay: choice === "recovery-day" });
+  state.stats.shiftsCompleted += 1;
+  if (choice !== "recovery-day") state.stats.overnightRests += 1;
+  clearEndShiftState();
+  advanceToNextMorning(days);
+  addLog(`${source} closed out. Recovered ${recovery.energyRecovered} energy${recovery.burnoutRecovered ? ` and reduced burnout by ${recovery.burnoutRecovered}` : ""}.`);
+  render();
+}
+
+function getShiftPrepSkillBonus(skillId) {
+  if (!state.flags.shiftPrepActive) return 0;
+  return ["fieldcraft", "documentation"].includes(skillId) ? 1 : 0;
+}
+
+function showBreakArea() {
+  if (state.flags.endShiftPending) return showEndShiftModal();
+  showModal({
+    kicker: "Break Area",
+    title: "Use The Quiet Corner Before Dispatch Finds You",
+    body: `
+      <p>The break area is now same-day recovery and preparation, not a free time machine.</p>
+      <div class="results-grid">
+        <span>Energy</span><strong>${state.energy}/${getMaxEnergy()}</strong>
+        <span>Burnout</span><strong>${state.burnout}</strong>
+        <span>Lunch packed</span><strong>${state.flags.packedLunchReady ? "Yes" : "No"}</strong>
+        <span>Cash</span><strong>$${state.cash}</strong>
+      </div>
+    `,
+    actions: [
+      { label: "Take 15-minute break (+10 energy)", onClick: takeShortBreak },
+      ...(!state.flags.packedLunchReady ? [{ label: "Pack lunch for next dispatch", className: "secondary-button", onClick: packLunchForNextDispatch }] : []),
+      ...(state.cash >= 5 ? [{ label: "Buy bad shop coffee - $5 (+12 energy, +1 burnout)", className: "secondary-button", onClick: buyBreakCoffee }] : []),
+      { label: "Take unpaid recovery day (full energy, -1 management rep)", className: "secondary-button", onClick: takeRecoveryDayFromShop },
+      { label: "Leave Break Area", className: "text-button" },
+    ],
+  });
+}
+
+function takeShortBreak() {
+  if (state.energy >= getMaxEnergy()) return notify("You are already at full energy. The chair is still bad.");
+  changeEnergy(10);
+  advanceClockMinutes(15);
+  state.stats.sameDayBreaks += 1;
+  addLog("Took a short break. Energy improved, and the clock moved instead of the calendar.");
+  render();
+}
+
+function packLunchForNextDispatch() {
+  state.flags.packedLunchReady = true;
+  state.stats.lunchesPacked += 1;
+  addLog("Packed lunch for the next dispatch. It will restore energy when you head out.");
+  render();
+}
+
+function buyBreakCoffee() {
+  state.cash -= 5;
+  changeEnergy(12);
+  state.burnout += 1;
+  state.stats.coffeeBreaks += 1;
+  state.stats.coffeesBought += 1;
+  addLog("Bought bad shop coffee. Energy improved, but burnout ticked up.");
+  render();
+}
+
+function takeRecoveryDayFromShop() {
+  state.reputation.management -= 1;
+  state.stats.recoveryDays += 1;
+  const recovery = applyOvernightRecovery({ recoveryDay: true });
+  advanceToNextMorning(1);
+  addLog(`Took an unpaid recovery day. Recovered ${recovery.energyRecovered} energy${recovery.burnoutRecovered ? ` and reduced burnout by ${recovery.burnoutRecovered}` : ""}. Management noticed.`);
+  render();
+}
+
+function consumePackedLunch(context) {
+  if (!state.flags.packedLunchReady) return;
+  state.flags.packedLunchReady = false;
+  changeEnergy(8);
+  addLog(`Ate the packed lunch before ${context}. Energy improved.`);
+}
+
 function awardCareerProgress({ xp, reputation, source }) {
   const previousLevel = getCareerLevel();
   state.xp += xp;
@@ -847,6 +1094,7 @@ function promptTravel() {
     actions: [{
       label: "Drive to Center City",
       onClick: () => {
+        consumePackedLunch("the Center City build");
         setClock("MON 8:03 AM");
         addLog("Arrived in Center City East. Curb unloading was not arranged.");
         showParkingModal();
@@ -1000,9 +1248,8 @@ function showResults() {
       label: "Return to Broomall Shop",
       onClick: () => {
         state.flags.reward = "starter-kit";
-        state.carry = [];
         addLog("Starter kit already included the current upgrade choices.");
-        enterScene("shop");
+        returnToShopAfterDispatch("Two Quick Carts", "Returned to the Broomall shop after the Center City cart build.");
       },
     }],
   });
@@ -1021,10 +1268,8 @@ function chooseReward(toolId) {
     actions: [{
       label: "Return to Broomall Shop",
       onClick: () => {
-        state.carry = [];
         addLog(`${content.tools[toolId].name} added to your personal kit.`);
-        addLog("Returned to the Broomall shop. More dispatches will be added next.");
-        enterScene("shop");
+        returnToShopAfterDispatch("Two Quick Carts", "Returned to the Broomall shop after the Center City cart build.");
       },
     }],
   });
@@ -1143,6 +1388,11 @@ function getCareerEffectsMarkup() {
       name: "Open callback drag",
       description: "Unresolved callbacks add 1 energy to access checks until the career ledger catches up.",
     },
+    {
+      active: Boolean(state.flags.shiftPrepActive),
+      name: "Next-shift prep",
+      description: "Staying late adds +1 Fieldcraft and +1 Documentation until the next dispatch closes.",
+    },
   ];
   return `
     <ul class="modal-list">
@@ -1158,10 +1408,16 @@ function getCareerLedgerMarkup() {
       <span>Callbacks generated</span><strong>${state.stats.callbacks}</strong>
       <span>Callback notes rebuilt</span><strong>${state.stats.callbacksResolved}</strong>
       <span>Overtime days</span><strong>${state.stats.overtimeDays}</strong>
+      <span>Shifts closed</span><strong>${state.stats.shiftsCompleted}</strong>
+      <span>Overnight rests</span><strong>${state.stats.overnightRests}</strong>
       <span>Recovery days taken</span><strong>${state.stats.recoveryDays}</strong>
+      <span>Same-day breaks</span><strong>${state.stats.sameDayBreaks}</strong>
       <span>Work orders reviewed</span><strong>${state.stats.workOrdersReviewed}</strong>
       <span>Lunches packed</span><strong>${state.stats.lunchesPacked}</strong>
       <span>Coffee jar contributions</span><strong>${state.stats.coffeesBought}</strong>
+      <span>Bad coffee breaks</span><strong>${state.stats.coffeeBreaks}</strong>
+      <span>Late prep nights</span><strong>${state.stats.stayLatePrepDays}</strong>
+      <span>Shop help nights</span><strong>${state.stats.shopHelpDays}</strong>
       <span>Site surveys completed</span><strong>${state.stats.surveysCompleted}</strong>
       <span>Access risks documented</span><strong>${state.stats.accessRisksDocumented}</strong>
       <span>Quotes trusted anyway</span><strong>${state.stats.quotesTrustedAnyway}</strong>
@@ -1372,18 +1628,11 @@ function buyTool(toolId) {
 }
 
 function takeBreak() {
-  if (state.energy >= getMaxEnergy() && state.burnout === 0) return notify("You are already rested enough for the next dispatch.");
-  state.energy = Math.min(getMaxEnergy(), state.energy + 24);
-  state.burnout = Math.max(0, state.burnout - 1);
-  state.stats.recoveryDays += 1;
-  const weekdays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-  const dayIndex = weekdays.indexOf(state.clock.slice(0, 3));
-  setClock(`${weekdays[(dayIndex + 1) % weekdays.length]} 7:22 AM`);
-  addLog("Took an unpaid recovery day. Energy improved and burnout eased.");
-  render();
+  showBreakArea();
 }
 
 function showDispatchPreview() {
+  if (state.flags.endShiftPending) return showEndShiftModal();
   if (state.flags.secureAccessComplete) {
     if (!state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0) return showCallbackCleanupDispatchPreview();
     if (!state.flags.handoffComplete) return showHandoffDispatchPreview();
@@ -1419,7 +1668,7 @@ function showDispatchPreview() {
         "Verifying the signal path can prevent callback debt.",
         "Rushing can help management now and cost you later.",
       ],
-      note: "Use the supply counter, inspect your kit, or take an unpaid recovery day before leaving.",
+      note: "Use the supply counter, inspect your kit, or use the break area before leaving.",
       managementNote: "Please keep this quick. The client has another meeting, and the quote says replacement.",
       prep: state.flags.servicePreparation ? `Preparation selected: ${getServicePreparationLabel()}` : "",
     }),
@@ -1437,6 +1686,7 @@ function getDispatchBoardMarkup({ type, setup, why, stakes, note, managementNote
       <li><strong>Why this is on the board</strong><span>${why}</span></li>
       <li><strong>Stakes</strong><span>${stakes.join(" ")}</span></li>
       ${prep ? `<li><strong>Prep</strong><span>${prep}</span></li>` : ""}
+      ${state.flags.shiftPrepActive ? `<li><strong>Next-shift prep</strong><span>Stayed late last shift: +1 Fieldcraft and +1 Documentation until this dispatch closes.</span></li>` : ""}
       <li><strong>Locked next work</strong><span>${getUpcomingDispatchText()}</span></li>
     </ul>
     ${note ? `<p class="muted">${note}</p>` : ""}
@@ -1514,6 +1764,7 @@ function showWarehouseDispatchPreview() {
 function startWarehouseRun() {
   state.flags.warehouseStarted = true;
   state.flags.prototypeSummaryViewed = false;
+  consumePackedLunch("the warehouse run");
   setClock(`${state.clock.slice(0, 3)} 4:18 PM`);
   addLog("Started looking for a replacement power supply reportedly stored in one of the vans.");
   render();
@@ -1623,7 +1874,7 @@ function finishWarehouseRun(approach) {
         ? `<blockquote>Management note: "Please avoid spending excessive time reorganizing stock during urgent dispatch support."</blockquote>`
         : `<blockquote>Management note: "Thanks for keeping the warehouse run efficient."</blockquote>`}
     `,
-    actions: [{ label: "Return To Shop", onClick: render }],
+    actions: [{ label: "Return To Shop", onClick: () => finishWarehouseShift(content.warehouseDispatch.title) }],
   });
 }
 
@@ -1719,6 +1970,7 @@ function promptSecureAccessTravel() {
       onClick: () => {
         state.flags.secureAccessStarted = true;
         state.flags.prototypeSummaryViewed = false;
+        consumePackedLunch("the Navy Yard access job");
         setClock(`${state.clock.slice(0, 3)} 5:08 PM`);
         addLog("Arrived at Navy Yard security with a building number and a bad feeling.");
         enterScene("navyYardAccess");
@@ -1837,10 +2089,7 @@ function finishSecureAccess(approach) {
     `,
     actions: [{
       label: "Return To Broomall Shop",
-      onClick: () => {
-        addLog("Returned to the Broomall shop after the Navy Yard access job.");
-        enterScene("shop");
-      },
+      onClick: () => returnToShopAfterDispatch(content.secureAccessDispatch.title, "Returned to the Broomall shop after the Navy Yard access job."),
     }],
   });
 }
@@ -1882,6 +2131,7 @@ function promptCallbackCleanupTravel() {
       onClick: () => {
         state.flags.callbackCleanupStarted = true;
         state.flags.prototypeSummaryViewed = false;
+        consumePackedLunch("the warranty return");
         setClock(`${state.clock.slice(0, 3)} 9:34 AM`);
         addLog("Arrived for a warranty return created by the career ledger, not the marketing brochure.");
         enterScene("warrantyReturn");
@@ -2001,10 +2251,7 @@ function finishCallbackCleanup(approach) {
     `,
     actions: [{
       label: "Return To Broomall Shop",
-      onClick: () => {
-        addLog("Returned to the Broomall shop after the warranty return.");
-        enterScene("shop");
-      },
+      onClick: () => returnToShopAfterDispatch(content.callbackCleanupDispatch.title, "Returned to the Broomall shop after the warranty return."),
     }],
   });
 }
@@ -2048,6 +2295,7 @@ function promptHandoffTravel() {
       onClick: () => {
         state.flags.handoffStarted = true;
         state.flags.prototypeSummaryViewed = false;
+        consumePackedLunch("the executive handoff");
         setClock(`${state.clock.slice(0, 3)} 1:42 PM`);
         addLog("Arrived for a client handoff where the room works and the labels do not.");
         enterScene("executiveHandoff");
@@ -2161,10 +2409,7 @@ function finishHandoff(approach) {
     `,
     actions: [{
       label: "Return To Broomall Shop",
-      onClick: () => {
-        addLog("Returned to the Broomall shop after the executive handoff.");
-        enterScene("shop");
-      },
+      onClick: () => returnToShopAfterDispatch(content.handoffDispatch.title, "Returned to the Broomall shop after the executive handoff."),
     }],
   });
 }
@@ -2205,6 +2450,7 @@ function promptCommissioningTravel() {
       label: "Drive To Training Room",
       onClick: () => {
         state.flags.commissioningStarted = true;
+        consumePackedLunch("the South Philadelphia commissioning visit");
         setClock(`${state.clock.slice(0, 3)} 3:04 PM`);
         addLog("Arrived in South Philadelphia to commission a room already marked complete.");
         enterScene("southPhillyCommissioning");
@@ -2330,10 +2576,7 @@ function finishCommissioning(approach) {
     `,
     actions: [{
       label: "Return To Broomall Shop",
-      onClick: () => {
-        addLog("Returned to the Broomall shop after the South Philadelphia commissioning visit.");
-        enterScene("shop");
-      },
+      onClick: () => returnToShopAfterDispatch(content.commissioningDispatch.title, "Returned to the Broomall shop after the South Philadelphia commissioning visit."),
     }],
   });
 }
@@ -2428,6 +2671,7 @@ function promptSurveyTravel() {
       label: "Drive To Campus",
       onClick: () => {
         state.flags.surveyStarted = true;
+        consumePackedLunch("the University City site survey");
         setClock(`${state.clock.slice(0, 3)} 1:18 PM`);
         addLog("Arrived in University City for a classroom display site survey.");
         enterScene("universitySurvey");
@@ -2546,10 +2790,7 @@ function finishSurvey(approach) {
     `,
     actions: [{
       label: "Return To Broomall Shop",
-      onClick: () => {
-        addLog("Returned to the Broomall shop after the University City survey.");
-        enterScene("shop");
-      },
+      onClick: () => returnToShopAfterDispatch(content.surveyDispatch.title, "Returned to the Broomall shop after the University City survey."),
     }],
   });
 }
@@ -2574,7 +2815,7 @@ function showServicePreparation() {
     `,
     actions: [
       { label: "Review the work order", onClick: () => chooseServicePreparation("review") },
-      { label: "Pack lunch from the break area", className: "secondary-button", onClick: () => chooseServicePreparation("lunch") },
+      ...(!state.flags.packedLunchReady ? [{ label: "Pack lunch from the break area", className: "secondary-button", onClick: () => chooseServicePreparation("lunch") }] : []),
       ...(state.cash >= 5 ? [{
         label: "Buy shop coffee - $5",
         className: "secondary-button",
@@ -2601,6 +2842,7 @@ function chooseServicePreparation(preparation) {
     title = "Lunch Acquired";
     body = `<p>You pack something from the break area before anybody can schedule through lunch.</p>
       <p class="muted">Recover 8 energy when you arrive in Conshohocken.</p>`;
+    state.flags.packedLunchReady = true;
     addLog("Packed lunch before leaving the Broomall shop.");
     state.stats.lunchesPacked += 1;
   }
@@ -2646,10 +2888,14 @@ function promptServiceTravel() {
       onClick: () => {
         state.flags.serviceStarted = true;
         state.carry = [];
+        const hadPackedLunch = state.flags.packedLunchReady;
+        consumePackedLunch("the Conshohocken service call");
         if (state.flags.servicePreparation === "lunch" && !state.flags.serviceLunchUsed) {
-          changeEnergy(8);
           state.flags.serviceLunchUsed = true;
-          addLog("Ate the packed lunch before heading inside. Energy improved.");
+          if (!hadPackedLunch) {
+            changeEnergy(8);
+            addLog("Ate the packed lunch before heading inside. Energy improved.");
+          }
         }
         setClock(`${state.clock.slice(0, 3)} 9:14 AM`);
         addLog("Arrived in Conshohocken for a display service call.");
@@ -2712,8 +2958,7 @@ function showServiceResults() {
           state.flags.serviceCallbackPending = true;
           addLog("A Conshohocken callback note appeared before you made it back to Broomall.");
         }
-        addLog("Returned to the Broomall shop after the Conshohocken service call.");
-        enterScene("shop");
+        returnToShopAfterDispatch(content.serviceDispatch.title, "Returned to the Broomall shop after the Conshohocken service call.");
       },
     }],
   });
@@ -2726,8 +2971,9 @@ function getInteractions() {
       {
         x: 330, y: 330, label: "Talk to supervisor", npc: "SUP",
         action: () => {
+          if (state.flags.endShiftPending) return showEndShiftModal();
           if (state.flags.serviceComplete && hasPendingTraining()) return notify('Supervisor: "You leveled up fast. Mark a training focus on the clipboard before dispatch adds anything else."');
-          if (state.flags.finished) return notify('Supervisor: "Good work today. Dispatch will have more tomorrow."');
+          if (state.flags.finished) return notify('Supervisor: "Check the board when you are ready. It will still say quick, because dispatch never learns."');
           if (!state.flags.shopBrief) {
             state.flags.shopBrief = true;
             addLog("Supervisor asked you to load the staged cart boxes into Van #3.");
@@ -2751,7 +2997,9 @@ function getInteractions() {
       }] : []),
       {
         x: 150, y: 270, label: "Read dispatch board",
-        action: () => state.flags.finished
+        action: () => state.flags.endShiftPending
+          ? showEndShiftModal()
+          : state.flags.finished
           ? showDispatchPreview()
           : notify("Dispatch board: TWO QUICK CARTS. Estimated labor: unclear."),
       },
@@ -2795,8 +3043,8 @@ function getInteractions() {
         x: 145, y: 400, label: "Browse personal tools",
         action: showSupplyCounter,
       }, {
-        x: 350, y: 185, label: "Take unpaid recovery day",
-        action: takeBreak,
+        x: 350, y: 185, label: state.flags.endShiftPending ? "Close out shift" : "Use break area",
+        action: showBreakArea,
       }] : []),
       {
         x: 830, y: 380, label: warehouseActive ? "Search Van #3" : hasCarriedItems() ? "Load item into Van #3" : "Inspect Van #3",
@@ -3295,6 +3543,7 @@ function notify(message) {
 function getObjective() {
   if (state.sceneId === "shop") {
     if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) return "Talk to Josh about the Conshohocken callback.";
+    if (state.flags.endShiftPending) return "Close out the shift before taking another dispatch.";
     if (state.flags.serviceComplete && !state.flags.joshServiceDebriefed) return "Check in with Josh at the workbench.";
     if (state.flags.serviceComplete && hasPendingTraining()) return "Choose a field-training focus from the career clipboard.";
     if (state.flags.serviceComplete && !state.flags.surveyComplete) return "Review the University City site survey on the dispatch board.";
