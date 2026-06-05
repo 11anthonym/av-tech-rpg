@@ -89,6 +89,7 @@ window.GAME_CONTENT = {
       description: "A place for your tools that is not a cardboard box.",
       effect: "Reduce energy spent picking up equipment by 1.",
       modifiers: { pickupEnergyReduction: 1 },
+      skillBonuses: { fieldcraft: 1 },
       price: 65,
     },
     drill: {
@@ -97,6 +98,7 @@ window.GAME_CONTENT = {
       description: "Entry-level, but the battery is yours.",
       effect: "Reduce energy spent assembling equipment by 4.",
       modifiers: { assemblyEnergyReduction: 4 },
+      skillBonuses: { install: 1 },
       price: 125,
     },
     handTruck: {
@@ -105,6 +107,7 @@ window.GAME_CONTENT = {
       description: "Carry more gear before your next garage trip.",
       effect: "Carry one additional equipment group during garage unloads.",
       modifiers: { garageCarryCapacityBonus: 1 },
+      skillBonuses: { fieldcraft: 1 },
       price: 100,
     },
     labeler: {
@@ -113,6 +116,7 @@ window.GAME_CONTENT = {
       description: "Josh repaired the feed roller and wrote your name inside the battery cover.",
       effect: "Reduce energy spent verifying signal paths by 2.",
       modifiers: { verificationEnergyReduction: 2 },
+      skillBonuses: { documentation: 1 },
       price: 0,
     },
     circuitHutOrganizer: {
@@ -153,6 +157,57 @@ window.GAME_CONTENT = {
       { level: 1, name: "Helper", xpRequired: 0 },
       { level: 2, name: "Junior Tech", xpRequired: 80 },
       { level: 3, name: "Field Tech", xpRequired: 180 },
+    ],
+    goals: [
+      {
+        id: "junior-tech",
+        name: "Become Junior Tech",
+        metric: "xp",
+        target: 80,
+        reward: "First field-training focus unlocks.",
+      },
+      {
+        id: "field-tech",
+        name: "Become Field Tech",
+        metric: "xp",
+        target: 180,
+        reward: "Certification choices can branch from this rank later.",
+      },
+      {
+        id: "crew-trust",
+        name: "Earn Crew Trust",
+        metric: "coworkerReputation",
+        target: 2,
+        reward: "Coworker tools and stronger handoffs unlock.",
+      },
+      {
+        id: "careful-rhythm",
+        name: "Build Careful-Work Rhythm",
+        metric: "carefulFinishes",
+        target: 2,
+        reward: "Repair and punch-list work costs 1 less energy.",
+      },
+      {
+        id: "documentation-habit",
+        name: "Build Documentation Habit",
+        metric: "documentedRisks",
+        target: 2,
+        reward: "Report and access-delay paperwork costs 1 less energy.",
+      },
+      {
+        id: "personal-kit",
+        name: "Build Personal Kit",
+        metric: "ownedPaidTools",
+        target: 3,
+        reward: "More future job options can key off owned tools.",
+      },
+      {
+        id: "field-task-habit",
+        name: "Make Field Task Choices",
+        metric: "fieldTaskChoicesMade",
+        target: 3,
+        reward: "Future jobs can branch around task-quality history.",
+      },
     ],
     skills: [
       {

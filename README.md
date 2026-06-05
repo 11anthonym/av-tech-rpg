@@ -46,21 +46,25 @@ arc and a practical hand-me-down tool while management continues to blame him
 for problems created by the shop's own planning. Before the service dispatch,
 the player can make one lightweight preparation choice: review the work order,
 pack lunch, buy coffee, ask Josh for advice, or leave immediately. The shop
-clipboard records a compact career ledger. A University City site survey then
-asks the player to check an elevator, hallway turn, and classroom wall after
-sales measured only the dimension that made the quote look straightforward. The
-player can document the access problem, use confidence training to push back
-calmly, or keep management happy by leaving the problem for install day. A South
-Philadelphia commissioning visit follows: the room is closed on paper, one
-ceiling speaker is silent, and the closeout drawing belongs to the mirrored room
-across the hall. The loose termination now becomes a field task: the player can
-re-land it fast, re-terminate it cleanly, document the mismatch, or use Josh's
-labeler if they earned it, and that task outcome changes XP, reputation, and
-callback debt. A short Broomall warehouse run closes the slice by sending the
-player through Van #3, the staging shelf, and the mystery-return pile for a
-replacement power supply reportedly stored in one of the vans. The slice ends
-with a snapshot of the player's progress plus locked previews of future
-dispatches.
+clipboard records a compact career ledger, visible career goals, and an
+emerging build identity based on skill branches, reputation, work style, and
+callback debt. Tools now publish their skill bonuses through content data, so
+future tools can strengthen install, documentation, troubleshooting, client
+communication, or fieldcraft without custom UI code. A University City site
+survey then asks the player to check an elevator, hallway turn, and classroom
+wall after sales measured only the dimension that made the quote look
+straightforward. The player can document the access problem, use confidence
+training to push back calmly, or keep management happy by leaving the problem
+for install day. A South Philadelphia commissioning visit follows: the room is
+closed on paper, one ceiling speaker is silent, and the closeout drawing belongs
+to the mirrored room across the hall. The loose termination now becomes a field
+task: the player can re-land it fast, re-terminate it cleanly, document the
+mismatch, or use Josh's labeler if they earned it, and that task outcome changes
+XP, reputation, and callback debt. A short Broomall warehouse run closes the
+slice by sending the player through Van #3, the staging shelf, and the
+mystery-return pile for a replacement power supply reportedly stored in one of
+the vans. The slice ends with a snapshot of the player's progress plus locked
+previews of future dispatches.
 
 ## Design Notes
 

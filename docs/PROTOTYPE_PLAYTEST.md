@@ -36,7 +36,11 @@ The playable slice now has:
    choices can affect, and what future work is still locked.
 13. Reusable character hooks for character-specific lines, simple traits,
    lightweight character stats, and return-trip risk flags.
-14. A completion card with a career snapshot, nearby locked work, and playtest
+14. A career clipboard with visible skill branches, build identity, goal
+   tracks, active effects, and a ledger for future branching.
+15. Data-driven tool skill bonuses, so new tools can matter to task checks
+   without adding one-off UI or calculation code.
+16. A completion card with a career snapshot, nearby locked work, and playtest
    questions.
 
 ## Playtest Questions
@@ -69,6 +73,10 @@ Watch a player complete the current build before expanding it. Look for:
   clean for management?
 - Do players notice when ledger stats become active career effects?
 - Are the stat effects helpful enough to matter without becoming a spreadsheet?
+- Does the career clipboard make the player's current build identity clear?
+- Do career goals make the next RPG targets obvious without feeling like chores?
+- Do players understand that tools improve skills as well as energy/carrying
+  costs?
 - Does the conditional warranty return make earlier rushed or patched choices
   feel remembered?
 - Does the executive handoff make "can the client use it?" feel like a real AV
@@ -162,6 +170,22 @@ The dispatch board now explains each available job with four pieces of
 information: why it is on the board, what the stakes are, any prep already
 selected, and the locked future work. This should make the prototype feel less
 like a fixed script and more like a career reacting to the ledger.
+
+## Current RPG Skeleton Experiment
+
+The career clipboard now exposes three pieces of RPG structure that future
+content should build on:
+
+1. **Build identity:** the player's strongest skill branches, reputation lean,
+   work style, and callback debt.
+2. **Career goals:** visible tracks for rank, crew trust, careful finishes,
+   documentation habits, tool ownership, and field-task choices.
+3. **Tool skill bonuses:** content-defined bonuses that make tools part of task
+   outcomes, not just energy discounts.
+
+Playtest whether these read like useful goals. If players ignore them, the next
+pass should improve how jobs reference goals and skill branches before adding a
+larger skill tree.
 
 ## Current Replay Experiment
 

@@ -13,10 +13,10 @@ game engine.
 ## Save Data
 
 The browser prototype autosaves career progress to local storage under
-`av-tech-rpg-save-v1`. The internal save format is currently version `12`. The
-save records the technician, tools, scene, position, carried items, tutorial
-progress, fatigue, cash, experience, reputation, field training, flags, and
-field log. It also stores a compact career ledger for completed-job statistics.
+`av-tech-rpg-save-v1`. The save records the technician, tools, scene, position,
+carried items, tutorial progress, fatigue, cash, experience, reputation, field
+training, flags, and field log. It also stores a compact career ledger for
+completed-job statistics.
 
 When changing saved data structures later:
 
@@ -42,6 +42,7 @@ labeler: {
   description: "Your cables can finally explain themselves.",
   effect: "Reduce callback risk during commissioning.",
   modifiers: { callbackRiskReduction: 1 },
+  skillBonuses: { documentation: 1 },
   price: 75,
 },
 ```
@@ -55,16 +56,23 @@ change gameplay after `app.js` reads them. The first reusable modifiers are:
 - `garageCarryCapacityBonus`
 - `verificationEnergyReduction`
 
+Tools can also add stable skill bonuses with `skillBonuses`. These bonuses are
+summed automatically by `getToolSkillBonus()`, shown anywhere the tool effect is
+rendered, and then folded into task checks. For example, a drill can add
+`install: 1`, a labeler can add `documentation: 1`, and a tool bag can add
+`fieldcraft: 1`.
+
 When a tool needs a new kind of behavior, add its modifier to `data.js`, read it
 through `getToolModifier()` in `app.js`, and keep the tool ID stable.
 
 ## Add Career Progression
 
 `data.js` contains the early career ranks, skill tree, and field-training
-choices. Each rank has a level, display name, and experience requirement. Each
-skill has a stable ID, readable branch, display name, and description. Each
-training choice has a stable ID, branch, description, readable effect, modifier
-map, and optional `skillBonuses` map.
+goals, and field-training choices. Each rank has a level, display name, and
+experience requirement. Each career goal has a stable ID, readable name, metric,
+target, and reward preview. Each skill has a stable ID, readable branch, display
+name, and description. Each training choice has a stable ID, branch,
+description, readable effect, modifier map, and optional `skillBonuses` map.
 
 The current reusable skill IDs are:
 
@@ -79,6 +87,27 @@ The first reusable training modifiers are:
 - `craftsmanship`
 - `confidence`
 - `maxEnergy`
+
+The first reusable career-goal metrics are:
+
+- `xp`
+- `jobsCompleted`
+- `clientReputation`
+- `coworkerReputation`
+- `managementReputation`
+- `carefulFinishes`
+- `documentedRisks`
+- `ownedTools`
+- `ownedPaidTools`
+- `callbacksResolved`
+- `skillChecksPassed`
+- `fieldTaskChoicesMade`
+
+Career goals are visible on the clipboard. Use them as short-term RPG tracks:
+rank, trust, tool ownership, field-task habits, documentation habits, and other
+values that future jobs can branch from. If a new metric is not already covered
+by `getCareerGoalValue()`, add it there rather than hardcoding display text in a
+job modal.
 
 Skills affect deterministic task checks in `app.js`. A task compares the
 active technician's skill value plus tools, training, and small prep bonuses

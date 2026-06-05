@@ -451,11 +451,11 @@ function getTrainingSkillBonus(skillId) {
 }
 
 function getToolSkillBonus(skillId) {
-  if (skillId === "install") return (ownsTool("drill") ? 1 : 0);
-  if (skillId === "documentation") return (ownsTool("labeler") ? 1 : 0);
-  if (skillId === "troubleshooting") return (hasActivePartsBrainFind() ? 1 : 0);
-  if (skillId === "fieldcraft") return (ownsTool("toolBag") ? 1 : 0) + (ownsTool("handTruck") ? 1 : 0);
-  return 0;
+  const staticBonus = state.tools.reduce((total, toolId) => (
+    total + (content.tools[toolId]?.skillBonuses?.[skillId] || 0)
+  ), 0);
+  const activeBonus = skillId === "troubleshooting" && hasActivePartsBrainFind() ? 1 : 0;
+  return staticBonus + activeBonus;
 }
 
 function getSkillValue(skillId) {
@@ -506,6 +506,88 @@ function getSkillSummaryMarkup() {
         <li><strong>${skill.branch}: ${skill.name} ${getSkillValue(skill.id)}</strong><span>${skill.description}</span></li>
       `).join("")}
     </ul>
+  `;
+}
+
+function formatSignedNumber(value) {
+  return value > 0 ? `+${value}` : `${value}`;
+}
+
+function getSkillBonusLabel(skillBonuses = {}) {
+  const entries = Object.entries(skillBonuses).filter(([, bonus]) => bonus);
+  if (!entries.length) return "";
+  return ` Skill bonus: ${entries.map(([skillId, bonus]) => {
+    const skill = getSkillDefinition(skillId);
+    return `${skill?.name || skillId} ${formatSignedNumber(bonus)}`;
+  }).join(", ")}.`;
+}
+
+function getToolEffectText(tool) {
+  return `${tool.effect}${getSkillBonusLabel(tool.skillBonuses)}`;
+}
+
+function getDocumentedRiskCount() {
+  return (state.stats.accessRisksDocumented || 0)
+    + (state.stats.accessDelaysDocumented || 0)
+    + (state.stats.documentedTaskRisks || 0);
+}
+
+function getCareerGoalValue(metric) {
+  if (metric === "xp") return state.xp;
+  if (metric === "jobsCompleted") return state.jobsCompleted;
+  if (metric === "clientReputation") return state.reputation.clients;
+  if (metric === "coworkerReputation") return state.reputation.coworkers;
+  if (metric === "managementReputation") return state.reputation.management;
+  if (metric === "documentedRisks") return getDocumentedRiskCount();
+  if (metric === "ownedTools") return state.tools.length;
+  if (metric === "ownedPaidTools") return state.tools.filter((toolId) => (content.tools[toolId]?.price || 0) > 0).length;
+  return state.stats[metric] || 0;
+}
+
+function getCareerGoalStatus(goal) {
+  return getCareerGoalValue(goal.metric) >= goal.target ? "[COMPLETE]" : "[ACTIVE]";
+}
+
+function getCareerGoalsMarkup() {
+  const goals = content.career.goals || [];
+  if (!goals.length) return `<p class="muted">No career goal tracks are configured yet.</p>`;
+  return `
+    <ul class="modal-list">
+      ${goals.map((goal) => {
+        const value = getCareerGoalValue(goal.metric);
+        return `<li><strong>${getCareerGoalStatus(goal)} ${goal.name}: ${value}/${goal.target}</strong><span>${goal.reward}</span></li>`;
+      }).join("")}
+    </ul>
+  `;
+}
+
+function getBuildIdentityMarkup() {
+  const rankedSkills = getSkillDefinitions()
+    .map((skill) => ({ ...skill, value: getSkillValue(skill.id) }))
+    .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name));
+  const reputationLean = [
+    { name: "Client", value: state.reputation.clients },
+    { name: "Team", value: state.reputation.coworkers },
+    { name: "Management", value: state.reputation.management },
+  ].sort((a, b) => b.value - a.value || a.name.localeCompare(b.name))[0];
+  const openCallbacks = getUnresolvedCallbackCount();
+  const workStyle = openCallbacks > 0
+    ? "Callback debt"
+    : getDocumentedRiskCount() >= 2
+    ? "Documentation-minded"
+    : state.stats.carefulFinishes >= 2
+    ? "Careful closer"
+    : state.reputation.coworkers >= 2
+    ? "Crew-trusted"
+    : "Early-career generalist";
+  return `
+    <div class="results-grid">
+      <span>Primary branch</span><strong>${rankedSkills[0]?.branch || "Unknown"}: ${rankedSkills[0]?.name || "Unformed"} ${rankedSkills[0]?.value || 0}</strong>
+      <span>Secondary branch</span><strong>${rankedSkills[1]?.branch || "Unknown"}: ${rankedSkills[1]?.name || "Unformed"} ${rankedSkills[1]?.value || 0}</strong>
+      <span>Reputation lean</span><strong>${reputationLean.name} ${formatReputation(reputationLean.value)}</strong>
+      <span>Work style</span><strong>${workStyle}</strong>
+      <span>Open callback debt</span><strong>${openCallbacks}</strong>
+    </div>
   `;
 }
 
@@ -1280,7 +1362,7 @@ function chooseReward(toolId) {
     title: content.tools[toolId].name,
     body: `
       <p>${content.tools[toolId].description}</p>
-      <p class="muted">${content.tools[toolId].effect}</p>
+      <p class="muted">${getToolEffectText(content.tools[toolId])}</p>
     `,
     actions: [{
       label: "Return to Broomall Shop",
@@ -1300,7 +1382,7 @@ function showPersonalKit() {
     title: "Your Tools",
     body: `
       <ul class="modal-list">
-        ${ownedTools.map((tool) => `<li><strong>${tool.name}</strong><span>${tool.effect}</span></li>`).join("")}
+        ${ownedTools.map((tool) => `<li><strong>${tool.name}</strong><span>${getToolEffectText(tool)}</span></li>`).join("")}
       </ul>
       <p class="muted">Garage carry capacity: ${getCarryCapacity("garage")} equipment group${getCarryCapacity("garage") === 1 ? "" : "s"}</p>
       <p class="muted">Assembly energy cost: ${getAssemblyEnergyCost(7)} per cart component</p>
@@ -1357,6 +1439,8 @@ function showCareerClipboard() {
       </div>
       <p><strong>Skill tree:</strong></p>
       ${getSkillSummaryMarkup()}
+      <p><strong>Build identity:</strong></p>
+      ${getBuildIdentityMarkup()}
       ${selectedTraining.length ? `
         <p><strong>Training completed:</strong></p>
         <ul class="modal-list">
@@ -1367,6 +1451,8 @@ function showCareerClipboard() {
       <ul class="modal-list">
         ${getCareerMilestones().map((milestone) => `<li><strong>${milestone.status} ${milestone.name}</strong><span>${milestone.description}</span></li>`).join("")}
       </ul>
+      <p><strong>Career goals:</strong></p>
+      ${getCareerGoalsMarkup()}
       <p><strong>Active career effects:</strong></p>
       ${getCareerEffectsMarkup()}
       <p><strong>Career ledger:</strong></p>
@@ -1605,7 +1691,7 @@ function receiveJoshLabeler() {
   showModal({
     kicker: "Personal Tool Added",
     title: content.tools.labeler.name,
-    body: `<p>${content.tools.labeler.description}</p><p class="muted">${content.tools.labeler.effect}</p>`,
+    body: `<p>${content.tools.labeler.description}</p><p class="muted">${getToolEffectText(content.tools.labeler)}</p>`,
     actions: [{ label: "Return to Shop", onClick: render }],
   });
 }
@@ -1618,7 +1704,7 @@ function showSupplyCounter() {
     body: availableTools.length ? `
       <p>Company reimbursement policy: optimistic.</p>
       <ul class="modal-list">
-        ${availableTools.map((tool) => `<li><strong>${tool.name} - $${tool.price}</strong><span>${tool.effect}</span></li>`).join("")}
+        ${availableTools.map((tool) => `<li><strong>${tool.name} - $${tool.price}</strong><span>${getToolEffectText(tool)}</span></li>`).join("")}
       </ul>
       <p class="muted">Cash available: $${state.cash}</p>
     ` : `<p>You already own every tool currently stocked here.</p>`,
@@ -1646,7 +1732,7 @@ function buyTool(toolId) {
   showModal({
     kicker: "Personal Tool Added",
     title: tool.name,
-    body: `<p>${tool.description}</p><p class="muted">${tool.effect}</p><p class="muted">Cash remaining: $${state.cash}</p>`,
+    body: `<p>${tool.description}</p><p class="muted">${getToolEffectText(tool)}</p><p class="muted">Cash remaining: $${state.cash}</p>`,
     actions: [{ label: "Return to Shop", onClick: render }],
   });
 }
@@ -4061,7 +4147,7 @@ function renderHud() {
     : `Nothing (0/${getCarryCapacity()})`;
   elements.toolList.replaceChildren(...state.tools.map((toolId) => {
     const li = document.createElement("li");
-    li.innerHTML = `<strong>${content.tools[toolId].name}</strong><small>${content.tools[toolId].effect}</small>`;
+    li.innerHTML = `<strong>${content.tools[toolId].name}</strong><small>${getToolEffectText(content.tools[toolId])}</small>`;
     return li;
   }));
   elements.vehicleCard.innerHTML = `
