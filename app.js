@@ -4203,6 +4203,28 @@ function getSkillSelectMarkup(id, selectedId) {
   return getCreatorSelectMarkup(id, getSkillDefinitions(), selectedId);
 }
 
+function syncCreatorExclusiveSelects(selectIds) {
+  const selects = selectIds
+    .map((id) => document.querySelector(`#${id}`))
+    .filter(Boolean);
+  const selectedValues = selects.map((select) => select.value).filter(Boolean);
+  selects.forEach((select) => {
+    Array.from(select.options).forEach((option) => {
+      option.disabled = option.value !== select.value && selectedValues.includes(option.value);
+    });
+  });
+}
+
+function syncCreatorChoiceAvailability() {
+  syncCreatorExclusiveSelects(["creator-trait-1", "creator-trait-2"]);
+  syncCreatorExclusiveSelects([
+    "creator-primary-1",
+    "creator-primary-2",
+    "creator-secondary-1",
+    "creator-secondary-2",
+  ]);
+}
+
 function getCreatorPreviewMarkup(technician) {
   return `
     <div class="results-grid">
@@ -4223,6 +4245,7 @@ function renderCreatorPreviewFromForm() {
   const preview = document.querySelector("#creator-preview");
   const errorNode = document.querySelector("#creator-error");
   if (!preview || !errorNode) return;
+  syncCreatorChoiceAvailability();
   const { error, technician } = getCreatorBuildFromForm();
   errorNode.textContent = error;
   preview.innerHTML = technician ? getCreatorPreviewMarkup(technician) : "";
