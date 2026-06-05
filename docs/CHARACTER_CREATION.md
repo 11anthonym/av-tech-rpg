@@ -1,4 +1,4 @@
-# Character Creation Research Plan
+# Character Creation First Release
 
 This feature should make the player feel like they are building a specific kind
 of AV technician, not filling out an unrelated fantasy RPG sheet. The useful
@@ -39,7 +39,7 @@ through use.
 
 ## Creation Formula
 
-The planned creator should use four layers:
+The first-release creator uses four layers:
 
 1. **Background:** where the tech learned their habits.
 2. **Work style:** a defining upside and complication, similar to a birthsign in
@@ -48,14 +48,19 @@ The planned creator should use four layers:
    existing skill tree.
 4. **Traits:** two smaller modifiers or hooks that add flavor and tradeoffs.
 
-The initial data skeleton lives in `content.characterCreation`:
+The creator data lives in `content.characterCreation`:
 
 - `backgrounds`
 - `workStyles`
 - `traits`
 - `premadeTemplates`
+- `baseStats`
+- `baseSkills`
+- `primarySkillBonus`
+- `secondarySkillBonus`
+- `traitSlots`
 
-## Current Planned Backgrounds
+## Current Backgrounds
 
 - **Residential Installer:** strong install and fieldcraft, weaker commercial
   documentation.
@@ -67,7 +72,7 @@ The initial data skeleton lives in `content.characterCreation`:
   more burnout risk.
 - **Green Apprentice:** balanced and teachable, but no strong specialty.
 
-## Current Planned Work Styles
+## Current Work Styles
 
 - **Measure Twice:** safer careful work, slower rushed work.
 - **Make It Work:** unlocks workaround choices, but creates callback risk when
@@ -77,7 +82,7 @@ The initial data skeleton lives in `content.characterCreation`:
 - **By The Book:** stronger documentation and management protection, but can
   cost coworker trust on messy jobs.
 
-## Current Planned Traits
+## Current Traits
 
 - **Steady Hands:** better termination checks.
 - **Notebook Habit:** better survey and access documentation.
@@ -91,20 +96,21 @@ The initial data skeleton lives in `content.characterCreation`:
 - **Organized Rookie:** Green Apprentice + Measure Twice + Notebook Habit.
 - **Prototype Tech:** Green Apprentice + Calm Under Fire.
 
-## Implementation Steps
+## Current Implementation
 
-1. Keep the current premade cards, but show their creator formula so players
-   learn the future system before it becomes interactive.
-2. Add a disabled "Custom Technician Creator" preview card to the selection
-   screen that lists the planned backgrounds, work styles, and traits.
-3. Add a real creator flow later:
+1. Premade cards show their creator formula so players can read Wiley and other
+   profiles as examples of the same system.
+2. The selection screen includes a working "Custom Technician Creator" card.
+3. The creator modal lets the player:
+   - name the technician
    - pick a background
    - pick a work style
    - pick two traits
    - pick two primary and two secondary skills
-   - preview final stats, starting tools, tradeoffs, and first-job consequences
-4. Store custom characters as ordinary technician objects in the save, or store
-   the selected formula and reconstruct the derived technician on load.
+   - preview final stats, starting tools, tradeoffs, and core skill values
+4. Custom characters are stored as ordinary technician objects in the save under
+   `customTechnician`, while premade careers still store only `technicianId`.
+5. Save format `16` is the first version that persists custom technician builds.
 
 ## Open Balance Questions
 
@@ -113,5 +119,5 @@ The initial data skeleton lives in `content.characterCreation`:
   allowed for roleplay?
 - Should negative traits like `bad-knees` grant extra trait points, or should
   every trait be a mixed upside/downside by default?
-- Should the first custom creator support free naming immediately, or wait until
-  the formula system is stable?
+- Should custom creator picks unlock unique early dialogue, or should the first
+  expansion focus only on skill checks and task consequences?

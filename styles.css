@@ -134,6 +134,10 @@ kbd { padding: 2px 5px; border: 1px solid #53615e; border-radius: 3px; color: va
 .expense { padding: 9px; border: 1px solid #5a4930; color: #e2c48c; background: rgba(239, 182, 78, .07); }
 .results-grid { display: grid; grid-template-columns: 1fr auto; gap: 6px 14px; margin-bottom: 14px; }
 .results-grid strong { color: var(--text); }
+.creator-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+.creator-form label { display: grid; gap: 5px; color: var(--text); font-size: 11px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+.creator-form input, .creator-form select { width: 100%; padding: 8px; border: 1px solid #465551; border-radius: 4px; color: var(--text); background: #101614; font: inherit; font-size: 12px; }
+.creator-error { min-height: 18px; color: #df8a7e; font-weight: 800; }
 .modal-list { margin: 0 0 13px; padding: 0; list-style: none; }
 .modal-list li { padding: 9px 0; border-bottom: 1px solid var(--line); }
 .modal-list strong, .modal-list span { display: block; }
@@ -157,4 +161,5 @@ blockquote { margin: 14px 0; padding: 10px 12px; border-left: 3px solid var(--ac
   .title-card { margin-top: 34px; }
   .selection-screen { padding: 42px 20px; }
   .technician-grid { grid-template-columns: 1fr; }
+  .creator-form { grid-template-columns: 1fr; }
 }

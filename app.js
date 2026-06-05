@@ -339,14 +339,28 @@ function hasPendingTraining() {
   return state.training.length < getCareerLevel() - 1;
 }
 
+function formatCash(amount) {
+  return amount < 0 ? `-$${Math.abs(amount)}` : `$${amount}`;
+}
+
+function uniqueValues(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function getSavedTechnician(savedGame) {
+  if (!savedGame) return null;
+  if (savedGame.customTechnician) return savedGame.customTechnician;
+  return content.technicians.find((item) => item.id === savedGame.technicianId);
+}
+
 function getSaveSummary(savedGame) {
   if (!savedGame) return "No saved career yet.";
-  const technician = content.technicians.find((item) => item.id === savedGame.technicianId);
+  const technician = getSavedTechnician(savedGame);
   const scene = content.scenes[savedGame.sceneId];
   const reward = savedGame.flags?.reward ? content.tools[savedGame.flags.reward]?.name : null;
   const detail = reward ? ` | Tutorial reward: ${reward}` : "";
   const level = getCareerLevel(inferSavedXp(savedGame));
-  return `${technician?.name || "Technician"} | Level ${level} | ${scene?.name || "First day"} | Energy ${savedGame.energy} | Cash $${inferSavedCash(savedGame)}${detail}`;
+  return `${technician?.name || "Technician"} | Level ${level} | ${scene?.name || "First day"} | Energy ${savedGame.energy} | Cash ${formatCash(inferSavedCash(savedGame))}${detail}`;
 }
 
 function refreshTitleScreen() {
@@ -358,8 +372,9 @@ function refreshTitleScreen() {
 
 function serializeGame() {
   return {
-    version: 15,
+    version: 16,
     technicianId: state.technician.id,
+    customTechnician: state.technician.custom ? state.technician : null,
     sceneId: state.sceneId,
     player: state.player,
     tools: state.tools,
@@ -781,7 +796,7 @@ function clearSavedGame() {
 function continueGame() {
   const savedGame = getSavedGame();
   if (!savedGame) return;
-  const technician = content.technicians.find((item) => item.id === savedGame.technicianId);
+  const technician = getSavedTechnician(savedGame);
   if (!technician || !content.scenes[savedGame.sceneId]) return clearSavedGame();
   const flags = { ...savedGame.flags };
   const migratedCash = inferSavedCash(savedGame);
@@ -1082,7 +1097,7 @@ function showBreakArea() {
         <span>Energy</span><strong>${state.energy}/${getMaxEnergy()}</strong>
         <span>Burnout</span><strong>${state.burnout}</strong>
         <span>Lunch packed</span><strong>${state.flags.packedLunchReady ? "Yes" : "No"}</strong>
-        <span>Cash</span><strong>$${state.cash}</strong>
+        <span>Cash</span><strong>${formatCash(state.cash)}</strong>
       </div>
     `,
     actions: [
@@ -1151,13 +1166,20 @@ function awardCareerProgress({ xp, reputation, source }) {
   }
 }
 
-function startGame(technicianId) {
+function startGame(technicianOrId) {
+  const technician = typeof technicianOrId === "string"
+    ? content.technicians.find((item) => item.id === technicianOrId)
+    : technicianOrId;
+  if (!technician) return;
   resetRuntimeState();
-  state.technician = content.technicians.find((item) => item.id === technicianId);
-  state.tools = [...state.technician.startingTools];
+  state.technician = technician;
+  state.tools = uniqueValues(["screwdriver", ...(state.technician.startingTools || [])]);
   state.energy = state.technician.stats.energy;
   state.burnout = state.technician.stats.burnout;
-  addLog("First day started. Nobody mentioned an onboarding packet.");
+  state.cash = state.technician.startingCash || 0;
+  addLog(state.technician.custom
+    ? `${state.technician.name}'s first day started from a custom build. Nobody mentioned an onboarding packet.`
+    : "First day started. Nobody mentioned an onboarding packet.");
   elements.selection.classList.add("hidden");
   elements.gameLayout.classList.remove("hidden");
   elements.menuButton.classList.remove("hidden");
@@ -1330,7 +1352,7 @@ function showResults() {
         <span>Overtime</span><strong>+${tidy ? "$42" : "$31"}</strong>
         <span>Garage parking</span><strong>-$18</strong>
         <span>Net take-home</span><strong>+$${netPay}</strong>
-        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
         <span>Expense status</span><strong>Receipt under review</strong>
         <span>Energy remaining</span><strong>${state.energy}/${getMaxEnergy()}</strong>
         <span>Burnout</span><strong>${state.burnout}</strong>
@@ -1706,7 +1728,7 @@ function showSupplyCounter() {
       <ul class="modal-list">
         ${availableTools.map((tool) => `<li><strong>${tool.name} - $${tool.price}</strong><span>${getToolEffectText(tool)}</span></li>`).join("")}
       </ul>
-      <p class="muted">Cash available: $${state.cash}</p>
+      <p class="muted">Cash available: ${formatCash(state.cash)}</p>
     ` : `<p>You already own every tool currently stocked here.</p>`,
     actions: [
       ...availableTools.map((tool) => ({
@@ -1732,7 +1754,7 @@ function buyTool(toolId) {
   showModal({
     kicker: "Personal Tool Added",
     title: tool.name,
-    body: `<p>${tool.description}</p><p class="muted">${getToolEffectText(tool)}</p><p class="muted">Cash remaining: $${state.cash}</p>`,
+    body: `<p>${tool.description}</p><p class="muted">${getToolEffectText(tool)}</p><p class="muted">Cash remaining: ${formatCash(state.cash)}</p>`,
     actions: [{ label: "Return to Shop", onClick: render }],
   });
 }
@@ -1837,7 +1859,7 @@ function showPrototypeSummary() {
       <p>You completed the currently playable dispatches. The Broomall board already has more work written in erasable marker.</p>
       <div class="results-grid">
         <span>Experience</span><strong>${state.xp} XP</strong>
-        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
         <span>Client reputation</span><strong>${formatReputation(state.reputation.clients)}</strong>
         <span>Coworker reputation</span><strong>${formatReputation(state.reputation.coworkers)}</strong>
         <span>Management reputation</span><strong>${formatReputation(state.reputation.management)}</strong>
@@ -1992,7 +2014,7 @@ function finishWarehouseRun(approach) {
     body: `
       <div class="results-grid">
         <span>Warehouse wages</span><strong>+$48</strong>
-        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
         <span>Experience</span><strong>+${correctedLabel ? 50 : 35} XP</strong>
         <span>Stockroom</span><strong>${correctedLabel ? "Bin label corrected" : "Mystery pile preserved"}</strong>
       </div>
@@ -2203,7 +2225,7 @@ function finishSecureAccess(approach) {
     body: `
       <div class="results-grid">
         <span>Access job wages</span><strong>+$${honest ? 92 : 76}</strong>
-        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Preparation</span><strong>${getSecureAccessPreparationLabel()}</strong>
         <span>Closeout</span><strong>${approach === "pushback" ? "Dispatch access miss escalated" : approach === "document" ? "Delay documented" : "Delay absorbed"}</strong>
@@ -2371,7 +2393,7 @@ function finishCallbackCleanup(approach) {
     body: `
       <div class="results-grid">
         <span>Warranty wages</span><strong>+$${resolved ? 68 : 54}</strong>
-        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Callback ledger</span><strong>${resolved ? "Callback resolved" : "Callback debt remains"}</strong>
         <span>Unresolved callbacks</span><strong>${getUnresolvedCallbackCount()}</strong>
@@ -2531,7 +2553,7 @@ function finishHandoff(approach) {
     body: `
       <div class="results-grid">
         <span>Handoff wages</span><strong>+$${helpful ? 64 : 48}</strong>
-        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Client outcome</span><strong>${approach === "cheat" ? "Cheat sheet rewritten" : approach === "patient" ? "Daily path practiced" : "Training gap left"}</strong>
       </div>
@@ -2917,7 +2939,7 @@ function finishCommissioning(approach) {
     body: `
       <div class="results-grid">
         <span>Commissioning wages</span><strong>+$84</strong>
-        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Closeout</span><strong>${approach === "craft" ? "Clean punch list issued" : approach === "repair" ? "Issue repaired and documented" : "Room marked passed"}</strong>
         <span>Technical task</span><strong>${getCommissioningTerminationTaskLabel()}</strong>
@@ -3135,7 +3157,7 @@ function finishSurvey(approach) {
     body: `
       <div class="results-grid">
         <span>Survey wages</span><strong>+$72</strong>
-        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Preparation</span><strong>${getSurveyPreparationLabel()}</strong>
         <span>Report</span><strong>${approach === "pushback" ? "Sales called directly" : approach === "document" ? "Access risk documented" : "Quoted plan accepted"}</strong>
@@ -3168,7 +3190,7 @@ function showServicePreparation() {
     title: "Prepare For The Service Call",
     body: `
       <p>Dispatch called this a quick display issue. You have time for one small preparation step before taking Van #3 to Conshohocken.</p>
-      <p class="muted">Cash available: $${state.cash}</p>
+      <p class="muted">Cash available: ${formatCash(state.cash)}</p>
     `,
     actions: [
       { label: "Review the work order", onClick: () => chooseServicePreparation("review") },
@@ -3299,7 +3321,7 @@ function showServiceResults() {
     body: `
       <div class="results-grid">
         <span>Service wages</span><strong>+$96</strong>
-        <span>Cash balance</span><strong>$${state.cash}</strong>
+        <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
         <span>Energy remaining</span><strong>${state.energy}/${getMaxEnergy()}</strong>
         <span>Burnout</span><strong>${state.burnout}</strong>
         <span>Experience</span><strong>+${xp} XP</strong>
@@ -4038,6 +4060,219 @@ function movePlayer() {
   renderNearby();
 }
 
+function escapeHtml(value) {
+  return `${value}`.replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
+  }[char]));
+}
+
+function sanitizeCreatorName(value) {
+  const clean = `${value || ""}`.replace(/[<>]/g, "").replace(/\s+/g, " ").trim();
+  return clean.slice(0, 32) || "Custom Tech";
+}
+
+function addNumericMap(target, source = {}) {
+  Object.entries(source).forEach(([key, value]) => {
+    target[key] = (target[key] || 0) + value;
+  });
+}
+
+function getCreatorConfig() {
+  return content.characterCreation;
+}
+
+function getCreatorChoice(collection, choiceId) {
+  return collection.find((item) => item.id === choiceId);
+}
+
+function getCreatorSelectionsFromForm() {
+  return {
+    name: sanitizeCreatorName(document.querySelector("#creator-name")?.value),
+    backgroundId: document.querySelector("#creator-background")?.value,
+    workStyleId: document.querySelector("#creator-work-style")?.value,
+    traitIds: [
+      document.querySelector("#creator-trait-1")?.value,
+      document.querySelector("#creator-trait-2")?.value,
+    ].filter(Boolean),
+    primarySkillIds: [
+      document.querySelector("#creator-primary-1")?.value,
+      document.querySelector("#creator-primary-2")?.value,
+    ].filter(Boolean),
+    secondarySkillIds: [
+      document.querySelector("#creator-secondary-1")?.value,
+      document.querySelector("#creator-secondary-2")?.value,
+    ].filter(Boolean),
+  };
+}
+
+function validateCreatorSelections(selections) {
+  const skillIds = [...selections.primarySkillIds, ...selections.secondarySkillIds];
+  if (new Set(skillIds).size !== skillIds.length) return "Pick four different major skills. Primary and secondary skills cannot overlap.";
+  if (new Set(selections.traitIds).size !== selections.traitIds.length) return "Pick two different traits.";
+  if (!selections.backgroundId || !selections.workStyleId || selections.traitIds.length !== 2) return "Pick a background, work style, and two traits.";
+  return "";
+}
+
+function buildCustomTechnician(selections) {
+  const creator = getCreatorConfig();
+  const background = getCreatorChoice(creator.backgrounds, selections.backgroundId);
+  const workStyle = getCreatorChoice(creator.workStyles, selections.workStyleId);
+  const traits = selections.traitIds.map((traitId) => getCreatorChoice(creator.traits, traitId)).filter(Boolean);
+  const stats = { ...creator.baseStats };
+  const characterStats = { ...creator.baseSkills };
+  const mechanicalTraits = ["customTechnician"];
+  const startingTools = ["screwdriver"];
+  let startingCash = 0;
+
+  [background, workStyle, ...traits].forEach((piece) => {
+    addNumericMap(stats, piece.statModifiers);
+    addNumericMap(characterStats, piece.skillBonuses);
+    addNumericMap(characterStats, piece.characterStats);
+    startingTools.push(...(piece.startingTools || []));
+    mechanicalTraits.push(...(piece.traits || []));
+    startingCash += piece.cashModifier || 0;
+  });
+
+  selections.primarySkillIds.forEach((skillId) => {
+    characterStats[skillId] = (characterStats[skillId] || 0) + creator.primarySkillBonus;
+  });
+  selections.secondarySkillIds.forEach((skillId) => {
+    characterStats[skillId] = (characterStats[skillId] || 0) + creator.secondarySkillBonus;
+  });
+
+  Object.keys(stats).forEach((key) => {
+    stats[key] = Math.max(key === "burnout" ? 0 : 1, stats[key]);
+  });
+  getSkillDefinitions().forEach((skill) => {
+    characterStats[skill.id] = Math.max(1, characterStats[skill.id] || 1);
+  });
+
+  const rankedSkills = getSkillDefinitions()
+    .map((skill) => ({ ...skill, value: characterStats[skill.id] || 0 }))
+    .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name));
+
+  return {
+    id: "custom-tech",
+    custom: true,
+    name: selections.name,
+    role: `${background.name} / ${workStyle.name}`,
+    tagline: `Custom build: ${background.name}, ${workStyle.name}.`,
+    description: `${background.tradeoff} ${workStyle.tradeoff}`,
+    strengths: rankedSkills.slice(0, 2).map((skill) => `${skill.name} ${skill.value}`),
+    weaknesses: rankedSkills.slice(-2).map((skill) => `${skill.name} ${skill.value}`),
+    playstyle: workStyle.effect,
+    difficulty: "Custom",
+    trait: workStyle.name,
+    tendency: traits.map((trait) => trait.name).join(", "),
+    stats,
+    characterStats,
+    traits: uniqueValues(mechanicalTraits),
+    startingTools: uniqueValues(startingTools),
+    startingCash,
+    creatorBuild: {
+      backgroundId: background.id,
+      workStyleId: workStyle.id,
+      traitIds: traits.map((trait) => trait.id),
+      primarySkillIds: selections.primarySkillIds,
+      secondarySkillIds: selections.secondarySkillIds,
+      formula: `${background.name} + ${workStyle.name} + ${traits.map((trait) => trait.name).join(" + ")}`,
+    },
+  };
+}
+
+function getCreatorBuildFromForm() {
+  const selections = getCreatorSelectionsFromForm();
+  const error = validateCreatorSelections(selections);
+  if (error) return { error, technician: null };
+  return { error: "", technician: buildCustomTechnician(selections) };
+}
+
+function getCreatorSelectMarkup(id, options, selectedId) {
+  return `
+    <select id="${id}">
+      ${options.map((option) => `<option value="${option.id}"${option.id === selectedId ? " selected" : ""}>${option.name}</option>`).join("")}
+    </select>
+  `;
+}
+
+function getSkillSelectMarkup(id, selectedId) {
+  return getCreatorSelectMarkup(id, getSkillDefinitions(), selectedId);
+}
+
+function getCreatorPreviewMarkup(technician) {
+  return `
+    <div class="results-grid">
+      <span>Name</span><strong>${escapeHtml(technician.name)}</strong>
+      <span>Formula</span><strong>${escapeHtml(technician.creatorBuild.formula)}</strong>
+      <span>Energy</span><strong>${technician.stats.energy}</strong>
+      <span>Craftsmanship</span><strong>${technician.stats.craftsmanship}</strong>
+      <span>Confidence</span><strong>${technician.stats.confidence}</strong>
+      <span>Starting cash</span><strong>${formatCash(technician.startingCash)}</strong>
+      <span>Starting kit</span><strong>${technician.startingTools.map((toolId) => content.tools[toolId]?.name || toolId).join(", ")}</strong>
+      <span>Core skills</span><strong>${getTechnicianSkillPreview(technician)}</strong>
+    </div>
+    <p class="muted"><strong>Tradeoff:</strong> ${escapeHtml(technician.description)}</p>
+  `;
+}
+
+function renderCreatorPreviewFromForm() {
+  const preview = document.querySelector("#creator-preview");
+  const errorNode = document.querySelector("#creator-error");
+  if (!preview || !errorNode) return;
+  const { error, technician } = getCreatorBuildFromForm();
+  errorNode.textContent = error;
+  preview.innerHTML = technician ? getCreatorPreviewMarkup(technician) : "";
+}
+
+function showCharacterCreator() {
+  const creator = getCreatorConfig();
+  const skills = getSkillDefinitions();
+  showModal({
+    kicker: "Custom Technician",
+    title: "Build Your First Tech",
+    body: `
+      <p>Pick a work background, work style, two traits, and four major skill focuses. This first release keeps the creator compact, but the resulting technician is playable and saved like a premade.</p>
+      <div class="creator-form">
+        <label>Name <input id="creator-name" maxlength="32" value="Custom Tech" /></label>
+        <label>Background ${getCreatorSelectMarkup("creator-background", creator.backgrounds, "green-apprentice")}</label>
+        <label>Work style ${getCreatorSelectMarkup("creator-work-style", creator.workStyles, "calm-under-fire")}</label>
+        <label>Trait 1 ${getCreatorSelectMarkup("creator-trait-1", creator.traits, "steady-hands")}</label>
+        <label>Trait 2 ${getCreatorSelectMarkup("creator-trait-2", creator.traits, "notebook-habit")}</label>
+        <label>Primary skill 1 ${getSkillSelectMarkup("creator-primary-1", skills[0]?.id)}</label>
+        <label>Primary skill 2 ${getSkillSelectMarkup("creator-primary-2", skills[1]?.id)}</label>
+        <label>Secondary skill 1 ${getSkillSelectMarkup("creator-secondary-1", skills[2]?.id)}</label>
+        <label>Secondary skill 2 ${getSkillSelectMarkup("creator-secondary-2", skills[4]?.id || skills[3]?.id)}</label>
+      </div>
+      <p class="creator-error" id="creator-error"></p>
+      <p><strong>Build preview:</strong></p>
+      <div id="creator-preview"></div>
+    `,
+    actions: [
+      { label: "Start Custom Career", close: false, onClick: () => {
+        const { error, technician } = getCreatorBuildFromForm();
+        const errorNode = document.querySelector("#creator-error");
+        if (error) {
+          if (errorNode) errorNode.textContent = error;
+          return;
+        }
+        closeModal();
+        startGame(technician);
+      } },
+      { label: "Update Preview", className: "secondary-button", close: false, onClick: renderCreatorPreviewFromForm },
+      { label: "Back to Profiles", className: "secondary-button" },
+    ],
+  });
+  document.querySelectorAll(".creator-form input, .creator-form select").forEach((input) => {
+    input.addEventListener("input", renderCreatorPreviewFromForm);
+    input.addEventListener("change", renderCreatorPreviewFromForm);
+  });
+  renderCreatorPreviewFromForm();
+}
+
 function renderSelection() {
   elements.technicianGrid.replaceChildren(
     ...content.technicians.map((technician) => {
@@ -4068,11 +4303,11 @@ function renderSelection() {
       card.append(makeButton("Start First Day", () => startGame(technician.id)));
       return card;
     }),
-    renderCharacterCreatorPreview(),
+    renderCharacterCreatorCard(),
   );
 }
 
-function renderCharacterCreatorPreview() {
+function renderCharacterCreatorCard() {
   const creator = content.characterCreation;
   const card = document.createElement("article");
   card.className = "technician-card creator-preview-card";
@@ -4091,10 +4326,9 @@ function renderCharacterCreatorPreview() {
     <p class="starting-kit"><strong>Backgrounds:</strong> ${creator.backgrounds.map((item) => item.name).join(", ")}</p>
     <p class="starting-kit"><strong>Work styles:</strong> ${creator.workStyles.map((item) => item.name).join(", ")}</p>
     <p class="starting-kit"><strong>Traits:</strong> ${creator.traits.map((item) => item.name).join(", ")}</p>
-    <p class="starting-kit"><strong>Next implementation:</strong> pick one background, one work style, and two traits, then preview skill and tradeoff changes before starting.</p>
+    <p class="starting-kit"><strong>Creator release:</strong> pick one background, one work style, two traits, and four major skill focuses, then preview the final build before starting.</p>
   `;
-  const button = makeButton("Creator Planned", () => {}, "secondary-button");
-  button.disabled = true;
+  const button = makeButton("Create Custom Technician", showCharacterCreator, "primary-button");
   card.append(button);
   return card;
 }
@@ -4158,7 +4392,7 @@ function renderHud() {
   elements.energyValue.textContent = state.energy;
   elements.energyMeter.style.width = `${(state.energy / getMaxEnergy()) * 100}%`;
   elements.burnoutValue.textContent = state.burnout;
-  elements.cashValue.textContent = `$${state.cash}`;
+  elements.cashValue.textContent = formatCash(state.cash);
   elements.craftValue.textContent = getCraftsmanship();
   elements.confidenceValue.textContent = getConfidence();
   elements.rankValue.textContent = rank.name;

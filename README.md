@@ -77,7 +77,7 @@ Instructions for extending the data-driven prototype live in
 The design-reference notes live in
 [docs/DESIGN_REFERENCES.md](docs/DESIGN_REFERENCES.md).
 
-The sourced character-creation plan lives in
+The sourced character-creation first release is documented in
 [docs/CHARACTER_CREATION.md](docs/CHARACTER_CREATION.md).
 
 The current playtest questions and deliberately small next-step roadmap live in

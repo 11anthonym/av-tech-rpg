@@ -16,7 +16,9 @@ The browser prototype autosaves career progress to local storage under
 `av-tech-rpg-save-v1`. The save records the technician, tools, scene, position,
 carried items, tutorial progress, fatigue, cash, experience, reputation, field
 training, flags, and field log. It also stores a compact career ledger for
-completed-job statistics.
+completed-job statistics. Premade careers store a `technicianId`; custom
+careers also store a derived `customTechnician` object so the build can resume
+without rebuilding it from current creator data.
 
 When changing saved data structures later:
 
@@ -213,10 +215,10 @@ line, or recording a flag. Current examples include Wiley's
 
 ## Add Character Creation Pieces
 
-The future custom creator is planned in
-[CHARACTER_CREATION.md](CHARACTER_CREATION.md). Its data skeleton lives in
-`content.characterCreation` and uses the same fields the current premade
-technicians already use.
+The custom creator is documented in
+[CHARACTER_CREATION.md](CHARACTER_CREATION.md). Its first-release data lives in
+`content.characterCreation` and derives playable custom technicians from the
+same fields the current premade technicians already use.
 
 When adding creator content:
 
