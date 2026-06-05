@@ -4043,6 +4043,7 @@ function renderSelection() {
     ...content.technicians.map((technician) => {
       const card = document.createElement("article");
       card.className = "technician-card";
+      const template = content.characterCreation?.premadeTemplates?.find((item) => item.technicianId === technician.id);
       card.innerHTML = `
         <p class="eyebrow">Technician Profile</p>
         <h3>${technician.name}</h3>
@@ -4061,12 +4062,41 @@ function renderSelection() {
         ${technician.difficulty ? `<p class="starting-kit"><strong>Difficulty:</strong> ${technician.difficulty}</p>` : ""}
         ${technician.trait ? `<p class="starting-kit"><strong>Trait:</strong> ${technician.trait}</p>` : ""}
         ${technician.tendency ? `<p class="starting-kit"><strong>Tendency:</strong> ${technician.tendency}</p>` : ""}
+        ${template ? `<p class="starting-kit"><strong>Creator formula:</strong> ${template.formula}</p>` : ""}
         <p class="starting-kit"><strong>Starting kit:</strong> ${technician.startingTools.map((toolId) => content.tools[toolId]?.name || toolId).join(", ")}</p>
       `;
       card.append(makeButton("Start First Day", () => startGame(technician.id)));
       return card;
     }),
+    renderCharacterCreatorPreview(),
   );
+}
+
+function renderCharacterCreatorPreview() {
+  const creator = content.characterCreation;
+  const card = document.createElement("article");
+  card.className = "technician-card creator-preview-card";
+  if (!creator) {
+    card.innerHTML = `
+      <p class="eyebrow">Future Feature</p>
+      <h3>Custom Technician</h3>
+      <p>Character creation planning has not been configured yet.</p>
+    `;
+    return card;
+  }
+  card.innerHTML = `
+    <p class="eyebrow">Future Feature</p>
+    <h3>Custom Technician Creator</h3>
+    <p>${creator.summary}</p>
+    <p class="starting-kit"><strong>Backgrounds:</strong> ${creator.backgrounds.map((item) => item.name).join(", ")}</p>
+    <p class="starting-kit"><strong>Work styles:</strong> ${creator.workStyles.map((item) => item.name).join(", ")}</p>
+    <p class="starting-kit"><strong>Traits:</strong> ${creator.traits.map((item) => item.name).join(", ")}</p>
+    <p class="starting-kit"><strong>Next implementation:</strong> pick one background, one work style, and two traits, then preview skill and tradeoff changes before starting.</p>
+  `;
+  const button = makeButton("Creator Planned", () => {}, "secondary-button");
+  button.disabled = true;
+  card.append(button);
+  return card;
 }
 
 function getTechnicianSkillPreview(technician) {

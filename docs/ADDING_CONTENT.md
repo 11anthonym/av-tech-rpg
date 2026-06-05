@@ -211,6 +211,27 @@ Use `traits` for simple hooks such as unlocking a special choice, changing a
 line, or recording a flag. Current examples include Wiley's
 `circuitHutPartsBrain`, `makeThatWork`, and `residentialInstinct`.
 
+## Add Character Creation Pieces
+
+The future custom creator is planned in
+[CHARACTER_CREATION.md](CHARACTER_CREATION.md). Its data skeleton lives in
+`content.characterCreation` and uses the same fields the current premade
+technicians already use.
+
+When adding creator content:
+
+1. Add a `background`, `workStyle`, or `trait` in `data.js`.
+2. Give it a stable ID, readable name, effect, and tradeoff.
+3. Use `skillBonuses`, `statModifiers`, and `startingTools` where the choice
+   should affect the derived technician.
+4. Update `premadeTemplates` if a one-click profile should explain which creator
+   pieces it represents.
+
+Do not add a creator option unless it can affect an early task, visible skill
+value, starting kit, reputation pressure, or career-goal track. Character
+creation should make the first workday feel different, not just decorate the
+selection screen.
+
 ## Add Character-Specific Lines
 
 `data.js` has a `characterLines` object keyed by technician ID. Scene logic can

@@ -40,7 +40,10 @@ The playable slice now has:
    tracks, active effects, and a ledger for future branching.
 15. Data-driven tool skill bonuses, so new tools can matter to task checks
    without adding one-off UI or calculation code.
-16. A completion card with a career snapshot, nearby locked work, and playtest
+16. A sourced character-creation plan, premade template formulas, and a disabled
+   creator preview card that exposes future backgrounds, work styles, and
+   traits.
+17. A completion card with a career snapshot, nearby locked work, and playtest
    questions.
 
 ## Playtest Questions
@@ -77,6 +80,10 @@ Watch a player complete the current build before expanding it. Look for:
 - Do career goals make the next RPG targets obvious without feeling like chores?
 - Do players understand that tools improve skills as well as energy/carrying
   costs?
+- Do premade creator formulas make Wiley and the other profiles easier to
+  understand?
+- Does the disabled creator preview make players curious, or does it feel like a
+  distracting unfinished promise?
 - Does the conditional warranty return make earlier rushed or patched choices
   feel remembered?
 - Does the executive handoff make "can the client use it?" feel like a real AV
@@ -203,6 +210,16 @@ The current character-support pass keeps Wiley data-driven where possible:
 character-specific lines live in `characterLines`, optional `characterStats` and
 `traits` can gate small choices, and quick-workaround choices can record
 return-trip risk flags for future callbacks.
+
+## Current Character Creation Experiment
+
+The first character-creation pass is intentionally a foundation, not a full
+creator. The selection screen now shows each premade profile's formula and a
+disabled custom-creator preview. The data skeleton in `content.characterCreation`
+defines planned backgrounds, work styles, traits, and premade mappings.
+
+The next implementation should only make the creator interactive after the
+first-job effects are clear enough to preview before starting.
 
 ## Next Experiment
 

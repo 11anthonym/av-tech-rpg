@@ -116,10 +116,10 @@ kbd { padding: 2px 5px; border: 1px solid #53615e; border-radius: 3px; color: va
 .field-log li::before { margin-right: 6px; color: var(--accent); content: ">"; }
 
 .primary-button, .secondary-button { width: 100%; padding: 11px 13px; border: 1px solid var(--accent-dark); border-radius: 4px; color: #201a0f; background: var(--accent); cursor: pointer; font-size: 12px; font-weight: 800; text-align: left; }
-.primary-button:hover, .primary-button:focus-visible { background: #f5c772; }
-.primary-button:disabled, .text-button:disabled { cursor: not-allowed; opacity: .42; }
+.primary-button:not(:disabled):hover, .primary-button:not(:disabled):focus-visible { background: #f5c772; }
+.primary-button:disabled, .secondary-button:disabled, .text-button:disabled { cursor: not-allowed; opacity: .42; }
 .secondary-button { border-color: #485753; color: var(--text); background: #27332f; }
-.secondary-button:hover, .secondary-button:focus-visible { border-color: #70817d; background: #303d39; }
+.secondary-button:not(:disabled):hover, .secondary-button:not(:disabled):focus-visible { border-color: #70817d; background: #303d39; }
 .text-button { padding: 0; border: 0; color: var(--accent); background: transparent; cursor: pointer; font-size: 10px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
 .danger-text { color: #df8a7e; }
 

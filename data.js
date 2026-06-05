@@ -63,6 +63,142 @@ window.GAME_CONTENT = {
     },
   ],
 
+  characterCreation: {
+    designStatus: "planned",
+    summary: "Future custom characters should combine a work background, a work style, and a small set of traits. Premade technicians are templates built from the same ingredients.",
+    backgrounds: [
+      {
+        id: "residential-installer",
+        name: "Residential Installer",
+        role: "Retrofit-heavy hands-on tech",
+        skillBonuses: { install: 2, troubleshooting: 1, fieldcraft: 1 },
+        statModifiers: { craftsmanship: 1, confidence: -1 },
+        startingTools: ["toolBag"],
+        tradeoff: "Strong with physical work and improvised paths, weaker at commercial documentation.",
+      },
+      {
+        id: "warehouse-runner",
+        name: "Warehouse Runner",
+        role: "Shop logistics and staging helper",
+        skillBonuses: { fieldcraft: 2, documentation: 1 },
+        statModifiers: { energy: 5 },
+        startingTools: ["toolBag"],
+        tradeoff: "Better at prep and carrying, less confident during client-facing decisions.",
+      },
+      {
+        id: "helpdesk-convert",
+        name: "Helpdesk Convert",
+        role: "Ticket-driven troubleshooter",
+        skillBonuses: { troubleshooting: 2, documentation: 1, clientCommunication: 1 },
+        statModifiers: { craftsmanship: -1 },
+        startingTools: [],
+        tradeoff: "Good diagnostic habits, weaker physical install baseline.",
+      },
+      {
+        id: "live-events-tech",
+        name: "Live Events Tech",
+        role: "Show-must-go-on operator",
+        skillBonuses: { clientCommunication: 2, fieldcraft: 1, troubleshooting: 1 },
+        statModifiers: { confidence: 1, burnout: 1 },
+        startingTools: [],
+        tradeoff: "Calm under pressure, but more vulnerable to burnout when jobs run long.",
+      },
+      {
+        id: "green-apprentice",
+        name: "Green Apprentice",
+        role: "New helper with fewer bad habits",
+        skillBonuses: { install: 1, documentation: 1, fieldcraft: 1 },
+        statModifiers: { energy: 5 },
+        startingTools: [],
+        tradeoff: "Balanced and teachable, but starts without a strong specialty.",
+      },
+    ],
+    workStyles: [
+      {
+        id: "measure-twice",
+        name: "Measure Twice",
+        effect: "Careful task choices get stronger payoff and callback risk drops.",
+        skillBonuses: { documentation: 1 },
+        tradeoff: "Rushed work costs more energy because this tech fights their own habits.",
+      },
+      {
+        id: "make-it-work",
+        name: "Make It Work",
+        effect: "Unlocks practical workaround choices and small-parts improvisation.",
+        skillBonuses: { install: 1, troubleshooting: 1 },
+        tradeoff: "Temporary fixes create more callback debt unless documented cleanly.",
+      },
+      {
+        id: "calm-under-fire",
+        name: "Calm Under Fire",
+        effect: "Pressure checks with clients, supervisors, and access desks are easier.",
+        skillBonuses: { clientCommunication: 1 },
+        tradeoff: "Lower early hands-on bonus than a specialist background.",
+      },
+      {
+        id: "parts-brain",
+        name: "Parts Brain",
+        effect: "Can search a personal organizer once per dispatch for a testing aid.",
+        skillBonuses: { fieldcraft: 1 },
+        startingTools: ["circuitHutOrganizer"],
+        tradeoff: "Testing shortcuts still need proper closeout or they become future risk.",
+      },
+      {
+        id: "by-the-book",
+        name: "By The Book",
+        effect: "Documentation and management-protection choices become more reliable.",
+        skillBonuses: { documentation: 1, clientCommunication: 1 },
+        tradeoff: "Overusing process can cost coworker trust on messy jobs.",
+      },
+    ],
+    traits: [
+      {
+        id: "steady-hands",
+        name: "Steady Hands",
+        effect: "+1 to cable termination and re-termination checks.",
+        tradeoff: "No social or paperwork benefit.",
+      },
+      {
+        id: "notebook-habit",
+        name: "Notebook Habit",
+        effect: "+1 Documentation during surveys and access problems.",
+        tradeoff: "No speed benefit when the job is already late.",
+      },
+      {
+        id: "tool-debt",
+        name: "Tool Debt",
+        effect: "Start with one extra stocked personal tool.",
+        tradeoff: "Start with less cash.",
+      },
+      {
+        id: "knows-a-guy",
+        name: "Knows A Guy",
+        effect: "Coworker and vendor conversations can open extra options.",
+        tradeoff: "Management reputation gains are smaller when favors bypass process.",
+      },
+      {
+        id: "bad-knees",
+        name: "Bad Knees",
+        effect: "+1 Documentation from planning around access and lifts.",
+        tradeoff: "Stairs, long carries, and repeated garage trips cost more energy.",
+      },
+    ],
+    premadeTemplates: [
+      {
+        technicianId: "wiley",
+        formula: "Residential Installer + Parts Brain + Make It Work",
+      },
+      {
+        technicianId: "organized-rookie",
+        formula: "Green Apprentice + Measure Twice + Notebook Habit",
+      },
+      {
+        technicianId: "prototype-tech",
+        formula: "Green Apprentice + Calm Under Fire",
+      },
+    ],
+  },
+
   characterLines: {
     wiley: {
       accessoryTote: 'Wiley clocked the accessory tote first. "Adapters are where simple jobs go to negotiate."',
