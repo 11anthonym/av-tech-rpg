@@ -346,9 +346,13 @@ walking trip creates a decision, a joke, or a useful sense of place.
 ## Add a Job
 
 The tutorial is intentionally scripted while the core loop is being tested.
-Before adding a job, fill out the short job design template in
-[EXPANSION_SKELETON.md](EXPANSION_SKELETON.md). Then add only the data and
-engine hooks the job actually needs.
+Before adding a job, fill out the short job design template and
+`Job Design Checklist V1` in [EXPANSION_SKELETON.md](EXPANSION_SKELETON.md).
+Then add only the data and engine hooks the job actually needs.
+
+Keep the starter geography intact while expanding: Radnor Rack & Wire is near
+Wayne, and the first playable tutorial job still goes to Center City East in
+Philadelphia.
 
 Do not extract a fully generic job runner yet. The current dispatches still
 benefit from hand-authored scenes and choices. Extract only after two or three

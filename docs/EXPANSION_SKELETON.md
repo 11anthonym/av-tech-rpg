@@ -41,6 +41,58 @@ What stat, reputation, XP, callback, or ledger value changes:
 What future job or goal can remember it:
 ```
 
+### Job Design Checklist V1
+
+Use this checklist before implementing the job. If a proposed dispatch cannot
+answer most of these, keep it in the idea backlog until the hook is clearer.
+
+- **Place:** Where does the job start, where does it happen, and why does that
+  route make sense from Radnor Rack & Wire near Wayne?
+- **First-job continuity:** The first playable job still goes from the
+  Wayne-area shop to Center City East in Philadelphia. Do not move the tutorial
+  job when adding new geography.
+- **Job family:** Which existing family owns the work: install, service, survey,
+  commissioning, logistics, or handoff?
+- **Company pressure:** What does the bad starter company want the player to do
+  that may conflict with good field work?
+- **Primary RPG test:** Which one skill, trait, tool, reputation lean, or ledger
+  habit is the job really testing?
+- **Prep:** What is the one small preparation choice before travel?
+- **Field actions:** What are the two or three things the player inspects,
+  carries, installs, traces, explains, or documents?
+- **Final choice:** What is the clean field-tech choice, the fast
+  management-friendly choice, and the risky compromise?
+- **Consequence:** Which visible values change: energy, burnout, cash, XP,
+  client rep, coworker rep, management rep, callbacks, return-trip risk, or a
+  career ledger stat?
+- **Memory:** What future dispatch, goal, or active career effect could remember
+  the outcome?
+- **AV truth:** What detail would make a real AV tech nod without needing a
+  simulator?
+- **Joke target:** Is the joke aimed at bad process, bad estimates, weird job
+  realities, or management pressure rather than at the field tech for knowing
+  less?
+
+### Small Worked Example
+
+Use this as a planning shape, not a commitment to build this exact job next.
+
+```txt
+Job title: Law Office Intermittent Audio
+Job family: service
+Company: Radnor Rack & Wire
+Map/scene: Center City office conference room
+Why it is on the dispatch board: Client says audio drops after ten minutes; dispatch says "probably cable."
+Core skills: troubleshooting, documentation, clientCommunication
+Preparation choice: review ticket history, text someone who knows the room, or leave immediately
+Three things to inspect or do: check USB path, inspect table box, ask client what "drops" means
+Final choice: verify full meeting path, swap the obvious cable, or document likely DSP/control issue
+Good outcome: client trust and coworker trust, more energy spent, management annoyed by scope
+Fast/bad-company outcome: management likes the quick swap, callback risk remains
+What changes: XP, client/coworker/management rep, callback ledger, documentedTaskRisks
+What remembers it: future callback return or a documentation-habit goal
+```
+
 Then implement in this order:
 
 1. Add or reuse a job family in `content.jobFamilies`.
@@ -55,6 +107,31 @@ Then implement in this order:
 
 Avoid making a job that only pays cash. A good dispatch should test at least one
 RPG identity: a skill, a trait, a tool, a reputation lean, or a ledger habit.
+
+## Incremental Roadmap
+
+Do these in small commits. Each step should answer one playability question and
+be easy to verify in the browser.
+
+1. **Job checklist pass:** Keep this document current and use it before adding
+   any new dispatch.
+2. **Choice clarity pass:** Add short skill/reputation hints to a few existing
+   choices so players understand why stats matter.
+3. **Company pressure pass:** Give Radnor Rack & Wire one or two visible
+   company-pressure effects, such as management favoring clean tickets while
+   field-quality choices build client and coworker trust.
+4. **Skill identity pass:** Decide whether advanced AV areas like networking,
+   DSP/audio, and control systems are full skills, job tags, or character flavor
+   stats before adding them to the visible skill tree.
+5. **Worked job pass:** Add one new dispatch using the checklist. Prefer one
+   tight example over adding several job ideas at once.
+6. **Authoring example pass:** After the next dispatch exists, document it as a
+   worked example for future contributors.
+7. **Save migration pass:** Add a small migration helper before renaming stable
+   IDs or changing saved data shapes again.
+
+Stop after each pass and play through the affected area. The prototype should
+grow by proving a loop, not by accumulating menus.
 
 ## Add A New Skill
 
