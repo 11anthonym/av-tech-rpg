@@ -47,6 +47,13 @@ The playable slice now has:
    check-in questions.
 18. A lightweight expansion skeleton for job families, company context, and
    data-driven trait bonuses.
+19. Visible company-pressure rules for Radnor Rack & Wire, so bad-company
+   incentives are legible before they become hidden balance math.
+20. An expanded skill foundation for Commercial Process, Networking,
+   DSP / Audio, and Control Systems, including a first Systems Fundamentals
+   training choice.
+21. A heavier end-of-shift fatigue tradeoff where staying late or helping Josh
+   is useful but meaningfully borrows from tomorrow.
 
 ## Playtest Questions
 
@@ -91,6 +98,12 @@ Watch a player complete the current build before expanding it. Look for:
 - Does the executive handoff make "can the client use it?" feel like a real AV
   success condition?
 - Does the dispatch board make consequences and skipped/triggered work obvious?
+- Do company-pressure rules help the bad shop feel intentional instead of
+  random or unfair?
+- Do advanced systems skills feel like a clear future path, or do they distract
+  from the early field-tech loop?
+- Do stay-late choices feel heavy enough now that they add burnout and reduce
+  tomorrow's comfort?
 - Are the AV jokes legible to newcomers and recognizable to working techs?
 - Does the completion card make players curious about one more dispatch?
 
@@ -243,15 +256,58 @@ Playtest whether the preview is enough to make the first-day differences clear.
 If the choices still feel abstract, the next pass should add more explicit
 first-job consequence text to the preview.
 
-## Next Experiment
+## Next Build Prep
 
-After a playtest pass, add only one small quality pass: tighten any confusing
-objective text, result screen, or too-slow walking/carrying beat found during
-play.
+Do not build all of these at once. Pick one small pass, play it, then commit.
 
-## Later Experiments
+### Recommended Next Slice: Systems-Flavored Service Job
 
-- **Cherry Hill Return Toll:** Test one readable travel-cost decision.
+Playability question: can the new advanced skills matter in one readable job
+without adding a programmer minigame or a generic quest engine?
+
+Candidate shape:
+
+```txt
+Working title: King of Prussia Room Offline
+Job family: service
+Company: Radnor Rack & Wire
+Map/scene: client conference room or simplified telecom closet
+Why it is on the board: client says the room is offline; dispatch says "probably reboot it."
+Core skills: troubleshooting, networking, controlSystems, documentation
+Prep choice: review network notes, ask Josh what changed, or leave immediately
+Three things to inspect or do: check panel status, verify device/network path, compare room note to actual rack
+Final choice: document the network/control mismatch, quick reboot and close ticket, or call out the scope miss
+Good outcome: client/coworker trust, useful notes, possible management friction
+Fast/bad-company outcome: management likes clean ticket, callback or return-trip risk remains
+What remembers it: callback ledger, documentation habit, future systems-training value
+```
+
+Scope guardrail: one prep choice, two or three checks, one final result modal.
+No new map system, no real IP addressing puzzle, no company-specific engine.
+
+### Second Choice: End-Of-Shift Balance Playtest
+
+Playability question: are clock-out, prep, help-Josh, and recovery-day choices
+now meaningfully different?
+
+What to watch:
+
+- Does staying late feel useful but painful?
+- Does helping Josh feel like relationship investment rather than free rep?
+- Does recovery day feel like a legitimate answer when burnout stacks?
+- Are the labels clear enough before the player clicks?
+
+Only tune numbers after one short playthrough from low-energy state and one from
+near-full-energy state.
+
+### Third Choice: Travel-Cost Micro-Job
+
+Playability question: can the game show the real cost of poor dispatch planning
+with one travel decision instead of a route simulator?
+
+Candidate shape: a Cherry Hill return or toll/parking decision that tests cash,
+energy, management pressure, and documentation. Keep it as a single dispatch
+beat unless the existing service loop needs a lighter change of pace.
 
 ## Prototype Guardrail
 

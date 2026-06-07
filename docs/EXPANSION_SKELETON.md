@@ -113,22 +113,21 @@ RPG identity: a skill, a trait, a tool, a reputation lean, or a ledger habit.
 Do these in small commits. Each step should answer one playability question and
 be easy to verify in the browser.
 
-1. **Job checklist pass:** Keep this document current and use it before adding
-   any new dispatch.
-2. **Choice clarity pass:** Add short skill/reputation hints to a few existing
-   choices so players understand why stats matter.
-3. **Company pressure pass:** Give Radnor Rack & Wire one or two visible
-   company-pressure effects, such as management favoring clean tickets while
+1. **Done - Job checklist pass:** Keep this document current and use it before
+   adding any new dispatch.
+2. **Done - Choice clarity pass:** Add short skill/reputation hints to a few
+   existing choices so players understand why stats matter.
+3. **Done - Company pressure pass:** Give Radnor Rack & Wire visible
+   company-pressure rules, such as management favoring clean tickets while
    field-quality choices build client and coworker trust.
-4. **Skill identity pass:** Decide whether advanced AV areas like networking,
-   DSP/audio, and control systems are full skills, job tags, or character flavor
-   stats before adding them to the visible skill tree.
-5. **Worked job pass:** Add one new dispatch using the checklist. Prefer one
-   tight example over adding several job ideas at once.
-6. **Authoring example pass:** After the next dispatch exists, document it as a
-   worked example for future contributors.
-7. **Save migration pass:** Add a small migration helper before renaming stable
-   IDs or changing saved data shapes again.
+4. **Done - Skill identity pass:** Advanced AV areas are now visible skills:
+   Commercial Process, Networking, DSP / Audio, and Control Systems.
+5. **Next - Worked job pass:** Add one new dispatch using the checklist. Prefer
+   one tight example over adding several job ideas at once.
+6. **Later - Authoring example pass:** After the next dispatch exists, document
+   it as a worked example for future contributors.
+7. **Later - Save migration pass:** Add a small migration helper before
+   renaming stable IDs or changing saved data shapes again.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
