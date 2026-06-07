@@ -24,6 +24,17 @@ through use.
   experience here is: "my technician is becoming a recognizable kind of field
   tech because of the work I choose and the habits I build."
   [Source](https://www.cs.northwestern.edu/~hunicke/MDA.pdf)
+- The **Stardew Valley skills model** is useful because skills improve through
+  relevant actions, then specializations make future play feel different without
+  turning the game into a spreadsheet. AV Tech RPG should use that lesson for
+  dispatch habits: a documentation-minded tech should feel different during
+  surveys, access problems, and handoffs.
+  [Source](https://stardewvalleywiki.com/Skills)
+- **AVIXA's CTS overview** frames general AV work around creating,
+  implementing, supporting, and servicing AV solutions for client needs. That
+  maps cleanly to this prototype's five readable skill branches: install,
+  troubleshooting, documentation, client communication, and fieldcraft.
+  [Source](https://www.avixa.org/training-certification/certification/cts-certification)
 
 ## Design Goals
 
@@ -93,24 +104,28 @@ The creator data lives in `content.characterCreation`:
 ## Premade Template Mapping
 
 - **Wiley:** Residential Installer + Parts Brain + Make It Work.
-- **Organized Rookie:** Green Apprentice + Measure Twice + Notebook Habit.
-- **Prototype Tech:** Green Apprentice + Calm Under Fire.
+- **Alex:** Green Apprentice + Calm Under Fire.
+- **Casey:** Warehouse Runner + Measure Twice + Notebook Habit.
+- **Jordan:** Helpdesk Convert + By The Book + Notebook Habit + Knows A Guy.
+- **Morgan:** Live Events Tech + Calm Under Fire + Knows A Guy + Steady Hands.
 
 ## Current Implementation
 
 1. Premade cards show their creator formula so players can read Wiley and other
    profiles as examples of the same system.
 2. The selection screen includes a working "Custom Technician Creator" card.
-3. The creator modal lets the player:
+3. Alex keeps the internal `prototype-tech` ID for save compatibility, but the
+   player-facing starter profile is now a balanced commercial helper.
+4. The creator modal lets the player:
    - name the technician
    - pick a background
    - pick a work style
    - pick two traits
    - pick two primary and two secondary skills
    - preview final stats, starting tools, tradeoffs, and core skill values
-4. Custom characters are stored as ordinary technician objects in the save under
+5. Custom characters are stored as ordinary technician objects in the save under
    `customTechnician`, while premade careers still store only `technicianId`.
-5. Save format `16` is the first version that persists custom technician builds.
+6. Save format `16` is the first version that persists custom technician builds.
 
 ## Open Balance Questions
 

@@ -436,6 +436,10 @@ function hasCharacterTrait(traitId) {
   return state.technician?.traits?.includes(traitId) || false;
 }
 
+function hasAnyCharacterTrait(traitIds) {
+  return traitIds.some((traitId) => hasCharacterTrait(traitId));
+}
+
 function getCharacterStat(statId) {
   return state.technician?.characterStats?.[statId] || 0;
 }
@@ -480,8 +484,24 @@ function getSkillValue(skillId) {
     + getShiftPrepSkillBonus(skillId);
 }
 
-function getSkillCheckResult({ skillId, difficulty, contextBonus = 0 }) {
-  const score = getSkillValue(skillId) + contextBonus;
+function getTraitContextBonus(skillId, contextId = "") {
+  let bonus = 0;
+  const documentationContexts = ["survey-documentation", "secure-access-documentation", "callback-documentation", "handoff-documentation", "commissioning-documentation"];
+  const pressureContexts = ["survey-pressure", "secure-access-pressure", "handoff-pressure", "commissioning-pressure"];
+  const handsOnContexts = ["cart-assembly", "service-install", "commissioning-termination"];
+  const troubleshootingContexts = ["service-diagnosis", "commissioning-troubleshooting", "callback-troubleshooting"];
+
+  if (skillId === "documentation" && documentationContexts.includes(contextId) && hasAnyCharacterTrait(["notebookHabit", "byTheBook"])) bonus += 1;
+  if (skillId === "clientCommunication" && pressureContexts.includes(contextId) && hasCharacterTrait("calmUnderFire")) bonus += 1;
+  if (skillId === "clientCommunication" && pressureContexts.includes(contextId) && hasCharacterTrait("knowsAGuy")) bonus += 1;
+  if (skillId === "install" && handsOnContexts.includes(contextId) && hasCharacterTrait("steadyHands")) bonus += 1;
+  if (skillId === "troubleshooting" && troubleshootingContexts.includes(contextId) && hasCharacterTrait("byTheBook")) bonus += 1;
+
+  return bonus;
+}
+
+function getSkillCheckResult({ skillId, difficulty, contextBonus = 0, contextId = "" }) {
+  const score = getSkillValue(skillId) + contextBonus + getTraitContextBonus(skillId, contextId);
   const margin = score - difficulty;
   const tier = margin >= 2 ? "clean" : margin >= 0 ? "solid" : margin === -1 ? "strained" : "miss";
   return {
@@ -675,12 +695,36 @@ function canUseMakeThatWorkShortcut() {
   return hasCharacterTrait("makeThatWork") && getCharacterStat("improvisation") >= 4;
 }
 
+function canUsePressureChoice() {
+  return getConfidence() >= 2 || hasCharacterTrait("calmUnderFire") || getSkillValue("clientCommunication") >= 4;
+}
+
 function getDocumentationHabitReduction() {
   return state.stats.accessRisksDocumented + state.stats.accessDelaysDocumented >= 2 ? 1 : 0;
 }
 
+function getDocumentationTraitReduction() {
+  return hasAnyCharacterTrait(["notebookHabit", "byTheBook"]) ? 1 : 0;
+}
+
+function getDocumentationSupportReduction() {
+  return Math.min(1, getDocumentationHabitReduction() + getDocumentationTraitReduction());
+}
+
 function getCarefulWorkReduction() {
   return state.stats.carefulFinishes >= 2 ? 1 : 0;
+}
+
+function getCarefulTraitReduction() {
+  return hasCharacterTrait("measureTwice") ? 1 : 0;
+}
+
+function getCarefulTaskReduction() {
+  return Math.min(1, getCarefulWorkReduction() + getCarefulTraitReduction());
+}
+
+function getLongCarryPenalty(baseCost) {
+  return hasCharacterTrait("badKnees") && baseCost >= 3 ? 1 : 0;
 }
 
 function getOpenCallbackPenalty() {
@@ -696,7 +740,7 @@ function getCarryCapacity(sceneId = state.sceneId) {
 }
 
 function getEquipmentEnergyCost(baseCost) {
-  return Math.max(0, baseCost - getToolModifier("pickupEnergyReduction"));
+  return Math.max(0, baseCost - getToolModifier("pickupEnergyReduction") + getLongCarryPenalty(baseCost));
 }
 
 function getAssemblyEnergyCost(baseCost) {
@@ -709,7 +753,8 @@ function getVerificationEnergyCost(baseCost) {
 }
 
 function getServiceDiagnosisEnergyCost(baseCost) {
-  return Math.max(0, baseCost - (state.flags.servicePreparation === "review" ? 1 : 0));
+  const preparationBonus = ["review", "contact"].includes(state.flags.servicePreparation) ? 1 : 0;
+  return Math.max(0, baseCost - preparationBonus);
 }
 
 function getServiceVerificationEnergyCost(baseCost) {
@@ -1177,9 +1222,7 @@ function startGame(technicianOrId) {
   state.energy = state.technician.stats.energy;
   state.burnout = state.technician.stats.burnout;
   state.cash = state.technician.startingCash || 0;
-  addLog(state.technician.custom
-    ? `${state.technician.name}'s first day started from a custom build. Nobody mentioned an onboarding packet.`
-    : "First day started. Nobody mentioned an onboarding packet.");
+  addLog(`${state.technician.name}'s first day started${state.technician.custom ? " from a custom build" : ""}. Nobody mentioned an onboarding packet.`);
   elements.selection.classList.add("hidden");
   elements.gameLayout.classList.remove("hidden");
   elements.menuButton.classList.remove("hidden");
@@ -1265,6 +1308,10 @@ function showSupervisorDeparture() {
   });
 }
 
+function getCableDressEnergyCost() {
+  return Math.max(0, 13 - getCarefulTaskReduction());
+}
+
 function showFinishChoice() {
   setClock("MON 5:46 PM");
   showModal({
@@ -1277,7 +1324,7 @@ function showFinishChoice() {
       <p><strong>Energy:</strong> ${state.energy}/${getMaxEnergy()}</p>
     `,
     actions: [
-      { label: "Dress the cables properly (+35 min)", onClick: () => finishJob("tidy") },
+      { label: `Dress the cables properly (+35 min, -${getCableDressEnergyCost()} energy)`, onClick: () => finishJob("tidy") },
       ...(canUseMakeThatWorkShortcut() ? [{
         label: "Use the adapter workaround and leave",
         className: "secondary-button",
@@ -1292,7 +1339,7 @@ function finishJob(choice) {
   state.flags.finished = true;
   state.flags.finishChoice = choice;
   if (choice === "tidy") {
-    changeEnergy(-13);
+    changeEnergy(-getCableDressEnergyCost());
     state.burnout += 1;
     setClock("MON 6:21 PM");
     addLog("Cable routing cleaned up. Client is happy. Management notices the clock.");
@@ -1427,12 +1474,12 @@ function useCircuitHutPartsBrain() {
   const dispatchKey = getCurrentDispatchKey();
   const find = getPartsBrainFind();
   getUsedPartsBrainDispatches()[dispatchKey] = find;
-  addLog(`Wiley checked the Circuit Hut organizer and found a ${find}.`);
+  addLog(`${state.technician.name} checked the Circuit Hut organizer and found a ${find}.`);
   showModal({
     kicker: "Circuit Hut Parts Brain",
     title: "Small Part, Big Judgment Call",
     body: `
-      <p>Wiley digs through the old parts organizer and finds a <strong>${find}</strong>.</p>
+      <p>${state.technician.name} digs through the old parts organizer and finds a <strong>${find}</strong>.</p>
       <p>This can help with testing during the current dispatch. It does not automatically make the workaround acceptable for final closeout.</p>
       <blockquote>${state.technician.name}: "${getCharacterLine("partsBrainQuote", "This is fine for testing. Permanent is where the paperwork starts.")}"</blockquote>
     `,
@@ -1498,6 +1545,16 @@ function showCareerClipboard() {
 
 function getCareerEffectsMarkup() {
   const effects = [
+    {
+      active: getDocumentationTraitReduction() > 0,
+      name: "Character documentation habit",
+      description: "Notebook Habit or By The Book reduces report, access-delay, and handoff paperwork by 1 energy from the start.",
+    },
+    {
+      active: getCarefulTraitReduction() > 0,
+      name: "Measure Twice tendency",
+      description: "Careful closeout and repair choices cost 1 less energy before the career-wide rhythm is built.",
+    },
     {
       active: getDocumentationHabitReduction() > 0,
       name: "Documentation habit",
@@ -1774,7 +1831,7 @@ function showDispatchPreview() {
     return showSecureAccessDispatchPreview();
   }
   if (state.flags.commissioningComplete) {
-    if (hasPendingTraining()) return notify("Mark your new field-training focus on the clipboard before closing out the prototype.");
+    if (hasPendingTraining()) return notify("Mark your new field-training focus on the clipboard before taking another dispatch.");
     return showWarehouseDispatchPreview();
   }
   if (state.flags.surveyComplete) {
@@ -1845,7 +1902,7 @@ function getDispatchBoardMarkup({ type, setup, why, stakes, note, managementNote
 function getUpcomingDispatchText() {
   return content.upcomingDispatches.length
     ? content.upcomingDispatches.map((dispatch) => `[LOCKED] ${dispatch.title}: ${dispatch.summary}`).join(" ")
-    : "More erasable-marker work will be added after this prototype pass.";
+    : "More erasable-marker work will be added after this board clears.";
 }
 
 function showPrototypeSummary() {
@@ -1853,10 +1910,10 @@ function showPrototypeSummary() {
   state.flags.prototypeSummaryViewed = true;
   render();
   showModal({
-    kicker: "Current Prototype Complete",
+    kicker: "Current Board Complete",
     title: `Level ${rank.level} ${rank.name}`,
     body: `
-      <p>You completed the currently playable dispatches. The Broomall board already has more work written in erasable marker.</p>
+      <p>You cleared the current Broomall dispatch board. More work is already written in erasable marker.</p>
       <div class="results-grid">
         <span>Experience</span><strong>${state.xp} XP</strong>
         <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
@@ -1870,7 +1927,7 @@ function showPrototypeSummary() {
       <ul class="modal-list">
         ${content.upcomingDispatches.map((dispatch) => `<li><strong>[LOCKED] ${dispatch.title}</strong><span>${dispatch.summary}</span></li>`).join("")}
       </ul>
-      <p><strong>Prototype playtest questions:</strong></p>
+      <p><strong>Career check-in:</strong></p>
       <ul class="modal-list">
         <li><strong>Did the walking stay purposeful?</strong><span>Loading and carrying should explain the job without becoming repetitive.</span></li>
         <li><strong>Did your choices feel visible?</strong><span>Your tools, preparation, diagnosis, survey report, commissioning notes, stockroom decision, and access-delay report should change how the workday plays.</span></li>
@@ -1943,6 +2000,7 @@ function inspectWarehouseLocation(checkId) {
     skillId: "fieldcraft",
     difficulty: checkId === "returns" ? 4 : 3,
     contextBonus: state.flags.warehouseStarted ? 0 : -1,
+    contextId: "warehouse-search",
   });
   const energyCost = Math.max(0, getWarehouseSearchEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
   changeEnergy(-energyCost);
@@ -2132,7 +2190,7 @@ function getSecureAccessCheckEnergyCost() {
 }
 
 function getSecureAccessReportEnergyCost(baseCost) {
-  return Math.max(0, baseCost - (state.flags.secureAccessPreparation === "contact" ? 1 : 0) - getDocumentationHabitReduction());
+  return Math.max(0, baseCost - (state.flags.secureAccessPreparation === "contact" ? 1 : 0) - getDocumentationSupportReduction());
 }
 
 function inspectSecureAccessCondition(checkId) {
@@ -2143,6 +2201,7 @@ function inspectSecureAccessCondition(checkId) {
     skillId: checkId === "escort" ? "clientCommunication" : "documentation",
     difficulty: checkId === "escort" ? 4 : 3,
     contextBonus: state.flags.secureAccessPreparation === "review" ? 1 : 0,
+    contextId: checkId === "escort" ? "secure-access-pressure" : "secure-access-documentation",
   });
   const energyCost = Math.max(0, getSecureAccessCheckEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
   changeEnergy(-energyCost);
@@ -2170,12 +2229,12 @@ function showSecureAccessChoice() {
     body: `
       <p>Security, the building number, and the escort policy all disagree with the dispatch estimate. The rack update itself is small; getting permission to reach it is the job.</p>
       <p>Management wants the ticket kept clean. The client would prefer an honest ETA over another vague "tech onsite" update.</p>
-      ${getDocumentationHabitReduction() ? `<p class="muted">Your documentation habit makes the access-delay note faster to write.</p>` : ""}
+      ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits make the access-delay note faster to write.</p>` : ""}
       ${getOpenCallbackPenalty() ? `<p class="muted">The open callback still on the ledger made today's access shuffle feel heavier.</p>` : ""}
     `,
     actions: [
       { label: `Document access delay and update ETA (-${getSecureAccessReportEnergyCost(4)} energy)`, onClick: () => finishSecureAccess("document") },
-      ...(getConfidence() >= 2 ? [{
+      ...(canUsePressureChoice() ? [{
         label: `Push dispatch to own the access miss (-${getSecureAccessReportEnergyCost(3)} energy)`,
         className: "secondary-button",
         onClick: () => finishSecureAccess("pushback"),
@@ -2299,7 +2358,7 @@ function getCallbackCleanupCheckEnergyCost() {
 }
 
 function getCallbackCleanupRepairEnergyCost(baseCost) {
-  return Math.max(0, getVerificationEnergyCost(baseCost) - getCarefulWorkReduction());
+  return Math.max(0, getVerificationEnergyCost(baseCost) - getCarefulTaskReduction());
 }
 
 function inspectCallbackCleanupCondition(checkId) {
@@ -2309,6 +2368,7 @@ function inspectCallbackCleanupCondition(checkId) {
   const skillCheck = resolveSkillCheck(`callback-${checkId}`, {
     skillId: checkId === "actual-fault" ? "troubleshooting" : "documentation",
     difficulty: checkId === "actual-fault" ? 4 : 3,
+    contextId: checkId === "actual-fault" ? "callback-troubleshooting" : "callback-documentation",
   });
   const energyCost = Math.max(0, getCallbackCleanupCheckEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
   changeEnergy(-energyCost);
@@ -2335,7 +2395,7 @@ function showCallbackCleanupChoice() {
     title: "The Callback Has A Cause",
     body: `
       <p>The issue came back because the previous closeout skipped the boring verification. The room can be fixed, documented, and removed from the callback ledger, or it can be made quiet enough for the ticket to close again.</p>
-      ${getCarefulWorkReduction() ? `<p class="muted">Your careful-work rhythm reduces the proper fix cost by 1 energy.</p>` : ""}
+      ${getCarefulTaskReduction() ? `<p class="muted">Your careful-work habits reduce the proper fix cost by 1 energy.</p>` : ""}
     `,
     actions: [
       { label: `Fix root cause and update notes (-${getCallbackCleanupRepairEnergyCost(6)} energy)`, onClick: () => finishCallbackCleanup("root") },
@@ -2459,11 +2519,11 @@ function promptHandoffTravel() {
 }
 
 function getHandoffCheckEnergyCost() {
-  return Math.max(0, 2 - getDocumentationHabitReduction());
+  return Math.max(0, 2 - getDocumentationSupportReduction());
 }
 
 function getHandoffEnergyCost(baseCost) {
-  return Math.max(0, baseCost - getDocumentationHabitReduction());
+  return Math.max(0, baseCost - getDocumentationSupportReduction());
 }
 
 function inspectHandoffCondition(checkId) {
@@ -2473,7 +2533,8 @@ function inspectHandoffCondition(checkId) {
   const skillCheck = resolveSkillCheck(`handoff-${checkId}`, {
     skillId: checkId === "client-need" ? "clientCommunication" : "documentation",
     difficulty: checkId === "client-need" ? 4 : 3,
-    contextBonus: getDocumentationHabitReduction(),
+    contextBonus: getDocumentationSupportReduction(),
+    contextId: checkId === "client-need" ? "handoff-pressure" : "handoff-documentation",
   });
   const energyCost = Math.max(0, getHandoffCheckEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
   changeEnergy(-energyCost);
@@ -2500,11 +2561,11 @@ function showHandoffChoice() {
     title: "The Room Works If Someone Explains It",
     body: `
       <p>The client does not need every feature. They need the morning meeting to start without a group of executives silently watching a laptop search for audio.</p>
-      ${getDocumentationHabitReduction() ? `<p class="muted">Your documentation habit makes the walkthrough notes and cheat sheet faster to prepare.</p>` : ""}
+      ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits make the walkthrough notes and cheat sheet faster to prepare.</p>` : ""}
     `,
     actions: [
       { label: `Patient walkthrough of the daily path (-${getHandoffEnergyCost(4)} energy)`, onClick: () => finishHandoff("patient") },
-      ...(getConfidence() >= 2 ? [{
+      ...(canUsePressureChoice() ? [{
         label: `Rewrite the cheat sheet in client language (-${getHandoffEnergyCost(3)} energy)`,
         className: "secondary-button",
         onClick: () => finishHandoff("cheat"),
@@ -2575,7 +2636,7 @@ function showCommissioningDispatchPreview() {
     body: getDispatchBoardMarkup({
       type: "Commissioning",
       setup: "Verify a small South Philadelphia training room before client handoff. The installation ticket is closed, but the client says one side of the room sounds quieter.",
-      why: "Unlocked after the University City survey. The prototype is testing incomplete-site troubleshooting.",
+      why: "Unlocked after the University City survey. This job tests whether incomplete-site troubleshooting can become a clean closeout.",
       stakes: [
         "Craftsmanship can unlock a cleaner punch-list option.",
         "Passing the room protects management's schedule.",
@@ -2619,12 +2680,12 @@ function getCommissioningCheckEnergyCost() {
 }
 
 function getCommissioningRepairEnergyCost(baseCost) {
-  return Math.max(0, getVerificationEnergyCost(baseCost) - getCarefulWorkReduction());
+  return Math.max(0, getVerificationEnergyCost(baseCost) - getCarefulTaskReduction());
 }
 
 function getCommissioningTerminationTaskEnergyCost(action) {
   const baseCosts = { quick: 2, clean: 5, label: 4, document: 3 };
-  const carefulDiscount = action === "quick" ? 0 : getCarefulWorkReduction();
+  const carefulDiscount = action === "quick" ? 0 : getCarefulTaskReduction();
   return Math.max(0, getVerificationEnergyCost(baseCosts[action] || 3) - carefulDiscount);
 }
 
@@ -2705,6 +2766,7 @@ function getCommissioningTerminationSkillCheck(action) {
       skillId: "install",
       difficulty: state.flags.terminationSkillStrained ? 5 : 4,
       contextBonus: getCarefulWorkReduction(),
+      contextId: "commissioning-termination",
     });
   }
   if (action === "label") {
@@ -2712,12 +2774,14 @@ function getCommissioningTerminationSkillCheck(action) {
       skillId: "documentation",
       difficulty: 4,
       contextBonus: ownsTool("labeler") ? 2 : 0,
+      contextId: "commissioning-documentation",
     });
   }
   return resolveSkillCheck("commissioning-termination-action-document", {
     skillId: "clientCommunication",
     difficulty: 3,
-    contextBonus: getDocumentationHabitReduction(),
+    contextBonus: getDocumentationSupportReduction(),
+    contextId: "commissioning-pressure",
   });
 }
 
@@ -2811,6 +2875,7 @@ function inspectCommissioningCondition(checkId) {
     skillId: checkId === "termination" ? "install" : checkId === "drawing" ? "documentation" : "troubleshooting",
     difficulty: checkId === "termination" ? 4 : 3,
     contextBonus: checkId === "termination" && ownsTool("labeler") ? 1 : 0,
+    contextId: checkId === "termination" ? "commissioning-termination" : checkId === "drawing" ? "commissioning-documentation" : "commissioning-troubleshooting",
   });
   const energyCost = Math.max(0, getCommissioningCheckEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
   changeEnergy(-energyCost);
@@ -2851,7 +2916,7 @@ function showCommissioningChoice() {
       <p>The third ceiling speaker is silent because its termination is loose. The drawing is for a mirrored room across the hall, which explains why the closed ticket was so confident.</p>
       <p>The client would like the room working. Project management would like the completion sheet to remain emotionally undisturbed.</p>
       ${getCommissioningTerminationTaskSummaryMarkup()}
-      ${getCarefulWorkReduction() ? `<p class="muted">Your careful finishes are paying off: repair and punch-list work costs 1 less energy.</p>` : ""}
+      ${getCarefulTaskReduction() ? `<p class="muted">Your careful-work habits are paying off: repair and punch-list work costs 1 less energy.</p>` : ""}
       ${state.flags.commissioningTerminationCallbackRisk ? `<p class="muted">The field task left a return-trip risk. A clean punch-list closeout can expose it before it becomes a surprise callback.</p>` : ""}
     `,
     actions: [
@@ -3064,7 +3129,7 @@ function getSurveyInspectionEnergyCost() {
 }
 
 function getSurveyReportEnergyCost(baseCost) {
-  return Math.max(0, baseCost - (state.flags.surveyPreparation === "sketch" ? 1 : 0) - getDocumentationHabitReduction());
+  return Math.max(0, baseCost - (state.flags.surveyPreparation === "sketch" ? 1 : 0) - getDocumentationSupportReduction());
 }
 
 function inspectSurveyConstraint(inspectionId) {
@@ -3075,6 +3140,7 @@ function inspectSurveyConstraint(inspectionId) {
     skillId: inspectionId === "wall" ? "install" : "documentation",
     difficulty: inspectionId === "wall" ? 3 : 4,
     contextBonus: state.flags.surveyPreparation === "measure" ? 1 : 0,
+    contextId: inspectionId === "wall" ? "survey-wall" : "survey-documentation",
   });
   const energyCost = Math.max(0, getSurveyInspectionEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
   changeEnergy(-energyCost);
@@ -3103,12 +3169,12 @@ function showSurveyReportChoice() {
     body: `
       <p>The 98-inch display fits on the classroom wall. It does not fit through the elevator opening, and the hallway turn offers no useful miracle.</p>
       <p>Sales wants the survey closed today because the quote is "basically approved."</p>
-      ${getDocumentationHabitReduction() ? `<p class="muted">Your documentation habit makes this report cost 1 less energy.</p>` : ""}
+      ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits make this report cost 1 less energy.</p>` : ""}
       ${state.flags.surveyDocumentationStrained ? `<p class="muted">Your access notes are thin. Documenting still helps, but calling sales directly prevents the weak notes from being buried.</p>` : ""}
     `,
     actions: [
       { label: `Document the access constraint (-${getSurveyReportEnergyCost(3)} energy)`, onClick: () => finishSurvey("document") },
-      ...(getConfidence() >= 2 ? [{
+      ...(canUsePressureChoice() ? [{
         label: `Call sales and push back calmly (-${getSurveyReportEnergyCost(2)} energy)`,
         className: "secondary-button",
         onClick: () => finishSurvey("pushback"),
@@ -3180,6 +3246,7 @@ function getServicePreparationLabel() {
     lunch: "Packed lunch",
     coffee: "Shop coffee",
     josh: "Asked Josh for advice",
+    contact: "Texted a site contact",
     none: "No extra preparation",
   }[state.flags.servicePreparation] || "None";
 }
@@ -3194,6 +3261,11 @@ function showServicePreparation() {
     `,
     actions: [
       { label: "Review the work order", onClick: () => chooseServicePreparation("review") },
+      ...(hasCharacterTrait("knowsAGuy") ? [{
+        label: "Text someone who has worked this site",
+        className: "secondary-button",
+        onClick: () => chooseServicePreparation("contact"),
+      }] : []),
       ...(!state.flags.packedLunchReady ? [{ label: "Pack lunch from the break area", className: "secondary-button", onClick: () => chooseServicePreparation("lunch") }] : []),
       ...(state.cash >= 5 ? [{
         label: "Buy shop coffee - $5",
@@ -3242,6 +3314,12 @@ function chooseServicePreparation(preparation) {
       <p class="muted">Signal-path verification will cost 1 less energy.</p>`;
     if (!state.flags.metJosh) addLog("Asked Josh for advice while management investigated the Van #2 remote collection.");
     state.flags.metJosh = true;
+  }
+  if (preparation === "contact") {
+    title = "Somebody Has Seen This Room";
+    body = `<p>You text a former coworker who remembers this client. They reply with a blurry photo, a warning about the credenza, and the phrase "check the coupler before blaming the display."</p>
+      <p class="muted">Diagnosis will cost 1 less energy. Management will never understand why this helped.</p>`;
+    addLog("Texted someone who had worked the Conshohocken room before. The coupler warning was oddly specific.");
   }
   render();
   showModal({
@@ -3855,7 +3933,8 @@ function chooseServiceApproach(approach) {
     const skillCheck = resolveSkillCheck("service-signal-path", {
       skillId: "troubleshooting",
       difficulty: 4,
-      contextBonus: (state.flags.servicePreparation === "review" ? 1 : 0) + (state.flags.servicePreparation === "josh" ? 1 : 0),
+      contextBonus: (state.flags.servicePreparation === "review" ? 1 : 0) + (state.flags.servicePreparation === "josh" ? 1 : 0) + (state.flags.servicePreparation === "contact" ? 1 : 0),
+      contextId: "service-diagnosis",
     });
     const energyCost = Math.max(0, getServiceVerificationEnergyCost(4) + (skillCheck.successful ? 0 : 2) - (skillCheck.tier === "clean" ? 1 : 0));
     changeEnergy(-energyCost);
@@ -3875,6 +3954,7 @@ function installServicePart() {
   const skillCheck = resolveSkillCheck(`service-install-${items.join("-")}`, {
     skillId: "install",
     difficulty: items.includes("replacement-display") ? 4 : 3,
+    contextId: "service-install",
   });
   state.serviceDelivered.push(...items);
   state.serviceInstalled.push(...items);
@@ -3906,6 +3986,7 @@ function installCartPart(destination) {
   const skillCheck = resolveSkillCheck(`cart-${part.id}`, {
     skillId: "install",
     difficulty: part.id.includes("display") ? 4 : 3,
+    contextId: "cart-assembly",
   });
   state.assembled.push(part.id);
   state.carry = [];
@@ -3942,7 +4023,7 @@ function getObjective() {
     if (state.flags.secureAccessComplete && !state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0) return "Review the warranty return on the dispatch board.";
     if (state.flags.secureAccessComplete && !state.flags.handoffComplete) return "Review the executive handoff on the dispatch board.";
     if (state.flags.secureAccessComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
-    if (state.flags.secureAccessComplete) return "Current prototype complete. Explore the shop.";
+    if (state.flags.secureAccessComplete) return "Current dispatch board complete. Explore the shop.";
     if (state.flags.finished) return "Prepare for the Conshohocken service call.";
     if (!state.flags.shopBrief) return "Find your supervisor.";
     if (state.loaded.length < content.tutorial.shopLoad.length) return `Load staged equipment into Van #3 (${state.loaded.length}/3).`;
@@ -4258,7 +4339,7 @@ function showCharacterCreator() {
     kicker: "Custom Technician",
     title: "Build Your First Tech",
     body: `
-      <p>Pick a work background, work style, two traits, and four major skill focuses. This first release keeps the creator compact, but the resulting technician is playable and saved like a premade.</p>
+      <p>Pick a work background, work style, two traits, and four major skill focuses. The creator stays compact, but the resulting technician is playable and saved like a premade.</p>
       <div class="creator-form">
         <label>Name <input id="creator-name" maxlength="32" value="Custom Tech" /></label>
         <label>Background ${getCreatorSelectMarkup("creator-background", creator.backgrounds, "green-apprentice")}</label>
@@ -4336,14 +4417,14 @@ function renderCharacterCreatorCard() {
   card.className = "technician-card creator-preview-card";
   if (!creator) {
     card.innerHTML = `
-      <p class="eyebrow">Future Feature</p>
+      <p class="eyebrow">Custom Build</p>
       <h3>Custom Technician</h3>
       <p>Character creation planning has not been configured yet.</p>
     `;
     return card;
   }
   card.innerHTML = `
-    <p class="eyebrow">Future Feature</p>
+    <p class="eyebrow">Custom Build</p>
     <h3>Custom Technician Creator</h3>
     <p>${creator.summary}</p>
     <p class="starting-kit"><strong>Backgrounds:</strong> ${creator.backgrounds.map((item) => item.name).join(", ")}</p>

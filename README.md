@@ -30,10 +30,10 @@ Build one small playable career loop:
 The prototype should answer one question: is it funny and satisfying to survive
 a badly managed AV workday while gradually becoming a more capable technician?
 
-The current browser prototype includes a small technician selection with two
-starting profiles, a walkable Broomall shop, van loading, a scripted Center City
-East trip, garage unloading, client check-in, the two-cart tutorial, fatigue, a
-starter tool reward, and a post-tutorial shop hub for recovery and
+The current browser prototype includes a small premade technician roster, a
+custom technician creator, a walkable Broomall shop, van loading, a scripted
+Center City East trip, garage unloading, client check-in, the two-cart tutorial,
+fatigue, a starter tool reward, and a post-tutorial shop hub for recovery and
 personal-tool purchases. Completed dispatches now return to an end-of-shift
 closeout where the player can clock out, stay late to prep, help Josh, or take a
 recovery day before the next job unlocks. A second Conshohocken service dispatch
@@ -63,8 +63,10 @@ mismatch, or use Josh's labeler if they earned it, and that task outcome changes
 XP, reputation, and callback debt. A short Broomall warehouse run closes the
 slice by sending the player through Van #3, the staging shelf, and the
 mystery-return pile for a replacement power supply reportedly stored in one of
-the vans. The slice ends with a snapshot of the player's progress plus locked
-previews of future dispatches.
+the vans. The roster now includes Alex, Casey, Wiley, Jordan, and Morgan, with
+trait hooks that affect early prep choices, skill checks, careful closeout, and
+client-pressure decisions. The slice ends with a snapshot of the player's
+progress plus locked previews of future dispatches.
 
 ## Design Notes
 
