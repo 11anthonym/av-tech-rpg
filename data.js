@@ -150,15 +150,15 @@ window.GAME_CONTENT = {
     },
   ],
 
-  currentCompanyId: "broomall-integration",
+  currentCompanyId: "radnor-rack-wire",
 
   companies: {
-    "broomall-integration": {
-      id: "broomall-integration",
-      name: "Broomall Integration",
+    "radnor-rack-wire": {
+      id: "radnor-rack-wire",
+      name: "Radnor Rack & Wire",
       role: "Starter Employer",
       culture: "Badly managed regional AV shop",
-      homeBase: "Broomall, PA",
+      homeBase: "Wayne Area, PA",
       summary: "A disorganized commercial AV shop where capable field people keep rescuing schedules that were never realistic.",
       strengths: ["Enough work to learn fast", "Josh still answers questions", "Sometimes the spare part actually exists"],
       dysfunctions: ["Optimistic estimates", "Weak dispatch notes", "Delayed reimbursement", "Management blames the person fixing the issue"],
@@ -829,10 +829,10 @@ window.GAME_CONTENT = {
   scenes: {
     shop: {
       name: "Trunkslammer Shop",
-      kicker: "Broomall, PA",
+      kicker: "Wayne Area, PA",
       playerStart: { x: 120, y: 430 },
       decor: [
-        { type: "label", x: 44, y: 36, w: 220, h: 38, text: "BROOMALL SHOP / UNIT 4" },
+        { type: "label", x: 44, y: 36, w: 220, h: 38, text: "RADNOR RACK & WIRE / UNIT 4" },
         { type: "office", x: 58, y: 110, w: 170, h: 140, text: "SALES OFFICE", solid: true },
         { type: "shelf", x: 480, y: 88, w: 220, h: 92, text: "STAGING AREA", solid: true },
         { type: "shelf", x: 500, y: 355, w: 160, h: 92, text: "MYSTERY RETURNS", solid: true },

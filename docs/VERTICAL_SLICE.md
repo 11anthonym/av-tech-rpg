@@ -137,8 +137,8 @@ different reasons.
 
 Use a small first map and add destinations gradually:
 
-- **Shop:** A fictional trunkslammer warehouse in Broomall, near West Chester
-  Pike and the Blue Route interchange. The location makes many regional
+- **Shop:** A fictional trunkslammer warehouse near Wayne, along the Main Line
+  near Lancaster Avenue and the Blue Route. The location makes many regional
   dispatches look deceptively reasonable before traffic, tolls, parking, and
   access conditions are considered.
 - **Center City:** Expensive meters, garages, short loading windows, congestion,
@@ -171,17 +171,17 @@ Use a small first map and add destinations gradually:
 The first vertical slice needs only one travel event. Keep the broader list as a
 content backlog.
 
-### Starting Shop: Broomall
+### Starting Shop: Wayne Area
 
-The first company's walkable shop is a small, disorganized warehouse unit in
-Broomall. Use a fictional street address while keeping the real regional
-geography recognizable.
+The first company's walkable shop is a small, disorganized warehouse unit near
+Wayne. Use a fictional street address while keeping the real regional geography
+recognizable.
 
 Nearby route choices create future events:
 
-- West Chester Pike toward Havertown, Upper Darby, and Philadelphia
+- Lancaster Avenue toward Villanova, Bryn Mawr, and Philadelphia
 - The Blue Route toward I-95, Conshohocken, and King of Prussia
-- Surface roads toward Main Line assignments
+- Surface roads toward Main Line and Chester County assignments
 
 The first tutorial does not need a route-selection simulation. Show the shop and
 destination on the map, then apply one readable travel or parking complication.
@@ -195,11 +195,11 @@ loosely inspired by the 8th and Market corridor. Use recognizable regional
 geography without reproducing an exact client address, building name, or floor
 plan.
 
-The first trip from Broomall introduces the game's logistics in a controlled
+The first trip from the Wayne-area shop introduces the game's logistics in a controlled
 way:
 
 1. Dispatch describes the assignment as a simple two-cart build.
-2. The travel transition shows the trip from Broomall toward Center City.
+2. The travel transition shows the trip from the Wayne-area shop toward Center City.
 3. The player parks in a fictional nearby garage.
 4. The player meets the supervisor at the parked van.
 5. The supervisor explains that curb unloading was not arranged.

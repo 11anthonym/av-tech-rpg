@@ -1261,11 +1261,11 @@ function getNextAssemblyItem() {
 function promptTravel() {
   showModal({
     kicker: "Route Summary",
-    title: "Broomall -> Center City East",
+    title: "Wayne Area -> Center City East",
     body: `
       <p><strong>Dispatch estimate:</strong> Simple two-cart build. Supervisor onsite.</p>
       <p>Today's drive is scripted for the tutorial. Future jobs can offer route, toll, and parking choices.</p>
-      <div class="route-line"><span>BROOMALL</span><i></i><span>CENTER CITY EAST</span></div>
+      <div class="route-line"><span>WAYNE AREA</span><i></i><span>CENTER CITY EAST</span></div>
     `,
     actions: [{
       label: "Drive to Center City",
@@ -1425,11 +1425,11 @@ function showResults() {
       className: "secondary-button",
       onClick: () => chooseReward(toolId),
     })) : [{
-      label: "Return to Broomall Shop",
+      label: "Return to Radnor Rack & Wire",
       onClick: () => {
         state.flags.reward = "starter-kit";
         addLog("Starter kit already included the current upgrade choices.");
-        returnToShopAfterDispatch("Two Quick Carts", "Returned to the Broomall shop after the Center City cart build.");
+        returnToShopAfterDispatch("Two Quick Carts", "Returned to Radnor Rack & Wire after the Center City cart build.");
       },
     }],
   });
@@ -1446,10 +1446,10 @@ function chooseReward(toolId) {
       <p class="muted">${getToolEffectText(content.tools[toolId])}</p>
     `,
     actions: [{
-      label: "Return to Broomall Shop",
+      label: "Return to Radnor Rack & Wire",
       onClick: () => {
         addLog(`${content.tools[toolId].name} added to your personal kit.`);
-        returnToShopAfterDispatch("Two Quick Carts", "Returned to the Broomall shop after the Center City cart build.");
+        returnToShopAfterDispatch("Two Quick Carts", "Returned to Radnor Rack & Wire after the Center City cart build.");
       },
     }],
   });
@@ -1507,7 +1507,7 @@ function showCareerClipboard() {
     content.career.trainingChoices.find((choice) => choice.id === trainingId)
   ));
   showModal({
-    kicker: "Broomall Career Clipboard",
+    kicker: "Radnor Rack & Wire Career Clipboard",
     title: `Level ${rank.level} ${rank.name}`,
     body: `
       <div class="results-grid">
@@ -1792,7 +1792,7 @@ function receiveJoshLabeler() {
 function showSupplyCounter() {
   const availableTools = Object.values(content.tools).filter((tool) => tool.price > 0 && !ownsTool(tool.id));
   showModal({
-    kicker: "Broomall Supply Counter",
+    kicker: "Radnor Rack & Wire Supply Counter",
     title: "Personal Tool Purchases",
     body: availableTools.length ? `
       <p>Company reimbursement policy: optimistic.</p>
@@ -1941,7 +1941,7 @@ function showPrototypeSummary() {
     kicker: "Current Board Complete",
     title: `Level ${rank.level} ${rank.name}`,
     body: `
-      <p>You cleared the current Broomall dispatch board. More work is already written in erasable marker.</p>
+      <p>You cleared the current Radnor Rack & Wire dispatch board. More work is already written in erasable marker.</p>
       <div class="results-grid">
         <span>Experience</span><strong>${state.xp} XP</strong>
         <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
@@ -2003,7 +2003,7 @@ function startWarehouseRun() {
   addLog("Started looking for a replacement power supply reportedly stored in one of the vans.");
   render();
   showModal({
-    kicker: "Broomall Warehouse Run",
+    kicker: "Radnor Rack & Wire Warehouse Run",
     title: "Check The Obvious Places",
     body: `
       <p>Search Van #3, the staging shelf, and the mystery-return pile. Dispatch has already asked whether you found it.</p>
@@ -2152,7 +2152,7 @@ function showSecureAccessPreparation() {
     title: "Prepare For Secure Access",
     body: `
       <p>The work order has a building number, a badge note, and a forwarded email chain where everyone spells the client acronym differently.</p>
-      <p class="muted">Take one small preparation step before leaving Broomall.</p>
+      <p class="muted">Take one small preparation step before leaving Radnor Rack & Wire.</p>
     `,
     actions: [
       { label: "Review the access email", onClick: () => chooseSecureAccessPreparation("review") },
@@ -2195,11 +2195,11 @@ function chooseSecureAccessPreparation(preparation) {
 function promptSecureAccessTravel() {
   showModal({
     kicker: "Route Summary",
-    title: "Broomall -> Navy Yard",
+    title: "Wayne Area -> Navy Yard",
     body: `
       <p><strong>Dispatch estimate:</strong> Quick rack update. Security already knows you are coming.</p>
       <p class="muted">Security may have received that information in a different timeline.</p>
-      <div class="route-line"><span>BROOMALL</span><i></i><span>NAVY YARD</span></div>
+      <div class="route-line"><span>WAYNE AREA</span><i></i><span>NAVY YARD</span></div>
     `,
     actions: [{
       label: "Drive To Security Gate",
@@ -2325,8 +2325,8 @@ function finishSecureAccess(approach) {
         : `<blockquote>Management note: "Thanks for keeping the ticket clean. Please improve onsite arrival efficiency."</blockquote>`}
     `,
     actions: [{
-      label: "Return To Broomall Shop",
-      onClick: () => returnToShopAfterDispatch(content.secureAccessDispatch.title, "Returned to the Broomall shop after the Navy Yard access job."),
+      label: "Return To Radnor Rack & Wire",
+      onClick: () => returnToShopAfterDispatch(content.secureAccessDispatch.title, "Returned to Radnor Rack & Wire after the Navy Yard access job."),
     }],
   });
 }
@@ -2364,11 +2364,11 @@ function showCallbackCleanupDispatchPreview() {
 function promptCallbackCleanupTravel() {
   showModal({
     kicker: "Route Summary",
-    title: "Broomall -> Callback Site",
+    title: "Wayne Area -> Callback Site",
     body: `
       <p><strong>Dispatch estimate:</strong> Confirm user concern, restore confidence, avoid assigning blame in writing.</p>
       <p class="muted">The previous closeout note is short enough to remember accidentally.</p>
-      <div class="route-line"><span>BROOMALL</span><i></i><span>CALLBACK SITE</span></div>
+      <div class="route-line"><span>WAYNE AREA</span><i></i><span>CALLBACK SITE</span></div>
     `,
     actions: [{
       label: "Drive To Warranty Return",
@@ -2495,8 +2495,8 @@ function finishCallbackCleanup(approach) {
         : `<blockquote>Management note: "Thanks for keeping warranty hours contained."</blockquote>`}
     `,
     actions: [{
-      label: "Return To Broomall Shop",
-      onClick: () => returnToShopAfterDispatch(content.callbackCleanupDispatch.title, "Returned to the Broomall shop after the warranty return."),
+      label: "Return To Radnor Rack & Wire",
+      onClick: () => returnToShopAfterDispatch(content.callbackCleanupDispatch.title, "Returned to Radnor Rack & Wire after the warranty return."),
     }],
   });
 }
@@ -2530,11 +2530,11 @@ function showHandoffDispatchPreview() {
 function promptHandoffTravel() {
   showModal({
     kicker: "Route Summary",
-    title: "Broomall -> Executive Boardroom",
+    title: "Wayne Area -> Executive Boardroom",
     body: `
       <p><strong>Dispatch estimate:</strong> Five-minute walkthrough. No technical work expected.</p>
       <p class="muted">No technical work expected is also what they said about the warranty return.</p>
-      <div class="route-line"><span>BROOMALL</span><i></i><span>BOARDROOM</span></div>
+      <div class="route-line"><span>WAYNE AREA</span><i></i><span>BOARDROOM</span></div>
     `,
     actions: [{
       label: "Drive To Handoff",
@@ -2655,8 +2655,8 @@ function finishHandoff(approach) {
         : `<blockquote>Management note: "Thanks for keeping the handoff efficient."</blockquote>`}
     `,
     actions: [{
-      label: "Return To Broomall Shop",
-      onClick: () => returnToShopAfterDispatch(content.handoffDispatch.title, "Returned to the Broomall shop after the executive handoff."),
+      label: "Return To Radnor Rack & Wire",
+      onClick: () => returnToShopAfterDispatch(content.handoffDispatch.title, "Returned to Radnor Rack & Wire after the executive handoff."),
     }],
   });
 }
@@ -2689,11 +2689,11 @@ function showCommissioningDispatchPreview() {
 function promptCommissioningTravel() {
   showModal({
     kicker: "Route Summary",
-    title: "Broomall -> South Philadelphia",
+    title: "Wayne Area -> South Philadelphia",
     body: `
       <p><strong>Dispatch estimate:</strong> Confirm room operation and collect client signoff.</p>
       <p class="muted">The completion sheet has already been signed internally.</p>
-      <div class="route-line"><span>BROOMALL</span><i></i><span>SOUTH PHILADELPHIA</span></div>
+      <div class="route-line"><span>WAYNE AREA</span><i></i><span>SOUTH PHILADELPHIA</span></div>
     `,
     actions: [{
       label: "Drive To Training Room",
@@ -3052,8 +3052,8 @@ function finishCommissioning(approach) {
           : `<blockquote>Management note: "Thanks for protecting the schedule. Please update drawings when time allows."</blockquote>`}
     `,
     actions: [{
-      label: "Return To Broomall Shop",
-      onClick: () => returnToShopAfterDispatch(content.commissioningDispatch.title, "Returned to the Broomall shop after the South Philadelphia commissioning visit."),
+      label: "Return To Radnor Rack & Wire",
+      onClick: () => returnToShopAfterDispatch(content.commissioningDispatch.title, "Returned to Radnor Rack & Wire after the South Philadelphia commissioning visit."),
     }],
   });
 }
@@ -3140,10 +3140,10 @@ function chooseSurveyPreparation(preparation) {
 function promptSurveyTravel() {
   showModal({
     kicker: "Route Summary",
-    title: "Broomall -> University City",
+    title: "Wayne Area -> University City",
     body: `
       <p><strong>Dispatch estimate:</strong> Measure one wall. Confirm install conditions. Do not overcomplicate the quote.</p>
-      <div class="route-line"><span>BROOMALL</span><i></i><span>UNIVERSITY CITY</span></div>
+      <div class="route-line"><span>WAYNE AREA</span><i></i><span>UNIVERSITY CITY</span></div>
     `,
     actions: [{
       label: "Drive To Campus",
@@ -3268,8 +3268,8 @@ function finishSurvey(approach) {
         : `<blockquote>Management note: "Please avoid introducing unnecessary complexity after sales has aligned the client around a solution."</blockquote>`}
     `,
     actions: [{
-      label: "Return To Broomall Shop",
-      onClick: () => returnToShopAfterDispatch(content.surveyDispatch.title, "Returned to the Broomall shop after the University City survey."),
+      label: "Return To Radnor Rack & Wire",
+      onClick: () => returnToShopAfterDispatch(content.surveyDispatch.title, "Returned to Radnor Rack & Wire after the University City survey."),
     }],
   });
 }
@@ -3328,7 +3328,7 @@ function chooseServicePreparation(preparation) {
     body = `<p>You pack something from the break area before anybody can schedule through lunch.</p>
       <p class="muted">Recover 8 energy when you arrive in Conshohocken.</p>`;
     state.flags.packedLunchReady = true;
-    addLog("Packed lunch before leaving the Broomall shop.");
+    addLog("Packed lunch before leaving Radnor Rack & Wire.");
     state.stats.lunchesPacked += 1;
   }
   if (preparation === "coffee") {
@@ -3368,11 +3368,11 @@ function promptServiceTravel() {
   const reviewedTicket = state.flags.servicePreparation === "review";
   showModal({
     kicker: "Route Summary",
-    title: "Broomall -> Conshohocken",
+    title: "Wayne Area -> Conshohocken",
     body: `
       <p><strong>Dispatch estimate:</strong> Diagnose the display issue and swap the screen if needed.</p>
       ${reviewedTicket ? `<p class="expense"><strong>Work-order note:</strong> Inline coupler reported behind the credenza.</p>` : ""}
-      <div class="route-line"><span>BROOMALL</span><i></i><span>CONSHOHOCKEN</span></div>
+      <div class="route-line"><span>WAYNE AREA</span><i></i><span>CONSHOHOCKEN</span></div>
     `,
     actions: [{
       label: "Drive to Client Office",
@@ -3443,13 +3443,13 @@ function showServiceResults() {
       <blockquote>Client note: "Thank you for fixing the display before the afternoon meeting.${checkedSignalPath ? " The cable notes are helpful." : strainedVerification ? " The room is working, though the notes are light." : ""}"</blockquote>
     `,
     actions: [{
-      label: "Return to Broomall Shop",
+      label: "Return to Radnor Rack & Wire",
       onClick: () => {
         if (!checkedSignalPath) {
           state.flags.serviceCallbackPending = true;
-          addLog("A Conshohocken callback note appeared before you made it back to Broomall.");
+          addLog("A Conshohocken callback note appeared before you made it back to Radnor Rack & Wire.");
         }
-        returnToShopAfterDispatch(content.serviceDispatch.title, "Returned to the Broomall shop after the Conshohocken service call.");
+        returnToShopAfterDispatch(content.serviceDispatch.title, "Returned to Radnor Rack & Wire after the Conshohocken service call.");
       },
     }],
   });

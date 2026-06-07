@@ -31,7 +31,7 @@ The prototype should answer one question: is it funny and satisfying to survive
 a badly managed AV workday while gradually becoming a more capable technician?
 
 The current browser prototype includes a small premade technician roster, a
-custom technician creator, a walkable Broomall shop, van loading, a scripted
+custom technician creator, a walkable Wayne-area shop, van loading, a scripted
 Center City East trip, garage unloading, client check-in, the two-cart tutorial,
 fatigue, a starter tool reward, and a post-tutorial shop hub for recovery and
 personal-tool purchases. Completed dispatches now return to an end-of-shift
@@ -60,7 +60,7 @@ closed on paper, one ceiling speaker is silent, and the closeout drawing belongs
 to the mirrored room across the hall. The loose termination now becomes a field
 task: the player can re-land it fast, re-terminate it cleanly, document the
 mismatch, or use Josh's labeler if they earned it, and that task outcome changes
-XP, reputation, and callback debt. A short Broomall warehouse run closes the
+XP, reputation, and callback debt. A short Wayne-area warehouse run closes the
 slice by sending the player through Van #3, the staging shelf, and the
 mystery-return pile for a replacement power supply reportedly stored in one of
 the vans. The roster now includes Alex, Casey, Wiley, Jordan, and Morgan, with

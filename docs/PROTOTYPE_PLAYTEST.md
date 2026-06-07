@@ -22,7 +22,7 @@ The playable slice now has:
    choice, and a management-versus-field-judgment report decision.
 6. A South Philadelphia commissioning visit with three checks, an incomplete
    room, and a craftsmanship-based punch-list option.
-7. A short Broomall warehouse run that reuses the shop map and tests whether
+7. A short Wayne-area warehouse run that reuses the shop map and tests whether
    stockroom exploration works as a change of pace.
 8. A Navy Yard secure-access job with a preparation choice, three access checks,
    and a bad-company closeout decision.
@@ -129,7 +129,7 @@ player earned it earlier.
 ## Current Warehouse Experiment
 
 The **Warehouse Run** tests shop exploration and van organization as a short
-change of pace. It reuses the Broomall map, asks the player to search three
+change of pace. It reuses the Wayne-area shop map, asks the player to search three
 existing hotspots, and ends with one stockroom-cleanup decision.
 
 ## Current Access Experiment
