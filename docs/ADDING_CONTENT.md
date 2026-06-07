@@ -206,11 +206,11 @@ the selection UI:
 - `traits`
 
 Use `characterStats` for skill-tree baselines such as `install`,
-`troubleshooting`, `documentation`, `clientCommunication`, and `fieldcraft`, and
-for character-specific flavor stats such as `toolPreparedness`,
-`improvisation`, `commercialProcess`, `networking`, `dspAudio`, and
-`controlSystems`. Skill-tree baselines should create tradeoffs, not a profile
-that is best at everything.
+`troubleshooting`, `documentation`, `clientCommunication`, `fieldcraft`,
+`commercialProcess`, `networking`, `dspAudio`, and `controlSystems`, and for
+character-specific flavor stats such as `toolPreparedness` and `improvisation`.
+Skill-tree baselines should create tradeoffs, not a profile that is best at
+everything.
 
 Use `traits` for simple hooks such as unlocking a special choice, changing a
 line, or recording a flag. Current examples include Wiley's

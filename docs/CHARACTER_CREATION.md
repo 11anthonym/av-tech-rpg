@@ -59,6 +59,11 @@ The first-release creator uses four layers:
    existing skill tree.
 4. **Traits:** two smaller modifiers or hooks that add flavor and tradeoffs.
 
+The creator can now choose both early field skills and advanced AV skills such
+as Commercial Process, Networking, DSP / Audio, and Control Systems. Those
+advanced choices are future-facing until a dispatch or training choice checks
+them directly.
+
 The creator data lives in `content.characterCreation`:
 
 - `backgrounds`

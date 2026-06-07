@@ -138,12 +138,17 @@ grow by proving a loop, not by accumulating menus.
 Add the skill to `content.career.skills` with a stable ID. Then decide where it
 matters before adding it to the creator.
 
-Good early skill candidates:
+The current expanded skill tree includes:
 
+- `install`: mounting, dressing, landing, and terminating physical work.
+- `troubleshooting`: proving signal path before replacing parts.
+- `documentation`: notes, labels, closeout, surveys, and handoff details.
+- `clientCommunication`: explaining tradeoffs when people are watching.
+- `fieldcraft`: prep, tools, staging, and practical job survival.
+- `commercialProcess`: scope, access rules, closeout, and change-order reality.
 - `networking`: VLANs, DHCP, switch ports, device discovery, IP conflicts.
 - `dspAudio`: gain structure, routing, AEC, mute logic, ceiling speaker faults.
 - `controlSystems`: button logic, source routing, panel labels, room presets.
-- `commercialProcess`: submittals, closeout notes, change orders, access rules.
 
 For a skill to be worth adding, it should appear in at least two of these:
 

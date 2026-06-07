@@ -4439,7 +4439,7 @@ function getCreatorPreviewMarkup(technician) {
       <span>Confidence</span><strong>${technician.stats.confidence}</strong>
       <span>Starting cash</span><strong>${formatCash(technician.startingCash)}</strong>
       <span>Starting kit</span><strong>${technician.startingTools.map((toolId) => content.tools[toolId]?.name || toolId).join(", ")}</strong>
-      <span>Core skills</span><strong>${getTechnicianSkillPreview(technician)}</strong>
+      <span>Key skills</span><strong>${getTechnicianSkillPreview(technician)}</strong>
     </div>
     <p class="muted"><strong>Tradeoff:</strong> ${escapeHtml(technician.description)}</p>
   `;
@@ -4517,7 +4517,7 @@ function renderSelection() {
           <span>Craft <strong>${technician.stats.craftsmanship}</strong></span>
           <span>Confidence <strong>${technician.stats.confidence}</strong></span>
         </div>
-        <p class="starting-kit"><strong>Core skills:</strong> ${getTechnicianSkillPreview(technician)}</p>
+        <p class="starting-kit"><strong>Key skills:</strong> ${getTechnicianSkillPreview(technician)}</p>
         ${technician.strengths ? `<p class="starting-kit"><strong>Strengths:</strong> ${technician.strengths.join(", ")}</p>` : ""}
         ${technician.weaknesses ? `<p class="starting-kit"><strong>Growth areas:</strong> ${technician.weaknesses.join(", ")}</p>` : ""}
         ${technician.playstyle ? `<p class="starting-kit"><strong>Playstyle:</strong> ${technician.playstyle}</p>` : ""}
@@ -4560,8 +4560,8 @@ function renderCharacterCreatorCard() {
   return card;
 }
 
-function getTechnicianSkillPreview(technician) {
-  return getSkillDefinitions().map((skill) => {
+function getTechnicianSkillPreview(technician, { limit = 5 } = {}) {
+  const skillValues = getSkillDefinitions().map((skill) => {
     const value = technician.characterStats?.[skill.id]
       || (skill.id === "install" ? Math.max(1, technician.stats.craftsmanship || 0)
       : skill.id === "troubleshooting" ? Math.max(1, (technician.stats.confidence || 0) + 1)
@@ -4569,8 +4569,14 @@ function getTechnicianSkillPreview(technician) {
       : skill.id === "clientCommunication" ? Math.max(1, (technician.stats.confidence || 0) + 1)
       : skill.id === "fieldcraft" ? Math.max(1, Math.floor((technician.stats.energy || 100) / 45))
       : 0);
-    return `${skill.name} ${value}`;
-  }).join(", ");
+    return { ...skill, value };
+  });
+  return skillValues
+    .filter((skill) => skill.value > 0)
+    .sort((a, b) => b.value - a.value || a.branch.localeCompare(b.branch) || a.name.localeCompare(b.name))
+    .slice(0, limit)
+    .map((skill) => `${skill.name} ${skill.value}`)
+    .join(", ");
 }
 
 function renderDecor() {
