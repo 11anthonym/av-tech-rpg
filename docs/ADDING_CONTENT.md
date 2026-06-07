@@ -142,7 +142,9 @@ for shop-based jobs, `finishWarehouseShift()`. Those helpers set up the
 end-of-shift closeout so the next dispatch does not unlock until the player
 clocks out, stays late to prep, helps Josh, or takes a recovery day. Ordinary
 overnight rest restores energy with a burnout penalty; recovery days restore
-more but cost management reputation.
+more but cost management reputation. Staying late should feel useful but heavy:
+it can improve the next shift or coworker trust, while costing more energy,
+adding burnout, and sometimes hurting management reputation.
 
 The break area is for same-day choices. `showBreakArea()` supports short breaks,
 packed lunch, coffee, and unpaid recovery days. Packed lunch uses the shared

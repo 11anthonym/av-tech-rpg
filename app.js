@@ -3,6 +3,9 @@ const keys = new Set();
 const PLAYER_SPEED = 8;
 const SAVE_KEY = "av-tech-rpg-save-v1";
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+const STAY_LATE_PREP_ENERGY_COST = 14;
+const HELP_JOSH_ENERGY_COST = 12;
+const STAY_LATE_BURNOUT_GAIN = 1;
 
 function createInitialState() {
   return {
@@ -1076,7 +1079,7 @@ function applyOvernightRecovery({ stayedLate = false, recoveryDay = false } = {}
   state.energy = recoveryDay ? getMaxEnergy() : Math.min(getMaxEnergy(), state.energy + recovery);
   if (recoveryDay) {
     state.burnout = Math.max(0, state.burnout - 2);
-  } else if (state.energy >= Math.ceil(getMaxEnergy() * 0.75)) {
+  } else if (!stayedLate && state.energy >= Math.ceil(getMaxEnergy() * 0.75)) {
     state.burnout = Math.max(0, state.burnout - 1);
   }
   return {
@@ -1127,13 +1130,14 @@ function showEndShiftModal() {
         <span>Energy</span><strong>${state.energy}/${getMaxEnergy()}</strong>
         <span>Burnout</span><strong>${state.burnout}</strong>
         <span>Overnight recovery</span><strong>+${ordinaryRecovery} energy${state.burnout ? " after burnout penalty" : ""}</strong>
+        <span>Stayed-late recovery</span><strong>+${lateRecovery} energy before new burnout</strong>
       </div>
-      <p class="muted">Burnout reduces ordinary overnight recovery. Recovery days restore more, but management notices the schedule gap.</p>
+      <p class="muted">Burnout reduces ordinary overnight recovery. Staying late helps the work, but it borrows energy from tomorrow. Recovery days restore more, but management notices the schedule gap.</p>
     `,
     actions: [
       { label: `Clock out and go home (+${ordinaryRecovery} energy overnight)`, onClick: () => completeShift("clock-out") },
-      { label: `Stay late to prep tomorrow (-8 energy, +1 Fieldcraft/Documentation next shift)`, className: "secondary-button", onClick: () => completeShift("prep") },
-      { label: "Help Josh clean up notes (-6 energy, +1 coworker rep)", className: "secondary-button", onClick: () => completeShift("help-josh") },
+      { label: `Stay late to prep tomorrow (-${STAY_LATE_PREP_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, +1 Fieldcraft/Documentation next shift)`, className: "secondary-button", onClick: () => completeShift("prep") },
+      { label: `Help Josh clean up notes (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, +1 coworker rep)`, className: "secondary-button", onClick: () => completeShift("help-josh") },
       { label: "Take a recovery day (full energy, -1 management rep)", className: "secondary-button", onClick: () => completeShift("recovery-day") },
       { label: "Not Yet", className: "text-button", onClick: render },
     ],
@@ -1145,17 +1149,20 @@ function completeShift(choice) {
   let stayedLate = false;
   let days = 1;
   if (choice === "prep") {
-    changeEnergy(-8);
+    changeEnergy(-STAY_LATE_PREP_ENERGY_COST);
+    state.burnout += STAY_LATE_BURNOUT_GAIN;
     stayedLate = true;
     state.flags.shiftPrepActive = true;
+    state.reputation.management -= 1;
     state.stats.stayLatePrepDays += 1;
-    addLog("Stayed late to prep tomorrow's first dispatch. Fieldcraft and documentation get a small next-shift boost.");
+    addLog("Stayed late to prep tomorrow's first dispatch. Fieldcraft and documentation get a next-shift boost, but the extra unpaid time landed hard.");
   } else if (choice === "help-josh") {
-    changeEnergy(-6);
+    changeEnergy(-HELP_JOSH_ENERGY_COST);
+    state.burnout += STAY_LATE_BURNOUT_GAIN;
     stayedLate = true;
     state.reputation.coworkers += 1;
     state.stats.shopHelpDays += 1;
-    addLog("Helped Josh clean up notes and labels before clocking out. Coworker reputation improved.");
+    addLog("Helped Josh clean up notes and labels before clocking out. Coworker reputation improved, and the longer day still took something out of you.");
   } else if (choice === "recovery-day") {
     days = 2;
     state.reputation.management -= 1;

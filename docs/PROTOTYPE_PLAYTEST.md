@@ -149,8 +149,9 @@ The ledger now has a few direct gameplay effects:
   and punch-list costs.
 - Unresolved callbacks add a small drag to later access checks.
 - Closing a shift restores energy overnight, with burnout reducing ordinary
-  recovery. Staying late, helping Josh, and taking recovery days create small
-  tradeoffs before the next dispatch unlocks.
+  recovery. Staying late or helping Josh creates a stronger fatigue tradeoff:
+  useful next-shift or coworker benefits, but more energy loss and burnout
+  before the next dispatch unlocks.
 
 These effects should make choices feel remembered while staying small enough for
 the prototype.
