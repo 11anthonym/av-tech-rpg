@@ -528,6 +528,16 @@ function getSkillCheckMarkup(result) {
   return `<p class="muted">Skill check: ${getSkillCheckLabel(result)}.</p>`;
 }
 
+function getChoicePressureMarkup(hints = []) {
+  if (!hints.length) return "";
+  return `
+    <p><strong>Choice pressure:</strong></p>
+    <ul class="modal-list">
+      ${hints.map((hint) => `<li><strong>${escapeHtml(hint.label)}</strong><span>${escapeHtml(hint.detail)}</span></li>`).join("")}
+    </ul>
+  `;
+}
+
 function getSkillSummaryMarkup() {
   return `
     <ul class="modal-list">
@@ -1334,6 +1344,20 @@ function showFinishChoice() {
       ${canUseMakeThatWorkShortcut() ? `<p class="muted">${getCharacterLine("finishChoice", "You can make the awkward path work for now. The question is whether it deserves to become the install.")}</p>` : ""}
       ${state.flags.cartAssemblyStrained ? `<p class="muted">Some assembly checks were strained. Dressing the cables properly also gives you time to catch the shaky details.</p>` : ""}
       <p><strong>Energy:</strong> ${state.energy}/${getMaxEnergy()}</p>
+      ${getChoicePressureMarkup([
+        {
+          label: "Dress properly",
+          detail: "Careful install closeout. Client and coworker trust improve, but management notices the clock.",
+        },
+        ...(canUseMakeThatWorkShortcut() ? [{
+          label: "Use the workaround",
+          detail: "Fast improvisation. Saves energy now, but leaves callback debt if the temporary path becomes permanent.",
+        }] : []),
+        {
+          label: "Zip ties and leave",
+          detail: "Management-friendly speed. Safer if the build checks were clean; risky if assembly was strained.",
+        },
+      ])}
     `,
     actions: [
       { label: `Dress the cables properly (+35 min, -${getCableDressEnergyCost()} energy)`, onClick: () => finishJob("tidy") },
@@ -2261,6 +2285,20 @@ function showSecureAccessChoice() {
       <p>Management wants the ticket kept clean. The client would prefer an honest ETA over another vague "tech onsite" update.</p>
       ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits make the access-delay note faster to write.</p>` : ""}
       ${getOpenCallbackPenalty() ? `<p class="muted">The open callback still on the ledger made today's access shuffle feel heavier.</p>` : ""}
+      ${getChoicePressureMarkup([
+        {
+          label: "Document the delay",
+          detail: "Documentation path. Honest ETA helps clients and coworkers while annoying management.",
+        },
+        ...(canUsePressureChoice() ? [{
+          label: "Push dispatch",
+          detail: "Client Communication path. Stronger accountability, bigger management hit.",
+        }] : []),
+        {
+          label: "Eat the delay",
+          detail: "Clean-ticket path. Management likes the paperwork, but burnout rises and the client gets less truth.",
+        },
+      ])}
     `,
     actions: [
       { label: `Document access delay and update ETA (-${getSecureAccessReportEnergyCost(4)} energy)`, onClick: () => finishSecureAccess("document") },
@@ -3205,6 +3243,20 @@ function showSurveyReportChoice() {
       <p>Sales wants the survey closed today because the quote is "basically approved."</p>
       ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits make this report cost 1 less energy.</p>` : ""}
       ${state.flags.surveyDocumentationStrained ? `<p class="muted">Your access notes are thin. Documenting still helps, but calling sales directly prevents the weak notes from being buried.</p>` : ""}
+      ${getChoicePressureMarkup([
+        {
+          label: "Document the constraint",
+          detail: "Documentation path. Builds client and coworker trust plus the documentation habit; management dislikes the added complexity.",
+        },
+        ...(canUsePressureChoice() ? [{
+          label: "Call sales calmly",
+          detail: "Client Communication path. Stronger pushback can protect the quote before install day.",
+        }] : []),
+        {
+          label: "Trust the quote",
+          detail: "Fast management-friendly closeout. Keeps the schedule clean and pushes the access problem into the future.",
+        },
+      ])}
     `,
     actions: [
       { label: `Document the access constraint (-${getSurveyReportEnergyCost(3)} energy)`, onClick: () => finishSurvey("document") },
@@ -3673,6 +3725,16 @@ function getInteractions() {
                 <p>There is also an unlabeled coupler behind the credenza. You can verify the signal path now or trust the service ticket and start swapping equipment.</p>
                 ${getCharacterLine("serviceInspect") ? `<p class="muted">${getCharacterLine("serviceInspect")}</p>` : ""}
                 ${state.flags.servicePreparation === "review" ? `<p class="muted">Reviewing the forwarded email chain saved time during diagnosis.</p>` : ""}
+                ${getChoicePressureMarkup([
+                  {
+                    label: "Verify signal path",
+                    detail: "Troubleshooting check. Costs energy now, but protects the client, coworker trust, and callback ledger.",
+                  },
+                  {
+                    label: "Trust the ticket",
+                    detail: "Fast management-friendly path. Saves time, but weak notes can turn the quick swap into a return trip.",
+                  },
+                ])}
               `,
               actions: [
                 { label: `Verify signal path (-${getServiceVerificationEnergyCost(4)} energy)`, onClick: () => chooseServiceApproach("verify") },
