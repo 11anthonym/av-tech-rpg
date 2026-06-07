@@ -256,7 +256,8 @@ and player-facing clarity; it is not a generic quest engine.
 Use `content.companies` and `currentCompanyId` to describe the current employer.
 The career clipboard renders the current company profile so future employers can
 change shop culture, supplied tools, and reputation pressure without rewriting
-technician profiles.
+technician profiles. Add short `pressureRules` when the shop has visible bad
+incentives the dispatch board should remind the player about.
 
 Use `content.traitContextBonuses` for small trait bonuses on specific job
 moments. A rule names a skill, a list of context IDs, and a bonus:

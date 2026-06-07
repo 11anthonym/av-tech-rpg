@@ -163,6 +163,26 @@ window.GAME_CONTENT = {
       strengths: ["Enough work to learn fast", "Josh still answers questions", "Sometimes the spare part actually exists"],
       dysfunctions: ["Optimistic estimates", "Weak dispatch notes", "Delayed reimbursement", "Management blames the person fixing the issue"],
       reputationPressure: "Management likes clean tickets. Clients and coworkers like honest closeout.",
+      pressureRules: [
+        {
+          id: "clean-ticket-pressure",
+          name: "Clean Ticket Pressure",
+          trigger: "Fast closeouts and short notes make management happier.",
+          fieldReality: "Client and coworker trust often require writing the problem down before it becomes a return trip.",
+        },
+        {
+          id: "scope-denial",
+          name: "Scope Denial",
+          trigger: "Anything not in the quote gets treated like a personal hobby.",
+          fieldReality: "Documenting the mismatch protects the next tech and may create management friction.",
+        },
+        {
+          id: "reimbursement-friction",
+          name: "Reimbursement Friction",
+          trigger: "Parking, tolls, and small supplies are always somehow your paperwork problem.",
+          fieldReality: "Prep choices and tools reduce pain, but the company still calls it efficiency.",
+        },
+      ],
       expansionUse: "Keep this as the first-company baseline. Future companies can change shop culture, supplied tools, dispatch expectations, and reputation pressure without changing technician data.",
     },
   },

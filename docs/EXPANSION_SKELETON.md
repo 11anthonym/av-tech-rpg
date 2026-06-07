@@ -186,6 +186,7 @@ A company profile should define:
 - `strengths`
 - `dysfunctions`
 - `reputationPressure`
+- `pressureRules`
 - `expansionUse`
 
 Future companies should change how jobs feel, not just rename the shop. For
@@ -195,6 +196,11 @@ example:
 - A chaotic subcontractor might pay more cash and create more access surprises.
 - A university in-house team might have lower travel friction but more politics.
 - A live-events company might reward pressure handling and punish burnout.
+
+Use `pressureRules` for visible shop incentives that can appear on the career
+clipboard and dispatch board. Keep each rule short: what management pushes for,
+and what good field work usually needs instead. They do not need mechanical
+effects until a job explicitly checks them.
 
 ## Add A New Job Family
 

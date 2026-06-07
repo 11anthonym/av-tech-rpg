@@ -604,6 +604,31 @@ function getCurrentCompany() {
   return content.companies?.[content.currentCompanyId] || null;
 }
 
+function getCompanyPressureRules() {
+  return getCurrentCompany()?.pressureRules || [];
+}
+
+function getCompanyPressureMarkup({ compact = false } = {}) {
+  const rules = getCompanyPressureRules();
+  if (!rules.length) return "";
+  const visibleRules = compact ? rules.slice(0, 2) : rules;
+  return `
+    <ul class="modal-list">
+      ${visibleRules.map((rule) => `
+        <li><strong>${rule.name}</strong><span>${rule.trigger} ${rule.fieldReality}</span></li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function getCompanyDispatchPressureMarkup() {
+  const rules = getCompanyPressureRules().slice(0, 2);
+  if (!rules.length) return "";
+  return `
+    <li><strong>Company pressure</strong><span>${rules.map((rule) => `${rule.name}: ${rule.trigger}`).join(" ")}</span></li>
+  `;
+}
+
 function getCompanyProfileMarkup() {
   const company = getCurrentCompany();
   if (!company) return `<p class="muted">No current company profile configured.</p>`;
@@ -615,6 +640,7 @@ function getCompanyProfileMarkup() {
       <span>Pressure</span><strong>${company.reputationPressure}</strong>
     </div>
     <p class="muted">${company.summary}</p>
+    ${getCompanyPressureRules().length ? `<p><strong>Company pressure rules:</strong></p>${getCompanyPressureMarkup()}` : ""}
   `;
 }
 
@@ -1940,6 +1966,7 @@ function getDispatchBoardMarkup({ type, setup, why, stakes, note, managementNote
     <ul class="modal-list">
       <li><strong>Why this is on the board</strong><span>${why}</span></li>
       ${getJobFamilyMarkup(familyId)}
+      ${getCompanyDispatchPressureMarkup()}
       <li><strong>Stakes</strong><span>${stakes.join(" ")}</span></li>
       ${prep ? `<li><strong>Prep</strong><span>${prep}</span></li>` : ""}
       ${state.flags.shiftPrepActive ? `<li><strong>Next-shift prep</strong><span>Stayed late last shift: +1 Fieldcraft and +1 Documentation until this dispatch closes.</span></li>` : ""}
