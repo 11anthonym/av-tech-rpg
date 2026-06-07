@@ -150,6 +150,93 @@ window.GAME_CONTENT = {
     },
   ],
 
+  currentCompanyId: "broomall-integration",
+
+  companies: {
+    "broomall-integration": {
+      id: "broomall-integration",
+      name: "Broomall Integration",
+      role: "Starter Employer",
+      culture: "Badly managed regional AV shop",
+      homeBase: "Broomall, PA",
+      summary: "A disorganized commercial AV shop where capable field people keep rescuing schedules that were never realistic.",
+      strengths: ["Enough work to learn fast", "Josh still answers questions", "Sometimes the spare part actually exists"],
+      dysfunctions: ["Optimistic estimates", "Weak dispatch notes", "Delayed reimbursement", "Management blames the person fixing the issue"],
+      reputationPressure: "Management likes clean tickets. Clients and coworkers like honest closeout.",
+      expansionUse: "Keep this as the first-company baseline. Future companies can change shop culture, supplied tools, dispatch expectations, and reputation pressure without changing technician data.",
+    },
+  },
+
+  jobFamilies: {
+    install: {
+      id: "install",
+      name: "Install",
+      coreSkills: ["install", "fieldcraft", "documentation"],
+      loop: "Load, carry, assemble, verify, close out.",
+      commonChoices: ["Clean finish vs. leave on time", "Tool prep vs. extra energy cost", "Document issue vs. keep ticket simple"],
+      expansionUse: "Use for mounting, carts, racks, rooms, and physical buildouts.",
+    },
+    service: {
+      id: "service",
+      name: "Service",
+      coreSkills: ["troubleshooting", "documentation", "clientCommunication"],
+      loop: "Read history, inspect symptoms, verify signal path, choose speed or root cause.",
+      commonChoices: ["Trust ticket vs. diagnose", "Patch vs. fix", "Tell client tradeoff vs. keep management happy"],
+      expansionUse: "Use for flicker, audio dropouts, control weirdness, remote support follow-ups, and warranty calls.",
+    },
+    survey: {
+      id: "survey",
+      name: "Site Survey",
+      coreSkills: ["documentation", "clientCommunication", "fieldcraft"],
+      loop: "Inspect constraints, compare against quote, write the problem before install day.",
+      commonChoices: ["Document risk vs. trust sales", "Push back calmly vs. avoid friction", "Measure path vs. assume access"],
+      expansionUse: "Use when the job is mostly observation, access, scope, and protecting the future crew.",
+    },
+    commissioning: {
+      id: "commissioning",
+      name: "Commissioning",
+      coreSkills: ["troubleshooting", "install", "documentation"],
+      loop: "Test the room, find incomplete work, choose the closeout standard.",
+      commonChoices: ["Pass room vs. punch list", "Repair cleanly vs. document mismatch", "Protect client trust vs. protect schedule"],
+      expansionUse: "Use for DSP tuning, control checks, source routing, punch lists, and rooms closed too early.",
+    },
+    logistics: {
+      id: "logistics",
+      name: "Logistics",
+      coreSkills: ["fieldcraft", "documentation", "clientCommunication"],
+      loop: "Find, stage, move, label, or route around missing prep.",
+      commonChoices: ["Fix stock issue vs. hand off fast", "Eat access delay vs. document it", "Use company process vs. field workaround"],
+      expansionUse: "Use for warehouse runs, access jobs, vehicle prep, travel complications, and supply-counter friction.",
+    },
+    handoff: {
+      id: "handoff",
+      name: "Client Handoff",
+      coreSkills: ["clientCommunication", "documentation", "troubleshooting"],
+      loop: "Learn what the client actually needs, translate the system, and leave usable instructions.",
+      commonChoices: ["Patient walkthrough vs. quick demo", "Client-language notes vs. button-label notes", "Answer questions vs. protect schedule"],
+      expansionUse: "Use for training, turnover, executive rooms, facility staff coaching, and nontechnical success conditions.",
+    },
+  },
+
+  traitContextBonuses: {
+    notebookHabit: [
+      { skillId: "documentation", contextIds: ["survey-documentation", "secure-access-documentation", "callback-documentation", "handoff-documentation", "commissioning-documentation"], bonus: 1 },
+    ],
+    byTheBook: [
+      { skillId: "documentation", contextIds: ["survey-documentation", "secure-access-documentation", "callback-documentation", "handoff-documentation", "commissioning-documentation"], bonus: 1 },
+      { skillId: "troubleshooting", contextIds: ["service-diagnosis", "commissioning-troubleshooting", "callback-troubleshooting"], bonus: 1 },
+    ],
+    calmUnderFire: [
+      { skillId: "clientCommunication", contextIds: ["survey-pressure", "secure-access-pressure", "handoff-pressure", "commissioning-pressure"], bonus: 1 },
+    ],
+    knowsAGuy: [
+      { skillId: "clientCommunication", contextIds: ["survey-pressure", "secure-access-pressure", "handoff-pressure", "commissioning-pressure"], bonus: 1 },
+    ],
+    steadyHands: [
+      { skillId: "install", contextIds: ["cart-assembly", "service-install", "commissioning-termination"], bonus: 1 },
+    ],
+  },
+
   characterCreation: {
     designStatus: "first-release",
     summary: "Custom characters combine a work background, a work style, two traits, and major skill picks. Premade technicians are templates built from the same ingredients.",

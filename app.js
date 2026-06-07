@@ -485,19 +485,13 @@ function getSkillValue(skillId) {
 }
 
 function getTraitContextBonus(skillId, contextId = "") {
-  let bonus = 0;
-  const documentationContexts = ["survey-documentation", "secure-access-documentation", "callback-documentation", "handoff-documentation", "commissioning-documentation"];
-  const pressureContexts = ["survey-pressure", "secure-access-pressure", "handoff-pressure", "commissioning-pressure"];
-  const handsOnContexts = ["cart-assembly", "service-install", "commissioning-termination"];
-  const troubleshootingContexts = ["service-diagnosis", "commissioning-troubleshooting", "callback-troubleshooting"];
-
-  if (skillId === "documentation" && documentationContexts.includes(contextId) && hasAnyCharacterTrait(["notebookHabit", "byTheBook"])) bonus += 1;
-  if (skillId === "clientCommunication" && pressureContexts.includes(contextId) && hasCharacterTrait("calmUnderFire")) bonus += 1;
-  if (skillId === "clientCommunication" && pressureContexts.includes(contextId) && hasCharacterTrait("knowsAGuy")) bonus += 1;
-  if (skillId === "install" && handsOnContexts.includes(contextId) && hasCharacterTrait("steadyHands")) bonus += 1;
-  if (skillId === "troubleshooting" && troubleshootingContexts.includes(contextId) && hasCharacterTrait("byTheBook")) bonus += 1;
-
-  return bonus;
+  return (state.technician?.traits || []).reduce((total, traitId) => (
+    total + (content.traitContextBonuses?.[traitId] || []).reduce((traitTotal, rule) => {
+      if (rule.skillId !== skillId) return traitTotal;
+      if (!rule.contextIds?.includes(contextId)) return traitTotal;
+      return traitTotal + (rule.bonus || 0);
+    }, 0)
+  ), 0);
 }
 
 function getSkillCheckResult({ skillId, difficulty, contextBonus = 0, contextId = "" }) {
@@ -593,6 +587,24 @@ function getCareerGoalsMarkup() {
         return `<li><strong>${getCareerGoalStatus(goal)} ${goal.name}: ${value}/${goal.target}</strong><span>${goal.reward}</span></li>`;
       }).join("")}
     </ul>
+  `;
+}
+
+function getCurrentCompany() {
+  return content.companies?.[content.currentCompanyId] || null;
+}
+
+function getCompanyProfileMarkup() {
+  const company = getCurrentCompany();
+  if (!company) return `<p class="muted">No current company profile configured.</p>`;
+  return `
+    <div class="results-grid">
+      <span>Employer</span><strong>${company.name}</strong>
+      <span>Culture</span><strong>${company.culture}</strong>
+      <span>Home base</span><strong>${company.homeBase}</strong>
+      <span>Pressure</span><strong>${company.reputationPressure}</strong>
+    </div>
+    <p class="muted">${company.summary}</p>
   `;
 }
 
@@ -1510,6 +1522,8 @@ function showCareerClipboard() {
       ${getSkillSummaryMarkup()}
       <p><strong>Build identity:</strong></p>
       ${getBuildIdentityMarkup()}
+      <p><strong>Current company:</strong></p>
+      ${getCompanyProfileMarkup()}
       ${selectedTraining.length ? `
         <p><strong>Training completed:</strong></p>
         <ul class="modal-list">
@@ -1850,6 +1864,7 @@ function showDispatchPreview() {
     title: "One Quick Display Swap",
     body: getDispatchBoardMarkup({
       type: "Service Call",
+      familyId: "service",
       setup: "Conference-room display issue in Conshohocken. Sales says the replacement display is already onsite. The client says the room is booked again this afternoon.",
       why: "Unlocked after your first install day. The shop wants to see whether you can handle a small service call without turning it into a meeting.",
       stakes: [
@@ -1883,11 +1898,24 @@ function getDispatchTaskCardsMarkup(taskCards = []) {
   `;
 }
 
-function getDispatchBoardMarkup({ type, setup, why, stakes, note, managementNote, prep = "", taskCards = [] }) {
+function getJobFamilyMarkup(familyId) {
+  const family = content.jobFamilies?.[familyId];
+  if (!family) return "";
+  const skillNames = family.coreSkills
+    .map((skillId) => getSkillDefinition(skillId)?.name || skillId)
+    .join(", ");
+  return `
+    <li><strong>Job family</strong><span>${family.name}: ${family.loop}</span></li>
+    <li><strong>Core RPG skills</strong><span>${skillNames}</span></li>
+  `;
+}
+
+function getDispatchBoardMarkup({ type, setup, why, stakes, note, managementNote, prep = "", taskCards = [], familyId = "" }) {
   return `
     <p><strong>${type}:</strong> ${setup}</p>
     <ul class="modal-list">
       <li><strong>Why this is on the board</strong><span>${why}</span></li>
+      ${getJobFamilyMarkup(familyId)}
       <li><strong>Stakes</strong><span>${stakes.join(" ")}</span></li>
       ${prep ? `<li><strong>Prep</strong><span>${prep}</span></li>` : ""}
       ${state.flags.shiftPrepActive ? `<li><strong>Next-shift prep</strong><span>Stayed late last shift: +1 Fieldcraft and +1 Documentation until this dispatch closes.</span></li>` : ""}
@@ -1949,6 +1977,7 @@ function showWarehouseDispatchPreview() {
     title: content.warehouseDispatch.title,
     body: getDispatchBoardMarkup({
       type: "Warehouse Run",
+      familyId: "logistics",
       setup: "Find a replacement power supply before another technician leaves for a service call. Dispatch says it was stored in one of the vans.",
       why: "Unlocked after commissioning. The shop needs a quick change of pace that tests whether messy inventory can become gameplay.",
       stakes: [
@@ -2090,6 +2119,7 @@ function showSecureAccessDispatchPreview() {
     title: content.secureAccessDispatch.title,
     body: getDispatchBoardMarkup({
       type: "Access Quest",
+      familyId: "logistics",
       setup: "Drop off a small rack update at a Navy Yard building with secure access. The ticket says Building 12. The forwarded email subject says Building 13.",
       why: "Unlocked after the warehouse run. Dispatch has moved from missing parts to missing access details.",
       stakes: [
@@ -2308,6 +2338,7 @@ function showCallbackCleanupDispatchPreview() {
     title: content.callbackCleanupDispatch.title,
     body: getDispatchBoardMarkup({
       type: "Return Trip",
+      familyId: "service",
       setup: "A callback is still sitting in the career ledger, and dispatch wants it cleaned up before anyone says warranty hours out loud.",
       why: `Triggered by unresolved callback debt. Current unresolved callbacks: ${getUnresolvedCallbackCount()}.${returnTripSummary ? ` ${returnTripSummary}` : ""}`,
       stakes: [
@@ -2476,6 +2507,7 @@ function showHandoffDispatchPreview() {
     title: content.handoffDispatch.title,
     body: getDispatchBoardMarkup({
       type: "Client Handoff",
+      familyId: "handoff",
       setup: "The room works, but the client needs to run the same meeting without becoming an unpaid AV tech.",
       why: state.flags.callbackCleanupComplete
         ? "Unlocked after the warranty return. The room is quieter now; the client still needs the human version."
@@ -2635,6 +2667,7 @@ function showCommissioningDispatchPreview() {
     title: content.commissioningDispatch.title,
     body: getDispatchBoardMarkup({
       type: "Commissioning",
+      familyId: "commissioning",
       setup: "Verify a small South Philadelphia training room before client handoff. The installation ticket is closed, but the client says one side of the room sounds quieter.",
       why: "Unlocked after the University City survey. This job tests whether incomplete-site troubleshooting can become a clean closeout.",
       stakes: [
@@ -3031,6 +3064,7 @@ function showSurveyDispatchPreview() {
     title: content.surveyDispatch.title,
     body: getDispatchBoardMarkup({
       type: "Site Survey",
+      familyId: "survey",
       setup: "Confirm access and mounting conditions for a University City classroom display. Sales already measured the wall.",
       why: "Unlocked after the service call and Josh debrief. The game is testing whether field judgment matters before install day.",
       stakes: [

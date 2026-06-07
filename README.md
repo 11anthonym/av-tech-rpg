@@ -82,6 +82,10 @@ The design-reference notes live in
 The sourced character-creation first release is documented in
 [docs/CHARACTER_CREATION.md](docs/CHARACTER_CREATION.md).
 
+The RPG expansion skeleton for adding jobs, skills, traits, job families, and
+future companies lives in
+[docs/EXPANSION_SKELETON.md](docs/EXPANSION_SKELETON.md).
+
 The current playtest questions and deliberately small next-step roadmap live in
 [docs/PROTOTYPE_PLAYTEST.md](docs/PROTOTYPE_PLAYTEST.md).
 

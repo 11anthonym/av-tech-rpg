@@ -1,0 +1,160 @@
+# RPG Expansion Skeleton
+
+This is the lightweight contract for growing AV Tech RPG without turning the
+prototype into a big engine rewrite. The goal is not to make every future job
+pure data. The goal is to keep the RPG pieces consistent enough that a new job,
+skill, trait, tool, or company feels like it belongs.
+
+## Current Shape
+
+The game now has four reusable layers:
+
+1. **Technician identity:** premade and custom technicians define stats,
+   skill baselines, traits, tools, strengths, weaknesses, and playstyle.
+2. **Career progression:** XP, ranks, training choices, goals, reputation,
+   ledger stats, and active career effects describe how the player is growing.
+3. **Job families:** dispatches can identify whether they are install,
+   service, survey, commissioning, logistics, or handoff work.
+4. **Company context:** the current employer describes shop culture,
+   pressure, dysfunction, and the reputation tradeoff behind bad-company humor.
+
+Keep those four layers readable in the UI. If a mechanic is invisible, players
+will experience it as randomness rather than roleplaying.
+
+## Add A New Job
+
+Start with this one-page design before adding code:
+
+```txt
+Job title:
+Job family:
+Company:
+Map/scene:
+Why it is on the dispatch board:
+Core skills:
+Preparation choice:
+Three things to inspect or do:
+Final choice:
+Good outcome:
+Fast/bad-company outcome:
+What stat, reputation, XP, callback, or ledger value changes:
+What future job or goal can remember it:
+```
+
+Then implement in this order:
+
+1. Add or reuse a job family in `content.jobFamilies`.
+2. Add the job's content block in `data.js`.
+3. Add the scene layout if it needs a new walkable space.
+4. Add a dispatch preview using `getDispatchBoardMarkup({ familyId })`.
+5. Use `resolveSkillCheck()` for one to three meaningful task checks.
+6. Save consequences with flags, stats, XP, reputation, callback debt, or
+   return-trip risks.
+7. Return through the existing shift closeout helpers unless the job is a short
+   shop-based task.
+
+Avoid making a job that only pays cash. A good dispatch should test at least one
+RPG identity: a skill, a trait, a tool, a reputation lean, or a ledger habit.
+
+## Add A New Skill
+
+Add the skill to `content.career.skills` with a stable ID. Then decide where it
+matters before adding it to the creator.
+
+Good early skill candidates:
+
+- `networking`: VLANs, DHCP, switch ports, device discovery, IP conflicts.
+- `dspAudio`: gain structure, routing, AEC, mute logic, ceiling speaker faults.
+- `controlSystems`: button logic, source routing, panel labels, room presets.
+- `commercialProcess`: submittals, closeout notes, change orders, access rules.
+
+For a skill to be worth adding, it should appear in at least two of these:
+
+- a technician or creator build preview
+- a tool bonus
+- a dispatch task check
+- a training choice
+- a career goal
+- a future job-family description
+
+If it only appears once, keep it as flavor text or a character stat for now.
+
+## Add A New Trait
+
+Traits work best when they are small, readable, and contextual. Add the trait ID
+to a technician, creator piece, or both. If it should affect checks, add a rule
+to `content.traitContextBonuses`:
+
+```js
+steadyHands: [
+  { skillId: "install", contextIds: ["cart-assembly"], bonus: 1 },
+],
+```
+
+Use context IDs for specific job moments instead of global bonuses. "Good at
+everything install-related forever" becomes invisible power creep. "Better at
+cart assembly and clean terminations" feels like a character tendency.
+
+## Add A New Company
+
+Add a company to `content.companies`, then switch `currentCompanyId` when the
+career is ready to move employers.
+
+A company profile should define:
+
+- `name`
+- `culture`
+- `homeBase`
+- `summary`
+- `strengths`
+- `dysfunctions`
+- `reputationPressure`
+- `expansionUse`
+
+Future companies should change how jobs feel, not just rename the shop. For
+example:
+
+- A better integrator might supply standard tools but expect cleaner paperwork.
+- A chaotic subcontractor might pay more cash and create more access surprises.
+- A university in-house team might have lower travel friction but more politics.
+- A live-events company might reward pressure handling and punish burnout.
+
+## Add A New Job Family
+
+Use a job family when several dispatches share the same RPG rhythm. Each family
+should have:
+
+- `coreSkills`
+- `loop`
+- `commonChoices`
+- `expansionUse`
+
+Do not add a family for every single dispatch. Add one when it helps future
+writers understand the kind of choices that job type should create.
+
+## Balance Guardrails
+
+- One job should usually test one primary skill and one secondary skill.
+- One trait bonus should usually be `+1` in specific contexts.
+- One dispatch should usually have one prep choice, a few checks, and one final
+  consequence choice.
+- Better field work should often bother management at a bad company.
+- Management-friendly shortcuts should usually create callback, reputation, or
+  ledger risk somewhere.
+- Tools should reduce friction, unlock a path, or improve a skill check. They
+  should not solve the whole dispatch by themselves.
+
+## What To Extract Later
+
+Do not extract these until multiple jobs need the same pattern:
+
+- a fully generic dispatch runner
+- company-specific dispatch board logic
+- vehicle selection
+- a route/toll/parking system
+- multi-step save migrations
+- branching employer/career acts
+
+Right now, repeat a small pattern two or three times before abstracting it. The
+prototype should stay easy to read by someone who is more interested in making a
+funny AV job than designing middleware.

@@ -177,9 +177,12 @@ Add another entry inside `technicians`:
 ```js
 {
   id: "organized-rookie",
-  name: "Organized Rookie",
-  tagline: "Not experienced, but brought snacks and a notebook.",
+  name: "Casey",
+  role: "Shop-Organized Apprentice",
+  tagline: "Brought a tool bag, snacks, and a dangerous belief in written notes.",
   stats: { energy: 105, burnout: 0, craftsmanship: 2, confidence: 1 },
+  characterStats: { install: 2, troubleshooting: 2, documentation: 3, clientCommunication: 1, fieldcraft: 3 },
+  traits: ["measureTwice", "notebookHabit"],
   startingTools: ["screwdriver", "toolBag"],
 },
 ```
@@ -233,6 +236,40 @@ Do not add a creator option unless it can affect an early task, visible skill
 value, starting kit, reputation pressure, or career-goal track. Character
 creation should make the first workday feel different, not just decorate the
 selection screen.
+
+## Add RPG Expansion Content
+
+For jobs, skills, traits, companies, and job families, start with
+[EXPANSION_SKELETON.md](EXPANSION_SKELETON.md). That guide describes the current
+RPG contract:
+
+- technician identity
+- career progression
+- job families
+- company context
+
+Use `content.jobFamilies` to describe the kind of RPG work a dispatch is
+testing. Pass the family ID into `getDispatchBoardMarkup({ familyId })` so the
+dispatch board can explain the core skills and loop. Use this for writer-facing
+and player-facing clarity; it is not a generic quest engine.
+
+Use `content.companies` and `currentCompanyId` to describe the current employer.
+The career clipboard renders the current company profile so future employers can
+change shop culture, supplied tools, and reputation pressure without rewriting
+technician profiles.
+
+Use `content.traitContextBonuses` for small trait bonuses on specific job
+moments. A rule names a skill, a list of context IDs, and a bonus:
+
+```js
+notebookHabit: [
+  { skillId: "documentation", contextIds: ["survey-documentation"], bonus: 1 },
+],
+```
+
+When adding a new check with `resolveSkillCheck()`, give it a `contextId` if
+traits should matter. Prefer specific contexts such as `service-diagnosis` or
+`commissioning-termination` over broad permanent bonuses.
 
 ## Add Character-Specific Lines
 
@@ -309,9 +346,13 @@ walking trip creates a decision, a joke, or a useful sense of place.
 ## Add a Job
 
 The tutorial is intentionally scripted while the core loop is being tested.
-Before adding several jobs, extract its job-specific arrays and progression into
-a reusable job format. Do that only after the first playable loop feels good;
-otherwise the abstraction will encode assumptions that have not been tested.
+Before adding a job, fill out the short job design template in
+[EXPANSION_SKELETON.md](EXPANSION_SKELETON.md). Then add only the data and
+engine hooks the job actually needs.
+
+Do not extract a fully generic job runner yet. The current dispatches still
+benefit from hand-authored scenes and choices. Extract only after two or three
+jobs repeat the same structure closely enough that the abstraction is obvious.
 
 ## Practical Rule
 

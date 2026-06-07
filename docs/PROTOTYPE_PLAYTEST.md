@@ -11,9 +11,9 @@ The playable slice now has:
 
 1. A first-day install tutorial with walking, loading, carrying, assembly, and a
    starter-tool reward.
-2. Three starting technician profiles that test whether tools, stats,
-   documentation habits, and character-specific tension make the same dispatch
-   sequence replay differently.
+2. Five premade technician profiles plus a custom creator that test whether
+   tools, stats, documentation habits, client pressure, and character-specific
+   tension make the same dispatch sequence replay differently.
 3. A short service call with one morning-preparation choice, a diagnosis choice,
    tool payoffs, and a possible callback.
 4. A walkable shop hub with rest, purchases, career XP, reputation, one training
@@ -43,16 +43,18 @@ The playable slice now has:
 16. A sourced first-release custom technician creator with premade formulas,
    background/work-style/trait picks, major skill picks, build preview, and save
    support.
-17. A completion card with a career snapshot, nearby locked work, and playtest
-   questions.
+17. A completion card with a career snapshot, nearby locked work, and career
+   check-in questions.
+18. A lightweight expansion skeleton for job families, company context, and
+   data-driven trait bonuses.
 
 ## Playtest Questions
 
 Watch a player complete the current build before expanding it. Look for:
 
 - Do players understand where to walk and what to interact with?
-- Does the second technician profile make the same workday feel meaningfully
-  different without needing a character creator?
+- Do the premade profiles make the same workday feel meaningfully different
+  before the player tries the custom creator?
 - Does Wiley feel like a competent residential installer learning commercial
   process, rather than a weak or joke character?
 - Does Circuit Hut Parts Brain feel useful without becoming a free solution?
@@ -189,6 +191,12 @@ content should build on:
    documentation habits, tool ownership, and field-task choices.
 3. **Tool skill bonuses:** content-defined bonuses that make tools part of task
    outcomes, not just energy discounts.
+4. **Company context:** the current employer's culture, dysfunction, and
+   reputation pressure.
+5. **Job families:** each dispatch board can show the RPG loop and core skills
+   for the kind of work being offered.
+6. **Trait context bonuses:** character traits can add small bonuses to named
+   task contexts without hardcoding every trait in the engine.
 
 Playtest whether these read like useful goals. If players ignore them, the next
 pass should improve how jobs reference goals and skill branches before adding a
@@ -196,9 +204,13 @@ larger skill tree.
 
 ## Current Replay Experiment
 
-The **Organized Rookie** profile starts with a tool bag, slightly more energy,
-and weaker confidence. It tests whether starting stats and tools create a
-meaningfully different replay without changing the dispatch sequence.
+The **Alex** profile is the balanced commercial helper and keeps the internal
+`prototype-tech` ID for save compatibility.
+
+The **Casey** profile starts with a tool bag, slightly more energy, stronger
+documentation habits, and weaker confidence. It tests whether starting stats,
+tools, and careful-work traits create a meaningfully different replay without
+changing the dispatch sequence.
 
 The **Wiley** profile starts as a residential install tech with stronger
 hands-on craft, lower commercial confidence, and a Circuit Hut parts organizer.
@@ -206,10 +218,17 @@ His first-pass experiment is small: he can choose to search the organizer once
 per dispatch for a testing aid, and he gets an early tempting workaround option
 that saves time while creating callback debt.
 
-The current character-support pass keeps Wiley data-driven where possible:
+The **Jordan** profile tests a helpdesk/service path: strong troubleshooting,
+clean notes, and a "Knows A Guy" prep option.
+
+The **Morgan** profile tests a live-events/client-pressure path: strong
+communication, steady hands, and earlier pressure-choice access.
+
+The current character-support pass keeps profiles data-driven where possible:
 character-specific lines live in `characterLines`, optional `characterStats` and
-`traits` can gate small choices, and quick-workaround choices can record
-return-trip risk flags for future callbacks.
+`traits` can gate small choices, `traitContextBonuses` maps traits to task
+contexts, and quick-workaround choices can record return-trip risk flags for
+future callbacks.
 
 ## Current Character Creation Experiment
 
