@@ -122,10 +122,10 @@ be easy to verify in the browser.
    field-quality choices build client and coworker trust.
 4. **Done - Skill identity pass:** Advanced AV areas are now visible skills:
    Commercial Process, Networking, DSP / Audio, and Control Systems.
-5. **Next - Worked job pass:** Add one new dispatch using the checklist. Prefer
-   one tight example over adding several job ideas at once.
-6. **Later - Authoring example pass:** After the next dispatch exists, document
-   it as a worked example for future contributors.
+5. **Done - Worked job pass:** Added one systems-flavored service dispatch using
+   the checklist.
+6. **Next - Authoring example pass:** Document the systems service dispatch as a
+   worked example for future contributors.
 7. **Later - Save migration pass:** Add a small migration helper before
    renaming stable IDs or changing saved data shapes again.
 

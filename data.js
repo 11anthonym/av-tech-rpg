@@ -246,10 +246,10 @@ window.GAME_CONTENT = {
 
   traitContextBonuses: {
     notebookHabit: [
-      { skillId: "documentation", contextIds: ["survey-documentation", "secure-access-documentation", "callback-documentation", "handoff-documentation", "commissioning-documentation"], bonus: 1 },
+      { skillId: "documentation", contextIds: ["survey-documentation", "secure-access-documentation", "callback-documentation", "handoff-documentation", "commissioning-documentation", "systems-documentation"], bonus: 1 },
     ],
     byTheBook: [
-      { skillId: "documentation", contextIds: ["survey-documentation", "secure-access-documentation", "callback-documentation", "handoff-documentation", "commissioning-documentation"], bonus: 1 },
+      { skillId: "documentation", contextIds: ["survey-documentation", "secure-access-documentation", "callback-documentation", "handoff-documentation", "commissioning-documentation", "systems-documentation"], bonus: 1 },
       { skillId: "troubleshooting", contextIds: ["service-diagnosis", "commissioning-troubleshooting", "callback-troubleshooting"], bonus: 1 },
     ],
     calmUnderFire: [
@@ -882,6 +882,48 @@ window.GAME_CONTENT = {
     ],
   },
 
+  systemsDispatch: {
+    title: "King of Prussia Room Offline",
+    summary: "Service a conference room that dispatch described as 'probably just needs a reboot.'",
+    taskCards: [
+      {
+        title: "Panel Status",
+        skill: "Control Systems 3",
+        outcome: "Shows whether the room is actually offline or just stuck on a bad user path.",
+      },
+      {
+        title: "Device Network Path",
+        skill: "Networking 3",
+        outcome: "Separates a real network issue from a polite ticket that says offline.",
+      },
+      {
+        title: "Rack Note Compare",
+        skill: "Documentation 3",
+        outcome: "Decides whether the next tech gets a useful mismatch note or a haunted ticket.",
+      },
+    ],
+    checks: [
+      {
+        id: "panel-status",
+        label: "Touch panel status",
+        log: "the touch panel is awake enough to complain but not enough to control the room",
+        detail: "The touch panel shows a room-offline banner, but the display is reachable from the panel diagnostics page. It is not dead. It is tattling.",
+      },
+      {
+        id: "network-path",
+        label: "Device network path",
+        log: "the room processor is on a different network note than the ticket claims",
+        detail: "The processor responds where the old room note says it should not. The ticket lists last year's VLAN like it has seniority.",
+      },
+      {
+        id: "rack-note",
+        label: "Rack note mismatch",
+        log: "the rack note was updated verbally, which is a brave file format",
+        detail: "The rack door has a neat printed note and two handwritten corrections. The newest correction says 'ask Josh' without specifying which future Josh.",
+      },
+    ],
+  },
+
   upcomingDispatches: [
     {
       title: "Cherry Hill Return Toll",
@@ -1020,6 +1062,20 @@ window.GAME_CONTENT = {
         { type: "floor-note", x: 410, y: 245, w: 210, h: 30, text: "TOUCH PANEL: PRESENT" },
         { type: "floor-note", x: 315, y: 390, w: 250, h: 30, text: "CHEAT SHEET: NOT PROVIDED" },
         { type: "floor-note", x: 690, y: 465, w: 175, h: 30, text: "MEETING IN 22 MIN" },
+      ],
+    },
+    systemsService: {
+      name: "Room Offline Service",
+      kicker: "King of Prussia, PA",
+      playerStart: { x: 120, y: 430 },
+      decor: [
+        { type: "label", x: 45, y: 36, w: 250, h: 38, text: "ROOM OFFLINE SERVICE" },
+        { type: "desk", x: 78, y: 110, w: 185, h: 92, text: "CLIENT TABLE", solid: true },
+        { type: "counter", x: 665, y: 325, w: 205, h: 105, text: "RACK / PROCESSOR", solid: true },
+        { type: "build", x: 650, y: 110, w: 205, h: 110, text: "DISPLAY WALL", solid: true },
+        { type: "floor-note", x: 410, y: 245, w: 210, h: 30, text: "PANEL: ROOM OFFLINE" },
+        { type: "floor-note", x: 315, y: 390, w: 250, h: 30, text: "NETWORK NOTE: LAST YEAR" },
+        { type: "floor-note", x: 690, y: 465, w: 175, h: 30, text: "REBOOT REQUESTED" },
       ],
     },
   },

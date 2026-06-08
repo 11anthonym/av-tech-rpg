@@ -54,6 +54,9 @@ The playable slice now has:
    training choice.
 21. A heavier end-of-shift fatigue tradeoff where staying late or helping Josh
    is useful but meaningfully borrows from tomorrow.
+22. A King of Prussia systems service job that tests Networking,
+   Control Systems, Documentation, prep choices, and bad-company reboot
+   pressure without adding a technical minigame.
 
 ## Playtest Questions
 
@@ -260,7 +263,7 @@ first-job consequence text to the preview.
 
 Do not build all of these at once. Pick one small pass, play it, then commit.
 
-### Recommended Next Slice: Systems-Flavored Service Job
+### Built Slice: Systems-Flavored Service Job
 
 Playability question: can the new advanced skills matter in one readable job
 without adding a programmer minigame or a generic quest engine?
@@ -284,6 +287,12 @@ What remembers it: callback ledger, documentation habit, future systems-training
 
 Scope guardrail: one prep choice, two or three checks, one final result modal.
 No new map system, no real IP addressing puzzle, no company-specific engine.
+
+Initial implementation: **King of Prussia Room Offline** now appears after the
+executive handoff and before the current-board summary.
+
+Next playtest question: does the systems job feel like a field service call with
+systems flavor, or does it feel too abstract compared with install/service work?
 
 ### Second Choice: End-Of-Shift Balance Playtest
 
