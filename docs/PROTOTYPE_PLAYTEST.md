@@ -296,9 +296,10 @@ executive handoff and before the current-board summary.
 Next playtest question: does the systems job feel like a field service call with
 systems flavor, or does it feel too abstract compared with install/service work?
 
-First tuning pass: make the closeout consequences visible before and after the
-click. The final choice should clearly preview callback debt, management
-friction, and coworker/client trust instead of relying on the result math alone.
+First tuning pass: make the closeout pressure visible before the click without
+turning the choice into an answer key. Energy and cash costs can be exact, but
+future outcomes should be phrased as risks and tendencies: callback risk,
+management friction, coworker cleanup, or client trust.
 
 ### Second Choice: End-Of-Shift Balance Playtest
 
@@ -353,6 +354,13 @@ Current tuning pass: raised the felt cost of warehouse label cleanup, access and
 survey reporting, client handoff support, and commissioning closeout. Watch for
 whether these choices feel meaningfully right-but-tiring without making careful
 play feel punished.
+
+Choice-language pass: major choices should show what the character can know in
+the moment. Immediate costs such as energy, cash, time, and burnout can be
+specific. Downstream consequences should stay uncertain: "may create management
+friction," "lowers return-trip risk," "protects the next tech," or "keeps the
+bad process invisible." Avoid showing exact reputation or callback math before
+the player commits.
 
 ## Prototype Guardrail
 

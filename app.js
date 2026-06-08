@@ -1155,7 +1155,13 @@ function previewShiftChoice(choice) {
     nextEnergy,
     nextBurnout,
     recovery,
-    reputation: choice === "prep" ? "Management -1" : choice === "help-josh" ? "Coworkers +1" : choice === "recovery-day" ? "Management -1" : "No rep change",
+    pressure: choice === "prep"
+      ? "Management may notice the extra time."
+      : choice === "help-josh"
+        ? "Josh and the crew remember the help."
+        : choice === "recovery-day"
+          ? "Management may notice the schedule gap."
+          : "No obvious reputation pressure.",
     benefit: choice === "prep" ? "+1 Fieldcraft/Documentation next dispatch" : choice === "help-josh" ? "Josh relationship progress" : choice === "recovery-day" ? "Skips next workday pressure" : "Clean rest",
   };
 }
@@ -1171,7 +1177,7 @@ function getEndShiftChoicePreviewMarkup() {
     <ul class="modal-list">
       ${choices.map((choice) => {
         const preview = previewShiftChoice(choice.id);
-        return `<li><strong>${choice.label}: ${preview.nextEnergy}/${getMaxEnergy()} energy, burnout ${preview.nextBurnout}</strong><span>${preview.benefit}. ${preview.reputation}. Recovery: +${preview.recovery} energy.</span></li>`;
+        return `<li><strong>${choice.label}: ${preview.nextEnergy}/${getMaxEnergy()} energy, burnout ${preview.nextBurnout}</strong><span>${preview.benefit}. ${preview.pressure} Recovery: +${preview.recovery} energy.</span></li>`;
       }).join("")}
     </ul>
   `;
@@ -1470,15 +1476,15 @@ function showFinishChoice() {
       ${getChoicePressureMarkup([
         {
           label: "Dress properly",
-          detail: "Careful install closeout. Client and coworker trust improve, but management notices the clock.",
+          detail: "Careful install closeout. Costs time and energy now; likely protects the client and next tech while making management impatient.",
         },
         ...(canUseMakeThatWorkShortcut() ? [{
           label: "Use the workaround",
-          detail: "Fast improvisation. Saves energy now, but leaves callback debt if the temporary path becomes permanent.",
+          detail: "Fast improvisation. Saves energy now, but may turn today's temporary fix into tomorrow's return trip.",
         }] : []),
         {
           label: "Zip ties and leave",
-          detail: "Management-friendly speed. Safer if the build checks were clean; risky if assembly was strained.",
+          detail: "Management-friendly speed. Lower effort now; future risk depends on how clean the build really was.",
         },
       ])}
     `,
@@ -2215,6 +2221,16 @@ function showWarehouseChoice() {
     body: `
       <p>The correct power supply was placed in mystery returns beneath a box labeled <strong>HDMI EXTENDERS / DO NOT STOCK / RETURN?</strong></p>
       <p>Dispatch wants the part immediately. Correcting the bin label would save the next search, but it would extend a task estimated at one minute.</p>
+      ${getChoicePressureMarkup([
+        {
+          label: "Correct the label",
+          detail: "Costs energy and probably annoys management; protects coworkers from repeating the same search.",
+        },
+        {
+          label: "Leave the pile",
+          detail: "Fastest shop outcome. Management sees speed, but the stockroom problem stays hidden.",
+        },
+      ])}
     `,
     actions: [
       { label: `Hand off part and correct the bin label (-${getWarehouseLabelEnergyCost()} energy)`, onClick: () => finishWarehouseRun("label") },
@@ -2423,15 +2439,15 @@ function showSecureAccessChoice() {
       ${getChoicePressureMarkup([
         {
           label: "Document the delay",
-          detail: "Documentation path. Honest ETA helps clients and coworkers while annoying management.",
+          detail: "Costs energy to protect the ETA trail. Likely helps clients and coworkers, with management friction possible.",
         },
         ...(canUsePressureChoice() ? [{
           label: "Push dispatch",
-          detail: "Client Communication path. Stronger accountability, bigger management hit.",
+          detail: "Stronger accountability if you can carry the conversation. Best process pressure, but management may not enjoy owning it.",
         }] : []),
         {
           label: "Eat the delay",
-          detail: "Clean-ticket path. Management likes the paperwork, but burnout rises and the client gets less truth.",
+          detail: "Clean-ticket path. Saves the schedule story now, but hides the access problem and adds personal strain.",
         },
       ])}
     `,
@@ -2600,6 +2616,20 @@ function showCallbackCleanupChoice() {
     body: `
       <p>The issue came back because the previous closeout skipped the boring verification. The room can be fixed, documented, and removed from the callback ledger, or it can be made quiet enough for the ticket to close again.</p>
       ${getCarefulTaskReduction() ? `<p class="muted">Your careful-work habits reduce the proper fix cost by 1 energy.</p>` : ""}
+      ${getChoicePressureMarkup([
+        {
+          label: "Fix the root cause",
+          detail: "Costs energy and exposes the weak closeout; likely protects the client and reduces return-trip pressure.",
+        },
+        ...(getCraftsmanship() >= 3 ? [{
+          label: "Clean repair",
+          detail: "Higher-quality field work with stronger client handoff; management may question why the warranty visit took longer.",
+        }] : []),
+        {
+          label: "Bandage it",
+          detail: "Fastest ticket close. Management may like the clean-looking update, but the room can still punish someone later.",
+        },
+      ])}
     `,
     actions: [
       { label: `Fix root cause and update notes (-${getCallbackCleanupRepairEnergyCost(6)} energy)`, onClick: () => finishCallbackCleanup("root") },
@@ -2767,6 +2797,20 @@ function showHandoffChoice() {
     body: `
       <p>The client does not need every feature. They need the morning meeting to start without a group of executives silently watching a laptop search for audio.</p>
       ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits make the walkthrough notes and cheat sheet faster to prepare.</p>` : ""}
+      ${getChoicePressureMarkup([
+        {
+          label: "Patient walkthrough",
+          detail: "Costs energy now; likely improves client confidence while management may see extra training time.",
+        },
+        ...(canUsePressureChoice() ? [{
+          label: "Client-language cheat sheet",
+          detail: "Turns technical labels into a usable daily path. Strong client upside, still slower than leaving.",
+        }] : []),
+        {
+          label: "Quick demo",
+          detail: "Fastest closeout. The room works, but usage questions may come back through someone else.",
+        },
+      ])}
     `,
     actions: [
       { label: `Patient walkthrough of the daily path (-${getHandoffEnergyCost(5)} energy)`, onClick: () => finishHandoff("patient") },
@@ -2977,19 +3021,19 @@ function showSystemsChoice() {
       <p>The room can be rebooted into a temporarily less embarrassing state, but the real issue is the mismatch between the control path, network note, and what the ticket claims is true.</p>
       ${state.flags.systemsChecksStrained ? `<p class="muted">One of the systems checks was strained, so the careful closeout has less upside.</p>` : ""}
       ${getChoicePressureMarkup([
-        { label: "Document mismatch", detail: "Costs energy and annoys management, but protects the next tech and avoids callback debt." },
-        { label: "Call out scope miss", detail: "Requires enough process confidence, gives the cleanest client/coworker outcome, and creates the most management friction." },
-        { label: "Quick reboot", detail: "Fastest and management-friendly, but client trust drops and callback debt is recorded." },
+        { label: "Document mismatch", detail: "Costs energy and likely bothers management, but gives the next tech a usable trail and lowers return-trip risk." },
+        { label: "Call out scope miss", detail: "Requires process confidence. Strong client/coworker upside, with sharper management friction possible." },
+        { label: "Quick reboot", detail: "Fastest and management-friendly. The room may behave today, but the real mismatch stays loose." },
       ])}
     `,
     actions: [
-      { label: "Document mismatch and reopen notes (-4 energy, no callback debt)", onClick: () => finishSystemsService("document") },
+      { label: "Document mismatch and reopen notes (-4 energy)", onClick: () => finishSystemsService("document") },
       ...(getSkillValue("commercialProcess") >= 3 || canUsePressureChoice() ? [{
-        label: "Call out scope miss before closing (-3 energy, bigger management hit)",
+        label: "Call out scope miss before closing (-3 energy)",
         className: "secondary-button",
         onClick: () => finishSystemsService("scope"),
       }] : []),
-      { label: "Quick reboot and close ticket (+1 callback debt)", className: "secondary-button", onClick: () => finishSystemsService("reboot") },
+      { label: "Quick reboot and close ticket", className: "secondary-button", onClick: () => finishSystemsService("reboot") },
     ],
   });
 }
@@ -3094,19 +3138,19 @@ function showTravelChoice() {
     body: `
       <p>The return stop itself is small. The problem is that dispatch treated the bridge like a rumor and the van like it runs on optimism.</p>
       ${getChoicePressureMarkup([
-        { label: "File receipt", detail: "Costs a little energy, protects your cash, and creates mild management friction." },
-        { label: "Push dispatch", detail: "Best process outcome if you can handle the pressure, but management dislikes being asked to own travel planning." },
-        { label: "Eat the toll", detail: `Fastest option. You pay $${tollCost}, management is happy, and the bad process remains invisible.` },
+        { label: "File receipt", detail: "Costs a little energy and protects your cash. Management may grumble about the paper trail." },
+        { label: "Push dispatch", detail: "Best process outcome if you can handle the pressure, but it asks management to notice its own travel planning." },
+        { label: "Eat the toll", detail: `Fastest option. You pay $${tollCost}, and the bad process stays invisible for now.` },
       ])}
     `,
     actions: [
       { label: `File toll receipt and ETA note (-2 energy, $${tollCost} reimbursed)`, onClick: () => finishTravelDispatch("receipt") },
       ...(getSkillValue("commercialProcess") >= 3 || canUsePressureChoice() ? [{
-        label: "Push dispatch to own the return toll (-2 energy, management hit)",
+        label: "Push dispatch to own the return toll (-2 energy)",
         className: "secondary-button",
         onClick: () => finishTravelDispatch("pushback"),
       }] : []),
-      { label: `Eat the toll and keep moving (-$${tollCost}, management +1)`, className: "secondary-button", onClick: () => finishTravelDispatch("absorb") },
+      { label: `Eat the toll and keep moving (-$${tollCost})`, className: "secondary-button", onClick: () => finishTravelDispatch("absorb") },
     ],
   });
 }
@@ -3404,6 +3448,24 @@ function showCommissioningTerminationChoice() {
         <li><strong>Client Communication ${getSkillValue("clientCommunication")}</strong><span>Explaining the mismatch can protect trust while hurting schedule optics.</span></li>
       </ul>
       ${ownsTool("labeler") ? `<p class="muted">Josh's rebuilt labeler unlocks a stronger trace-and-label path.</p>` : `<p class="muted">A labeler would make the documentation path stronger here.</p>`}
+      ${getChoicePressureMarkup([
+        {
+          label: "Re-land fast",
+          detail: "Lowest-effort technical answer. It may get audio back, but the underlying workmanship risk is less controlled.",
+        },
+        {
+          label: "Re-terminate cleanly",
+          detail: "Costs more energy and tests install skill. Stronger chance the room stays fixed after you leave.",
+        },
+        ...(ownsTool("labeler") ? [{
+          label: "Trace and label",
+          detail: "Uses Josh's labeler to protect the next tech and make the weird path readable.",
+        }] : []),
+        {
+          label: "Document first",
+          detail: "Slower process choice. Helps explain the mismatch before touching something the paperwork says is already fine.",
+        },
+      ])}
     `,
     actions: [
       { label: `Re-land it fast (-${getCommissioningTerminationTaskEnergyCost("quick")} energy)`, onClick: () => resolveCommissioningTerminationTask("quick") },
@@ -3469,6 +3531,20 @@ function showCommissioningChoice() {
       ${getCommissioningTerminationTaskSummaryMarkup()}
       ${getCarefulTaskReduction() ? `<p class="muted">Your careful-work habits are paying off: repair and punch-list work costs 1 less energy.</p>` : ""}
       ${state.flags.commissioningTerminationCallbackRisk ? `<p class="muted">The field task left a return-trip risk. A clean punch-list closeout can expose it before it becomes a surprise callback.</p>` : ""}
+      ${getChoicePressureMarkup([
+        {
+          label: "Repair and document",
+          detail: "Costs energy and protects the client with a usable discrepancy note. Management may dislike the extra paper trail.",
+        },
+        ...(canCleanTerminate ? [{
+          label: "Clean punch list",
+          detail: "Strongest field-quality stance. It owns the mismatch now, with possible schedule pressure later.",
+        }] : []),
+        {
+          label: "Pass the room",
+          detail: "Fastest closeout. The current notes may be enough, or they may hand the next problem to someone else.",
+        },
+      ])}
     `,
     actions: [
       { label: `Tell client it is repaired and document discrepancy (-${getCommissioningCloseoutEnergyCost("repair")} energy)`, onClick: () => finishCommissioning("repair") },
@@ -3726,15 +3802,15 @@ function showSurveyReportChoice() {
       ${getChoicePressureMarkup([
         {
           label: "Document the constraint",
-          detail: "Documentation path. Builds client and coworker trust plus the documentation habit; management dislikes the added complexity.",
+          detail: "Costs energy to make the access problem real on paper. Likely protects install day, but management may call it complexity.",
         },
         ...(canUsePressureChoice() ? [{
           label: "Call sales calmly",
-          detail: "Client Communication path. Stronger pushback can protect the quote before install day.",
+          detail: "Uses pressure handling to challenge the quote before install day. Outcome depends on how well the conversation lands.",
         }] : []),
         {
           label: "Trust the quote",
-          detail: "Fast management-friendly closeout. Keeps the schedule clean and pushes the access problem into the future.",
+          detail: "Fast management-friendly closeout. Keeps the schedule clean while leaving the access risk unresolved.",
         },
       ])}
     `,
@@ -4208,7 +4284,7 @@ function getInteractions() {
                 ${getChoicePressureMarkup([
                   {
                     label: "Verify signal path",
-                    detail: "Troubleshooting check. Costs energy now, but protects the client, coworker trust, and callback ledger.",
+                    detail: "Troubleshooting check. Costs energy now, but lowers the chance that the quick swap becomes someone else's return trip.",
                   },
                   {
                     label: "Trust the ticket",
