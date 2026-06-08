@@ -1115,6 +1115,46 @@ function applyOvernightRecovery({ stayedLate = false, recoveryDay = false } = {}
   };
 }
 
+function previewShiftChoice(choice) {
+  const maxEnergy = getMaxEnergy();
+  const energyCost = choice === "prep" ? STAY_LATE_PREP_ENERGY_COST : choice === "help-josh" ? HELP_JOSH_ENERGY_COST : 0;
+  const stayedLate = ["prep", "help-josh"].includes(choice);
+  const recoveryDay = choice === "recovery-day";
+  const burnoutAfterChoice = Math.max(0, state.burnout + (stayedLate ? STAY_LATE_BURNOUT_GAIN : 0));
+  const recovery = recoveryDay ? maxEnergy : getOvernightRecovery({ stayedLate });
+  const energyAfterChoice = Math.max(0, state.energy - energyCost);
+  const nextEnergy = recoveryDay ? maxEnergy : Math.min(maxEnergy, energyAfterChoice + recovery);
+  const nextBurnout = recoveryDay
+    ? Math.max(0, burnoutAfterChoice - 2)
+    : !stayedLate && nextEnergy >= Math.ceil(maxEnergy * 0.75)
+      ? Math.max(0, burnoutAfterChoice - 1)
+      : burnoutAfterChoice;
+  return {
+    nextEnergy,
+    nextBurnout,
+    recovery,
+    reputation: choice === "prep" ? "Management -1" : choice === "help-josh" ? "Coworkers +1" : choice === "recovery-day" ? "Management -1" : "No rep change",
+    benefit: choice === "prep" ? "+1 Fieldcraft/Documentation next dispatch" : choice === "help-josh" ? "Josh relationship progress" : choice === "recovery-day" ? "Skips next workday pressure" : "Clean rest",
+  };
+}
+
+function getEndShiftChoicePreviewMarkup() {
+  const choices = [
+    { id: "clock-out", label: "Clock out" },
+    { id: "prep", label: "Stay late prep" },
+    { id: "help-josh", label: "Help Josh" },
+    { id: "recovery-day", label: "Recovery day" },
+  ];
+  return `
+    <ul class="modal-list">
+      ${choices.map((choice) => {
+        const preview = previewShiftChoice(choice.id);
+        return `<li><strong>${choice.label}: ${preview.nextEnergy}/${getMaxEnergy()} energy, burnout ${preview.nextBurnout}</strong><span>${preview.benefit}. ${preview.reputation}. Recovery: +${preview.recovery} energy.</span></li>`;
+      }).join("")}
+    </ul>
+  `;
+}
+
 function clearEndShiftState() {
   state.flags.endShiftPending = false;
   state.flags.endShiftSource = null;
@@ -1159,6 +1199,8 @@ function showEndShiftModal() {
         <span>Stayed-late recovery</span><strong>+${lateRecovery} energy before new burnout</strong>
       </div>
       <p class="muted">Burnout reduces ordinary overnight recovery. Staying late helps the work, but it borrows energy from tomorrow. Recovery days restore more, but management notices the schedule gap.</p>
+      <p><strong>Next-morning preview:</strong></p>
+      ${getEndShiftChoicePreviewMarkup()}
     `,
     actions: [
       { label: `Clock out and go home (+${ordinaryRecovery} energy overnight)`, onClick: () => completeShift("clock-out") },

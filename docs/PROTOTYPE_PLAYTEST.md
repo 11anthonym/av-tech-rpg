@@ -313,6 +313,11 @@ What to watch:
 Only tune numbers after one short playthrough from low-energy state and one from
 near-full-energy state.
 
+First tuning pass: show a next-morning preview for every end-of-shift option.
+This keeps the existing balance but makes the real tradeoff visible: energy,
+burnout, relationship/reputation change, and the benefit of staying late or
+taking recovery.
+
 ### Third Choice: Travel-Cost Micro-Job
 
 Playability question: can the game show the real cost of poor dispatch planning
