@@ -294,6 +294,10 @@ executive handoff and before the current-board summary.
 Next playtest question: does the systems job feel like a field service call with
 systems flavor, or does it feel too abstract compared with install/service work?
 
+First tuning pass: make the closeout consequences visible before and after the
+click. The final choice should clearly preview callback debt, management
+friction, and coworker/client trust instead of relying on the result math alone.
+
 ### Second Choice: End-Of-Shift Balance Playtest
 
 Playability question: are clock-out, prep, help-Josh, and recovery-day choices

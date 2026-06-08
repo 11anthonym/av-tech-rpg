@@ -2907,17 +2907,28 @@ function showSystemsChoice() {
     body: `
       <p>The room can be rebooted into a temporarily less embarrassing state, but the real issue is the mismatch between the control path, network note, and what the ticket claims is true.</p>
       ${state.flags.systemsChecksStrained ? `<p class="muted">One of the systems checks was strained, so the careful closeout has less upside.</p>` : ""}
+      ${getChoicePressureMarkup([
+        { label: "Document mismatch", detail: "Costs energy and annoys management, but protects the next tech and avoids callback debt." },
+        { label: "Call out scope miss", detail: "Requires enough process confidence, gives the cleanest client/coworker outcome, and creates the most management friction." },
+        { label: "Quick reboot", detail: "Fastest and management-friendly, but client trust drops and callback debt is recorded." },
+      ])}
     `,
     actions: [
-      { label: "Document mismatch and reopen notes (-4 energy)", onClick: () => finishSystemsService("document") },
+      { label: "Document mismatch and reopen notes (-4 energy, no callback debt)", onClick: () => finishSystemsService("document") },
       ...(getSkillValue("commercialProcess") >= 3 || canUsePressureChoice() ? [{
-        label: "Call out scope miss before closing (-3 energy)",
+        label: "Call out scope miss before closing (-3 energy, bigger management hit)",
         className: "secondary-button",
         onClick: () => finishSystemsService("scope"),
       }] : []),
-      { label: "Quick reboot and close ticket", className: "secondary-button", onClick: () => finishSystemsService("reboot") },
+      { label: "Quick reboot and close ticket (+1 callback debt)", className: "secondary-button", onClick: () => finishSystemsService("reboot") },
     ],
   });
+}
+
+function getSystemsReputationSummary(approach, strained = false) {
+  if (approach === "reboot") return "Client -1, Management +1";
+  if (approach === "scope") return "Client +2, Coworkers +1, Management -2";
+  return `Client +1, Coworkers ${strained ? "+1" : "+2"}, Management -1`;
 }
 
 function finishSystemsService(approach) {
@@ -2966,7 +2977,9 @@ function finishSystemsService(approach) {
         <span>Systems wages</span><strong>+$${documented ? 68 : 52}</strong>
         <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
         <span>Experience</span><strong>+${xp} XP</strong>
+        <span>Reputation impact</span><strong>${getSystemsReputationSummary(approach, strained)}</strong>
         <span>Callback ledger</span><strong>${documented ? "Mismatch documented" : "Callback risk added"}</strong>
+        <span>Career ledger</span><strong>${documented ? "Systems mismatch documented" : "Quick reboot closed"}</strong>
       </div>
       ${documented
         ? `<blockquote>Management note: "Please keep technical closeout proportionate to the original ticket."</blockquote>`

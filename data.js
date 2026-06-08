@@ -894,7 +894,7 @@ window.GAME_CONTENT = {
       {
         title: "Device Network Path",
         skill: "Networking 3",
-        outcome: "Separates a real network issue from a polite ticket that says offline.",
+        outcome: "Separates a real network issue from a stale room note that says offline.",
       },
       {
         title: "Rack Note Compare",
