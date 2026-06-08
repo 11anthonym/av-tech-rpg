@@ -2177,7 +2177,7 @@ function getWarehouseSearchEnergyCost() {
 }
 
 function getWarehouseLabelEnergyCost() {
-  return ownsTool("labeler") ? 1 : 2;
+  return ownsTool("labeler") ? 2 : 4;
 }
 
 function inspectWarehouseLocation(checkId) {
@@ -2379,7 +2379,7 @@ function getSecureAccessCheckEnergyCost() {
 }
 
 function getSecureAccessReportEnergyCost(baseCost) {
-  return Math.max(0, baseCost - (state.flags.secureAccessPreparation === "contact" ? 1 : 0) - getDocumentationSupportReduction());
+  return Math.max(2, baseCost - (state.flags.secureAccessPreparation === "contact" ? 1 : 0) - getDocumentationSupportReduction());
 }
 
 function inspectSecureAccessCondition(checkId) {
@@ -2769,9 +2769,9 @@ function showHandoffChoice() {
       ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits make the walkthrough notes and cheat sheet faster to prepare.</p>` : ""}
     `,
     actions: [
-      { label: `Patient walkthrough of the daily path (-${getHandoffEnergyCost(4)} energy)`, onClick: () => finishHandoff("patient") },
+      { label: `Patient walkthrough of the daily path (-${getHandoffEnergyCost(5)} energy)`, onClick: () => finishHandoff("patient") },
       ...(canUsePressureChoice() ? [{
-        label: `Rewrite the cheat sheet in client language (-${getHandoffEnergyCost(3)} energy)`,
+        label: `Rewrite the cheat sheet in client language (-${getHandoffEnergyCost(4)} energy)`,
         className: "secondary-button",
         onClick: () => finishHandoff("cheat"),
       }] : []),
@@ -2784,7 +2784,7 @@ function finishHandoff(approach) {
   const helpful = approach !== "quick";
   const strainedPrep = Boolean(state.flags.handoffPrepStrained) && approach === "patient";
   const xp = (approach === "cheat" ? 60 : approach === "patient" ? 50 : 30) - (strainedPrep ? 5 : 0);
-  if (helpful) changeEnergy(-getHandoffEnergyCost(approach === "cheat" ? 3 : 4));
+  if (helpful) changeEnergy(-getHandoffEnergyCost(approach === "cheat" ? 4 : 5));
   state.flags.handoffComplete = true;
   state.flags.handoffApproach = approach;
   state.flags.prototypeSummaryViewed = false;
@@ -3243,7 +3243,7 @@ function getCommissioningTerminationTaskEnergyCost(action) {
 function getCommissioningCloseoutEnergyCost(approach) {
   if (approach === "pass") return 0;
   const hasTaskAction = Boolean(state.flags.commissioningTerminationAction);
-  const baseCost = hasTaskAction ? (approach === "craft" ? 3 : 2) : (approach === "craft" ? 5 : 6);
+  const baseCost = hasTaskAction ? (approach === "craft" ? 4 : 3) : (approach === "craft" ? 5 : 6);
   const riskPenalty = state.flags.commissioningTerminationCallbackRisk && approach === "repair" ? 1 : 0;
   return getCommissioningRepairEnergyCost(baseCost) + riskPenalty;
 }
@@ -3681,7 +3681,7 @@ function getSurveyInspectionEnergyCost() {
 }
 
 function getSurveyReportEnergyCost(baseCost) {
-  return Math.max(0, baseCost - (state.flags.surveyPreparation === "sketch" ? 1 : 0) - getDocumentationSupportReduction());
+  return Math.max(2, baseCost - (state.flags.surveyPreparation === "sketch" ? 1 : 0) - getDocumentationSupportReduction());
 }
 
 function inspectSurveyConstraint(inspectionId) {

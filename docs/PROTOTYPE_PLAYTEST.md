@@ -337,6 +337,23 @@ cost to keep management happy.
 Next playtest question: does the one-choice travel job feel like real dispatch
 friction, or does it feel too small after a full systems service dispatch?
 
+## Energy Balance Notes
+
+Responsible choices should usually cost enough energy to make the shortcut
+tempting. Good habits, prep, and tools can reduce friction, but they should not
+erase it completely on choices that involve extra documentation, cleanup,
+client coaching, or careful closeout.
+
+Cutting corners should often be the faster, lower-energy option in the moment.
+The balance target is that the player keeps asking: do I protect myself right
+now, or spend energy to reduce callback risk, angry clients, coworker rework,
+and later performance pressure?
+
+Current tuning pass: raised the felt cost of warehouse label cleanup, access and
+survey reporting, client handoff support, and commissioning closeout. Watch for
+whether these choices feel meaningfully right-but-tiring without making careful
+play feel punished.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.
