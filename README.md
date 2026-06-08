@@ -91,9 +91,9 @@ The current playtest questions and deliberately small next-step roadmap live in
 
 ## Play Locally
 
-No Python installation or local server is required. Download or clone the
-repository, then double-click `play-av-tech-rpg.cmd` on Windows. You can also
-open `index.html` directly in a modern browser on any platform.
+No Python installation or local server is required. For ordinary playtesting,
+use the hosted GitHub Pages link below. If you download or clone the repository,
+you can also open `index.html` directly in a modern browser on any platform.
 
 The prototype autosaves the active career in the browser's local storage. Use
 `Continue Career` on the title screen to restore progress or `Clear Saved
