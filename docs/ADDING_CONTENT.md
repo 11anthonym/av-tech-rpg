@@ -361,6 +361,29 @@ Do not extract a fully generic job runner yet. The current dispatches still
 benefit from hand-authored scenes and choices. Extract only after two or three
 jobs repeat the same structure closely enough that the abstraction is obvious.
 
+### Current Dispatch Pattern To Copy
+
+Use **King of Prussia Room Offline** as the current worked example for a compact
+new dispatch.
+
+The implementation is intentionally hand-authored:
+
+- `content.systemsDispatch` in `data.js` stores the title, summary, task cards,
+  and three check definitions.
+- `content.scenes.systemsService` stores the small walkable room.
+- `showSystemsDispatchPreview()` renders the dispatch-board pitch.
+- `showSystemsPreparation()` and `chooseSystemsPreparation()` handle one small
+  prep decision before travel.
+- `inspectSystemsCondition()` uses `resolveSkillCheck()` for the three checks.
+- `showSystemsChoice()` and `finishSystemsService()` record XP, reputation,
+  cash, callback debt, and systems ledger stats.
+- `getInteractions()` wires the room's clickable/NPC hotspots.
+- `getObjective()`, `render()`, `serializeGame()`, and `continueGame()` keep
+  the new job visible, saved, and resumable.
+
+When adding the next dispatch, copy the shape, not the topic. Pick one primary
+RPG question, one prep choice, two or three checks, and one final consequence.
+
 ## Practical Rule
 
 Add one small content item, reload the browser, and walk through the affected

@@ -93,6 +93,45 @@ What changes: XP, client/coworker/management rep, callback ledger, documentedTas
 What remembers it: future callback return or a documentation-habit goal
 ```
 
+### Implemented Worked Example: King Of Prussia Room Offline
+
+This is the current example for adding one compact dispatch without extracting a
+generic job engine.
+
+```txt
+Job title: King of Prussia Room Offline
+Job family: service
+Company: Radnor Rack & Wire
+Map/scene: King of Prussia conference room with client table, display wall, rack/processer, panel note, and stale network note
+Why it is on the dispatch board: Client says the room is offline; dispatch says it probably just needs a reboot.
+Core skills: troubleshooting, networking, controlSystems, documentation
+Preparation choice: review room/network notes, ask Josh what changed, or leave with dispatch notes as written
+Three things to inspect or do: check touch panel status, verify device network path, compare rack note to the actual room
+Final choice: document the network/control mismatch, call out the scope miss, or quick reboot and close the ticket
+Good outcome: useful systems note, client/coworker trust, documented task risk, possible management friction
+Fast/bad-company outcome: management likes the quick close, client trust drops, callback debt increases
+What changes: XP, cash, client/coworker/management rep, callbacks, systems ledger stats, documentedTaskRisks
+What remembers it: callback ledger can route quick-reboot debt into Warranty Return; career clipboard records systems jobs and mismatches
+```
+
+Why this shape works:
+
+- It proves advanced skills in one place instead of adding a separate systems
+  career act.
+- It uses real AV texture: vague "offline" reports, stale room notes, control
+  path confusion, and reboot pressure.
+- It keeps the player choice legible: useful closeout versus clean-looking
+  ticket.
+- It reuses the existing callback ledger instead of inventing a new failure
+  system.
+
+What not to copy blindly:
+
+- Do not make every future service job test three advanced skills.
+- Do not add a new scene if an existing room can carry the joke and decision.
+- Do not add real IP addressing, subnet math, or manufacturer-specific trivia
+  unless the player choice remains readable without specialist knowledge.
+
 Then implement in this order:
 
 1. Add or reuse a job family in `content.jobFamilies`.
@@ -124,9 +163,11 @@ be easy to verify in the browser.
    Commercial Process, Networking, DSP / Audio, and Control Systems.
 5. **Done - Worked job pass:** Added one systems-flavored service dispatch using
    the checklist.
-6. **Next - Authoring example pass:** Document the systems service dispatch as a
-   worked example for future contributors.
-7. **Later - Save migration pass:** Add a small migration helper before
+6. **Done - Authoring example pass:** Documented the systems service dispatch
+   as a worked example for future contributors.
+7. **Next - Playtest tuning pass:** Play through the systems service dispatch
+   and tighten only confusing text, costs, or consequence visibility.
+8. **Later - Save migration pass:** Add a small migration helper before
    renaming stable IDs or changing saved data shapes again.
 
 Stop after each pass and play through the affected area. The prototype should
