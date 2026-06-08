@@ -115,6 +115,67 @@ Watch a player complete the current build before expanding it. Look for:
 Keep notes on hesitation, missed interactions, and repeated actions. Prefer
 fixing unclear or tedious moments before adding systems.
 
+## Current Fix List From Playthrough
+
+Playtest pass: June 8, 2026. Paths checked: Alex careful first-day closeout into
+service prep, and Wiley shortcut-heavy first-day closeout into a rushed service
+path.
+
+### Priority Fixes
+
+1. **End-of-shift action labels still expose exact reputation math.**
+   The preview language now says "management may notice" and "the crew
+   remember the help," but the buttons still say things like `+1 coworker rep`
+   and `-1 management rep`. Keep exact energy/burnout costs, but soften the
+   reputation language on the buttons to match the uncertainty rule.
+
+2. **Service-call strained verification can create callback debt without enough
+   result clarity.**
+   In the careful Alex path, verifying the signal path under strain still led to
+   callback debt, but the result reads mostly as "Verified under strain" and a
+   light client note. The result should make the uncertainty visible after the
+   click: the tech tried the right process, but weak notes or strained install
+   left return-trip risk.
+
+3. **Shortcut consequences exist, but the board should connect them more
+   clearly.**
+   Wiley's shortcut path correctly stacked callback debt and return-trip risk.
+   The next dispatch/clipboard flow should make that feel remembered rather than
+   hidden in ledger math. Add a small "because of your choices" line to the
+   dispatch board or shop objective when callback debt is open.
+
+4. **Career clipboard is useful but too dense for a first read.**
+   The clipboard currently shows skills, build identity, company context,
+   milestone preview, goals, active effects, and the full ledger in one long
+   modal. Add a compact top summary for active consequences first, then let the
+   detailed ledger stay lower in the modal.
+
+5. **Negative goal progress reads awkwardly.**
+   A shortcut-heavy Wiley path can show `Earn Crew Trust: -1/2`. The negative
+   coworker reputation is valid, but goal progress should probably display as
+   `0/2` with a note that crew trust is currently damaged, instead of making the
+   progress meter look broken.
+
+6. **"Locked next work" can imply the wrong next dispatch.**
+   The service dispatch board still shows Burlington County as locked future
+   work even though the next actual playable job is University City. Either show
+   the real next dispatch preview, rename this area to "Later work," or make the
+   locked list reflect the actual unlock chain.
+
+### Secondary Tuning Notes
+
+- At high energy, end-of-shift choices often all preview full next-morning
+  energy, so the tradeoff has to live almost entirely in burnout and pressure
+  text. Consider adding a short note when recovery is capped: "you would waste
+  some recovery at full energy, but burnout/pressure still changes."
+- Dispatch board stakes still use the phrase "callback debt" before a few
+  choices. This is probably acceptable as a risk concept, but future wording
+  should prefer "return-trip risk" when we want the outcome to feel less
+  deterministic.
+- Result screens can show exact consequences after the click, but they should
+  explain why the outcome happened. This matters most when the player chose the
+  careful path and still got a strained or partial result.
+
 ## Current Content Experiment
 
 The **University City Site Survey** is the third dispatch. It tests a different
