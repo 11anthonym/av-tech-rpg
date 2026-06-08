@@ -639,7 +639,9 @@ function getCareerGoalsMarkup() {
     <ul class="modal-list">
       ${goals.map((goal) => {
         const value = getCareerGoalValue(goal.metric);
-        return `<li><strong>${getCareerGoalStatus(goal)} ${goal.name}: ${value}/${goal.target}</strong><span>${goal.reward}</span></li>`;
+        const displayValue = Math.max(0, value);
+        const setbackNote = value < 0 ? " Current standing is below zero, so repair the relationship before this track can advance." : "";
+        return `<li><strong>${getCareerGoalStatus(goal)} ${goal.name}: ${displayValue}/${goal.target}</strong><span>${goal.reward}${setbackNote}</span></li>`;
       }).join("")}
     </ul>
   `;
@@ -732,6 +734,41 @@ function getOpenReturnTripRiskSummary() {
   const risks = getReturnTripRiskEntries();
   if (!risks.length) return "";
   return risks.map((risk) => `${risk.source}: ${risk.detail}`).join(" ");
+}
+
+function getActiveCareerSummaryMarkup() {
+  const openCallbacks = getUnresolvedCallbackCount();
+  const items = [];
+  if (openCallbacks > 0) {
+    items.push({
+      label: "Open callback pressure",
+      detail: `${openCallbacks} unresolved callback${openCallbacks === 1 ? "" : "s"} can make later access and board choices heavier.`,
+    });
+  }
+  const returnTripSummary = getOpenReturnTripRiskSummary();
+  if (returnTripSummary) {
+    items.push({ label: "Return-trip risks remembered", detail: returnTripSummary });
+  }
+  if (state.reputation.coworkers < 0) {
+    items.push({ label: "Crew trust damaged", detail: "Coworker reputation is below zero; crew-trust goals need repair before they can advance." });
+  }
+  if (getDocumentationSupportReduction()) {
+    items.push({ label: "Documentation support", detail: "Documentation habits or traits reduce some report, access-delay, and handoff paperwork costs." });
+  }
+  if (getCarefulTaskReduction()) {
+    items.push({ label: "Careful-work support", detail: "Careful habits or traits reduce some repair and punch-list energy costs." });
+  }
+  if (state.flags.shiftPrepActive) {
+    items.push({ label: "Next-shift prep active", detail: "Stayed-late prep is boosting Fieldcraft and Documentation until this dispatch closes." });
+  }
+  if (!items.length) {
+    items.push({ label: "No active complications", detail: "Your current build is not carrying callback pressure, return-trip risk, or temporary shift prep." });
+  }
+  return `
+    <ul class="modal-list">
+      ${items.map((item) => `<li><strong>${item.label}</strong><span>${escapeHtml(item.detail)}</span></li>`).join("")}
+    </ul>
+  `;
 }
 
 function getCurrentDispatchKey() {
@@ -1146,6 +1183,7 @@ function previewShiftChoice(choice) {
   const recovery = recoveryDay ? maxEnergy : getOvernightRecovery({ stayedLate });
   const energyAfterChoice = Math.max(0, state.energy - energyCost);
   const nextEnergy = recoveryDay ? maxEnergy : Math.min(maxEnergy, energyAfterChoice + recovery);
+  const cappedRecovery = recoveryDay ? 0 : Math.max(0, energyAfterChoice + recovery - maxEnergy);
   const nextBurnout = recoveryDay
     ? Math.max(0, burnoutAfterChoice - 2)
     : !stayedLate && nextEnergy >= Math.ceil(maxEnergy * 0.75)
@@ -1163,6 +1201,7 @@ function previewShiftChoice(choice) {
           ? "Management may notice the schedule gap."
           : "No obvious reputation pressure.",
     benefit: choice === "prep" ? "+1 Fieldcraft/Documentation next dispatch" : choice === "help-josh" ? "Josh relationship progress" : choice === "recovery-day" ? "Skips next workday pressure" : "Clean rest",
+    capNote: cappedRecovery ? ` ${cappedRecovery} recovery would be capped at max energy.` : "",
   };
 }
 
@@ -1177,7 +1216,7 @@ function getEndShiftChoicePreviewMarkup() {
     <ul class="modal-list">
       ${choices.map((choice) => {
         const preview = previewShiftChoice(choice.id);
-        return `<li><strong>${choice.label}: ${preview.nextEnergy}/${getMaxEnergy()} energy, burnout ${preview.nextBurnout}</strong><span>${preview.benefit}. ${preview.pressure} Recovery: +${preview.recovery} energy.</span></li>`;
+        return `<li><strong>${choice.label}: ${preview.nextEnergy}/${getMaxEnergy()} energy, burnout ${preview.nextBurnout}</strong><span>${preview.benefit}. ${preview.pressure} Recovery: +${preview.recovery} energy.${preview.capNote}</span></li>`;
       }).join("")}
     </ul>
   `;
@@ -1232,9 +1271,9 @@ function showEndShiftModal() {
     `,
     actions: [
       { label: `Clock out and go home (+${ordinaryRecovery} energy overnight)`, onClick: () => completeShift("clock-out") },
-      { label: `Stay late to prep tomorrow (-${STAY_LATE_PREP_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, +1 Fieldcraft/Documentation next shift)`, className: "secondary-button", onClick: () => completeShift("prep") },
-      { label: `Help Josh clean up notes (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, +1 coworker rep)`, className: "secondary-button", onClick: () => completeShift("help-josh") },
-      { label: "Take a recovery day (full energy, -1 management rep)", className: "secondary-button", onClick: () => completeShift("recovery-day") },
+      { label: `Stay late to prep tomorrow (-${STAY_LATE_PREP_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, prep advantage)`, className: "secondary-button", onClick: () => completeShift("prep") },
+      { label: `Help Josh clean up notes (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, crew remembers)`, className: "secondary-button", onClick: () => completeShift("help-josh") },
+      { label: "Take a recovery day (full energy, management may notice)", className: "secondary-button", onClick: () => completeShift("recovery-day") },
       { label: "Not Yet", className: "text-button", onClick: render },
     ],
   });
@@ -1300,7 +1339,7 @@ function showBreakArea() {
       { label: "Take 15-minute break (+10 energy)", onClick: takeShortBreak },
       ...(!state.flags.packedLunchReady ? [{ label: "Pack lunch for next dispatch", className: "secondary-button", onClick: packLunchForNextDispatch }] : []),
       ...(state.cash >= 5 ? [{ label: "Buy bad shop coffee - $5 (+12 energy, +1 burnout)", className: "secondary-button", onClick: buyBreakCoffee }] : []),
-      { label: "Take unpaid recovery day (full energy, -1 management rep)", className: "secondary-button", onClick: takeRecoveryDayFromShop },
+      { label: "Take unpaid recovery day (full energy, management may notice)", className: "secondary-button", onClick: takeRecoveryDayFromShop },
       { label: "Leave Break Area", className: "text-button" },
     ],
   });
@@ -1671,10 +1710,12 @@ function showCareerClipboard() {
         <span>Coworker reputation</span><strong>${formatReputation(state.reputation.coworkers)}</strong>
         <span>Management reputation</span><strong>${formatReputation(state.reputation.management)}</strong>
       </div>
-      <p><strong>Skill tree:</strong></p>
-      ${getSkillSummaryMarkup()}
+      <p><strong>Active consequences:</strong></p>
+      ${getActiveCareerSummaryMarkup()}
       <p><strong>Build identity:</strong></p>
       ${getBuildIdentityMarkup()}
+      <p><strong>Skill tree details:</strong></p>
+      ${getSkillSummaryMarkup()}
       <p><strong>Current company:</strong></p>
       ${getCompanyProfileMarkup()}
       ${selectedTraining.length ? `
@@ -2033,7 +2074,7 @@ function showDispatchPreview() {
       why: "Unlocked after your first install day. The shop wants to see whether you can handle a small service call without turning it into a meeting.",
       stakes: [
         "Preparation changes diagnosis, energy, or arrival stamina.",
-        "Verifying the signal path can prevent callback debt.",
+        "Verifying the signal path can lower return-trip risk.",
         "Rushing can help management now and cost you later.",
       ],
       note: "Use the supply counter, inspect your kit, or use the break area before leaving.",
@@ -2082,9 +2123,10 @@ function getDispatchBoardMarkup({ type, setup, why, stakes, note, managementNote
       ${getJobFamilyMarkup(familyId)}
       ${getCompanyDispatchPressureMarkup()}
       <li><strong>Stakes</strong><span>${stakes.join(" ")}</span></li>
+      ${getOpenCallbackBoardMarkup()}
       ${prep ? `<li><strong>Prep</strong><span>${prep}</span></li>` : ""}
       ${state.flags.shiftPrepActive ? `<li><strong>Next-shift prep</strong><span>Stayed late last shift: +1 Fieldcraft and +1 Documentation until this dispatch closes.</span></li>` : ""}
-      <li><strong>Locked next work</strong><span>${getUpcomingDispatchText()}</span></li>
+      <li><strong>Later work</strong><span>${getUpcomingDispatchText()}</span></li>
     </ul>
     ${getDispatchTaskCardsMarkup(taskCards)}
     ${note ? `<p class="muted">${note}</p>` : ""}
@@ -2092,9 +2134,16 @@ function getDispatchBoardMarkup({ type, setup, why, stakes, note, managementNote
   `;
 }
 
+function getOpenCallbackBoardMarkup() {
+  const openCallbacks = getUnresolvedCallbackCount();
+  if (!openCallbacks) return "";
+  const returnTripSummary = getOpenReturnTripRiskSummary();
+  return `<li><strong>Because of your choices</strong><span>${openCallbacks} unresolved callback${openCallbacks === 1 ? "" : "s"} on the ledger. ${returnTripSummary || "Future work may feel heavier until the callback ledger catches up."}</span></li>`;
+}
+
 function getUpcomingDispatchText() {
   return content.upcomingDispatches.length
-    ? content.upcomingDispatches.map((dispatch) => `[LOCKED] ${dispatch.title}: ${dispatch.summary}`).join(" ")
+    ? content.upcomingDispatches.map((dispatch) => `[PLANNED] ${dispatch.title}: ${dispatch.summary}`).join(" ")
     : "More erasable-marker work will be added after this board clears.";
 }
 
@@ -2529,9 +2578,9 @@ function showCallbackCleanupDispatchPreview() {
       type: "Return Trip",
       familyId: "service",
       setup: "A callback is still sitting in the career ledger, and dispatch wants it cleaned up before anyone says warranty hours out loud.",
-      why: `Triggered by unresolved callback debt. Current unresolved callbacks: ${getUnresolvedCallbackCount()}.${returnTripSummary ? ` ${returnTripSummary}` : ""}`,
+      why: `Triggered by unresolved callback pressure. Current unresolved callbacks: ${getUnresolvedCallbackCount()}.${returnTripSummary ? ` ${returnTripSummary}` : ""}`,
       stakes: [
-        "A real fix resolves callback debt and helps client trust.",
+        "A real fix resolves ledger pressure and helps client trust.",
         "A quick bandage keeps warranty hours contained.",
         "Craftsmanship can turn the cleanup into a better handoff.",
       ],
@@ -2890,7 +2939,7 @@ function showSystemsDispatchPreview() {
       stakes: [
         "Networking and Control Systems can change how cleanly you identify the fault.",
         "Documentation can turn a weird room note into future-proof closeout.",
-        "A quick reboot keeps management happy and may leave callback debt.",
+        "A quick reboot keeps management happy and may leave return-trip risk.",
       ],
       note: "This is still a field-tech service call, not a subnet worksheet.",
       managementNote: "Please avoid turning a simple offline room into a network investigation.",
@@ -4009,6 +4058,13 @@ function showServiceResults() {
   const checkedSignalPath = verifiedSignalPath && !state.flags.serviceVerificationStrained;
   const strainedVerification = verifiedSignalPath && state.flags.serviceVerificationStrained;
   const xp = checkedSignalPath ? 50 : strainedVerification ? 45 : 40;
+  const serviceReturnRisk = !checkedSignalPath;
+  const diagnosisLabel = checkedSignalPath ? "Signal path verified" : strainedVerification ? "Verification strained" : "Rework required";
+  const serviceRiskDetail = checkedSignalPath
+    ? "Signal path notes are clean enough to protect the room."
+    : strainedVerification
+      ? "You chose the right process, but the notes stayed thin enough that a return trip can still happen."
+      : "Skipping verification saved time, but the unlabeled path can still send someone back.";
   state.flags.serviceComplete = true;
   state.carry = [];
   setClock(`${state.clock.slice(0, 3)} ${checkedSignalPath ? "11:26" : "11:44"} AM`);
@@ -4046,8 +4102,10 @@ function showServiceResults() {
         <span>Burnout</span><strong>${state.burnout}</strong>
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Preparation</span><strong>${getServicePreparationLabel()}</strong>
-        <span>Diagnosis</span><strong>${checkedSignalPath ? "Signal path verified" : strainedVerification ? "Verified under strain" : "Rework required"}</strong>
+        <span>Diagnosis</span><strong>${diagnosisLabel}</strong>
+        <span>Return-trip risk</span><strong>${serviceReturnRisk ? "Possible" : "Controlled"}</strong>
       </div>
+      <p class="muted">${serviceRiskDetail}</p>
       <blockquote>Client note: "Thank you for fixing the display before the afternoon meeting.${checkedSignalPath ? " The cable notes are helpful." : strainedVerification ? " The room is working, though the notes are light." : ""}"</blockquote>
     `,
     actions: [{
