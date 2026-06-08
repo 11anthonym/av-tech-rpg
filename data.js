@@ -924,10 +924,33 @@ window.GAME_CONTENT = {
     ],
   },
 
+  travelDispatch: {
+    title: "Cherry Hill Return Toll",
+    summary: "Handle a South Jersey return stop after dispatch forgot the bridge toll exists on the way back.",
+    tollCost: 6,
+    taskCards: [
+      {
+        title: "Bridge Toll",
+        skill: "Commercial Process 2",
+        outcome: "Decides whether the cost is documented, absorbed, or kicked back to dispatch.",
+      },
+      {
+        title: "Return ETA",
+        skill: "Client Communication 3",
+        outcome: "Frames the delay before management turns it into a personal scheduling choice.",
+      },
+      {
+        title: "Receipt Trail",
+        skill: "Documentation 3",
+        outcome: "Protects reimbursement and future travel planning without adding a route simulator.",
+      },
+    ],
+  },
+
   upcomingDispatches: [
     {
-      title: "Cherry Hill Return Toll",
-      summary: "Dispatch accounted for the bridge on the way there.",
+      title: "Burlington County Retrofit Walkdown",
+      summary: "The drawings say existing conduit. The ceiling says several other things.",
     },
   ],
 

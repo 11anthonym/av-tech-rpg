@@ -6,6 +6,7 @@ const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const STAY_LATE_PREP_ENERGY_COST = 14;
 const HELP_JOSH_ENERGY_COST = 12;
 const STAY_LATE_BURNOUT_GAIN = 1;
+const CHERRY_HILL_TOLL_COST = 6;
 
 function createInitialState() {
   return {
@@ -60,6 +61,8 @@ function createInitialState() {
       systemsJobsCompleted: 0,
       systemMismatchesDocumented: 0,
       quickRebootsClosed: 0,
+      travelCostsDocumented: 0,
+      unreimbursedTravelCosts: 0,
       trainingGapsLeft: 0,
       skillChecksPassed: 0,
       skillChecksStrained: 0,
@@ -158,7 +161,8 @@ function inferSavedXp(savedGame) {
     + (savedGame.flags?.secureAccessComplete ? (savedGame.flags.secureAccessApproach === "pushback" ? 60 : savedGame.flags.secureAccessApproach === "document" ? 55 : 35) : 0)
     + (savedGame.flags?.callbackCleanupComplete ? (savedGame.flags.callbackCleanupApproach === "craft" ? 65 : savedGame.flags.callbackCleanupApproach === "root" ? 55 : 35) : 0)
     + (savedGame.flags?.handoffComplete ? (savedGame.flags.handoffApproach === "cheat" ? 60 : savedGame.flags.handoffApproach === "patient" ? 50 : 30) : 0)
-    + (savedGame.flags?.systemsComplete ? (savedGame.flags.systemsApproach === "scope" ? 65 : savedGame.flags.systemsApproach === "document" ? 55 : 35) : 0);
+    + (savedGame.flags?.systemsComplete ? (savedGame.flags.systemsApproach === "scope" ? 65 : savedGame.flags.systemsApproach === "document" ? 55 : 35) : 0)
+    + (savedGame.flags?.travelComplete ? (savedGame.flags.travelApproach === "pushback" ? 45 : savedGame.flags.travelApproach === "receipt" ? 35 : 25) : 0);
 }
 
 function inferSavedReputation(savedGame) {
@@ -248,6 +252,14 @@ function inferSavedReputation(savedGame) {
       reputation.management += savedGame.flags.systemsApproach === "scope" ? -2 : -1;
     }
   }
+  if (savedGame.flags?.travelComplete) {
+    if (savedGame.flags.travelApproach === "absorb") {
+      reputation.management += 1;
+    } else {
+      reputation.coworkers += 1;
+      reputation.management += savedGame.flags.travelApproach === "pushback" ? -2 : -1;
+    }
+  }
   return reputation;
 }
 
@@ -276,7 +288,12 @@ function inferSavedStats(savedGame) {
     warrantyReturnsCompleted: 0,
     warrantyBandagesApplied: 0,
     clientHandoffsCompleted: 0,
+    systemsJobsCompleted: 0,
+    systemMismatchesDocumented: 0,
+    quickRebootsClosed: 0,
     trainingGapsLeft: 0,
+    travelCostsDocumented: 0,
+    unreimbursedTravelCosts: 0,
     skillChecksPassed: 0,
     skillChecksStrained: 0,
     fieldTaskChoicesMade: 0,
@@ -342,6 +359,10 @@ function inferSavedStats(savedGame) {
     stats.systemsJobsCompleted += 1;
     if (savedGame.flags.systemsApproach === "reboot") stats.quickRebootsClosed += 1;
     else stats.systemMismatchesDocumented += 1;
+  }
+  if (savedGame.flags?.travelComplete) {
+    if (savedGame.flags.travelApproach === "absorb") stats.unreimbursedTravelCosts += 1;
+    else stats.travelCostsDocumented += 1;
   }
   return stats;
 }
@@ -930,6 +951,7 @@ function continueGame() {
   if (flags.callbackCleanupComplete) flags.callbackCleanupProgressAwarded = true;
   if (flags.handoffComplete) flags.handoffProgressAwarded = true;
   if (flags.systemsComplete) flags.systemsProgressAwarded = true;
+  if (flags.travelComplete) flags.travelProgressAwarded = true;
   if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
     flags.serviceCallbackPending = true;
   }
@@ -948,7 +970,7 @@ function continueGame() {
     systemsChecks: savedGame.systemsChecks || [],
     cash: migratedCash,
     xp: migratedXp,
-    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0) + (flags.warehouseComplete ? 1 : 0) + (flags.secureAccessComplete ? 1 : 0) + (flags.callbackCleanupComplete ? 1 : 0) + (flags.handoffComplete ? 1 : 0) + (flags.systemsComplete ? 1 : 0),
+    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0) + (flags.warehouseComplete ? 1 : 0) + (flags.secureAccessComplete ? 1 : 0) + (flags.callbackCleanupComplete ? 1 : 0) + (flags.handoffComplete ? 1 : 0) + (flags.systemsComplete ? 1 : 0) + (flags.travelComplete ? 1 : 0),
     reputation: migratedReputation,
     training: savedGame.training || [],
     stats: migratedStats,
@@ -1757,6 +1779,8 @@ function getCareerLedgerMarkup() {
       <span>Systems jobs completed</span><strong>${state.stats.systemsJobsCompleted}</strong>
       <span>Systems mismatches documented</span><strong>${state.stats.systemMismatchesDocumented}</strong>
       <span>Quick reboots closed</span><strong>${state.stats.quickRebootsClosed}</strong>
+      <span>Travel costs documented</span><strong>${state.stats.travelCostsDocumented}</strong>
+      <span>Unreimbursed travel costs</span><strong>${state.stats.unreimbursedTravelCosts}</strong>
       <span>Training gaps left</span><strong>${state.stats.trainingGapsLeft}</strong>
       <span>Passed skill checks</span><strong>${state.stats.skillChecksPassed}</strong>
       <span>Strained skill checks</span><strong>${state.stats.skillChecksStrained}</strong>
@@ -1967,6 +1991,9 @@ function showDispatchPreview() {
   if (state.flags.handoffComplete && !state.flags.systemsComplete) {
     return showSystemsDispatchPreview();
   }
+  if (state.flags.systemsComplete && getUnresolvedCallbackCount() === 0 && !state.flags.travelComplete) {
+    return showTravelDispatchPreview();
+  }
   if (state.flags.secureAccessComplete) {
     if (!state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0) return showCallbackCleanupDispatchPreview();
     if (!state.flags.handoffComplete) return showHandoffDispatchPreview();
@@ -2090,7 +2117,7 @@ function showPrototypeSummary() {
       <p><strong>Career check-in:</strong></p>
       <ul class="modal-list">
         <li><strong>Did the walking stay purposeful?</strong><span>Loading and carrying should explain the job without becoming repetitive.</span></li>
-        <li><strong>Did your choices feel visible?</strong><span>Your tools, preparation, diagnosis, survey report, commissioning notes, stockroom decision, access-delay report, and systems closeout should change how the workday plays.</span></li>
+        <li><strong>Did your choices feel visible?</strong><span>Your tools, preparation, diagnosis, survey report, commissioning notes, stockroom decision, access-delay report, systems closeout, and travel-cost choice should change how the workday plays.</span></li>
         <li><strong>Did progression make you curious?</strong><span>The shop, clipboard, and locked dispatches should make one more workday sound appealing.</span></li>
       </ul>
       <blockquote>Dispatch note: "Please remain flexible. Several schedules are currently being finalized retroactively."</blockquote>
@@ -3030,6 +3057,124 @@ function finishSystemsService(approach) {
     actions: [{
       label: "Return To Radnor Rack & Wire",
       onClick: () => returnToShopAfterDispatch(content.systemsDispatch.title, "Returned to Radnor Rack & Wire after the King of Prussia systems service."),
+    }],
+  });
+}
+
+function showTravelDispatchPreview() {
+  showModal({
+    kicker: "Dispatch Board",
+    title: content.travelDispatch.title,
+    body: getDispatchBoardMarkup({
+      type: "Travel Cost",
+      familyId: "logistics",
+      setup: "Dispatch added a quick Cherry Hill return stop after the King of Prussia service call. The work is tiny. The bridge toll and paperwork are somehow yours.",
+      why: "Unlocked after the systems service job. This tests whether travel friction can be a readable RPG choice without adding a route simulator.",
+      stakes: [
+        `The current DRPA passenger toll is $${content.travelDispatch.tollCost || CHERRY_HILL_TOLL_COST}.`,
+        "Documenting the cost protects reimbursement and annoys management.",
+        "Eating the toll keeps the ticket clean and quietly costs you cash.",
+      ],
+      note: "This is a single travel decision: no new map, no toll booth minigame, no heroic spreadsheet.",
+      managementNote: "Please keep this return stop efficient. Travel expenses should be reasonable and pre-approved.",
+      taskCards: content.travelDispatch.taskCards,
+    }),
+    actions: [
+      { label: "Review Travel Choices", onClick: showTravelChoice },
+      { label: "Return to Shop", className: "secondary-button" },
+    ],
+  });
+}
+
+function showTravelChoice() {
+  const tollCost = content.travelDispatch.tollCost || CHERRY_HILL_TOLL_COST;
+  showModal({
+    kicker: "Cherry Hill Return",
+    title: "The Toll Exists Both Ways",
+    body: `
+      <p>The return stop itself is small. The problem is that dispatch treated the bridge like a rumor and the van like it runs on optimism.</p>
+      ${getChoicePressureMarkup([
+        { label: "File receipt", detail: "Costs a little energy, protects your cash, and creates mild management friction." },
+        { label: "Push dispatch", detail: "Best process outcome if you can handle the pressure, but management dislikes being asked to own travel planning." },
+        { label: "Eat the toll", detail: `Fastest option. You pay $${tollCost}, management is happy, and the bad process remains invisible.` },
+      ])}
+    `,
+    actions: [
+      { label: `File toll receipt and ETA note (-2 energy, $${tollCost} reimbursed)`, onClick: () => finishTravelDispatch("receipt") },
+      ...(getSkillValue("commercialProcess") >= 3 || canUsePressureChoice() ? [{
+        label: "Push dispatch to own the return toll (-2 energy, management hit)",
+        className: "secondary-button",
+        onClick: () => finishTravelDispatch("pushback"),
+      }] : []),
+      { label: `Eat the toll and keep moving (-$${tollCost}, management +1)`, className: "secondary-button", onClick: () => finishTravelDispatch("absorb") },
+    ],
+  });
+}
+
+function getTravelReputationSummary(approach) {
+  if (approach === "absorb") return "Management +1";
+  if (approach === "pushback") return "Coworkers +1, Management -2";
+  return "Coworkers +1, Management -1";
+}
+
+function finishTravelDispatch(approach) {
+  const tollCost = content.travelDispatch.tollCost || CHERRY_HILL_TOLL_COST;
+  const documented = approach !== "absorb";
+  const xp = approach === "pushback" ? 45 : approach === "receipt" ? 35 : 25;
+  const basePay = 42;
+  const netPay = documented ? basePay : basePay - tollCost;
+  if (documented) changeEnergy(-2);
+  state.flags.travelComplete = true;
+  state.flags.travelApproach = approach;
+  state.flags.prototypeSummaryViewed = false;
+  setClock(`${state.clock.slice(0, 3)} ${documented ? "5:18" : "4:58"} PM`);
+  if (!state.flags.travelPaid) {
+    state.cash += netPay;
+    state.flags.travelPaid = true;
+  }
+  if (!state.flags.travelProgressAwarded) {
+    awardCareerProgress({
+      xp,
+      reputation: documented
+        ? { clients: 0, coworkers: 1, management: approach === "pushback" ? -2 : -1 }
+        : { clients: 0, coworkers: 0, management: 1 },
+      source: content.travelDispatch.title,
+    });
+    state.flags.travelProgressAwarded = true;
+  }
+  if (!state.flags.travelStatsRecorded) {
+    if (documented) {
+      state.stats.travelCostsDocumented += 1;
+      state.stats.documentedTaskRisks += 1;
+    } else {
+      state.stats.unreimbursedTravelCosts += 1;
+    }
+    state.flags.travelStatsRecorded = true;
+  }
+  addLog(documented
+    ? "Documented the Cherry Hill return toll instead of letting the van become a charity with ladder racks."
+    : "Ate the Cherry Hill toll to keep the ticket moving. The receipt disappeared into the same place as accurate dispatch estimates.");
+  render();
+  showModal({
+    kicker: "Travel Cost Complete",
+    title: approach === "pushback" ? "Dispatch Owns The Bridge Now" : approach === "receipt" ? "Receipt Filed Before It Became Folklore" : "The Toll Came Out Of Your Pocket",
+    body: `
+      <div class="results-grid">
+        <span>Base travel pay</span><strong>+$${basePay}</strong>
+        <span>Bridge toll</span><strong>${documented ? `$${tollCost} reimbursed` : `-$${tollCost} absorbed`}</strong>
+        <span>Net cash</span><strong>+${formatCash(netPay)}</strong>
+        <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
+        <span>Experience</span><strong>+${xp} XP</strong>
+        <span>Reputation impact</span><strong>${getTravelReputationSummary(approach)}</strong>
+        <span>Career ledger</span><strong>${documented ? "Travel cost documented" : "Unreimbursed travel cost"}</strong>
+      </div>
+      ${documented
+        ? `<blockquote>Management note: "Please avoid over-documenting routine travel expenses."</blockquote>`
+        : `<blockquote>Management note: "Thanks for keeping the return stop simple."</blockquote>`}
+    `,
+    actions: [{
+      label: "Return To Radnor Rack & Wire",
+      onClick: () => returnToShopAfterDispatch(content.travelDispatch.title, "Returned to Radnor Rack & Wire after the Cherry Hill return stop."),
     }],
   });
 }
@@ -4499,7 +4644,8 @@ function getObjective() {
     if (state.flags.secureAccessComplete && !state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0) return "Review the warranty return on the dispatch board.";
     if (state.flags.secureAccessComplete && !state.flags.handoffComplete) return "Review the executive handoff on the dispatch board.";
     if (state.flags.handoffComplete && !state.flags.systemsComplete) return "Review the King of Prussia systems service on the dispatch board.";
-    if (state.flags.systemsComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
+    if (state.flags.systemsComplete && getUnresolvedCallbackCount() === 0 && !state.flags.travelComplete) return "Review the Cherry Hill return toll on the dispatch board.";
+    if (state.flags.travelComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
     if (state.flags.secureAccessComplete) return "Current dispatch board complete. Explore the shop.";
     if (state.flags.finished) return "Prepare for the Conshohocken service call.";
     if (!state.flags.shopBrief) return "Find your supervisor.";
@@ -5038,9 +5184,12 @@ function render() {
   const callbackCleanupActive = state.sceneId === "warrantyReturn";
   const handoffActive = state.sceneId === "executiveHandoff";
   const systemsActive = state.sceneId === "systemsService";
+  const travelActive = state.flags.systemsComplete && getUnresolvedCallbackCount() === 0 && !state.flags.travelComplete;
+  const travelSummaryPending = state.flags.travelComplete && !state.flags.prototypeSummaryViewed;
   const warehouseActive = state.flags.warehouseStarted && !state.flags.warehouseComplete;
-  const systemsSummaryPending = state.flags.systemsComplete && getUnresolvedCallbackCount() === 0 && !state.flags.prototypeSummaryViewed;
-  const activeDispatch = systemsActive || (state.flags.systemsStarted && !state.flags.systemsComplete) || (state.flags.handoffComplete && !state.flags.systemsComplete) || systemsSummaryPending
+  const activeDispatch = travelActive || travelSummaryPending
+    ? content.travelDispatch
+    : systemsActive || (state.flags.systemsStarted && !state.flags.systemsComplete) || (state.flags.handoffComplete && !state.flags.systemsComplete)
     ? content.systemsDispatch
     : handoffActive || (state.flags.handoffStarted && !state.flags.handoffComplete) || (state.flags.secureAccessComplete && (state.flags.callbackCleanupComplete || getUnresolvedCallbackCount() === 0) && !state.flags.handoffComplete)
     ? content.handoffDispatch
@@ -5059,6 +5208,8 @@ function render() {
       : { title: "Two Quick Carts", summary: "Build two mobile video conferencing carts at a Center City East office." };
   elements.jobStatus.textContent = warehouseActive
     ? "WAREHOUSE RUN"
+    : travelActive
+      ? "TRAVEL COST"
     : systemsActive
       ? "SYSTEMS SERVICE"
     : handoffActive

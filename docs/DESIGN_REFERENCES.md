@@ -32,6 +32,9 @@ kit, build shop relationships, and preview nearby career milestones.
 - [r/CommercialAV: Tools](https://www.reddit.com/r/CommercialAV/comments/umi11o)
   discusses the mix of personal hand tools, company equipment, stocked vans,
   and technicians gradually building dependable kits.
+- [DRPA Bridge Toll Schedule](https://drpa.org/travel/toll-schedule.html)
+  lists the current passenger/small-truck toll used as grounded detail for the
+  Cherry Hill return-toll micro-job.
 
 These patterns support fictional dispatches such as underestimated downtown
 carries, undocumented couplers, rooms marked ready before commissioning, and

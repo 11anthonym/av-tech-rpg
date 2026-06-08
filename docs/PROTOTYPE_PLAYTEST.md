@@ -57,6 +57,8 @@ The playable slice now has:
 22. A King of Prussia systems service job that tests Networking,
    Control Systems, Documentation, prep choices, and bad-company reboot
    pressure without adding a technical minigame.
+23. A Cherry Hill return-toll micro-job that tests cash, reimbursement pressure,
+   management optics, and documentation without adding a route simulator.
 
 ## Playtest Questions
 
@@ -326,6 +328,14 @@ with one travel decision instead of a route simulator?
 Candidate shape: a Cherry Hill return or toll/parking decision that tests cash,
 energy, management pressure, and documentation. Keep it as a single dispatch
 beat unless the existing service loop needs a lighter change of pace.
+
+Initial implementation: **Cherry Hill Return Toll** now appears after the
+systems service job if callback debt is clear. It is a board-only micro-dispatch
+with one final choice: document the toll, push dispatch to own it, or eat the
+cost to keep management happy.
+
+Next playtest question: does the one-choice travel job feel like real dispatch
+friction, or does it feel too small after a full systems service dispatch?
 
 ## Prototype Guardrail
 
