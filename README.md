@@ -39,7 +39,9 @@ closeout where the player can clock out, stay late to prep, help Josh, or take a
 recovery day before the next job unlocks. A second Conshohocken service dispatch
 turns a reported display issue into a replacement job, adds a small
 diagnosis-versus-speed decision, and lets the player's early tool choices reduce
-the work involved. Completed work awards experience and reputation, with an
+the work involved. Zero-energy crashes now create push-your-luck pressure
+through skill penalties, exhaustion incidents, and lower ordinary recovery.
+Completed work awards experience and reputation, with an
 early rank-up and field-training choice available from the walkable shop hub.
 Josh, the company's patient lead technician, adds an early coworker relationship
 arc and a practical hand-me-down tool while management continues to blame him

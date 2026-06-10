@@ -64,6 +64,8 @@ section + section { margin-top: 22px; }
 .stat-row strong, .meter-row strong { color: var(--text); }
 .meter { height: 7px; margin-bottom: 14px; overflow: hidden; border-radius: 99px; background: #111715; }
 .meter i { display: block; height: 100%; border-radius: inherit; background: var(--success); transition: width 160ms ease; }
+.meter i.energy-low { background: #efb64e; }
+.meter i.energy-danger { background: #df8a7e; }
 .carry-card, .nearby-card, .vehicle-card { padding: 10px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); background: var(--panel-alt); font-size: 12px; line-height: 1.5; }
 .carry-card { color: var(--accent); }
 .vehicle-card { display: grid; gap: 4px; }

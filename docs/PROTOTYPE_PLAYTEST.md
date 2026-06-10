@@ -432,6 +432,23 @@ Implementation note: the next-morning preview now uses the same recovery math as
 the actual shift closeout. Staying late applies the new burnout before recovery,
 so the preview no longer overstates tomorrow's energy.
 
+Zero-energy follow-up: hitting zero is now a risk/reward state instead of only a
+low number. The player can keep working, but field judgment gets worse: skill
+checks can show an exhaustion penalty, every 8 unpaid energy creates an
+exhaustion incident, and ordinary overnight recovery is capped after a crash.
+For a 100-energy tech, the first crash caps ordinary recovery at 60 energy, and
+each incident tightens that cap by 8. Incidents rotate through management
+friction, return-trip risk, and coworker handoff damage. Recovery day clears the
+pressure at a management cost.
+
+Design references: Stardew Valley and related life-sim stamina systems are good
+models for making daily limits readable, while Darkest Dungeon-style stress and
+Slay the Spire-style pressure are useful references for visible accumulated
+risk. The AV Tech version should not copy their exact pass-out, hospital,
+stress-affliction, or damage rules. It should feel like field work: tired
+decisions create thin notes, callbacks, reputation friction, and a worse start
+tomorrow.
+
 ### Third Choice: Travel-Cost Micro-Job
 
 Playability question: can the game show the real cost of poor dispatch planning

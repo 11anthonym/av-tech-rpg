@@ -159,6 +159,11 @@ readable and visible on the career clipboard. The current examples are:
 - unresolved callbacks add a small energy penalty to later access checks
 - energy costs can run the meter to zero; unpaid energy beyond zero becomes
   exhaustion debt, and every 10 unpaid energy adds 1 burnout
+- every 8 unpaid energy also creates an exhaustion incident; incidents rotate
+  through management friction, return-trip risk, and coworker handoff damage
+- zero-energy pressure can reduce later skill checks and cap ordinary next-day
+  recovery; the first crash caps ordinary recovery at 60 energy for a 100-energy
+  tech, and each incident tightens that cap by 8 more
 - consecutive late nights cap next-morning energy until the player clocks out
   normally or takes a recovery day
 

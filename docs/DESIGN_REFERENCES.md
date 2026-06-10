@@ -18,6 +18,26 @@ combine common field situations into readable scenarios.
 For AV Tech RPG, keep the equivalent small: complete jobs, improve a practical
 kit, build shop relationships, and preview nearby career milestones.
 
+## Fatigue And Push-Your-Luck Pressure
+
+- Stardew Valley is the main reference for stamina as a daily budget: players
+  can push too hard, but the real design value is that fatigue makes tomorrow
+  and recovery choices matter.
+- Harvest Moon / Story of Seasons games are useful references for readable
+  routine pressure: chores are simple, but a day has limits, so prioritization
+  becomes the game.
+- Darkest Dungeon is a useful stress reference, not a tone reference: pressure
+  should accumulate in visible ways and create hard tradeoffs before it becomes
+  a collapse.
+- Slay the Spire is a useful risk/reward reference: the player should often
+  understand the upside of taking damage or pressure now, then decide whether
+  the future cost is worth it.
+
+Do not copy exact pass-out, hospital, money-loss, or stress-affliction rules.
+For AV Tech RPG, zero energy means field judgment gets worse: skill checks can
+take an exhaustion penalty, unpaid effort can create incidents, and ordinary
+rest can wake the player below full energy unless they spend a recovery day.
+
 ## Commercial AV Patterns
 
 - [r/CommercialAV: How Do You Quote Labor for Larger AV Projects?](https://www.reddit.com/r/CommercialAV/comments/1hvbs7a)

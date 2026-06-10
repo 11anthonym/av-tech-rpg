@@ -13,6 +13,11 @@ const MIN_STAYED_LATE_RECOVERY = 16;
 const STAY_LATE_NEXT_MORNING_CAP_LOSS = 20;
 const CONSECUTIVE_LATE_NIGHT_CAP_LOSS = 10;
 const MIN_STAY_LATE_NEXT_MORNING_ENERGY = 30;
+const EXHAUSTION_PRESSURE_PER_INCIDENT = 8;
+const EXHAUSTION_NEXT_MORNING_CAP_LOSS = 40;
+const EXHAUSTION_INCIDENT_CAP_LOSS = 8;
+const MIN_EXHAUSTION_NEXT_MORNING_ENERGY = 20;
+const MAX_EXHAUSTION_SKILL_PENALTY = 3;
 
 function createInitialState() {
   return {
@@ -82,6 +87,8 @@ function createInitialState() {
       stayLatePrepDays: 0,
       shopHelpDays: 0,
       energyCrashes: 0,
+      exhaustionIncidents: 0,
+      exhaustionMistakes: 0,
       exhaustionBurnout: 0,
     },
     clock: "MON 7:11 AM",
@@ -314,6 +321,8 @@ function inferSavedStats(savedGame) {
     stayLatePrepDays: 0,
     shopHelpDays: 0,
     energyCrashes: 0,
+    exhaustionIncidents: 0,
+    exhaustionMistakes: 0,
     exhaustionBurnout: 0,
   };
   if (savedGame.stats) return { ...stats, ...savedGame.stats };
@@ -549,8 +558,15 @@ function getTraitContextBonus(skillId, contextId = "") {
   ), 0);
 }
 
+function getExhaustionSkillPenalty() {
+  const zeroPenalty = state.energy <= 0 ? 1 : 0;
+  const incidentPenalty = state.flags.exhaustionIncidentsThisShift || 0;
+  return Math.min(MAX_EXHAUSTION_SKILL_PENALTY, zeroPenalty + incidentPenalty);
+}
+
 function getSkillCheckResult({ skillId, difficulty, contextBonus = 0, contextId = "" }) {
-  const score = getSkillValue(skillId) + contextBonus + getTraitContextBonus(skillId, contextId);
+  const exhaustionPenalty = getExhaustionSkillPenalty();
+  const score = getSkillValue(skillId) + contextBonus + getTraitContextBonus(skillId, contextId) - exhaustionPenalty;
   const margin = score - difficulty;
   const tier = margin >= 2 ? "clean" : margin >= 0 ? "solid" : margin === -1 ? "strained" : "miss";
   return {
@@ -559,6 +575,7 @@ function getSkillCheckResult({ skillId, difficulty, contextBonus = 0, contextId 
     score,
     margin,
     tier,
+    exhaustionPenalty,
     successful: margin >= 0,
   };
 }
@@ -576,7 +593,7 @@ function resolveSkillCheck(flagKey, options) {
 function getSkillCheckLabel(result) {
   const skill = getSkillDefinition(result.skillId);
   const status = result.tier === "clean" ? "clean" : result.tier === "solid" ? "solid" : result.tier === "strained" ? "strained" : "messy";
-  return `${skill?.name || result.skillId} ${result.score}/${result.difficulty} (${status})`;
+  return `${skill?.name || result.skillId} ${result.score}/${result.difficulty} (${status}${result.exhaustionPenalty ? `, exhaustion -${result.exhaustionPenalty}` : ""})`;
 }
 
 function getSkillCheckMarkup(result) {
@@ -591,6 +608,13 @@ function getChoicePressureMarkup(hints = []) {
       ${hints.map((hint) => `<li><strong>${escapeHtml(hint.label)}</strong><span>${escapeHtml(hint.detail)}</span></li>`).join("")}
     </ul>
   `;
+}
+
+function getExhaustionPressureMarkup() {
+  if (!state.flags.energyExhaustedThisShift && !state.flags.exhaustionIncidentsThisShift) return "";
+  const penalty = getExhaustionSkillPenalty();
+  const cap = getExhaustionEnergyCap();
+  return `<p class="expense"><strong>Zero-energy pressure:</strong> ordinary rest is capped at ${cap}/${getMaxEnergy()} energy tomorrow${penalty ? `, and skill checks are at -${penalty}` : ""}. Recovery day clears the pressure.</p>`;
 }
 
 function getSkillSummaryMarkup() {
@@ -760,9 +784,11 @@ function getActiveCareerSummaryMarkup() {
     items.push({ label: "Return-trip risks remembered", detail: returnTripSummary });
   }
   if (state.flags.energyExhaustedThisShift || state.flags.exhaustionDebt) {
+    const exhaustionPenalty = getExhaustionSkillPenalty();
+    const exhaustionCap = getExhaustionEnergyCap();
     items.push({
       label: "Exhaustion debt",
-      detail: "Energy hit zero this shift. Further unpaid effort can turn into burnout until you get a real reset.",
+      detail: `Energy hit zero this shift. Further unpaid effort can create incidents, burnout, and a ${exhaustionCap}-energy ordinary recovery cap.${exhaustionPenalty ? ` Skill checks are currently at -${exhaustionPenalty}.` : ""}`,
     });
   }
   if (state.reputation.coworkers < 0) {
@@ -1115,20 +1141,65 @@ function addLog(message) {
   state.log = state.log.slice(0, 10);
 }
 
+function markEnergyCrash() {
+  if (state.flags.energyExhaustedThisShift) return;
+  state.flags.energyExhaustedThisShift = true;
+  state.stats.energyCrashes = (state.stats.energyCrashes || 0) + 1;
+  addLog("Energy hit zero. Further effort starts borrowing from tomorrow.");
+}
+
+function recordExhaustionMistake() {
+  const riskId = `exhaustion-${getCurrentDispatchKey()}`;
+  if (!state.flags.returnTripRisks?.[riskId]) {
+    state.stats.callbacks += 1;
+    state.stats.exhaustionMistakes = (state.stats.exhaustionMistakes || 0) + 1;
+    recordReturnTripRisk(riskId, {
+      source: "Zero-energy overrun",
+      detail: "A tired closeout left enough uncertainty to create return-trip pressure.",
+    });
+    addLog("Exhaustion mistake: a tired closeout created return-trip risk.");
+  } else {
+    state.reputation.clients -= 1;
+    addLog("Exhaustion mistake: the client noticed the closeout getting thin.");
+  }
+}
+
+function recordExhaustionIncident() {
+  const incidentNumber = (state.flags.exhaustionIncidentsThisShift || 0) + 1;
+  state.flags.exhaustionIncidentsThisShift = incidentNumber;
+  state.stats.exhaustionIncidents = (state.stats.exhaustionIncidents || 0) + 1;
+  const consequence = (incidentNumber - 1) % 3;
+  if (consequence === 0) {
+    state.reputation.management -= 1;
+    addLog("Exhaustion incident: dispatch noticed the job getting messy.");
+  } else if (consequence === 1) {
+    recordExhaustionMistake();
+  } else {
+    state.reputation.coworkers -= 1;
+    addLog("Exhaustion incident: the crew will need to untangle part of the handoff.");
+  }
+}
+
+function applyExhaustionPressure(unpaidEnergy) {
+  if (!unpaidEnergy) return;
+  state.flags.exhaustionPressureDebt = (state.flags.exhaustionPressureDebt || 0) + unpaidEnergy;
+  const incidentGain = Math.floor(state.flags.exhaustionPressureDebt / EXHAUSTION_PRESSURE_PER_INCIDENT);
+  if (!incidentGain) return;
+  state.flags.exhaustionPressureDebt %= EXHAUSTION_PRESSURE_PER_INCIDENT;
+  for (let index = 0; index < incidentGain; index += 1) recordExhaustionIncident();
+}
+
 function changeEnergy(amount) {
   const beforeEnergy = state.energy;
   const maxEnergy = getMaxEnergy();
   state.energy = Math.max(0, Math.min(maxEnergy, state.energy + amount));
   if (amount >= 0) return;
 
-  if (state.energy === 0 && !state.flags.energyExhaustedThisShift) {
-    state.flags.energyExhaustedThisShift = true;
-    state.stats.energyCrashes = (state.stats.energyCrashes || 0) + 1;
-    addLog("Energy hit zero. Further effort starts borrowing from tomorrow.");
-  }
+  if (state.energy === 0) markEnergyCrash();
 
   const unpaidEnergy = Math.max(0, Math.abs(amount) - beforeEnergy);
   if (!unpaidEnergy) return;
+  applyExhaustionPressure(unpaidEnergy);
   state.flags.exhaustionDebt = (state.flags.exhaustionDebt || 0) + unpaidEnergy;
   const burnoutGain = Math.floor(state.flags.exhaustionDebt / EXHAUSTION_DEBT_PER_BURNOUT);
   if (!burnoutGain) return;
@@ -1205,14 +1276,20 @@ function getStayedLateEnergyCap(lateNightStreak = state.flags.consecutiveLateNig
   return Math.max(MIN_STAY_LATE_NEXT_MORNING_ENERGY, getMaxEnergy() - streakPenalty);
 }
 
+function getExhaustionEnergyCap(incidentCount = state.flags.exhaustionIncidentsThisShift || 0) {
+  const capLoss = EXHAUSTION_NEXT_MORNING_CAP_LOSS
+    + Math.max(0, incidentCount) * EXHAUSTION_INCIDENT_CAP_LOSS;
+  return Math.max(MIN_EXHAUSTION_NEXT_MORNING_ENERGY, getMaxEnergy() - capLoss);
+}
+
 function applyOvernightRecovery({ stayedLate = false, recoveryDay = false } = {}) {
   const beforeEnergy = state.energy;
   const beforeBurnout = state.burnout;
   const recovery = recoveryDay ? getMaxEnergy() : getOvernightRecovery({ stayedLate });
   const recoveredEnergy = recoveryDay ? getMaxEnergy() : Math.min(getMaxEnergy(), state.energy + recovery);
-  state.energy = stayedLate && !recoveryDay
-    ? Math.min(recoveredEnergy, getStayedLateEnergyCap())
-    : recoveredEnergy;
+  const stayedLateCap = stayedLate && !recoveryDay ? getStayedLateEnergyCap() : getMaxEnergy();
+  const exhaustionCap = state.flags.energyExhaustedThisShift && !recoveryDay ? getExhaustionEnergyCap() : getMaxEnergy();
+  state.energy = Math.min(recoveredEnergy, stayedLateCap, exhaustionCap);
   if (recoveryDay) {
     state.burnout = Math.max(0, state.burnout - 2);
   } else if (!stayedLate && state.energy >= Math.ceil(getMaxEnergy() * 0.75)) {
@@ -1232,16 +1309,27 @@ function previewShiftChoice(choice) {
   const recoveryDay = choice === "recovery-day";
   const lateNightStreak = stayedLate ? (state.flags.consecutiveLateNights || 0) + 1 : 0;
   const unpaidEnergy = Math.max(0, energyCost - state.energy);
+  const exhaustionPressureDebt = (state.flags.exhaustionPressureDebt || 0) + unpaidEnergy;
+  const exhaustionIncidentGain = Math.floor(exhaustionPressureDebt / EXHAUSTION_PRESSURE_PER_INCIDENT);
+  const exhaustionIncidents = (state.flags.exhaustionIncidentsThisShift || 0) + exhaustionIncidentGain;
   const exhaustionBurnoutGain = Math.floor(((state.flags.exhaustionDebt || 0) + unpaidEnergy) / EXHAUSTION_DEBT_PER_BURNOUT);
   const burnoutAfterChoice = Math.max(0, state.burnout + exhaustionBurnoutGain + (stayedLate ? STAY_LATE_BURNOUT_GAIN : 0));
   const recovery = recoveryDay ? maxEnergy : getOvernightRecovery({ stayedLate, burnout: burnoutAfterChoice });
   const energyAfterChoice = Math.max(0, state.energy - energyCost);
   const rawNextEnergy = recoveryDay ? maxEnergy : Math.min(maxEnergy, energyAfterChoice + recovery);
   const lateEnergyCap = stayedLate ? getStayedLateEnergyCap(lateNightStreak) : maxEnergy;
-  const nextEnergy = Math.min(rawNextEnergy, lateEnergyCap);
+  const willHitZero = state.flags.energyExhaustedThisShift || state.energy <= 0 || (energyCost > 0 && energyAfterChoice === 0);
+  const exhaustionEnergyCap = willHitZero && !recoveryDay ? getExhaustionEnergyCap(exhaustionIncidents) : maxEnergy;
+  const nextEnergy = Math.min(rawNextEnergy, lateEnergyCap, exhaustionEnergyCap);
   const cappedRecovery = recoveryDay ? 0 : Math.max(0, energyAfterChoice + recovery - maxEnergy);
   const lateCapNote = stayedLate && rawNextEnergy > lateEnergyCap
     ? ` Stayed-late fatigue caps tomorrow at ${lateEnergyCap} energy${lateNightStreak > 1 ? ` after ${lateNightStreak} late nights` : ""}.`
+    : "";
+  const exhaustionCapNote = willHitZero && !recoveryDay && rawNextEnergy > exhaustionEnergyCap
+    ? ` Zero-energy crash caps tomorrow at ${exhaustionEnergyCap} energy${exhaustionIncidents ? ` after ${exhaustionIncidents} exhaustion incident${exhaustionIncidents === 1 ? "" : "s"}` : ""}.`
+    : "";
+  const exhaustionIncidentNote = exhaustionIncidentGain
+    ? ` This overrun crosses ${exhaustionIncidentGain} exhaustion incident${exhaustionIncidentGain === 1 ? "" : "s"} before rest.`
     : "";
   const nextBurnout = recoveryDay
     ? Math.max(0, burnoutAfterChoice - 2)
@@ -1260,7 +1348,7 @@ function previewShiftChoice(choice) {
           ? "Management may notice the schedule gap."
           : "No obvious reputation pressure.",
     benefit: choice === "prep" ? "+1 Fieldcraft/Documentation next dispatch" : choice === "help-josh" ? "Josh relationship progress" : choice === "recovery-day" ? "Skips next workday pressure" : "Clean rest",
-    capNote: lateCapNote || (cappedRecovery ? ` ${cappedRecovery} recovery would be capped at max energy.` : ""),
+    capNote: `${lateCapNote}${exhaustionCapNote}${exhaustionIncidentNote}` || (cappedRecovery ? ` ${cappedRecovery} recovery would be capped at max energy.` : ""),
   };
 }
 
@@ -1287,6 +1375,8 @@ function clearEndShiftState() {
   state.flags.endShiftSummaryShown = false;
   state.flags.energyExhaustedThisShift = false;
   state.flags.exhaustionDebt = 0;
+  state.flags.exhaustionPressureDebt = 0;
+  state.flags.exhaustionIncidentsThisShift = 0;
 }
 
 function startEndShift(source) {
@@ -1315,6 +1405,8 @@ function showEndShiftModal() {
   const ordinaryRecovery = getOvernightRecovery();
   const lateRecovery = getOvernightRecovery({ stayedLate: true, burnout: state.burnout + STAY_LATE_BURNOUT_GAIN });
   const lateEnergyCap = getStayedLateEnergyCap((state.flags.consecutiveLateNights || 0) + 1);
+  const exhaustionCap = state.flags.energyExhaustedThisShift ? getExhaustionEnergyCap() : null;
+  const exhaustionPenalty = getExhaustionSkillPenalty();
   showModal({
     kicker: "End Of Shift",
     title: "Close Out The Workday",
@@ -1327,8 +1419,10 @@ function showEndShiftModal() {
         <span>Overnight recovery</span><strong>+${ordinaryRecovery} energy${state.burnout ? " after burnout penalty" : ""}</strong>
         <span>Stayed-late recovery</span><strong>+${lateRecovery} energy after new burnout</strong>
         <span>Stayed-late cap</span><strong>${lateEnergyCap}/${getMaxEnergy()} energy tomorrow</strong>
+        ${exhaustionCap ? `<span>Zero-energy cap</span><strong>${exhaustionCap}/${getMaxEnergy()} energy tomorrow unless recovery day</strong>` : ""}
+        ${exhaustionPenalty ? `<span>Exhaustion penalty</span><strong>-${exhaustionPenalty} on skill checks this shift</strong>` : ""}
       </div>
-      <p class="muted">Burnout reduces ordinary overnight recovery. Staying late helps the work, but it caps tomorrow's energy; consecutive late nights tighten that cap. Recovery days restore more, but management notices the schedule gap.</p>
+      <p class="muted">Burnout reduces ordinary overnight recovery. Staying late helps the work, but it caps tomorrow's energy; consecutive late nights tighten that cap. Hitting zero energy is a push-your-luck state: work can continue, but incidents, weaker skill checks, and a lower next-morning cap can follow. Recovery days restore more, but management notices the schedule gap.</p>
       <p><strong>Next-morning preview:</strong></p>
       ${getEndShiftChoicePreviewMarkup()}
     `,
@@ -1401,6 +1495,7 @@ function showBreakArea() {
         <span>Lunch packed</span><strong>${state.flags.packedLunchReady ? "Yes" : "No"}</strong>
         <span>Cash</span><strong>${formatCash(state.cash)}</strong>
       </div>
+      ${getExhaustionPressureMarkup()}
     `,
     actions: [
       { label: "Take 15-minute break (+10 energy)", onClick: takeShortBreak },
@@ -1444,6 +1539,8 @@ function takeRecoveryDayFromShop() {
   const recovery = applyOvernightRecovery({ recoveryDay: true });
   state.flags.energyExhaustedThisShift = false;
   state.flags.exhaustionDebt = 0;
+  state.flags.exhaustionPressureDebt = 0;
+  state.flags.exhaustionIncidentsThisShift = 0;
   state.flags.consecutiveLateNights = 0;
   advanceToNextMorning(1);
   addLog(`Took an unpaid recovery day. Recovered ${recovery.energyRecovered} energy${recovery.burnoutRecovered ? ` and reduced burnout by ${recovery.burnoutRecovered}` : ""}. Management noticed.`);
@@ -1853,6 +1950,11 @@ function getCareerEffectsMarkup() {
       name: "Next-shift prep",
       description: "Staying late adds +1 Fieldcraft and +1 Documentation until the next dispatch closes.",
     },
+    {
+      active: Boolean(state.flags.energyExhaustedThisShift || state.flags.exhaustionIncidentsThisShift),
+      name: "Zero-energy pressure",
+      description: "Hitting zero energy can cap ordinary recovery, lower skill checks, and turn unpaid effort into incidents.",
+    },
   ];
   return `
     <ul class="modal-list">
@@ -1877,6 +1979,8 @@ function getCareerLedgerMarkup() {
       <span>Coffee jar contributions</span><strong>${state.stats.coffeesBought}</strong>
       <span>Bad coffee breaks</span><strong>${state.stats.coffeeBreaks}</strong>
       <span>Energy crashes</span><strong>${state.stats.energyCrashes || 0}</strong>
+      <span>Exhaustion incidents</span><strong>${state.stats.exhaustionIncidents || 0}</strong>
+      <span>Exhaustion mistakes</span><strong>${state.stats.exhaustionMistakes || 0}</strong>
       <span>Overexertion burnout</span><strong>${state.stats.exhaustionBurnout || 0}</strong>
       <span>Late prep nights</span><strong>${state.stats.stayLatePrepDays}</strong>
       <span>Shop help nights</span><strong>${state.stats.shopHelpDays}</strong>
@@ -5339,7 +5443,10 @@ function renderHud() {
   const rank = getCareerRank();
   elements.techName.textContent = state.technician.name;
   elements.energyValue.textContent = state.energy;
-  elements.energyMeter.style.width = `${(state.energy / getMaxEnergy()) * 100}%`;
+  const energyRatio = state.energy / getMaxEnergy();
+  elements.energyMeter.style.width = `${energyRatio * 100}%`;
+  elements.energyMeter.classList.toggle("energy-low", energyRatio > 0 && energyRatio <= 0.25);
+  elements.energyMeter.classList.toggle("energy-danger", state.energy <= 0 || state.flags.energyExhaustedThisShift);
   elements.burnoutValue.textContent = state.burnout;
   elements.cashValue.textContent = formatCash(state.cash);
   elements.craftValue.textContent = getCraftsmanship();
