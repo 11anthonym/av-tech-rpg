@@ -100,6 +100,11 @@ The prototype autosaves the active career in the browser's local storage. Use
 Career` to remove the local save. A save created from a directly opened file is
 separate from a save created on a hosted website.
 
+The hosted page cache-busts `styles.css`, `data.js`, and `app.js` on each load
+so a hard refresh can pick up the newest deployed files without clearing the
+saved career. The save key remains `av-tech-rpg-save-v1`; only an intentional
+save migration or save-key change should reset prototype progress.
+
 ## Share Online
 
 Play the hosted version at

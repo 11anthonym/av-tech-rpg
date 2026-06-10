@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AV Tech RPG | First Day</title>
-    <link rel="stylesheet" href="styles.css" />
+    <script>
+      window.AV_TECH_RPG_ASSET_VERSION = Date.now().toString(36);
+      document.write(`<link rel="stylesheet" href="styles.css?v=${window.AV_TECH_RPG_ASSET_VERSION}" />`);
+    </script>
   </head>
   <body>
     <header class="topbar">
@@ -163,7 +166,9 @@
       </section>
     </div>
 
-    <script src="data.js"></script>
-    <script src="app.js"></script>
+    <script>
+      document.write(`<script src="data.js?v=${window.AV_TECH_RPG_ASSET_VERSION}"><\/script>`);
+      document.write(`<script src="app.js?v=${window.AV_TECH_RPG_ASSET_VERSION}"><\/script>`);
+    </script>
   </body>
 </html>
