@@ -7,6 +7,7 @@ const STAY_LATE_PREP_ENERGY_COST = 14;
 const HELP_JOSH_ENERGY_COST = 12;
 const STAY_LATE_BURNOUT_GAIN = 1;
 const CHERRY_HILL_TOLL_COST = 6;
+const EXHAUSTION_DEBT_PER_BURNOUT = 10;
 
 function createInitialState() {
   return {
@@ -75,6 +76,8 @@ function createInitialState() {
       coffeeBreaks: 0,
       stayLatePrepDays: 0,
       shopHelpDays: 0,
+      energyCrashes: 0,
+      exhaustionBurnout: 0,
     },
     clock: "MON 7:11 AM",
     flags: {},
@@ -305,6 +308,8 @@ function inferSavedStats(savedGame) {
     coffeeBreaks: 0,
     stayLatePrepDays: 0,
     shopHelpDays: 0,
+    energyCrashes: 0,
+    exhaustionBurnout: 0,
   };
   if (savedGame.stats) return { ...stats, ...savedGame.stats };
   if (savedGame.flags?.finished) {
@@ -749,6 +754,12 @@ function getActiveCareerSummaryMarkup() {
   if (returnTripSummary) {
     items.push({ label: "Return-trip risks remembered", detail: returnTripSummary });
   }
+  if (state.flags.energyExhaustedThisShift || state.flags.exhaustionDebt) {
+    items.push({
+      label: "Exhaustion debt",
+      detail: "Energy hit zero this shift. Further unpaid effort can turn into burnout until you get a real reset.",
+    });
+  }
   if (state.reputation.coworkers < 0) {
     items.push({ label: "Crew trust damaged", detail: "Coworker reputation is below zero; crew-trust goals need repair before they can advance." });
   }
@@ -1094,7 +1105,26 @@ function addLog(message) {
 }
 
 function changeEnergy(amount) {
-  state.energy = Math.max(0, Math.min(getMaxEnergy(), state.energy + amount));
+  const beforeEnergy = state.energy;
+  const maxEnergy = getMaxEnergy();
+  state.energy = Math.max(0, Math.min(maxEnergy, state.energy + amount));
+  if (amount >= 0) return;
+
+  if (state.energy === 0 && !state.flags.energyExhaustedThisShift) {
+    state.flags.energyExhaustedThisShift = true;
+    state.stats.energyCrashes = (state.stats.energyCrashes || 0) + 1;
+    addLog("Energy hit zero. Further effort starts borrowing from tomorrow.");
+  }
+
+  const unpaidEnergy = Math.max(0, Math.abs(amount) - beforeEnergy);
+  if (!unpaidEnergy) return;
+  state.flags.exhaustionDebt = (state.flags.exhaustionDebt || 0) + unpaidEnergy;
+  const burnoutGain = Math.floor(state.flags.exhaustionDebt / EXHAUSTION_DEBT_PER_BURNOUT);
+  if (!burnoutGain) return;
+  state.flags.exhaustionDebt %= EXHAUSTION_DEBT_PER_BURNOUT;
+  state.burnout += burnoutGain;
+  state.stats.exhaustionBurnout = (state.stats.exhaustionBurnout || 0) + burnoutGain;
+  addLog(`Overexertion added ${burnoutGain} burnout.`);
 }
 
 function setClock(clock) {
@@ -1150,9 +1180,9 @@ function advanceToNextMorning(days = 1) {
   setClock(`${day} 7:18 AM`);
 }
 
-function getOvernightRecovery({ stayedLate = false } = {}) {
+function getOvernightRecovery({ stayedLate = false, burnout = state.burnout } = {}) {
   const enduranceBonus = state.training.includes("endurance") ? 10 : 0;
-  const burnoutPenalty = state.burnout * 10;
+  const burnoutPenalty = burnout * 10;
   const latePenalty = stayedLate ? 10 : 0;
   return Math.max(28, 65 + enduranceBonus - burnoutPenalty - latePenalty);
 }
@@ -1180,7 +1210,7 @@ function previewShiftChoice(choice) {
   const stayedLate = ["prep", "help-josh"].includes(choice);
   const recoveryDay = choice === "recovery-day";
   const burnoutAfterChoice = Math.max(0, state.burnout + (stayedLate ? STAY_LATE_BURNOUT_GAIN : 0));
-  const recovery = recoveryDay ? maxEnergy : getOvernightRecovery({ stayedLate });
+  const recovery = recoveryDay ? maxEnergy : getOvernightRecovery({ stayedLate, burnout: burnoutAfterChoice });
   const energyAfterChoice = Math.max(0, state.energy - energyCost);
   const nextEnergy = recoveryDay ? maxEnergy : Math.min(maxEnergy, energyAfterChoice + recovery);
   const cappedRecovery = recoveryDay ? 0 : Math.max(0, energyAfterChoice + recovery - maxEnergy);
@@ -1226,6 +1256,8 @@ function clearEndShiftState() {
   state.flags.endShiftPending = false;
   state.flags.endShiftSource = null;
   state.flags.endShiftSummaryShown = false;
+  state.flags.energyExhaustedThisShift = false;
+  state.flags.exhaustionDebt = 0;
 }
 
 function startEndShift(source) {
@@ -1252,7 +1284,7 @@ function finishWarehouseShift(source) {
 function showEndShiftModal() {
   const source = state.flags.endShiftSource || "today's dispatch";
   const ordinaryRecovery = getOvernightRecovery();
-  const lateRecovery = getOvernightRecovery({ stayedLate: true });
+  const lateRecovery = getOvernightRecovery({ stayedLate: true, burnout: state.burnout + STAY_LATE_BURNOUT_GAIN });
   showModal({
     kicker: "End Of Shift",
     title: "Close Out The Workday",
@@ -1263,7 +1295,7 @@ function showEndShiftModal() {
         <span>Energy</span><strong>${state.energy}/${getMaxEnergy()}</strong>
         <span>Burnout</span><strong>${state.burnout}</strong>
         <span>Overnight recovery</span><strong>+${ordinaryRecovery} energy${state.burnout ? " after burnout penalty" : ""}</strong>
-        <span>Stayed-late recovery</span><strong>+${lateRecovery} energy before new burnout</strong>
+        <span>Stayed-late recovery</span><strong>+${lateRecovery} energy after new burnout</strong>
       </div>
       <p class="muted">Burnout reduces ordinary overnight recovery. Staying late helps the work, but it borrows energy from tomorrow. Recovery days restore more, but management notices the schedule gap.</p>
       <p><strong>Next-morning preview:</strong></p>
@@ -1375,6 +1407,8 @@ function takeRecoveryDayFromShop() {
   state.reputation.management -= 1;
   state.stats.recoveryDays += 1;
   const recovery = applyOvernightRecovery({ recoveryDay: true });
+  state.flags.energyExhaustedThisShift = false;
+  state.flags.exhaustionDebt = 0;
   advanceToNextMorning(1);
   addLog(`Took an unpaid recovery day. Recovered ${recovery.energyRecovered} energy${recovery.burnoutRecovered ? ` and reduced burnout by ${recovery.burnoutRecovered}` : ""}. Management noticed.`);
   render();
@@ -1806,6 +1840,8 @@ function getCareerLedgerMarkup() {
       <span>Lunches packed</span><strong>${state.stats.lunchesPacked}</strong>
       <span>Coffee jar contributions</span><strong>${state.stats.coffeesBought}</strong>
       <span>Bad coffee breaks</span><strong>${state.stats.coffeeBreaks}</strong>
+      <span>Energy crashes</span><strong>${state.stats.energyCrashes || 0}</strong>
+      <span>Overexertion burnout</span><strong>${state.stats.exhaustionBurnout || 0}</strong>
       <span>Late prep nights</span><strong>${state.stats.stayLatePrepDays}</strong>
       <span>Shop help nights</span><strong>${state.stats.shopHelpDays}</strong>
       <span>Site surveys completed</span><strong>${state.stats.surveysCompleted}</strong>
@@ -2038,7 +2074,7 @@ function showDispatchPreview() {
   if (state.flags.handoffComplete && !state.flags.systemsComplete) {
     return showSystemsDispatchPreview();
   }
-  if (state.flags.systemsComplete && getUnresolvedCallbackCount() === 0 && !state.flags.travelComplete) {
+  if (state.flags.systemsComplete && !state.flags.travelComplete) {
     return showTravelDispatchPreview();
   }
   if (state.flags.secureAccessComplete) {
@@ -3027,8 +3063,10 @@ function getSystemsCheckContextBonus(checkId) {
   return 0;
 }
 
-function getSystemsCheckEnergyCost() {
-  return Math.max(0, 3 - (state.flags.systemsPreparation === "review" ? 1 : 0));
+function getSystemsCheckEnergyCost(checkId) {
+  const preparationHelps = (state.flags.systemsPreparation === "review" && ["network-path", "rack-note"].includes(checkId))
+    || (state.flags.systemsPreparation === "josh" && checkId === "panel-status");
+  return Math.max(0, 3 - (preparationHelps ? 1 : 0));
 }
 
 function inspectSystemsCondition(checkId) {
@@ -3043,7 +3081,7 @@ function inspectSystemsCondition(checkId) {
     contextBonus: getSystemsCheckContextBonus(checkId),
     contextId,
   });
-  const energyCost = Math.max(0, getSystemsCheckEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
+  const energyCost = Math.max(0, getSystemsCheckEnergyCost(checkId) + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
   changeEnergy(-energyCost);
   if (!skillCheck.successful) state.flags.systemsChecksStrained = true;
   addLog(`${check.label} checked: ${check.log}`);
@@ -3088,9 +3126,10 @@ function showSystemsChoice() {
 }
 
 function getSystemsReputationSummary(approach, strained = false) {
-  if (approach === "reboot") return "Client -1, Management +1";
-  if (approach === "scope") return "Client +2, Coworkers +1, Management -2";
-  return `Client +1, Coworkers ${strained ? "+1" : "+2"}, Management -1`;
+  if (approach === "reboot") return "Client trust drops; management likes the clean ticket";
+  if (approach === "scope") return "Client and crew trust rise; management friction sharpens";
+  if (strained) return "Client trust rises; the crew gets partial help; management grumbles";
+  return "Client and crew trust rise; management grumbles about the paper trail";
 }
 
 function finishSystemsService(approach) {
@@ -3139,9 +3178,9 @@ function finishSystemsService(approach) {
         <span>Systems wages</span><strong>+$${documented ? 68 : 52}</strong>
         <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
         <span>Experience</span><strong>+${xp} XP</strong>
-        <span>Reputation impact</span><strong>${getSystemsReputationSummary(approach, strained)}</strong>
-        <span>Callback ledger</span><strong>${documented ? "Mismatch documented" : "Callback risk added"}</strong>
-        <span>Career ledger</span><strong>${documented ? "Systems mismatch documented" : "Quick reboot closed"}</strong>
+        <span>Relationship result</span><strong>${getSystemsReputationSummary(approach, strained)}</strong>
+        <span>Return-trip risk</span><strong>${documented ? "Lowered by documenting the mismatch" : "Increased by leaving the mismatch loose"}</strong>
+        <span>Career record</span><strong>${documented ? "Systems mismatch documented" : "Quick reboot closed"}</strong>
       </div>
       ${documented
         ? `<blockquote>Management note: "Please keep technical closeout proportionate to the original ticket."</blockquote>`
@@ -3205,9 +3244,9 @@ function showTravelChoice() {
 }
 
 function getTravelReputationSummary(approach) {
-  if (approach === "absorb") return "Management +1";
-  if (approach === "pushback") return "Coworkers +1, Management -2";
-  return "Coworkers +1, Management -1";
+  if (approach === "absorb") return "Management likes the clean ticket";
+  if (approach === "pushback") return "Crew trust rises; management friction sharpens";
+  return "Crew trust rises; management grumbles about the receipt trail";
 }
 
 function finishTravelDispatch(approach) {
@@ -3258,8 +3297,8 @@ function finishTravelDispatch(approach) {
         <span>Net cash</span><strong>+${formatCash(netPay)}</strong>
         <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
         <span>Experience</span><strong>+${xp} XP</strong>
-        <span>Reputation impact</span><strong>${getTravelReputationSummary(approach)}</strong>
-        <span>Career ledger</span><strong>${documented ? "Travel cost documented" : "Unreimbursed travel cost"}</strong>
+        <span>Relationship result</span><strong>${getTravelReputationSummary(approach)}</strong>
+        <span>Career record</span><strong>${documented ? "Travel cost documented" : "Unreimbursed travel cost"}</strong>
       </div>
       ${documented
         ? `<blockquote>Management note: "Please avoid over-documenting routine travel expenses."</blockquote>`
@@ -4778,7 +4817,7 @@ function getObjective() {
     if (state.flags.secureAccessComplete && !state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0) return "Review the warranty return on the dispatch board.";
     if (state.flags.secureAccessComplete && !state.flags.handoffComplete) return "Review the executive handoff on the dispatch board.";
     if (state.flags.handoffComplete && !state.flags.systemsComplete) return "Review the King of Prussia systems service on the dispatch board.";
-    if (state.flags.systemsComplete && getUnresolvedCallbackCount() === 0 && !state.flags.travelComplete) return "Review the Cherry Hill return toll on the dispatch board.";
+    if (state.flags.systemsComplete && !state.flags.travelComplete) return "Review the Cherry Hill return toll on the dispatch board.";
     if (state.flags.travelComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
     if (state.flags.secureAccessComplete) return "Current dispatch board complete. Explore the shop.";
     if (state.flags.finished) return "Prepare for the Conshohocken service call.";
@@ -5318,7 +5357,7 @@ function render() {
   const callbackCleanupActive = state.sceneId === "warrantyReturn";
   const handoffActive = state.sceneId === "executiveHandoff";
   const systemsActive = state.sceneId === "systemsService";
-  const travelActive = state.flags.systemsComplete && getUnresolvedCallbackCount() === 0 && !state.flags.travelComplete;
+  const travelActive = state.flags.systemsComplete && !state.flags.travelComplete;
   const travelSummaryPending = state.flags.travelComplete && !state.flags.prototypeSummaryViewed;
   const warehouseActive = state.flags.warehouseStarted && !state.flags.warehouseComplete;
   const activeDispatch = travelActive || travelSummaryPending

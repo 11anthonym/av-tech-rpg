@@ -157,6 +157,8 @@ readable and visible on the career clipboard. The current examples are:
 - repeated documented access issues reduce report/access-delay paperwork costs
 - repeated careful finishes reduce repair/punch-list costs
 - unresolved callbacks add a small energy penalty to later access checks
+- energy costs can run the meter to zero; unpaid energy beyond zero becomes
+  exhaustion debt, and every 10 unpaid energy adds 1 burnout
 
 Coworker relationship milestones can grant a tool without stocking it at the
 supply counter. Keep the tool's `price` at `0`, give the relationship a readable

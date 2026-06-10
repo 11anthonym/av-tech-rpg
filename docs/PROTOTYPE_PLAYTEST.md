@@ -366,6 +366,24 @@ turning the choice into an answer key. Energy and cash costs can be exact, but
 future outcomes should be phrased as risks and tendencies: callback risk,
 management friction, coworker cleanup, or client trust.
 
+Tuning pass: June 10, 2026. The systems prep effects now match the button text:
+reviewing notes helps the network and rack-note checks, while asking Josh helps
+the touch-panel/control read. Result screens for the systems job and Cherry Hill
+travel job now report relationship outcomes, return-trip risk, and career record
+language instead of exact reputation math. A quick simulation pass confirmed that
+Jordan reads as the strongest service/systems profile, Casey benefits from notes,
+and Alex/Wiley/Morgan still feel meaningfully out of depth unless they pick
+systems training.
+
+Routing fix: the Cherry Hill travel-cost job now stays available after the
+systems service even if a quick reboot creates fresh callback debt. The dispatch
+board still surfaces that unresolved callback pressure, but the current slice no
+longer dead-ends before the travel-cost experiment or completion snapshot.
+
+Feedback to collect next: does the player understand that a strained systems
+check can make the careful closeout less valuable without making the careful
+choice feel like a trap?
+
 ### Second Choice: End-Of-Shift Balance Playtest
 
 Playability question: are clock-out, prep, help-Josh, and recovery-day choices
@@ -386,6 +404,30 @@ This keeps the existing balance but makes the real tradeoff visible: energy,
 burnout, relationship/reputation change, and the benefit of staying late or
 taking recovery.
 
+Balance check: June 10, 2026. Simulated near-full energy, mid-energy with
+burnout, and low-energy with high burnout. No number change yet. At high energy,
+staying late mostly trades burnout and pressure for prep/relationship benefits
+because ordinary recovery caps out. At mid energy, staying late visibly lowers
+next-morning energy. At low energy with burnout stacked, recovery day is clearly
+the right pressure-release option.
+
+Feedback to collect next: do players treat high-energy stay-late choices as
+meaningful because of burnout and pressure text, or do they ignore those costs
+because the next-morning energy preview still shows full energy?
+
+Follow-up simulation: repeated stay-late choices plus moderate or heavy daily
+work now run the player down over several shifts. A 35-energy workday plus
+stay-late prep reaches zero energy around day 5 or 6; a 50-energy workday plus
+stay-late prep reaches zero faster. Repeated 75- or 90-energy workdays now also
+collapse even if the player clocks out, because energy costs that overrun zero
+become exhaustion debt. Every 10 unpaid energy converts into 1 burnout. This is
+not a fail state; it is a "borrow from tomorrow" rule so the player can finish a
+bad day while making repeated overwork materially worse.
+
+Implementation note: the next-morning preview now uses the same recovery math as
+the actual shift closeout. Staying late applies the new burnout before recovery,
+so the preview no longer overstates tomorrow's energy.
+
 ### Third Choice: Travel-Cost Micro-Job
 
 Playability question: can the game show the real cost of poor dispatch planning
@@ -396,12 +438,18 @@ energy, management pressure, and documentation. Keep it as a single dispatch
 beat unless the existing service loop needs a lighter change of pace.
 
 Initial implementation: **Cherry Hill Return Toll** now appears after the
-systems service job if callback debt is clear. It is a board-only micro-dispatch
-with one final choice: document the toll, push dispatch to own it, or eat the
-cost to keep management happy.
+systems service job. It is a board-only micro-dispatch with one final choice:
+document the toll, push dispatch to own it, or eat the cost to keep management
+happy.
 
 Next playtest question: does the one-choice travel job feel like real dispatch
 friction, or does it feel too small after a full systems service dispatch?
+
+Outcome check: June 10, 2026. Receipt and pushback preserve cash while costing
+energy and management friction; absorbing the toll saves energy but lowers net
+cash and records unreimbursed travel. No number change yet. The micro-job now
+also remains available after systems-created callback debt, so this experiment
+can still be tested after a quick-reboot systems closeout.
 
 ## Energy Balance Notes
 
