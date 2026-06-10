@@ -159,6 +159,8 @@ readable and visible on the career clipboard. The current examples are:
 - unresolved callbacks add a small energy penalty to later access checks
 - energy costs can run the meter to zero; unpaid energy beyond zero becomes
   exhaustion debt, and every 10 unpaid energy adds 1 burnout
+- consecutive late nights cap next-morning energy until the player clocks out
+  normally or takes a recovery day
 
 Coworker relationship milestones can grant a tool without stocking it at the
 supply counter. Keep the tool's `price` at `0`, give the relationship a readable

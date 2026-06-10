@@ -10,6 +10,9 @@ const CHERRY_HILL_TOLL_COST = 6;
 const EXHAUSTION_DEBT_PER_BURNOUT = 10;
 const MIN_OVERNIGHT_RECOVERY = 28;
 const MIN_STAYED_LATE_RECOVERY = 16;
+const STAY_LATE_NEXT_MORNING_CAP_LOSS = 20;
+const CONSECUTIVE_LATE_NIGHT_CAP_LOSS = 10;
+const MIN_STAY_LATE_NEXT_MORNING_ENERGY = 30;
 
 function createInitialState() {
   return {
@@ -774,6 +777,12 @@ function getActiveCareerSummaryMarkup() {
   if (state.flags.shiftPrepActive) {
     items.push({ label: "Next-shift prep active", detail: "Stayed-late prep is boosting Fieldcraft and Documentation until this dispatch closes." });
   }
+  if (state.flags.consecutiveLateNights) {
+    items.push({
+      label: "Late-night fatigue",
+      detail: `${state.flags.consecutiveLateNights} consecutive late night${state.flags.consecutiveLateNights === 1 ? "" : "s"} will cap recovery until you clock out normally or take a recovery day.`,
+    });
+  }
   if (!items.length) {
     items.push({ label: "No active complications", detail: "Your current build is not carrying callback pressure, return-trip risk, or temporary shift prep." });
   }
@@ -1190,11 +1199,20 @@ function getOvernightRecovery({ stayedLate = false, burnout = state.burnout } = 
   return Math.max(recoveryFloor, 65 + enduranceBonus - burnoutPenalty - latePenalty);
 }
 
+function getStayedLateEnergyCap(lateNightStreak = state.flags.consecutiveLateNights || 1) {
+  const streakPenalty = STAY_LATE_NEXT_MORNING_CAP_LOSS
+    + Math.max(0, lateNightStreak - 1) * CONSECUTIVE_LATE_NIGHT_CAP_LOSS;
+  return Math.max(MIN_STAY_LATE_NEXT_MORNING_ENERGY, getMaxEnergy() - streakPenalty);
+}
+
 function applyOvernightRecovery({ stayedLate = false, recoveryDay = false } = {}) {
   const beforeEnergy = state.energy;
   const beforeBurnout = state.burnout;
   const recovery = recoveryDay ? getMaxEnergy() : getOvernightRecovery({ stayedLate });
-  state.energy = recoveryDay ? getMaxEnergy() : Math.min(getMaxEnergy(), state.energy + recovery);
+  const recoveredEnergy = recoveryDay ? getMaxEnergy() : Math.min(getMaxEnergy(), state.energy + recovery);
+  state.energy = stayedLate && !recoveryDay
+    ? Math.min(recoveredEnergy, getStayedLateEnergyCap())
+    : recoveredEnergy;
   if (recoveryDay) {
     state.burnout = Math.max(0, state.burnout - 2);
   } else if (!stayedLate && state.energy >= Math.ceil(getMaxEnergy() * 0.75)) {
@@ -1212,13 +1230,19 @@ function previewShiftChoice(choice) {
   const energyCost = choice === "prep" ? STAY_LATE_PREP_ENERGY_COST : choice === "help-josh" ? HELP_JOSH_ENERGY_COST : 0;
   const stayedLate = ["prep", "help-josh"].includes(choice);
   const recoveryDay = choice === "recovery-day";
+  const lateNightStreak = stayedLate ? (state.flags.consecutiveLateNights || 0) + 1 : 0;
   const unpaidEnergy = Math.max(0, energyCost - state.energy);
   const exhaustionBurnoutGain = Math.floor(((state.flags.exhaustionDebt || 0) + unpaidEnergy) / EXHAUSTION_DEBT_PER_BURNOUT);
   const burnoutAfterChoice = Math.max(0, state.burnout + exhaustionBurnoutGain + (stayedLate ? STAY_LATE_BURNOUT_GAIN : 0));
   const recovery = recoveryDay ? maxEnergy : getOvernightRecovery({ stayedLate, burnout: burnoutAfterChoice });
   const energyAfterChoice = Math.max(0, state.energy - energyCost);
-  const nextEnergy = recoveryDay ? maxEnergy : Math.min(maxEnergy, energyAfterChoice + recovery);
+  const rawNextEnergy = recoveryDay ? maxEnergy : Math.min(maxEnergy, energyAfterChoice + recovery);
+  const lateEnergyCap = stayedLate ? getStayedLateEnergyCap(lateNightStreak) : maxEnergy;
+  const nextEnergy = Math.min(rawNextEnergy, lateEnergyCap);
   const cappedRecovery = recoveryDay ? 0 : Math.max(0, energyAfterChoice + recovery - maxEnergy);
+  const lateCapNote = stayedLate && rawNextEnergy > lateEnergyCap
+    ? ` Stayed-late fatigue caps tomorrow at ${lateEnergyCap} energy${lateNightStreak > 1 ? ` after ${lateNightStreak} late nights` : ""}.`
+    : "";
   const nextBurnout = recoveryDay
     ? Math.max(0, burnoutAfterChoice - 2)
     : !stayedLate && nextEnergy >= Math.ceil(maxEnergy * 0.75)
@@ -1236,7 +1260,7 @@ function previewShiftChoice(choice) {
           ? "Management may notice the schedule gap."
           : "No obvious reputation pressure.",
     benefit: choice === "prep" ? "+1 Fieldcraft/Documentation next dispatch" : choice === "help-josh" ? "Josh relationship progress" : choice === "recovery-day" ? "Skips next workday pressure" : "Clean rest",
-    capNote: cappedRecovery ? ` ${cappedRecovery} recovery would be capped at max energy.` : "",
+    capNote: lateCapNote || (cappedRecovery ? ` ${cappedRecovery} recovery would be capped at max energy.` : ""),
   };
 }
 
@@ -1290,6 +1314,7 @@ function showEndShiftModal() {
   const source = state.flags.endShiftSource || "today's dispatch";
   const ordinaryRecovery = getOvernightRecovery();
   const lateRecovery = getOvernightRecovery({ stayedLate: true, burnout: state.burnout + STAY_LATE_BURNOUT_GAIN });
+  const lateEnergyCap = getStayedLateEnergyCap((state.flags.consecutiveLateNights || 0) + 1);
   showModal({
     kicker: "End Of Shift",
     title: "Close Out The Workday",
@@ -1301,8 +1326,9 @@ function showEndShiftModal() {
         <span>Burnout</span><strong>${state.burnout}</strong>
         <span>Overnight recovery</span><strong>+${ordinaryRecovery} energy${state.burnout ? " after burnout penalty" : ""}</strong>
         <span>Stayed-late recovery</span><strong>+${lateRecovery} energy after new burnout</strong>
+        <span>Stayed-late cap</span><strong>${lateEnergyCap}/${getMaxEnergy()} energy tomorrow</strong>
       </div>
-      <p class="muted">Burnout reduces ordinary overnight recovery. Staying late helps the work, but it borrows energy from tomorrow. Recovery days restore more, but management notices the schedule gap.</p>
+      <p class="muted">Burnout reduces ordinary overnight recovery. Staying late helps the work, but it caps tomorrow's energy; consecutive late nights tighten that cap. Recovery days restore more, but management notices the schedule gap.</p>
       <p><strong>Next-morning preview:</strong></p>
       ${getEndShiftChoicePreviewMarkup()}
     `,
@@ -1324,6 +1350,7 @@ function completeShift(choice) {
     changeEnergy(-STAY_LATE_PREP_ENERGY_COST);
     state.burnout += STAY_LATE_BURNOUT_GAIN;
     stayedLate = true;
+    state.flags.consecutiveLateNights = (state.flags.consecutiveLateNights || 0) + 1;
     state.flags.shiftPrepActive = true;
     state.reputation.management -= 1;
     state.stats.stayLatePrepDays += 1;
@@ -1332,16 +1359,19 @@ function completeShift(choice) {
     changeEnergy(-HELP_JOSH_ENERGY_COST);
     state.burnout += STAY_LATE_BURNOUT_GAIN;
     stayedLate = true;
+    state.flags.consecutiveLateNights = (state.flags.consecutiveLateNights || 0) + 1;
     state.reputation.coworkers += 1;
     state.stats.shopHelpDays += 1;
     addLog("Helped Josh clean up notes and labels before clocking out. Coworker reputation improved, and the longer day still took something out of you.");
   } else if (choice === "recovery-day") {
     days = 2;
+    state.flags.consecutiveLateNights = 0;
     state.reputation.management -= 1;
     state.stats.recoveryDays += 1;
     addLog("Took a recovery day instead of accepting the next dispatch. Management reputation took a small hit.");
   } else {
     state.flags.shiftPrepActive = false;
+    state.flags.consecutiveLateNights = 0;
     addLog("Clocked out and went home instead of turning the next dispatch into the same tired day.");
   }
   const recovery = applyOvernightRecovery({ stayedLate, recoveryDay: choice === "recovery-day" });
@@ -1414,6 +1444,7 @@ function takeRecoveryDayFromShop() {
   const recovery = applyOvernightRecovery({ recoveryDay: true });
   state.flags.energyExhaustedThisShift = false;
   state.flags.exhaustionDebt = 0;
+  state.flags.consecutiveLateNights = 0;
   advanceToNextMorning(1);
   addLog(`Took an unpaid recovery day. Recovered ${recovery.energyRecovered} energy${recovery.burnoutRecovered ? ` and reduced burnout by ${recovery.burnoutRecovered}` : ""}. Management noticed.`);
   render();
