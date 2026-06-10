@@ -405,24 +405,26 @@ burnout, relationship/reputation change, and the benefit of staying late or
 taking recovery.
 
 Balance check: June 10, 2026. Simulated near-full energy, mid-energy with
-burnout, and low-energy with high burnout. No number change yet. At high energy,
-staying late mostly trades burnout and pressure for prep/relationship benefits
-because ordinary recovery caps out. At mid energy, staying late visibly lowers
-next-morning energy. At low energy with burnout stacked, recovery day is clearly
-the right pressure-release option.
+burnout, and low-energy with high burnout. Initial numbers made one-off
+stay-late choices readable, but repeated stay-late choices were still too easy
+to absorb from full energy because the recovery floor was higher than the
+stay-late cost. Staying late now costs more energy, and stayed-late overnight
+recovery has a lower floor than ordinary clock-out recovery. At high energy, a
+single late night can still be okay; a week of late nights now visibly grinds
+the player down.
 
-Feedback to collect next: do players treat high-energy stay-late choices as
-meaningful because of burnout and pressure text, or do they ignore those costs
-because the next-morning energy preview still shows full energy?
+Feedback to collect next: do higher stay-late costs make the choice feel heavy
+without making Josh help or next-day prep feel like fake options?
 
 Follow-up simulation: repeated stay-late choices plus moderate or heavy daily
-work now run the player down over several shifts. A 35-energy workday plus
-stay-late prep reaches zero energy around day 5 or 6; a 50-energy workday plus
-stay-late prep reaches zero faster. Repeated 75- or 90-energy workdays now also
-collapse even if the player clocks out, because energy costs that overrun zero
-become exhaustion debt. Every 10 unpaid energy converts into 1 burnout. This is
-not a fail state; it is a "borrow from tomorrow" rule so the player can finish a
-bad day while making repeated overwork materially worse.
+work now run the player down over several shifts. Stay-late prep by itself
+falls from full energy to a low-energy crash loop after about a week; help-Josh
+nights last slightly longer but still degrade. A 35-energy workday plus
+stay-late prep reaches zero much sooner, and repeated 75- or 90-energy workdays
+also collapse even if the player clocks out, because energy costs that overrun
+zero become exhaustion debt. Every 10 unpaid energy converts into 1 burnout.
+This is not a fail state; it is a "borrow from tomorrow" rule so the player can
+finish a bad day while making repeated overwork materially worse.
 
 Implementation note: the next-morning preview now uses the same recovery math as
 the actual shift closeout. Staying late applies the new burnout before recovery,

@@ -3,11 +3,13 @@ const keys = new Set();
 const PLAYER_SPEED = 8;
 const SAVE_KEY = "av-tech-rpg-save-v1";
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-const STAY_LATE_PREP_ENERGY_COST = 14;
-const HELP_JOSH_ENERGY_COST = 12;
+const STAY_LATE_PREP_ENERGY_COST = 32;
+const HELP_JOSH_ENERGY_COST = 30;
 const STAY_LATE_BURNOUT_GAIN = 1;
 const CHERRY_HILL_TOLL_COST = 6;
 const EXHAUSTION_DEBT_PER_BURNOUT = 10;
+const MIN_OVERNIGHT_RECOVERY = 28;
+const MIN_STAYED_LATE_RECOVERY = 16;
 
 function createInitialState() {
   return {
@@ -1184,7 +1186,8 @@ function getOvernightRecovery({ stayedLate = false, burnout = state.burnout } = 
   const enduranceBonus = state.training.includes("endurance") ? 10 : 0;
   const burnoutPenalty = burnout * 10;
   const latePenalty = stayedLate ? 10 : 0;
-  return Math.max(28, 65 + enduranceBonus - burnoutPenalty - latePenalty);
+  const recoveryFloor = stayedLate ? MIN_STAYED_LATE_RECOVERY : MIN_OVERNIGHT_RECOVERY;
+  return Math.max(recoveryFloor, 65 + enduranceBonus - burnoutPenalty - latePenalty);
 }
 
 function applyOvernightRecovery({ stayedLate = false, recoveryDay = false } = {}) {
@@ -1209,7 +1212,9 @@ function previewShiftChoice(choice) {
   const energyCost = choice === "prep" ? STAY_LATE_PREP_ENERGY_COST : choice === "help-josh" ? HELP_JOSH_ENERGY_COST : 0;
   const stayedLate = ["prep", "help-josh"].includes(choice);
   const recoveryDay = choice === "recovery-day";
-  const burnoutAfterChoice = Math.max(0, state.burnout + (stayedLate ? STAY_LATE_BURNOUT_GAIN : 0));
+  const unpaidEnergy = Math.max(0, energyCost - state.energy);
+  const exhaustionBurnoutGain = Math.floor(((state.flags.exhaustionDebt || 0) + unpaidEnergy) / EXHAUSTION_DEBT_PER_BURNOUT);
+  const burnoutAfterChoice = Math.max(0, state.burnout + exhaustionBurnoutGain + (stayedLate ? STAY_LATE_BURNOUT_GAIN : 0));
   const recovery = recoveryDay ? maxEnergy : getOvernightRecovery({ stayedLate, burnout: burnoutAfterChoice });
   const energyAfterChoice = Math.max(0, state.energy - energyCost);
   const nextEnergy = recoveryDay ? maxEnergy : Math.min(maxEnergy, energyAfterChoice + recovery);
