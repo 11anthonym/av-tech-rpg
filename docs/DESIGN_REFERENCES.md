@@ -18,6 +18,30 @@ combine common field situations into readable scenarios.
 For AV Tech RPG, keep the equivalent small: complete jobs, improve a practical
 kit, build shop relationships, and preview nearby career milestones.
 
+## World Structure And Travel
+
+- [AV Tech RPG North Star](NORTH_STAR.md) records the long-term target:
+  Stardew Valley-style daily RPG structure, Pokemon-style compact area
+  transitions, and old-GTA-style vehicle/travel flavor.
+- [Tiled: Introduction](https://doc.mapeditor.org/en/stable/manual/introduction/)
+  is the strongest map-authoring reference for future tile maps and object
+  metadata such as collision, doors, spawn points, and route triggers.
+- [Phaser: Scenes](https://docs.phaser.io/phaser/concepts/scenes) is the
+  strongest browser-game reference for splitting map boards, UI overlays,
+  travel cards, and future driving or regional-map views into separate scenes.
+- [Phaser: Cameras](https://docs.phaser.io/phaser/concepts/cameras) is a useful
+  reference for later maps that scroll instead of fitting on one fixed board.
+- [Excalibur TileMaps](https://excaliburjs.com/docs/tilemap) is a lighter
+  JavaScript option with Tiled support if Phaser feels too heavy for the next
+  prototype stage.
+- [Godot TileMap](https://docs.godotengine.org/en/stable/classes/class_tilemap.html)
+  is the editor-first reference if the project eventually leaves the browser
+  prototype and becomes a fuller 2D game project.
+
+For AV Tech RPG, do not jump to manual driving or a full engine migration just
+because those references exist. Build areas, portals, van interactions, route
+choices, and fast travel first.
+
 ## Fatigue And Push-Your-Luck Pressure
 
 - Stardew Valley is the main reference for stamina as a daily budget: players

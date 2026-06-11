@@ -1,9 +1,10 @@
 # RPG Expansion Skeleton
 
 This is the lightweight contract for growing AV Tech RPG without turning the
-prototype into a big engine rewrite. The goal is not to make every future job
+prototype into a big engine rewrite. The long-term target is captured in
+[NORTH_STAR.md](NORTH_STAR.md). The goal here is not to make every future job
 pure data. The goal is to keep the RPG pieces consistent enough that a new job,
-skill, trait, tool, or company feels like it belongs.
+skill, trait, tool, company, or area feels like it belongs.
 
 ## Current Shape
 
@@ -21,7 +22,7 @@ The game now has five reusable layers:
    where a dispatch happens and how the player moves between shop, van,
    parking, buildings, and job rooms.
 
-Keep those four layers readable in the UI. If a mechanic is invisible, players
+Keep those five layers readable in the UI. If a mechanic is invisible, players
 will experience it as randomness rather than roleplaying.
 
 ## Add A New Job
