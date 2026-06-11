@@ -43,6 +43,7 @@ function createInitialState() {
     cash: 0,
     xp: 0,
     jobsCompleted: 0,
+    vehicleId: "van3",
     reputation: { clients: 0, coworkers: 0, management: 0 },
     training: [],
     stats: {
@@ -459,6 +460,7 @@ function serializeGame() {
     cash: state.cash,
     xp: state.xp,
     jobsCompleted: state.jobsCompleted,
+    vehicleId: state.vehicleId,
     reputation: state.reputation,
     training: state.training,
     stats: state.stats,
@@ -1056,6 +1058,7 @@ function continueGame() {
     cash: migratedCash,
     xp: migratedXp,
     jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0) + (flags.warehouseComplete ? 1 : 0) + (flags.secureAccessComplete ? 1 : 0) + (flags.callbackCleanupComplete ? 1 : 0) + (flags.handoffComplete ? 1 : 0) + (flags.systemsComplete ? 1 : 0) + (flags.travelComplete ? 1 : 0),
+    vehicleId: savedGame.vehicleId || content.world?.defaultVehicleId || "van3",
     reputation: migratedReputation,
     training: savedGame.training || [],
     stats: migratedStats,
@@ -1576,6 +1579,7 @@ function startGame(technicianOrId) {
   resetRuntimeState();
   state.technician = technician;
   state.tools = uniqueValues(["screwdriver", ...(state.technician.startingTools || [])]);
+  state.vehicleId = content.world?.defaultVehicleId || "van3";
   state.energy = state.technician.stats.energy;
   state.burnout = state.technician.stats.burnout;
   state.cash = state.technician.startingCash || 0;
@@ -1588,11 +1592,78 @@ function startGame(technicianOrId) {
 
 function enterScene(sceneId, playerPosition = null) {
   state.sceneId = sceneId;
+  const area = getWorldAreaByScene(sceneId);
+  if (area) state.flags.currentAreaId = area.id;
   state.player = playerPosition && !overlapsSolidObject(playerPosition.x, playerPosition.y)
     ? { ...playerPosition }
     : { ...content.scenes[sceneId].playerStart };
   render();
   elements.scene.focus();
+}
+
+function getCurrentVehicleId() {
+  return state.vehicleId || content.world?.defaultVehicleId || "van3";
+}
+
+function getCurrentVehicle() {
+  return content.vehicles[getCurrentVehicleId()] || content.vehicles.van3;
+}
+
+function getWorldAreaByScene(sceneId) {
+  return Object.values(content.world?.areas || {}).find((area) => area.sceneId === sceneId);
+}
+
+function getWorldRoute(routeId) {
+  return content.world?.routes?.[routeId] || null;
+}
+
+function getRouteArrivalClock(route) {
+  if (!route?.arrivalTime) return null;
+  if (/^[A-Z]{3} /.test(route.arrivalTime)) return route.arrivalTime;
+  return `${state.clock.slice(0, 3)} ${route.arrivalTime}`;
+}
+
+function getRouteLineMarkup(route) {
+  return `<div class="route-line"><span>${escapeHtml(route.fromLabel)}</span><i></i><span>${escapeHtml(route.toLabel)}</span></div>`;
+}
+
+function recordRouteTravel(route) {
+  state.flags.routeHistory ||= {};
+  state.flags.routeHistory[route.id] = (state.flags.routeHistory[route.id] || 0) + 1;
+  state.flags.lastRouteId = route.id;
+  if (route.toAreaId) state.flags.currentAreaId = route.toAreaId;
+}
+
+function travelRoute(routeId, { beforeTravel, afterTravel } = {}) {
+  const route = getWorldRoute(routeId);
+  if (!route) return notify(`Route ${routeId} is not mapped yet.`);
+  beforeTravel?.(route);
+  if (route.packedLunchContext) consumePackedLunch(route.packedLunchContext);
+  const arrivalClock = getRouteArrivalClock(route);
+  if (arrivalClock) setClock(arrivalClock);
+  if (route.arrivalLog) addLog(route.arrivalLog);
+  recordRouteTravel(route);
+  if (afterTravel) return afterTravel(route);
+  if (route.destinationSceneId) return enterScene(route.destinationSceneId);
+  return render();
+}
+
+function showTravelRouteModal({ routeId, dispatchEstimate, extraBody = "", actionLabel, beforeTravel, afterTravel }) {
+  const route = getWorldRoute(routeId);
+  if (!route) return notify(`Route ${routeId} is not mapped yet.`);
+  showModal({
+    kicker: "Route Summary",
+    title: `${route.fromLabel} -> ${route.toLabel}`,
+    body: `
+      ${dispatchEstimate ? `<p><strong>Dispatch estimate:</strong> ${dispatchEstimate}</p>` : ""}
+      ${extraBody}
+      ${getRouteLineMarkup(route)}
+    `,
+    actions: [{
+      label: actionLabel || route.actionLabel || `Drive to ${route.toLabel}`,
+      onClick: () => travelRoute(routeId, { beforeTravel, afterTravel }),
+    }],
+  });
 }
 
 function getNextShopLoad() {
@@ -1604,23 +1675,11 @@ function getNextAssemblyItem() {
 }
 
 function promptTravel() {
-  showModal({
-    kicker: "Route Summary",
-    title: "Wayne Area -> Center City East",
-    body: `
-      <p><strong>Dispatch estimate:</strong> Simple two-cart build. Supervisor onsite.</p>
-      <p>Today's drive is scripted for the tutorial. Future jobs can offer route, toll, and parking choices.</p>
-      <div class="route-line"><span>WAYNE AREA</span><i></i><span>CENTER CITY EAST</span></div>
-    `,
-    actions: [{
-      label: "Drive to Center City",
-      onClick: () => {
-        consumePackedLunch("the Center City build");
-        setClock("MON 8:03 AM");
-        addLog("Arrived in Center City East. Curb unloading was not arranged.");
-        showParkingModal();
-      },
-    }],
+  showTravelRouteModal({
+    routeId: "centerCityTutorial",
+    dispatchEstimate: "Simple two-cart build. Supervisor onsite.",
+    extraBody: "<p>Today's drive is scripted for the tutorial. Future jobs can offer route, toll, and parking choices.</p>",
+    afterTravel: showParkingModal,
   });
 }
 
@@ -2593,25 +2652,14 @@ function chooseSecureAccessPreparation(preparation) {
 }
 
 function promptSecureAccessTravel() {
-  showModal({
-    kicker: "Route Summary",
-    title: "Wayne Area -> Navy Yard",
-    body: `
-      <p><strong>Dispatch estimate:</strong> Quick rack update. Security already knows you are coming.</p>
-      <p class="muted">Security may have received that information in a different timeline.</p>
-      <div class="route-line"><span>WAYNE AREA</span><i></i><span>NAVY YARD</span></div>
-    `,
-    actions: [{
-      label: "Drive To Security Gate",
-      onClick: () => {
-        state.flags.secureAccessStarted = true;
-        state.flags.prototypeSummaryViewed = false;
-        consumePackedLunch("the Navy Yard access job");
-        setClock(`${state.clock.slice(0, 3)} 5:08 PM`);
-        addLog("Arrived at Navy Yard security with a building number and a bad feeling.");
-        enterScene("navyYardAccess");
-      },
-    }],
+  showTravelRouteModal({
+    routeId: "navyYardAccess",
+    dispatchEstimate: "Quick rack update. Security already knows you are coming.",
+    extraBody: `<p class="muted">Security may have received that information in a different timeline.</p>`,
+    beforeTravel: () => {
+      state.flags.secureAccessStarted = true;
+      state.flags.prototypeSummaryViewed = false;
+    },
   });
 }
 
@@ -2776,25 +2824,14 @@ function showCallbackCleanupDispatchPreview() {
 }
 
 function promptCallbackCleanupTravel() {
-  showModal({
-    kicker: "Route Summary",
-    title: "Wayne Area -> Callback Site",
-    body: `
-      <p><strong>Dispatch estimate:</strong> Confirm user concern, restore confidence, avoid assigning blame in writing.</p>
-      <p class="muted">The previous closeout note is short enough to remember accidentally.</p>
-      <div class="route-line"><span>WAYNE AREA</span><i></i><span>CALLBACK SITE</span></div>
-    `,
-    actions: [{
-      label: "Drive To Warranty Return",
-      onClick: () => {
-        state.flags.callbackCleanupStarted = true;
-        state.flags.prototypeSummaryViewed = false;
-        consumePackedLunch("the warranty return");
-        setClock(`${state.clock.slice(0, 3)} 9:34 AM`);
-        addLog("Arrived for a warranty return created by the career ledger, not the marketing brochure.");
-        enterScene("warrantyReturn");
-      },
-    }],
+  showTravelRouteModal({
+    routeId: "warrantyReturn",
+    dispatchEstimate: "Confirm user concern, restore confidence, avoid assigning blame in writing.",
+    extraBody: `<p class="muted">The previous closeout note is short enough to remember accidentally.</p>`,
+    beforeTravel: () => {
+      state.flags.callbackCleanupStarted = true;
+      state.flags.prototypeSummaryViewed = false;
+    },
   });
 }
 
@@ -2956,25 +2993,14 @@ function showHandoffDispatchPreview() {
 }
 
 function promptHandoffTravel() {
-  showModal({
-    kicker: "Route Summary",
-    title: "Wayne Area -> Executive Boardroom",
-    body: `
-      <p><strong>Dispatch estimate:</strong> Five-minute walkthrough. No technical work expected.</p>
-      <p class="muted">No technical work expected is also what they said about the warranty return.</p>
-      <div class="route-line"><span>WAYNE AREA</span><i></i><span>BOARDROOM</span></div>
-    `,
-    actions: [{
-      label: "Drive To Handoff",
-      onClick: () => {
-        state.flags.handoffStarted = true;
-        state.flags.prototypeSummaryViewed = false;
-        consumePackedLunch("the executive handoff");
-        setClock(`${state.clock.slice(0, 3)} 1:42 PM`);
-        addLog("Arrived for a client handoff where the room works and the labels do not.");
-        enterScene("executiveHandoff");
-      },
-    }],
+  showTravelRouteModal({
+    routeId: "executiveHandoff",
+    dispatchEstimate: "Five-minute walkthrough. No technical work expected.",
+    extraBody: `<p class="muted">No technical work expected is also what they said about the warranty return.</p>`,
+    beforeTravel: () => {
+      state.flags.handoffStarted = true;
+      state.flags.prototypeSummaryViewed = false;
+    },
   });
 }
 
@@ -3175,25 +3201,14 @@ function chooseSystemsPreparation(preparation) {
 }
 
 function promptSystemsTravel() {
-  showModal({
-    kicker: "Route Summary",
-    title: "Wayne Area -> King of Prussia",
-    body: `
-      <p><strong>Dispatch estimate:</strong> Quick reboot, confirm room online, close ticket.</p>
-      <p class="muted">The client says the room has been rebooted twice. The room, bravely, remains offline.</p>
-      <div class="route-line"><span>WAYNE AREA</span><i></i><span>KING OF PRUSSIA</span></div>
-    `,
-    actions: [{
-      label: "Drive To Systems Service",
-      onClick: () => {
-        state.flags.systemsStarted = true;
-        state.flags.prototypeSummaryViewed = false;
-        consumePackedLunch("the King of Prussia systems service");
-        setClock(`${state.clock.slice(0, 3)} 3:18 PM`);
-        addLog("Arrived for a room-offline service call where the reboot has already enjoyed several chances.");
-        enterScene("systemsService");
-      },
-    }],
+  showTravelRouteModal({
+    routeId: "systemsService",
+    dispatchEstimate: "Quick reboot, confirm room online, close ticket.",
+    extraBody: `<p class="muted">The client says the room has been rebooted twice. The room, bravely, remains offline.</p>`,
+    beforeTravel: () => {
+      state.flags.systemsStarted = true;
+      state.flags.prototypeSummaryViewed = false;
+    },
   });
 }
 
@@ -3477,24 +3492,13 @@ function showCommissioningDispatchPreview() {
 }
 
 function promptCommissioningTravel() {
-  showModal({
-    kicker: "Route Summary",
-    title: "Wayne Area -> South Philadelphia",
-    body: `
-      <p><strong>Dispatch estimate:</strong> Confirm room operation and collect client signoff.</p>
-      <p class="muted">The completion sheet has already been signed internally.</p>
-      <div class="route-line"><span>WAYNE AREA</span><i></i><span>SOUTH PHILADELPHIA</span></div>
-    `,
-    actions: [{
-      label: "Drive To Training Room",
-      onClick: () => {
-        state.flags.commissioningStarted = true;
-        consumePackedLunch("the South Philadelphia commissioning visit");
-        setClock(`${state.clock.slice(0, 3)} 3:04 PM`);
-        addLog("Arrived in South Philadelphia to commission a room already marked complete.");
-        enterScene("southPhillyCommissioning");
-      },
-    }],
+  showTravelRouteModal({
+    routeId: "southPhillyCommissioning",
+    dispatchEstimate: "Confirm room operation and collect client signoff.",
+    extraBody: `<p class="muted">The completion sheet has already been signed internally.</p>`,
+    beforeTravel: () => {
+      state.flags.commissioningStarted = true;
+    },
   });
 }
 
@@ -3960,23 +3964,12 @@ function chooseSurveyPreparation(preparation) {
 }
 
 function promptSurveyTravel() {
-  showModal({
-    kicker: "Route Summary",
-    title: "Wayne Area -> University City",
-    body: `
-      <p><strong>Dispatch estimate:</strong> Measure one wall. Confirm install conditions. Do not overcomplicate the quote.</p>
-      <div class="route-line"><span>WAYNE AREA</span><i></i><span>UNIVERSITY CITY</span></div>
-    `,
-    actions: [{
-      label: "Drive To Campus",
-      onClick: () => {
-        state.flags.surveyStarted = true;
-        consumePackedLunch("the University City site survey");
-        setClock(`${state.clock.slice(0, 3)} 1:18 PM`);
-        addLog("Arrived in University City for a classroom display site survey.");
-        enterScene("universitySurvey");
-      },
-    }],
+  showTravelRouteModal({
+    routeId: "universitySurvey",
+    dispatchEstimate: "Measure one wall. Confirm install conditions. Do not overcomplicate the quote.",
+    beforeTravel: () => {
+      state.flags.surveyStarted = true;
+    },
   });
 }
 
@@ -4202,33 +4195,26 @@ function chooseServicePreparation(preparation) {
 
 function promptServiceTravel() {
   const reviewedTicket = state.flags.servicePreparation === "review";
-  showModal({
-    kicker: "Route Summary",
-    title: "Wayne Area -> Conshohocken",
-    body: `
-      <p><strong>Dispatch estimate:</strong> Diagnose the display issue and swap the screen if needed.</p>
-      ${reviewedTicket ? `<p class="expense"><strong>Work-order note:</strong> Inline coupler reported behind the credenza.</p>` : ""}
-      <div class="route-line"><span>WAYNE AREA</span><i></i><span>CONSHOHOCKEN</span></div>
-    `,
-    actions: [{
-      label: "Drive to Client Office",
-      onClick: () => {
-        state.flags.serviceStarted = true;
-        state.carry = [];
-        const hadPackedLunch = state.flags.packedLunchReady;
-        consumePackedLunch("the Conshohocken service call");
-        if (state.flags.servicePreparation === "lunch" && !state.flags.serviceLunchUsed) {
-          state.flags.serviceLunchUsed = true;
-          if (!hadPackedLunch) {
-            changeEnergy(8);
-            addLog("Ate the packed lunch before heading inside. Energy improved.");
-          }
+  showTravelRouteModal({
+    routeId: "conshohockenService",
+    dispatchEstimate: "Diagnose the display issue and swap the screen if needed.",
+    extraBody: reviewedTicket ? `<p class="expense"><strong>Work-order note:</strong> Inline coupler reported behind the credenza.</p>` : "",
+    beforeTravel: () => {
+      state.flags.serviceStarted = true;
+      state.carry = [];
+      state.flags.serviceHadPackedLunchBeforeRoute = Boolean(state.flags.packedLunchReady);
+    },
+    afterTravel: (route) => {
+      if (state.flags.servicePreparation === "lunch" && !state.flags.serviceLunchUsed) {
+        state.flags.serviceLunchUsed = true;
+        if (!state.flags.serviceHadPackedLunchBeforeRoute) {
+          changeEnergy(8);
+          addLog("Ate the packed lunch before heading inside. Energy improved.");
         }
-        setClock(`${state.clock.slice(0, 3)} 9:14 AM`);
-        addLog("Arrived in Conshohocken for a display service call.");
-        enterScene("serviceOffice");
-      },
-    }],
+      }
+      delete state.flags.serviceHadPackedLunchBeforeRoute;
+      enterScene(route.destinationSceneId);
+    },
   });
 }
 
@@ -5439,7 +5425,7 @@ function renderNearby() {
 }
 
 function renderHud() {
-  const vehicle = content.vehicles.van3;
+  const vehicle = getCurrentVehicle();
   const rank = getCareerRank();
   elements.techName.textContent = state.technician.name;
   elements.energyValue.textContent = state.energy;

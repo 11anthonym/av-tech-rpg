@@ -52,7 +52,9 @@ clipboard records a compact career ledger, visible career goals, and an
 emerging build identity based on skill branches, reputation, work style, and
 callback debt. Tools now publish their skill bonuses through content data, so
 future tools can strengthen install, documentation, troubleshooting, client
-communication, or fieldcraft without custom UI code. A University City site
+communication, or fieldcraft without custom UI code. Current dispatch drives
+now use a lightweight world-route skeleton, giving future areas, vans, building
+entries, and fast-travel choices a shared foundation. A University City site
 survey then asks the player to check an elevator, hallway turn, and classroom
 wall after sales measured only the dimension that made the quote look
 straightforward. The player can document the access problem, use confidence

@@ -7,7 +7,7 @@ skill, trait, tool, or company feels like it belongs.
 
 ## Current Shape
 
-The game now has four reusable layers:
+The game now has five reusable layers:
 
 1. **Technician identity:** premade and custom technicians define stats,
    skill baselines, traits, tools, strengths, weaknesses, and playstyle.
@@ -17,6 +17,9 @@ The game now has four reusable layers:
    service, survey, commissioning, logistics, or handoff work.
 4. **Company context:** the current employer describes shop culture,
    pressure, dysfunction, and the reputation tradeoff behind bad-company humor.
+5. **World skeleton:** regions, areas, portals, vehicles, and routes describe
+   where a dispatch happens and how the player moves between shop, van,
+   parking, buildings, and job rooms.
 
 Keep those four layers readable in the UI. If a mechanic is invisible, players
 will experience it as randomness rather than roleplaying.
@@ -165,9 +168,12 @@ be easy to verify in the browser.
    the checklist.
 6. **Done - Authoring example pass:** Documented the systems service dispatch
    as a worked example for future contributors.
-7. **Next - Playtest tuning pass:** Play through the systems service dispatch
+7. **Done - Travel skeleton pass:** Current dispatch travel now goes through
+   `content.world.routes` and `showTravelRouteModal()` so future area exits,
+   vehicle selection, route choices, and fast travel have a shared foundation.
+8. **Next - Playtest tuning pass:** Play through the systems service dispatch
    and tighten only confusing text, costs, or consequence visibility.
-8. **Later - Save migration pass:** Add a small migration helper before
+9. **Later - Save migration pass:** Add a small migration helper before
    renaming stable IDs or changing saved data shapes again.
 
 Stop after each pass and play through the affected area. The prototype should
@@ -278,8 +284,9 @@ Do not extract these until multiple jobs need the same pattern:
 
 - a fully generic dispatch runner
 - company-specific dispatch board logic
-- vehicle selection
-- a route/toll/parking system
+- manual driving or a full regional-map UI
+- vehicle selection UI
+- toll, parking, fuel, and traffic sub-systems
 - multi-step save migrations
 - branching employer/career acts
 

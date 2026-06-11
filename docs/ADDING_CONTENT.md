@@ -2,8 +2,8 @@
 
 The prototype separates content from game logic:
 
-- `data.js` contains technicians, tools, vehicles, tutorial items, and scene
-  layouts.
+- `data.js` contains technicians, tools, vehicles, world areas/routes, tutorial
+  items, and scene layouts.
 - `app.js` contains movement, interaction rules, progression, and rendering.
 - `styles.css` contains presentation.
 
@@ -326,8 +326,49 @@ van5: {
 },
 ```
 
-The prototype currently assigns `van3` directly in `app.js`. A later vehicle
-selection screen can choose from this data without changing the vehicle shape.
+The prototype stores the current vehicle ID in the save data and defaults to
+`content.world.defaultVehicleId`. A later vehicle selection screen can choose
+from this data without changing the vehicle shape.
+
+## Add a World Area or Route
+
+`content.world` is the lightweight map skeleton for the future larger game. It
+does not replace scenes yet; it gives scenes, buildings, vans, and dispatch
+travel a shared vocabulary.
+
+Use:
+
+- `regions` for readable Philadelphia-area map nodes such as Wayne Area,
+  Center City East, Conshohocken, University City, Navy Yard, King of Prussia,
+  and Cherry Hill.
+- `areas` for concrete places that may have scenes: shop, garage, lobby,
+  job room, loading dock, campus gate, or parking area.
+- `portals` for future interior transitions such as door, elevator, building
+  entrance, van exit, or return route.
+- `routes` for dispatch travel from one area to another.
+
+Route entries should include:
+
+```js
+conshohockenService: {
+  id: "conshohockenService",
+  fromAreaId: "shop",
+  toAreaId: "serviceOffice",
+  fromLabel: "WAYNE AREA",
+  toLabel: "CONSHOHOCKEN",
+  destinationSceneId: "serviceOffice",
+  actionLabel: "Drive to Client Office",
+  packedLunchContext: "the Conshohocken service call",
+  arrivalTime: "9:14 AM",
+  arrivalLog: "Arrived in Conshohocken for a display service call.",
+  fastTravelEligible: true,
+},
+```
+
+Then call `showTravelRouteModal({ routeId, dispatchEstimate, extraBody,
+beforeTravel, afterTravel })` from `app.js`. Keep route data free of functions;
+use `beforeTravel` for flags such as `serviceStarted`, and `afterTravel` only
+when the arrival needs a special card before entering the destination scene.
 
 ## Add a Scene Layout
 

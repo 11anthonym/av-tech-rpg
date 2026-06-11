@@ -188,6 +188,12 @@ destination on the map, then apply one readable travel or parking complication.
 The two-cart client site should be a fictional office with a real regional place
 name.
 
+Current prototype note: dispatch drives are now represented as `content.world`
+routes. A route connects a home area to a destination area, sets arrival time,
+consumes packed-lunch recovery when appropriate, and enters the destination
+scene. This is the stepping stone toward a future regional map, van interaction,
+route choices, and fast travel without building manual driving yet.
+
 ### Tutorial Destination: Center City East
 
 Place the first two-cart job at a fictional office in **Center City East**,
