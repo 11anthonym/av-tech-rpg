@@ -56,7 +56,8 @@ communication, or fieldcraft without custom UI code. Current dispatch drives
 now use a lightweight world-route skeleton, giving future areas, vans, building
 entries, and fast-travel choices a shared foundation. The first building
 entrance and elevator transitions now use reusable portal data as the next step
-toward compact enter/exit area flow. A University City site
+toward compact enter/exit area flow, and the shop van now has a reusable
+vehicle surface for cargo, route launch, and future fast travel. A University City site
 survey then asks the player to check an elevator, hallway turn, and classroom
 wall after sales measured only the dimension that made the quote look
 straightforward. The player can document the access problem, use confidence

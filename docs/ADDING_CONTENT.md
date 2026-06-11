@@ -330,6 +330,19 @@ The prototype stores the current vehicle ID in the save data and defaults to
 `content.world.defaultVehicleId`. A later vehicle selection screen can choose
 from this data without changing the vehicle shape.
 
+Vehicle interactions should go through the reusable van surface instead of
+adding one-off scene logic. `showVehicleMenu()` currently handles:
+
+- inspecting the current vehicle stats
+- loading carried cargo into the vehicle
+- reviewing loaded cargo
+- starting the currently available mapped route
+- showing the locked fast-travel hook for future regional-map work
+
+Use `getCurrentVehicle()`, `getVehicleCargoCapacity()`,
+`loadCarriedItemsIntoVehicle()`, and route data from `content.world.routes`
+instead of hardcoding a specific van inside new scene interactions.
+
 ## Add a World Area or Route
 
 `content.world` is the lightweight map skeleton for the future larger game. It

@@ -176,9 +176,12 @@ be easy to verify in the browser.
    elevator now use `content.world.portals`, `getScenePortalInteractions()`,
    and `usePortal()` so future doors, elevators, exits, and building interiors
    have a reusable path.
-9. **Next - Playtest tuning pass:** Play through the systems service dispatch
+9. **Done - Vehicle interaction pass:** The shop van now opens a reusable
+   vehicle surface for cargo, loadout, mapped route launch, and the future
+   fast-travel hook.
+10. **Next - Playtest tuning pass:** Play through the systems service dispatch
    and tighten only confusing text, costs, or consequence visibility.
-10. **Later - Save migration pass:** Add a small migration helper before
+11. **Later - Save migration pass:** Add a small migration helper before
    renaming stable IDs or changing saved data shapes again.
 
 Stop after each pass and play through the affected area. The prototype should
