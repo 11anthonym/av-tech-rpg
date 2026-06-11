@@ -1030,6 +1030,7 @@ function continueGame() {
   const migratedStats = inferSavedStats(savedGame);
   if (flags.finished) flags.tutorialPaid = true;
   if (flags.finished) flags.tutorialProgressAwarded = true;
+  if ((savedGame.delivered || []).length === content.tutorial.garageUnload.length) flags.centerCityEquipmentDelivered = true;
   if (flags.serviceComplete) flags.serviceProgressAwarded = true;
   if (flags.surveyComplete) flags.surveyProgressAwarded = true;
   if (flags.commissioningComplete) flags.commissioningProgressAwarded = true;
@@ -1617,10 +1618,38 @@ function getWorldRoute(routeId) {
   return content.world?.routes?.[routeId] || null;
 }
 
+function getWorldPortal(portalId) {
+  return content.world?.portals?.[portalId] || null;
+}
+
+function getWorldArea(areaId) {
+  return content.world?.areas?.[areaId] || null;
+}
+
+function getScenePortalInteractions(sceneId = state.sceneId) {
+  const area = getWorldAreaByScene(sceneId);
+  if (!area) return [];
+  return Object.values(content.world?.portals || {})
+    .filter((portal) => portal.fromAreaId === area.id && typeof portal.x === "number" && typeof portal.y === "number")
+    .map((portal) => ({
+      x: portal.x,
+      y: portal.y,
+      label: portal.label,
+      portalId: portal.id,
+      action: () => usePortal(portal.id),
+    }));
+}
+
 function getRouteArrivalClock(route) {
   if (!route?.arrivalTime) return null;
   if (/^[A-Z]{3} /.test(route.arrivalTime)) return route.arrivalTime;
   return `${state.clock.slice(0, 3)} ${route.arrivalTime}`;
+}
+
+function getTimeOnCurrentDay(time) {
+  if (!time) return null;
+  if (/^[A-Z]{3} /.test(time)) return time;
+  return `${state.clock.slice(0, 3)} ${time}`;
 }
 
 function getRouteLineMarkup(route) {
@@ -1646,6 +1675,40 @@ function travelRoute(routeId, { beforeTravel, afterTravel } = {}) {
   if (afterTravel) return afterTravel(route);
   if (route.destinationSceneId) return enterScene(route.destinationSceneId);
   return render();
+}
+
+function recordPortalUse(portal) {
+  state.flags.portalHistory ||= {};
+  state.flags.portalHistory[portal.id] = (state.flags.portalHistory[portal.id] || 0) + 1;
+  state.flags.lastPortalId = portal.id;
+  if (portal.toAreaId) state.flags.currentAreaId = portal.toAreaId;
+}
+
+function finishPortal(portal) {
+  const destination = getWorldArea(portal.toAreaId);
+  if (!destination?.sceneId) return notify(`${portal.label} is not connected to a scene yet.`);
+  const arrivalClock = getTimeOnCurrentDay(portal.arrivalClock);
+  if (arrivalClock) setClock(arrivalClock);
+  if (portal.arrivalLog) addLog(portal.arrivalLog);
+  recordPortalUse(portal);
+  enterScene(destination.sceneId, portal.toPlayerStart || null);
+}
+
+function usePortal(portalId) {
+  const portal = getWorldPortal(portalId);
+  if (!portal) return notify(`Portal ${portalId} is not mapped yet.`);
+  if (portal.requiredFlag && !state.flags[portal.requiredFlag]) {
+    return notify(portal.requiredMessage || `${portal.label} is not available yet.`);
+  }
+  if (portal.transition) {
+    return showModal({
+      kicker: portal.transition.kicker || "Area Transition",
+      title: portal.transition.title || portal.label,
+      body: `<p>${escapeHtml(portal.transition.body || portal.label)}</p>`,
+      actions: [{ label: portal.transition.actionLabel || portal.label, onClick: () => finishPortal(portal) }],
+    });
+  }
+  return finishPortal(portal);
 }
 
 function showTravelRouteModal({ routeId, dispatchEstimate, extraBody = "", actionLabel, beforeTravel, afterTravel }) {
@@ -1696,12 +1759,7 @@ function showParkingModal() {
 }
 
 function showLobbyTransition() {
-  showModal({
-    kicker: "Client Entrance",
-    title: "Everything Is Inside",
-    body: `<p>You made the garage trips manually. A folding hand truck is beginning to sound appealing.</p>`,
-    actions: [{ label: "Enter Lobby", onClick: () => enterScene("lobby") }],
-  });
+  usePortal("garageToLobby");
 }
 
 function showSupervisorDeparture() {
@@ -4419,7 +4477,7 @@ function getInteractions() {
           render();
         },
       },
-      {
+      ...(hasCarriedItems() || !state.flags.centerCityEquipmentDelivered ? [{
         x: 116, y: 185, label: hasCarriedItems() ? "Carry equipment to client entrance" : "Walk to client entrance",
         action: () => {
           if (hasCarriedItems()) {
@@ -4431,13 +4489,16 @@ function getInteractions() {
             if (state.delivered.length === content.tutorial.garageUnload.length) {
               setClock("MON 8:39 AM");
               addLog("Equipment delivered to lobby. Utility cart would have helped.");
+              state.flags.centerCityEquipmentDelivered = true;
               return showLobbyTransition();
             }
             return render();
           }
+          if (state.flags.centerCityEquipmentDelivered) return usePortal("garageToLobby");
           notify("The equipment still needs to be carried from the van.");
         },
-      },
+      }] : []),
+      ...(!hasCarriedItems() && state.flags.centerCityEquipmentDelivered ? getScenePortalInteractions("garage") : []),
     ];
   }
 
@@ -4458,15 +4519,7 @@ function getInteractions() {
           });
         },
       },
-      {
-        x: 795, y: 205, label: "Take elevator to client floor",
-        action: () => {
-          if (!state.flags.securityChecked) return notify("Security wants you to check in first.");
-          setClock("MON 9:06 AM");
-          addLog("Reached the client floor with the delivered equipment.");
-          enterScene("client");
-        },
-      },
+      ...getScenePortalInteractions("lobby"),
     ];
   }
 
@@ -5399,11 +5452,15 @@ function renderDecor() {
   });
   const interactions = getInteractions().map((item) => {
     const marker = document.createElement("div");
-    marker.className = item.npc ? "interaction-marker npc-marker" : "interaction-marker";
+    marker.className = item.npc
+      ? "interaction-marker npc-marker"
+      : item.portalId
+        ? "interaction-marker portal-marker"
+        : "interaction-marker";
     marker.style.left = `${item.x - 11}px`;
     marker.style.top = `${item.y - 11}px`;
     marker.title = item.label;
-    marker.textContent = item.npc || "";
+    marker.textContent = item.npc || (item.portalId ? ">" : "");
     return marker;
   });
   elements.sceneLayer.replaceChildren(...decor, ...interactions);

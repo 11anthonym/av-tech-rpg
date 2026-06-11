@@ -343,7 +343,7 @@ Use:
   and Cherry Hill.
 - `areas` for concrete places that may have scenes: shop, garage, lobby,
   job room, loading dock, campus gate, or parking area.
-- `portals` for future interior transitions such as door, elevator, building
+- `portals` for interior transitions such as door, elevator, building
   entrance, van exit, or return route.
 - `routes` for dispatch travel from one area to another.
 
@@ -369,6 +369,30 @@ Then call `showTravelRouteModal({ routeId, dispatchEstimate, extraBody,
 beforeTravel, afterTravel })` from `app.js`. Keep route data free of functions;
 use `beforeTravel` for flags such as `serviceStarted`, and `afterTravel` only
 when the arrival needs a special card before entering the destination scene.
+
+Portal entries should include the source area, target area, marker position,
+and any small gate required before the player can use it:
+
+```js
+lobbyToConferenceRoom: {
+  id: "lobbyToConferenceRoom",
+  fromAreaId: "centerCityLobby",
+  toAreaId: "centerCityConferenceRoom",
+  kind: "elevator",
+  label: "Take elevator to client floor",
+  x: 795,
+  y: 205,
+  requiredFlag: "securityChecked",
+  requiredMessage: "Security wants you to check in first.",
+  arrivalClock: "9:06 AM",
+  arrivalLog: "Reached the client floor with the delivered equipment.",
+},
+```
+
+Then include `getScenePortalInteractions("sceneId")` in that scene's
+interaction list, or call `usePortal("portalId")` when a scripted beat should
+open the portal immediately. Portal history is saved in `flags.portalHistory`,
+and the most recent portal ID is saved as `flags.lastPortalId`.
 
 ## Add a Scene Layout
 

@@ -172,9 +172,13 @@ be easy to verify in the browser.
 7. **Done - Travel skeleton pass:** Current dispatch travel now goes through
    `content.world.routes` and `showTravelRouteModal()` so future area exits,
    vehicle selection, route choices, and fast travel have a shared foundation.
-8. **Next - Playtest tuning pass:** Play through the systems service dispatch
+8. **Done - Portal skeleton pass:** The tutorial garage entrance and lobby
+   elevator now use `content.world.portals`, `getScenePortalInteractions()`,
+   and `usePortal()` so future doors, elevators, exits, and building interiors
+   have a reusable path.
+9. **Next - Playtest tuning pass:** Play through the systems service dispatch
    and tighten only confusing text, costs, or consequence visibility.
-9. **Later - Save migration pass:** Add a small migration helper before
+10. **Later - Save migration pass:** Add a small migration helper before
    renaming stable IDs or changing saved data shapes again.
 
 Stop after each pass and play through the affected area. The prototype should

@@ -105,6 +105,7 @@ kbd { padding: 2px 5px; border: 1px solid #53615e; border-radius: 3px; color: va
 .interaction-marker { position: absolute; z-index: 3; width: 23px; height: 23px; border: 3px solid #f3bd58; border-radius: 50%; background: rgba(239, 182, 78, .2); box-shadow: 0 0 0 4px rgba(239, 182, 78, .14); animation: pulse 1.5s infinite ease-in-out; }
 @keyframes pulse { 50% { transform: scale(1.15); } }
 .npc-marker { display: grid; width: 34px; height: 42px; margin: -10px 0 0 -5px; place-items: center; border-color: #31423d; border-radius: 12px 12px 5px 5px; color: #20312d; background: #73b69a; box-shadow: 0 3px 0 rgba(0, 0, 0, .18), 0 0 0 4px rgba(239, 182, 78, .2); font-size: 8px; font-weight: 900; letter-spacing: .04em; animation: none; }
+.portal-marker { display: grid; place-items: center; border-color: #7bb6d8; color: #dff4ff; background: rgba(72, 128, 160, .42); box-shadow: 0 0 0 4px rgba(123, 182, 216, .16); font-size: 12px; font-weight: 900; animation: none; }
 .player { position: absolute; z-index: 6; width: 30px; height: 40px; transition: left 45ms linear, top 45ms linear; }
 .player i { display: block; width: 25px; height: 27px; margin: 0 auto; border: 3px solid #17211f; border-radius: 11px 11px 4px 4px; background: var(--accent); box-shadow: 0 3px 0 rgba(0, 0, 0, .18); }
 .player b { display: block; margin-top: 2px; color: #31423d; font-size: 8px; letter-spacing: .06em; text-align: center; }
