@@ -394,8 +394,25 @@ conshohockenService: {
 },
 ```
 
-Then call `showTravelRouteModal({ routeId, dispatchEstimate, extraBody,
-beforeTravel, afterTravel })` from `app.js`. Keep route data free of functions;
+Routes may also include a small `choices` array when travel friction matters:
+
+```js
+choices: [
+  {
+    id: "loadingZoneGamble",
+    label: "Try the loading-zone approach",
+    detail: "Save a few minutes, but spend energy dealing with curb pressure.",
+    arrivalTime: "7:58 AM",
+    energyDelta: -2,
+    log: "Tried the loading-zone approach.",
+  },
+],
+```
+
+Then call `showRouteChoiceModal({ routeId, dispatchEstimate, extraBody,
+beforeTravel, afterTravel })` when the player should choose an approach, or
+`showTravelRouteModal({ routeId, dispatchEstimate, extraBody, beforeTravel,
+afterTravel })` when the route has no choice. Keep route data free of functions;
 use `beforeTravel` for flags such as `serviceStarted`, and `afterTravel` only
 when the arrival needs a special card before entering the destination scene.
 

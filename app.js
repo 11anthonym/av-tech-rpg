@@ -182,6 +182,7 @@ function migrateSavedRouteHistory(savedGame, flags) {
   ];
   markRouteHistory(flags, "centerCityTutorial", flags.finished || flags.centerCityEquipmentDelivered || centerCityAreaIds.has(currentArea?.id));
   routeMilestones.forEach(([routeId, traveled]) => markRouteHistory(flags, routeId, traveled));
+  flags.routeChoiceHistory ||= {};
 }
 
 function migrateSavedGame(savedGame) {
@@ -1814,6 +1815,19 @@ function getRouteTravelCount(routeId) {
   return state.flags.routeHistory?.[routeId] || 0;
 }
 
+function getRouteChoices(route) {
+  return route?.choices || [];
+}
+
+function getRouteChoice(route, choiceId) {
+  return getRouteChoices(route).find((choice) => choice.id === choiceId) || null;
+}
+
+function getLastRouteChoiceLabel(route) {
+  const choiceId = state.flags.routeChoiceHistory?.[route.id];
+  return getRouteChoice(route, choiceId)?.label || "";
+}
+
 function hasLoadedItems(itemIds) {
   return itemIds.every((itemId) => state.loaded.includes(itemId));
 }
@@ -1840,6 +1854,8 @@ function getRouteStatus(route) {
 
 function getRouteMapDetail(route) {
   const tags = [getRouteStatus(route)];
+  const lastChoice = getLastRouteChoiceLabel(route);
+  if (lastChoice) tags.push(`last route: ${lastChoice}`);
   tags.push(route.fastTravelEligible ? "fast-travel candidate" : "manual route");
   const destination = getWorldArea(route.toAreaId);
   if (destination?.label) tags.push(destination.label);
@@ -1932,10 +1948,11 @@ function getScenePortalInteractions(sceneId = state.sceneId) {
     }));
 }
 
-function getRouteArrivalClock(route) {
-  if (!route?.arrivalTime) return null;
-  if (/^[A-Z]{3} /.test(route.arrivalTime)) return route.arrivalTime;
-  return `${state.clock.slice(0, 3)} ${route.arrivalTime}`;
+function getRouteArrivalClock(route, routeChoice = null) {
+  const arrivalTime = routeChoice?.arrivalTime || route?.arrivalTime;
+  if (!arrivalTime) return null;
+  if (/^[A-Z]{3} /.test(arrivalTime)) return arrivalTime;
+  return `${state.clock.slice(0, 3)} ${arrivalTime}`;
 }
 
 function getTimeOnCurrentDay(time) {
@@ -1948,22 +1965,35 @@ function getRouteLineMarkup(route) {
   return `<div class="route-line"><span>${escapeHtml(route.fromLabel)}</span><i></i><span>${escapeHtml(route.toLabel)}</span></div>`;
 }
 
-function recordRouteTravel(route) {
+function recordRouteTravel(route, routeChoice = null) {
   state.flags.routeHistory ||= {};
   state.flags.routeHistory[route.id] = (state.flags.routeHistory[route.id] || 0) + 1;
   state.flags.lastRouteId = route.id;
+  if (routeChoice?.id) {
+    state.flags.routeChoiceHistory ||= {};
+    state.flags.routeChoiceHistory[route.id] = routeChoice.id;
+  }
   if (route.toAreaId) state.flags.currentAreaId = route.toAreaId;
 }
 
-function travelRoute(routeId, { beforeTravel, afterTravel } = {}) {
+function applyRouteChoice(route, routeChoice) {
+  if (!routeChoice) return;
+  if (routeChoice.energyDelta) changeEnergy(routeChoice.energyDelta);
+  if (routeChoice.cashDelta) state.cash += routeChoice.cashDelta;
+  if (routeChoice.burnoutDelta) state.burnout = Math.max(0, state.burnout + routeChoice.burnoutDelta);
+  addLog(routeChoice.log || `${routeChoice.label} selected for ${route.toLabel}.`);
+}
+
+function travelRoute(routeId, { beforeTravel, afterTravel, routeChoice } = {}) {
   const route = getWorldRoute(routeId);
   if (!route) return notify(`Route ${routeId} is not mapped yet.`);
   beforeTravel?.(route);
+  applyRouteChoice(route, routeChoice);
   if (route.packedLunchContext) consumePackedLunch(route.packedLunchContext);
-  const arrivalClock = getRouteArrivalClock(route);
+  const arrivalClock = getRouteArrivalClock(route, routeChoice);
   if (arrivalClock) setClock(arrivalClock);
   if (route.arrivalLog) addLog(route.arrivalLog);
-  recordRouteTravel(route);
+  recordRouteTravel(route, routeChoice);
   if (afterTravel) return afterTravel(route);
   if (route.destinationSceneId) return enterScene(route.destinationSceneId);
   return render();
@@ -2003,7 +2033,55 @@ function usePortal(portalId) {
   return finishPortal(portal);
 }
 
-function showTravelRouteModal({ routeId, dispatchEstimate, extraBody = "", actionLabel, beforeTravel, afterTravel }) {
+function getRouteChoiceImpactMarkup(choice) {
+  const impacts = [];
+  if (choice.arrivalTime) impacts.push(`Arrive ${choice.arrivalTime}`);
+  if (choice.energyDelta) impacts.push(`${choice.energyDelta > 0 ? "+" : ""}${choice.energyDelta} energy`);
+  if (choice.cashDelta) impacts.push(`${choice.cashDelta > 0 ? "+" : "-"}$${Math.abs(choice.cashDelta)}`);
+  if (choice.burnoutDelta) impacts.push(`${choice.burnoutDelta > 0 ? "+" : ""}${choice.burnoutDelta} burnout`);
+  return impacts.length ? ` <em>${escapeHtml(impacts.join(" / "))}</em>` : "";
+}
+
+function showRouteChoiceModal({ routeId, dispatchEstimate, extraBody = "", actionLabel, beforeTravel, afterTravel }) {
+  const route = getWorldRoute(routeId);
+  if (!route) return notify(`Route ${routeId} is not mapped yet.`);
+  const choices = getRouteChoices(route);
+  if (!choices.length) {
+    return showTravelRouteModal({ routeId, dispatchEstimate, extraBody, actionLabel, beforeTravel, afterTravel });
+  }
+  showModal({
+    kicker: "Route Choice",
+    title: `${route.fromLabel} -> ${route.toLabel}`,
+    body: `
+      ${dispatchEstimate ? `<p><strong>Dispatch estimate:</strong> ${dispatchEstimate}</p>` : ""}
+      ${extraBody}
+      ${getRouteLineMarkup(route)}
+      <ul class="modal-list">
+        ${choices.map((choice) => `
+          <li>
+            <strong>${escapeHtml(choice.label)}${getRouteChoiceImpactMarkup(choice)}</strong>
+            <span>${escapeHtml(choice.detail)}</span>
+          </li>
+        `).join("")}
+      </ul>
+    `,
+    actions: choices.map((choice, index) => ({
+      label: choice.label,
+      className: index === 0 ? undefined : "secondary-button",
+      onClick: () => showTravelRouteModal({
+        routeId,
+        dispatchEstimate,
+        extraBody: `${extraBody}<p class="muted"><strong>Route approach:</strong> ${escapeHtml(choice.label)}. ${escapeHtml(choice.detail)}</p>`,
+        actionLabel,
+        beforeTravel,
+        afterTravel,
+        routeChoice: choice,
+      }),
+    })),
+  });
+}
+
+function showTravelRouteModal({ routeId, dispatchEstimate, extraBody = "", actionLabel, beforeTravel, afterTravel, routeChoice = null }) {
   const route = getWorldRoute(routeId);
   if (!route) return notify(`Route ${routeId} is not mapped yet.`);
   showModal({
@@ -2016,7 +2094,7 @@ function showTravelRouteModal({ routeId, dispatchEstimate, extraBody = "", actio
     `,
     actions: [{
       label: actionLabel || route.actionLabel || `Drive to ${route.toLabel}`,
-      onClick: () => travelRoute(routeId, { beforeTravel, afterTravel }),
+      onClick: () => travelRoute(routeId, { beforeTravel, afterTravel, routeChoice }),
     }],
   });
 }
@@ -2030,7 +2108,7 @@ function getNextAssemblyItem() {
 }
 
 function promptTravel() {
-  showTravelRouteModal({
+  showRouteChoiceModal({
     routeId: "centerCityTutorial",
     dispatchEstimate: "Simple two-cart build. Supervisor onsite.",
     extraBody: "<p>Today's drive is scripted for the tutorial. Future jobs can offer route, toll, and parking choices.</p>",

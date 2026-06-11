@@ -189,8 +189,11 @@ be easy to verify in the browser.
    `migrateSavedGame()` so older local careers can pick up vehicle, area,
    route-history, array, and progress-award fields without changing the save
    key.
-13. **Next - Route choice pass:** Add a small route-cost choice to one mapped
-   route before unlocking broad fast travel.
+13. **Done - Route choice pass:** The Center City tutorial drive now has a
+   reusable `choices` array and `showRouteChoiceModal()` path for time, energy,
+   cash, and burnout tradeoffs before broad fast travel unlocks.
+14. **Next - Fast-travel unlock pass:** Decide the smallest route-history and
+   cost rule that should make one repeat route fast-travel eligible.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

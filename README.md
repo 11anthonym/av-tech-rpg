@@ -59,6 +59,9 @@ entrance and elevator transitions now use reusable portal data as the next step
 toward compact enter/exit area flow, and the shop van now has a reusable
 vehicle surface for cargo, route launch, and a regional map that lists known
 destinations, mapped routes, travel history, and future fast-travel candidates.
+The first Center City drive now asks for a route approach so travel can carry
+small time, energy, and burnout tradeoffs before the game attempts manual
+driving or broad fast travel.
 A University City site
 survey then asks the player to check an elevator, hallway turn, and classroom
 wall after sales measured only the dimension that made the quote look

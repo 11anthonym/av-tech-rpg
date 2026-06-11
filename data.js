@@ -605,6 +605,31 @@ window.GAME_CONTENT = {
         arrivalTime: "8:03 AM",
         arrivalLog: "Arrived in Center City East. Curb unloading was not arranged.",
         fastTravelEligible: false,
+        choices: [
+          {
+            id: "garageRoute",
+            label: "Use the reliable garage route",
+            detail: "Predictable and boring in the useful way. Arrive at the planned garage time.",
+            arrivalTime: "8:03 AM",
+            log: "Took the reliable garage route into Center City East.",
+          },
+          {
+            id: "loadingZoneGamble",
+            label: "Try the loading-zone approach",
+            detail: "Save a few minutes near the building, but burn energy dealing with curb pressure that nobody actually arranged.",
+            arrivalTime: "7:58 AM",
+            energyDelta: -2,
+            log: "Tried the loading-zone approach. It saved minutes and spent them immediately on curb stress.",
+          },
+          {
+            id: "circleForCurb",
+            label: "Circle for curb access",
+            detail: "Avoid committing to the garage too early. Arrive later and add burnout from watching the same block twice.",
+            arrivalTime: "8:11 AM",
+            burnoutDelta: 1,
+            log: "Circled for curb access before accepting the garage reality.",
+          },
+        ],
       },
       conshohockenService: {
         id: "conshohockenService",
