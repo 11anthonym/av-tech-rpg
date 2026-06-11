@@ -182,10 +182,15 @@ be easy to verify in the browser.
 10. **Done - Regional map surface pass:** The van now opens a regional map
    surface that shows current area, known regions, mapped routes, route
    history, and fast-travel candidates without bypassing dispatch gates.
-11. **Next - Playtest tuning pass:** Play through the systems service dispatch
-   and tighten only confusing text, costs, or consequence visibility.
-12. **Later - Save migration pass:** Add a small migration helper before
-   renaming stable IDs or changing saved data shapes again.
+11. **Done - Playtest tuning pass:** Played through the systems service
+   dispatch in simulation and made strained diagnostic quality visible on the
+   closeout/result cards.
+12. **Done - Save migration pass:** Save loading now goes through
+   `migrateSavedGame()` so older local careers can pick up vehicle, area,
+   route-history, array, and progress-award fields without changing the save
+   key.
+13. **Next - Route choice pass:** Add a small route-cost choice to one mapped
+   route before unlocking broad fast travel.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

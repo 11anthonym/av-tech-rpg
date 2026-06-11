@@ -22,11 +22,16 @@ without rebuilding it from current creator data.
 
 When changing saved data structures later:
 
-1. Add a version migration for existing saves, or
+1. Add a version migration in `migrateSavedGame()` for existing saves, or
 2. Change the save-key version and treat it as a clean prototype reset.
 
 Avoid storing functions, DOM nodes, or open dialog callbacks. Reconstruct those
 from saved progression flags when the game resumes.
+
+The save key should stay stable unless a prototype reset is intentional. Internal
+save versions can advance as long as `migrateSavedGame()` fills any new arrays,
+flags, route history, vehicle IDs, or current-area data needed by the latest
+build.
 
 ## Add a Tool
 

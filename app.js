@@ -2,6 +2,7 @@ const content = window.GAME_CONTENT;
 const keys = new Set();
 const PLAYER_SPEED = 8;
 const SAVE_KEY = "av-tech-rpg-save-v1";
+const SAVE_VERSION = 17;
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const STAY_LATE_PREP_ENERGY_COST = 32;
 const HELP_JOSH_ENERGY_COST = 30;
@@ -155,10 +156,79 @@ const elements = {
 
 function getSavedGame() {
   try {
-    return JSON.parse(localStorage.getItem(SAVE_KEY));
+    return migrateSavedGame(JSON.parse(localStorage.getItem(SAVE_KEY)));
   } catch {
     return null;
   }
+}
+
+function markRouteHistory(flags, routeId, traveled = true) {
+  if (!traveled) return;
+  flags.routeHistory ||= {};
+  flags.routeHistory[routeId] ||= 1;
+}
+
+function migrateSavedRouteHistory(savedGame, flags) {
+  const centerCityAreaIds = new Set(["centerCityGarage", "centerCityLobby", "centerCityConferenceRoom"]);
+  const currentArea = getWorldAreaByScene(savedGame.sceneId);
+  const routeMilestones = [
+    ["conshohockenService", flags.serviceStarted || flags.serviceComplete || savedGame.sceneId === "serviceOffice"],
+    ["universitySurvey", flags.surveyStarted || flags.surveyComplete || savedGame.sceneId === "universitySurvey"],
+    ["southPhillyCommissioning", flags.commissioningStarted || flags.commissioningComplete || savedGame.sceneId === "southPhillyCommissioning"],
+    ["navyYardAccess", flags.secureAccessStarted || flags.secureAccessComplete || savedGame.sceneId === "navyYardAccess"],
+    ["warrantyReturn", flags.callbackCleanupStarted || flags.callbackCleanupComplete || savedGame.sceneId === "warrantyReturn"],
+    ["executiveHandoff", flags.handoffStarted || flags.handoffComplete || savedGame.sceneId === "executiveHandoff"],
+    ["systemsService", flags.systemsStarted || flags.systemsComplete || savedGame.sceneId === "systemsService"],
+  ];
+  markRouteHistory(flags, "centerCityTutorial", flags.finished || flags.centerCityEquipmentDelivered || centerCityAreaIds.has(currentArea?.id));
+  routeMilestones.forEach(([routeId, traveled]) => markRouteHistory(flags, routeId, traveled));
+}
+
+function migrateSavedGame(savedGame) {
+  if (!savedGame || typeof savedGame !== "object") return null;
+  const flags = { ...(savedGame.flags || {}) };
+  const migrated = {
+    ...savedGame,
+    version: SAVE_VERSION,
+    flags,
+    tools: savedGame.tools || [],
+    carry: normalizeCarry(savedGame.carry),
+    loaded: savedGame.loaded || [],
+    delivered: savedGame.delivered || [],
+    assembled: savedGame.assembled || [],
+    serviceDelivered: savedGame.serviceDelivered || [],
+    serviceInstalled: savedGame.serviceInstalled || [],
+    surveyInspections: savedGame.surveyInspections || [],
+    commissioningChecks: savedGame.commissioningChecks || [],
+    warehouseChecks: savedGame.warehouseChecks || [],
+    secureAccessChecks: savedGame.secureAccessChecks || [],
+    callbackCleanupChecks: savedGame.callbackCleanupChecks || [],
+    handoffChecks: savedGame.handoffChecks || [],
+    systemsChecks: savedGame.systemsChecks || [],
+    vehicleId: savedGame.vehicleId || content.world?.defaultVehicleId || "van3",
+    training: savedGame.training || [],
+    log: savedGame.log || [],
+  };
+  if (flags.finished) flags.tutorialPaid = true;
+  if (flags.finished) flags.tutorialProgressAwarded = true;
+  if ((migrated.delivered || []).length === content.tutorial.garageUnload.length) flags.centerCityEquipmentDelivered = true;
+  if (flags.serviceComplete) flags.serviceProgressAwarded = true;
+  if (flags.surveyComplete) flags.surveyProgressAwarded = true;
+  if (flags.commissioningComplete) flags.commissioningProgressAwarded = true;
+  if (flags.warehouseComplete) flags.warehouseProgressAwarded = true;
+  if (flags.secureAccessComplete) flags.secureAccessProgressAwarded = true;
+  if (flags.callbackCleanupComplete) flags.callbackCleanupProgressAwarded = true;
+  if (flags.handoffComplete) flags.handoffProgressAwarded = true;
+  if (flags.systemsComplete) flags.systemsProgressAwarded = true;
+  if (flags.travelComplete) flags.travelProgressAwarded = true;
+  if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
+    flags.serviceCallbackPending = true;
+  }
+  if (!flags.currentAreaId) {
+    flags.currentAreaId = getWorldAreaByScene(savedGame.sceneId)?.id || content.world?.homeAreaId || "shop";
+  }
+  migrateSavedRouteHistory(migrated, flags);
+  return migrated;
 }
 
 function inferSavedCash(savedGame) {
@@ -436,7 +506,7 @@ function refreshTitleScreen() {
 
 function serializeGame() {
   return {
-    version: 16,
+    version: SAVE_VERSION,
     technicianId: state.technician.id,
     customTechnician: state.technician.custom ? state.technician : null,
     sceneId: state.sceneId,
@@ -3541,7 +3611,7 @@ function showSystemsChoice() {
     title: "The Room Is Not Just Offline",
     body: `
       <p>The room can be rebooted into a temporarily less embarrassing state, but the real issue is the mismatch between the control path, network note, and what the ticket claims is true.</p>
-      ${state.flags.systemsChecksStrained ? `<p class="muted">One of the systems checks was strained, so the careful closeout has less upside.</p>` : ""}
+      ${state.flags.systemsChecksStrained ? `<p class="muted">One of the systems checks was strained. Documenting is still useful, but the closeout has less upside because one read needed extra interpretation.</p>` : ""}
       ${getChoicePressureMarkup([
         { label: "Document mismatch", detail: "Costs energy and likely bothers management, but gives the next tech a usable trail and lowers return-trip risk." },
         { label: "Call out scope miss", detail: "Requires process confidence. Strong client/coworker upside, with sharper management friction possible." },
@@ -3562,9 +3632,16 @@ function showSystemsChoice() {
 
 function getSystemsReputationSummary(approach, strained = false) {
   if (approach === "reboot") return "Client trust drops; management likes the clean ticket";
+  if (approach === "scope" && strained) return "Client trust rises; the crew gets a partial trail; management friction sharpens";
   if (approach === "scope") return "Client and crew trust rise; management friction sharpens";
   if (strained) return "Client trust rises; the crew gets partial help; management grumbles";
   return "Client and crew trust rise; management grumbles about the paper trail";
+}
+
+function getSystemsDiagnosticSummary(strained) {
+  return strained
+    ? "Strained read; useful closeout with reduced upside"
+    : "Clean read; closeout is well supported";
 }
 
 function finishSystemsService(approach) {
@@ -3613,6 +3690,7 @@ function finishSystemsService(approach) {
         <span>Systems wages</span><strong>+$${documented ? 68 : 52}</strong>
         <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
         <span>Experience</span><strong>+${xp} XP</strong>
+        <span>Diagnostic quality</span><strong>${getSystemsDiagnosticSummary(strained)}</strong>
         <span>Relationship result</span><strong>${getSystemsReputationSummary(approach, strained)}</strong>
         <span>Return-trip risk</span><strong>${documented ? "Lowered by documenting the mismatch" : "Increased by leaving the mismatch loose"}</strong>
         <span>Career record</span><strong>${documented ? "Systems mismatch documented" : "Quick reboot closed"}</strong>

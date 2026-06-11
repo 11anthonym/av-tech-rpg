@@ -384,6 +384,11 @@ Feedback to collect next: does the player understand that a strained systems
 check can make the careful closeout less valuable without making the careful
 choice feel like a trap?
 
+Follow-up tuning pass: June 11, 2026. A systems result now includes a
+`Diagnostic quality` row, and the scope-miss relationship summary changes when
+the checks were strained. The intent is to make the reduced upside visible
+without telling the player that documenting was a mistake.
+
 ### Second Choice: End-Of-Shift Balance Playtest
 
 Playability question: are clock-out, prep, help-Josh, and recovery-day choices
