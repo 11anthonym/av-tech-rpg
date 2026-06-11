@@ -179,9 +179,12 @@ be easy to verify in the browser.
 9. **Done - Vehicle interaction pass:** The shop van now opens a reusable
    vehicle surface for cargo, loadout, mapped route launch, and the future
    fast-travel hook.
-10. **Next - Playtest tuning pass:** Play through the systems service dispatch
+10. **Done - Regional map surface pass:** The van now opens a regional map
+   surface that shows current area, known regions, mapped routes, route
+   history, and fast-travel candidates without bypassing dispatch gates.
+11. **Next - Playtest tuning pass:** Play through the systems service dispatch
    and tighten only confusing text, costs, or consequence visibility.
-11. **Later - Save migration pass:** Add a small migration helper before
+12. **Later - Save migration pass:** Add a small migration helper before
    renaming stable IDs or changing saved data shapes again.
 
 Stop after each pass and play through the affected area. The prototype should

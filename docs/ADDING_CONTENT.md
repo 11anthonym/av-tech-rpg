@@ -337,11 +337,22 @@ adding one-off scene logic. `showVehicleMenu()` currently handles:
 - loading carried cargo into the vehicle
 - reviewing loaded cargo
 - starting the currently available mapped route
-- showing the locked fast-travel hook for future regional-map work
+- opening the regional map
 
 Use `getCurrentVehicle()`, `getVehicleCargoCapacity()`,
 `loadCarriedItemsIntoVehicle()`, and route data from `content.world.routes`
 instead of hardcoding a specific van inside new scene interactions.
+
+## Use the Regional Map
+
+`showRegionalMap()` is the prototype surface for the future overworld. It shows
+the current area, current vehicle, regional nodes, known routes, route history,
+and which routes are candidates for later fast travel.
+
+For now, most route launching still belongs to the dispatch board or specific
+story gates. Add new destinations to `content.world.regions`, `areas`, and
+`routes` first, then expose direct map launching only after the route's prep,
+cost, unlock, and save-state rules are clear.
 
 ## Add a World Area or Route
 

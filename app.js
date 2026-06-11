@@ -1009,8 +1009,7 @@ function showVehicleCargo() {
 
 function showVehicleMenu() {
   const vehicle = getCurrentVehicle();
-  const readyForTutorialRoute = state.loaded.length === content.tutorial.shopLoad.length && state.flags.shopBrief && !state.flags.finished;
-  const canDriveCurrentRoute = readyForTutorialRoute && !state.flags.endShiftPending;
+  const canDriveCurrentRoute = isTutorialRouteReady();
   showModal({
     kicker: "Vehicle",
     title: vehicle.name,
@@ -1023,7 +1022,7 @@ function showVehicleMenu() {
         <span>Clearance</span><strong>${escapeHtml(vehicle.clearance)}</strong>
         <span>Comfort</span><strong>${escapeHtml(vehicle.comfort)}</strong>
       </div>
-      <p class="muted">The van is now the route surface: load gear here, review cargo here, and start mapped travel from here when a route is ready.</p>
+      <p class="muted">The van is now the route surface: load gear here, review cargo here, and open the regional map when you want to see where the day can branch.</p>
     `,
     actions: [
       ...(hasCarriedItems() ? [{
@@ -1040,7 +1039,7 @@ function showVehicleMenu() {
         className: "secondary-button",
         onClick: showDispatchPreview,
       }] : []),
-      { label: "Fast Travel Locked", className: "secondary-button", onClick: () => notify("Fast travel will unlock after the regional map has real route nodes.") },
+      { label: "Open Regional Map", className: "secondary-button", onClick: showRegionalMap },
       { label: "Close", className: "text-button", onClick: render },
     ],
   });
@@ -1725,6 +1724,128 @@ function getWorldPortal(portalId) {
 
 function getWorldArea(areaId) {
   return content.world?.areas?.[areaId] || null;
+}
+
+function getWorldRegion(regionId) {
+  return content.world?.regions?.[regionId] || null;
+}
+
+function getWorldRoutes() {
+  return Object.values(content.world?.routes || {});
+}
+
+function getCurrentWorldArea() {
+  return getWorldArea(state.flags.currentAreaId)
+    || getWorldAreaByScene(state.sceneId)
+    || getWorldArea(content.world?.homeAreaId);
+}
+
+function getRouteTravelCount(routeId) {
+  return state.flags.routeHistory?.[routeId] || 0;
+}
+
+function hasLoadedItems(itemIds) {
+  return itemIds.every((itemId) => state.loaded.includes(itemId));
+}
+
+function isTutorialRouteReady() {
+  return hasLoadedItems(content.tutorial.shopLoad)
+    && state.flags.shopBrief
+    && !state.flags.finished
+    && !state.flags.endShiftPending;
+}
+
+function canLaunchRouteFromRegionalMap(routeId) {
+  return routeId === "centerCityTutorial" && isTutorialRouteReady();
+}
+
+function getRouteStatus(route) {
+  const travelCount = getRouteTravelCount(route.id);
+  if (travelCount > 0) return `Traveled ${travelCount} time${travelCount === 1 ? "" : "s"}`;
+  if (canLaunchRouteFromRegionalMap(route.id)) return "Available now";
+  if (route.id === "centerCityTutorial" && state.flags.shopBrief && !state.flags.finished) return "Needs van cargo";
+  if (route.fastTravelEligible) return "Dispatch board route";
+  return "Story route";
+}
+
+function getRouteMapDetail(route) {
+  const tags = [getRouteStatus(route)];
+  tags.push(route.fastTravelEligible ? "fast-travel candidate" : "manual route");
+  const destination = getWorldArea(route.toAreaId);
+  if (destination?.label) tags.push(destination.label);
+  return tags.join(" | ");
+}
+
+function getRegionalRouteMarkup() {
+  const routes = getWorldRoutes();
+  if (!routes.length) return "<p class=\"muted\">No routes mapped yet.</p>";
+  return `
+    <ul class="modal-list">
+      ${routes.map((route) => `
+        <li>
+          <strong>${escapeHtml(route.fromLabel)} -> ${escapeHtml(route.toLabel)}</strong>
+          <span>${escapeHtml(getRouteMapDetail(route))}</span>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function getRegionalNodeMarkup() {
+  const regions = Object.values(content.world?.regions || {});
+  if (!regions.length) return "<p class=\"muted\">No regions mapped yet.</p>";
+  const currentArea = getCurrentWorldArea();
+  return `
+    <ul class="modal-list">
+      ${regions.map((region) => {
+        const isCurrent = currentArea?.regionId === region.id;
+        return `
+          <li>
+            <strong>${escapeHtml(region.mapLabel || region.name)}${isCurrent ? " (current)" : ""}</strong>
+            <span>${escapeHtml(region.role || "Regional node")}</span>
+          </li>
+        `;
+      }).join("")}
+    </ul>
+  `;
+}
+
+function showRegionalMap() {
+  const currentArea = getCurrentWorldArea();
+  const currentRegion = getWorldRegion(currentArea?.regionId);
+  const currentLocation = [
+    currentRegion?.name,
+    currentArea?.label,
+  ].filter(Boolean).join(" - ") || "Unmapped";
+  showModal({
+    kicker: "Regional Map",
+    title: "Greater Philadelphia Workday",
+    body: `
+      <div class="results-grid">
+        <span>Current area</span><strong>${escapeHtml(currentLocation)}</strong>
+        <span>Vehicle</span><strong>${escapeHtml(getVehicleName())}</strong>
+        <span>Last route</span><strong>${escapeHtml(state.flags.lastRouteId || "None")}</strong>
+      </div>
+      <p class="muted">Fast-travel candidates are visible here, but route launching still stays gated until nodes, costs, and unlock rules are proven.</p>
+      <h3>Regions</h3>
+      ${getRegionalNodeMarkup()}
+      <h3>Known Routes</h3>
+      ${getRegionalRouteMarkup()}
+    `,
+    actions: [
+      ...(canLaunchRouteFromRegionalMap("centerCityTutorial") ? [{
+        label: "Drive to Center City East",
+        onClick: promptTravel,
+      }] : []),
+      ...(state.flags.finished && !state.flags.endShiftPending ? [{
+        label: "Review Dispatch Board Routes",
+        className: "secondary-button",
+        onClick: showDispatchPreview,
+      }] : []),
+      { label: "Back To Van", className: "secondary-button", onClick: showVehicleMenu },
+      { label: "Close", className: "text-button", onClick: render },
+    ],
+  });
 }
 
 function getScenePortalInteractions(sceneId = state.sceneId) {
