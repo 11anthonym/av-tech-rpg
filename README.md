@@ -62,6 +62,9 @@ destinations, mapped routes, travel history, and future fast-travel candidates.
 The first Center City drive now asks for a route approach so travel can carry
 small time, energy, and burnout tradeoffs before the game attempts manual
 driving or broad fast travel.
+Eligible repeat routes can also unlock a conservative fast-travel shortcut once
+they have been driven before, while still respecting dispatch gates and costing
+energy.
 A University City site
 survey then asks the player to check an elevator, hallway turn, and classroom
 wall after sales measured only the dimension that made the quote look

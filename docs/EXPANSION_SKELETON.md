@@ -192,8 +192,12 @@ be easy to verify in the browser.
 13. **Done - Route choice pass:** The Center City tutorial drive now has a
    reusable `choices` array and `showRouteChoiceModal()` path for time, energy,
    cash, and burnout tradeoffs before broad fast travel unlocks.
-14. **Next - Fast-travel unlock pass:** Decide the smallest route-history and
-   cost rule that should make one repeat route fast-travel eligible.
+14. **Done - Fast-travel unlock pass:** Eligible routes now unlock fast travel
+   after they have been driven once, but only when they match the current
+   dispatch route, start from the current area, and pay an energy cost.
+15. **Next - Repeat route content pass:** Add one explicit repeated dispatch or
+   return visit so the fast-travel rule becomes naturally visible without test
+   state.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

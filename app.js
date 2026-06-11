@@ -1815,6 +1815,14 @@ function getRouteTravelCount(routeId) {
   return state.flags.routeHistory?.[routeId] || 0;
 }
 
+function getFastTravelCount(routeId) {
+  return state.flags.fastTravelHistory?.[routeId] || 0;
+}
+
+function getFastTravelEnergyCost(route) {
+  return route.fastTravelEnergyCost ?? 1;
+}
+
 function getRouteChoices(route) {
   return route?.choices || [];
 }
@@ -1843,8 +1851,42 @@ function canLaunchRouteFromRegionalMap(routeId) {
   return routeId === "centerCityTutorial" && isTutorialRouteReady();
 }
 
+function getCurrentDispatchRouteId() {
+  if (!state.flags.finished || state.flags.endShiftPending) return null;
+  if (state.flags.handoffComplete && !state.flags.systemsComplete) return "systemsService";
+  if (state.flags.systemsComplete && !state.flags.travelComplete) return null;
+  if (state.flags.secureAccessComplete) {
+    if (!state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0) return "warrantyReturn";
+    if (!state.flags.handoffComplete) return "executiveHandoff";
+    return null;
+  }
+  if (state.flags.warehouseComplete) return "navyYardAccess";
+  if (state.flags.commissioningComplete) return null;
+  if (state.flags.surveyComplete) return "southPhillyCommissioning";
+  if (state.flags.serviceComplete) {
+    if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) return null;
+    if (!state.flags.joshServiceDebriefed) return null;
+    if (hasPendingTraining()) return null;
+    return "universitySurvey";
+  }
+  return "conshohockenService";
+}
+
+function isFastTravelUnlocked(route) {
+  return Boolean(route?.fastTravelEligible) && getRouteTravelCount(route.id) > 0;
+}
+
+function canFastTravelRoute(route) {
+  const currentArea = getCurrentWorldArea();
+  return isFastTravelUnlocked(route)
+    && currentArea?.id === route.fromAreaId
+    && getCurrentDispatchRouteId() === route.id;
+}
+
 function getRouteStatus(route) {
   const travelCount = getRouteTravelCount(route.id);
+  if (canFastTravelRoute(route)) return "Fast travel ready";
+  if (isFastTravelUnlocked(route)) return "Fast travel unlocked";
   if (travelCount > 0) return `Traveled ${travelCount} time${travelCount === 1 ? "" : "s"}`;
   if (canLaunchRouteFromRegionalMap(route.id)) return "Available now";
   if (route.id === "centerCityTutorial" && state.flags.shopBrief && !state.flags.finished) return "Needs van cargo";
@@ -1856,10 +1898,15 @@ function getRouteMapDetail(route) {
   const tags = [getRouteStatus(route)];
   const lastChoice = getLastRouteChoiceLabel(route);
   if (lastChoice) tags.push(`last route: ${lastChoice}`);
-  tags.push(route.fastTravelEligible ? "fast-travel candidate" : "manual route");
+  if (getFastTravelCount(route.id)) tags.push(`fast traveled ${getFastTravelCount(route.id)} time${getFastTravelCount(route.id) === 1 ? "" : "s"}`);
+  tags.push(route.fastTravelEligible ? `fast travel: ${getFastTravelEnergyCost(route)} energy` : "manual route");
   const destination = getWorldArea(route.toAreaId);
   if (destination?.label) tags.push(destination.label);
   return tags.join(" | ");
+}
+
+function getFastTravelRoutes() {
+  return getWorldRoutes().filter(canFastTravelRoute);
 }
 
 function getRegionalRouteMarkup() {
@@ -1899,6 +1946,7 @@ function getRegionalNodeMarkup() {
 function showRegionalMap() {
   const currentArea = getCurrentWorldArea();
   const currentRegion = getWorldRegion(currentArea?.regionId);
+  const fastTravelRoutes = getFastTravelRoutes();
   const currentLocation = [
     currentRegion?.name,
     currentArea?.label,
@@ -1912,7 +1960,7 @@ function showRegionalMap() {
         <span>Vehicle</span><strong>${escapeHtml(getVehicleName())}</strong>
         <span>Last route</span><strong>${escapeHtml(state.flags.lastRouteId || "None")}</strong>
       </div>
-      <p class="muted">Fast-travel candidates are visible here, but route launching still stays gated until nodes, costs, and unlock rules are proven.</p>
+      <p class="muted">Fast travel unlocks after you have driven an eligible route once. It still respects active dispatch prep and costs route energy.</p>
       <h3>Regions</h3>
       ${getRegionalNodeMarkup()}
       <h3>Known Routes</h3>
@@ -1928,6 +1976,11 @@ function showRegionalMap() {
         className: "secondary-button",
         onClick: showDispatchPreview,
       }] : []),
+      ...fastTravelRoutes.map((route) => ({
+        label: `Fast Travel to ${route.toLabel}`,
+        className: "secondary-button",
+        onClick: () => promptFastTravelRoute(route.id),
+      })),
       { label: "Back To Van", className: "secondary-button", onClick: showVehicleMenu },
       { label: "Close", className: "text-button", onClick: render },
     ],
@@ -1984,10 +2037,20 @@ function applyRouteChoice(route, routeChoice) {
   addLog(routeChoice.log || `${routeChoice.label} selected for ${route.toLabel}.`);
 }
 
-function travelRoute(routeId, { beforeTravel, afterTravel, routeChoice } = {}) {
+function applyFastTravelRoute(route) {
+  const energyCost = getFastTravelEnergyCost(route);
+  changeEnergy(-energyCost);
+  state.flags.fastTravelHistory ||= {};
+  state.flags.fastTravelHistory[route.id] = (state.flags.fastTravelHistory[route.id] || 0) + 1;
+  state.flags.lastFastTravelRouteId = route.id;
+  addLog(`Used the known ${route.toLabel} route. Fast travel cost ${energyCost} energy.`);
+}
+
+function travelRoute(routeId, { beforeTravel, afterTravel, routeChoice, fastTravel = false } = {}) {
   const route = getWorldRoute(routeId);
   if (!route) return notify(`Route ${routeId} is not mapped yet.`);
   beforeTravel?.(route);
+  if (fastTravel) applyFastTravelRoute(route);
   applyRouteChoice(route, routeChoice);
   if (route.packedLunchContext) consumePackedLunch(route.packedLunchContext);
   const arrivalClock = getRouteArrivalClock(route, routeChoice);
@@ -2081,22 +2144,37 @@ function showRouteChoiceModal({ routeId, dispatchEstimate, extraBody = "", actio
   });
 }
 
-function showTravelRouteModal({ routeId, dispatchEstimate, extraBody = "", actionLabel, beforeTravel, afterTravel, routeChoice = null }) {
+function showTravelRouteModal({ routeId, dispatchEstimate, extraBody = "", actionLabel, beforeTravel, afterTravel, routeChoice = null, fastTravel = false }) {
   const route = getWorldRoute(routeId);
   if (!route) return notify(`Route ${routeId} is not mapped yet.`);
+  const fastTravelCost = getFastTravelEnergyCost(route);
   showModal({
-    kicker: "Route Summary",
+    kicker: fastTravel ? "Fast Travel" : "Route Summary",
     title: `${route.fromLabel} -> ${route.toLabel}`,
     body: `
       ${dispatchEstimate ? `<p><strong>Dispatch estimate:</strong> ${dispatchEstimate}</p>` : ""}
+      ${fastTravel ? `<p class="expense"><strong>Fast travel:</strong> Known route shortcut, -${fastTravelCost} energy.</p>` : ""}
       ${extraBody}
       ${getRouteLineMarkup(route)}
     `,
     actions: [{
-      label: actionLabel || route.actionLabel || `Drive to ${route.toLabel}`,
-      onClick: () => travelRoute(routeId, { beforeTravel, afterTravel, routeChoice }),
+      label: actionLabel || (fastTravel ? `Fast Travel to ${route.toLabel}` : route.actionLabel || `Drive to ${route.toLabel}`),
+      onClick: () => travelRoute(routeId, { beforeTravel, afterTravel, routeChoice, fastTravel }),
     }],
   });
+}
+
+function promptFastTravelRoute(routeId) {
+  const route = getWorldRoute(routeId);
+  if (!canFastTravelRoute(route)) return notify("That fast travel route is not available for the current dispatch.");
+  if (routeId === "conshohockenService") return state.flags.servicePreparation ? promptServiceTravel({ fastTravel: true }) : showServicePreparation();
+  if (routeId === "universitySurvey") return state.flags.surveyPreparation ? promptSurveyTravel({ fastTravel: true }) : showSurveyPreparation();
+  if (routeId === "southPhillyCommissioning") return promptCommissioningTravel({ fastTravel: true });
+  if (routeId === "navyYardAccess") return state.flags.secureAccessPreparation ? promptSecureAccessTravel({ fastTravel: true }) : showSecureAccessPreparation();
+  if (routeId === "warrantyReturn") return promptCallbackCleanupTravel({ fastTravel: true });
+  if (routeId === "executiveHandoff") return promptHandoffTravel({ fastTravel: true });
+  if (routeId === "systemsService") return state.flags.systemsPreparation ? promptSystemsTravel({ fastTravel: true }) : showSystemsPreparation();
+  return notify("That route needs a dispatch hook before fast travel can launch it.");
 }
 
 function getNextShopLoad() {
@@ -3079,11 +3157,12 @@ function chooseSecureAccessPreparation(preparation) {
   });
 }
 
-function promptSecureAccessTravel() {
+function promptSecureAccessTravel({ fastTravel = false } = {}) {
   showTravelRouteModal({
     routeId: "navyYardAccess",
     dispatchEstimate: "Quick rack update. Security already knows you are coming.",
     extraBody: `<p class="muted">Security may have received that information in a different timeline.</p>`,
+    fastTravel,
     beforeTravel: () => {
       state.flags.secureAccessStarted = true;
       state.flags.prototypeSummaryViewed = false;
@@ -3251,11 +3330,12 @@ function showCallbackCleanupDispatchPreview() {
   });
 }
 
-function promptCallbackCleanupTravel() {
+function promptCallbackCleanupTravel({ fastTravel = false } = {}) {
   showTravelRouteModal({
     routeId: "warrantyReturn",
     dispatchEstimate: "Confirm user concern, restore confidence, avoid assigning blame in writing.",
     extraBody: `<p class="muted">The previous closeout note is short enough to remember accidentally.</p>`,
+    fastTravel,
     beforeTravel: () => {
       state.flags.callbackCleanupStarted = true;
       state.flags.prototypeSummaryViewed = false;
@@ -3420,11 +3500,12 @@ function showHandoffDispatchPreview() {
   });
 }
 
-function promptHandoffTravel() {
+function promptHandoffTravel({ fastTravel = false } = {}) {
   showTravelRouteModal({
     routeId: "executiveHandoff",
     dispatchEstimate: "Five-minute walkthrough. No technical work expected.",
     extraBody: `<p class="muted">No technical work expected is also what they said about the warranty return.</p>`,
+    fastTravel,
     beforeTravel: () => {
       state.flags.handoffStarted = true;
       state.flags.prototypeSummaryViewed = false;
@@ -3628,11 +3709,12 @@ function chooseSystemsPreparation(preparation) {
   promptSystemsTravel();
 }
 
-function promptSystemsTravel() {
+function promptSystemsTravel({ fastTravel = false } = {}) {
   showTravelRouteModal({
     routeId: "systemsService",
     dispatchEstimate: "Quick reboot, confirm room online, close ticket.",
     extraBody: `<p class="muted">The client says the room has been rebooted twice. The room, bravely, remains offline.</p>`,
+    fastTravel,
     beforeTravel: () => {
       state.flags.systemsStarted = true;
       state.flags.prototypeSummaryViewed = false;
@@ -3927,11 +4009,12 @@ function showCommissioningDispatchPreview() {
   });
 }
 
-function promptCommissioningTravel() {
+function promptCommissioningTravel({ fastTravel = false } = {}) {
   showTravelRouteModal({
     routeId: "southPhillyCommissioning",
     dispatchEstimate: "Confirm room operation and collect client signoff.",
     extraBody: `<p class="muted">The completion sheet has already been signed internally.</p>`,
+    fastTravel,
     beforeTravel: () => {
       state.flags.commissioningStarted = true;
     },
@@ -4399,10 +4482,11 @@ function chooseSurveyPreparation(preparation) {
   });
 }
 
-function promptSurveyTravel() {
+function promptSurveyTravel({ fastTravel = false } = {}) {
   showTravelRouteModal({
     routeId: "universitySurvey",
     dispatchEstimate: "Measure one wall. Confirm install conditions. Do not overcomplicate the quote.",
+    fastTravel,
     beforeTravel: () => {
       state.flags.surveyStarted = true;
     },
@@ -4629,12 +4713,13 @@ function chooseServicePreparation(preparation) {
   });
 }
 
-function promptServiceTravel() {
+function promptServiceTravel({ fastTravel = false } = {}) {
   const reviewedTicket = state.flags.servicePreparation === "review";
   showTravelRouteModal({
     routeId: "conshohockenService",
     dispatchEstimate: "Diagnose the display issue and swap the screen if needed.",
     extraBody: reviewedTicket ? `<p class="expense"><strong>Work-order note:</strong> Inline coupler reported behind the credenza.</p>` : "",
+    fastTravel,
     beforeTravel: () => {
       state.flags.serviceStarted = true;
       state.carry = [];

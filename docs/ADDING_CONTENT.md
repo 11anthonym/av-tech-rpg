@@ -359,6 +359,15 @@ story gates. Add new destinations to `content.world.regions`, `areas`, and
 `routes` first, then expose direct map launching only after the route's prep,
 cost, unlock, and save-state rules are clear.
 
+Fast travel is deliberately conservative:
+
+- The route must have `fastTravelEligible: true`.
+- The player must have driven that exact route at least once.
+- The route must match the currently available dispatch route.
+- The player must be at the route's `fromAreaId`.
+- Fast travel still costs route energy, defaulting to 1 energy unless the route
+  defines `fastTravelEnergyCost`.
+
 ## Add a World Area or Route
 
 `content.world` is the lightweight map skeleton for the future larger game. It
@@ -391,6 +400,7 @@ conshohockenService: {
   arrivalTime: "9:14 AM",
   arrivalLog: "Arrived in Conshohocken for a display service call.",
   fastTravelEligible: true,
+  fastTravelEnergyCost: 1,
 },
 ```
 
