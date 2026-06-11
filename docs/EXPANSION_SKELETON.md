@@ -198,8 +198,12 @@ be easy to verify in the browser.
 15. **Done - Repeat route content pass:** A compact Conshohocken label
    follow-up now appears after the service call and Josh debrief, reusing the
    known route so fast travel becomes naturally visible.
-16. **Next - Route map polish pass:** Make the regional map easier to scan as
-   unlocked repeat routes, active dispatch routes, and locked candidates grow.
+16. **Done - Route map polish pass:** The regional map now groups routes into
+   Active Route, Unlocked Fast Travel, and Route Atlas sections so route state
+   stays readable as the map grows.
+17. **Next - Building exit pass:** Add a reusable return/exit portal pattern
+   for job rooms so compact interiors can lead back to vans, streets, or shops
+   without custom scene code.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

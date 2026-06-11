@@ -1914,6 +1914,7 @@ function getRouteStatus(route) {
 
 function getRouteMapDetail(route) {
   const tags = [getRouteStatus(route)];
+  if (isRouteActiveOnMap(route)) tags.push("active route");
   const lastChoice = getLastRouteChoiceLabel(route);
   if (lastChoice) tags.push(`last route: ${lastChoice}`);
   if (getFastTravelCount(route.id)) tags.push(`fast traveled ${getFastTravelCount(route.id)} time${getFastTravelCount(route.id) === 1 ? "" : "s"}`);
@@ -1927,9 +1928,12 @@ function getFastTravelRoutes() {
   return getWorldRoutes().filter(canFastTravelRoute);
 }
 
-function getRegionalRouteMarkup() {
-  const routes = getWorldRoutes();
-  if (!routes.length) return "<p class=\"muted\">No routes mapped yet.</p>";
+function isRouteActiveOnMap(route) {
+  return getCurrentDispatchRouteId() === route.id || canLaunchRouteFromRegionalMap(route.id);
+}
+
+function getRouteListMarkup(routes, emptyMessage) {
+  if (!routes.length) return `<p class="muted">${emptyMessage}</p>`;
   return `
     <ul class="modal-list">
       ${routes.map((route) => `
@@ -1939,6 +1943,22 @@ function getRegionalRouteMarkup() {
         </li>
       `).join("")}
     </ul>
+  `;
+}
+
+function getRegionalRouteMarkup() {
+  const routes = getWorldRoutes();
+  if (!routes.length) return "<p class=\"muted\">No routes mapped yet.</p>";
+  const activeRoutes = routes.filter(isRouteActiveOnMap);
+  const unlockedRoutes = routes.filter((route) => !isRouteActiveOnMap(route) && isFastTravelUnlocked(route));
+  const atlasRoutes = routes.filter((route) => !isRouteActiveOnMap(route) && !isFastTravelUnlocked(route));
+  return `
+    <h3>Active Route</h3>
+    ${getRouteListMarkup(activeRoutes, "No active route is ready from the map. Check the dispatch board.")}
+    <h3>Unlocked Fast Travel</h3>
+    ${getRouteListMarkup(unlockedRoutes, "No repeat routes have unlocked fast travel yet.")}
+    <h3>Route Atlas</h3>
+    ${getRouteListMarkup(atlasRoutes, "No locked route candidates remain.")}
   `;
 }
 
@@ -1981,7 +2001,6 @@ function showRegionalMap() {
       <p class="muted">Fast travel unlocks after you have driven an eligible route once. It still respects active dispatch prep and costs route energy.</p>
       <h3>Regions</h3>
       ${getRegionalNodeMarkup()}
-      <h3>Known Routes</h3>
       ${getRegionalRouteMarkup()}
     `,
     actions: [

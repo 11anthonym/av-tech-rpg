@@ -373,6 +373,11 @@ return visit that reuses `conshohockenService` after the player has already
 driven that route. Copy that pattern when adding a repeat route before adding
 manual driving or broad map teleports.
 
+The regional map groups routes into Active Route, Unlocked Fast Travel, and
+Route Atlas. If a route appears in the wrong section, check
+`getCurrentDispatchRouteId()`, `fastTravelEligible`, and whether
+`routeHistory[route.id]` is being recorded when the route is driven.
+
 ## Add a World Area or Route
 
 `content.world` is the lightweight map skeleton for the future larger game. It
