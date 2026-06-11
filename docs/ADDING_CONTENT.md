@@ -368,6 +368,11 @@ Fast travel is deliberately conservative:
 - Fast travel still costs route energy, defaulting to 1 energy unless the route
   defines `fastTravelEnergyCost`.
 
+The first content example is `content.followupDispatch`: a compact Conshohocken
+return visit that reuses `conshohockenService` after the player has already
+driven that route. Copy that pattern when adding a repeat route before adding
+manual driving or broad map teleports.
+
 ## Add a World Area or Route
 
 `content.world` is the lightweight map skeleton for the future larger game. It

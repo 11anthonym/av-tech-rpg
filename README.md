@@ -65,6 +65,8 @@ driving or broad fast travel.
 Eligible repeat routes can also unlock a conservative fast-travel shortcut once
 they have been driven before, while still respecting dispatch gates and costing
 energy.
+A compact Conshohocken label follow-up now reuses the first service route so
+that shortcut can appear naturally in play instead of only in test state.
 A University City site
 survey then asks the player to check an elevator, hallway turn, and classroom
 wall after sales measured only the dimension that made the quote look

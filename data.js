@@ -909,6 +909,23 @@ window.GAME_CONTENT = {
     ],
   },
 
+  followupDispatch: {
+    title: "Conshohocken Label Follow-up",
+    summary: "Return to a known service route to make the next visit less mysterious.",
+    taskCards: [
+      {
+        title: "Known Route",
+        skill: "Fieldcraft 2",
+        outcome: "Tests whether route history can become useful fast travel.",
+      },
+      {
+        title: "Coupler Label",
+        skill: "Documentation 3",
+        outcome: "Turns a hidden service note into something the next tech can actually find.",
+      },
+    ],
+  },
+
   surveyDispatch: {
     title: "University City Site Survey",
     summary: "Confirm whether a quoted classroom display can reach its intended wall.",

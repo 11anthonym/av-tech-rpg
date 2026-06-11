@@ -2,7 +2,7 @@ const content = window.GAME_CONTENT;
 const keys = new Set();
 const PLAYER_SPEED = 8;
 const SAVE_KEY = "av-tech-rpg-save-v1";
-const SAVE_VERSION = 17;
+const SAVE_VERSION = 18;
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const STAY_LATE_PREP_ENERGY_COST = 32;
 const HELP_JOSH_ENERGY_COST = 30;
@@ -214,6 +214,7 @@ function migrateSavedGame(savedGame) {
   if (flags.finished) flags.tutorialProgressAwarded = true;
   if ((migrated.delivered || []).length === content.tutorial.garageUnload.length) flags.centerCityEquipmentDelivered = true;
   if (flags.serviceComplete) flags.serviceProgressAwarded = true;
+  if (flags.conshohockenFollowupComplete) flags.conshohockenFollowupProgressAwarded = true;
   if (flags.surveyComplete) flags.surveyProgressAwarded = true;
   if (flags.commissioningComplete) flags.commissioningProgressAwarded = true;
   if (flags.warehouseComplete) flags.warehouseProgressAwarded = true;
@@ -242,6 +243,7 @@ function inferSavedXp(savedGame) {
   if (typeof savedGame.xp === "number") return savedGame.xp;
   return (savedGame.flags?.finished ? 40 : 0)
     + (savedGame.flags?.serviceComplete ? (savedGame.flags.serviceApproach === "verify" ? 50 : 40) : 0)
+    + (savedGame.flags?.conshohockenFollowupComplete ? (savedGame.flags.conshohockenFollowupApproach === "label" ? 30 : 20) : 0)
     + (savedGame.flags?.surveyComplete ? (savedGame.flags.surveyApproach === "pushback" ? 60 : savedGame.flags.surveyApproach === "document" ? 55 : 35) : 0)
     + (savedGame.flags?.commissioningComplete ? (savedGame.flags.commissioningApproach === "craft" ? 65 : savedGame.flags.commissioningApproach === "repair" ? 60 : 40) : 0)
     + (savedGame.flags?.warehouseComplete ? (savedGame.flags.warehouseApproach === "label" ? 50 : 35) : 0)
@@ -347,6 +349,15 @@ function inferSavedReputation(savedGame) {
       reputation.management += savedGame.flags.travelApproach === "pushback" ? -2 : -1;
     }
   }
+  if (savedGame.flags?.conshohockenFollowupComplete) {
+    if (savedGame.flags.conshohockenFollowupApproach === "label") {
+      reputation.clients += 1;
+      reputation.coworkers += 1;
+      reputation.management -= 1;
+    } else {
+      reputation.management += 1;
+    }
+  }
   return reputation;
 }
 
@@ -406,6 +417,9 @@ function inferSavedStats(savedGame) {
   if (savedGame.flags?.serviceComplete) {
     if (savedGame.flags.serviceApproach === "verify") stats.carefulFinishes += 1;
     else stats.callbacks += 1;
+  }
+  if (savedGame.flags?.conshohockenFollowupComplete && savedGame.flags.conshohockenFollowupApproach === "label") {
+    stats.documentedTaskRisks += 1;
   }
   if (savedGame.flags?.serviceCallbackResolved) stats.callbacksResolved += 1;
   if (savedGame.flags?.servicePreparation === "review") stats.workOrdersReviewed += 1;
@@ -1221,7 +1235,7 @@ function continueGame() {
     systemsChecks: savedGame.systemsChecks || [],
     cash: migratedCash,
     xp: migratedXp,
-    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0) + (flags.warehouseComplete ? 1 : 0) + (flags.secureAccessComplete ? 1 : 0) + (flags.callbackCleanupComplete ? 1 : 0) + (flags.handoffComplete ? 1 : 0) + (flags.systemsComplete ? 1 : 0) + (flags.travelComplete ? 1 : 0),
+    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.conshohockenFollowupComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0) + (flags.warehouseComplete ? 1 : 0) + (flags.secureAccessComplete ? 1 : 0) + (flags.callbackCleanupComplete ? 1 : 0) + (flags.handoffComplete ? 1 : 0) + (flags.systemsComplete ? 1 : 0) + (flags.travelComplete ? 1 : 0),
     vehicleId: savedGame.vehicleId || content.world?.defaultVehicleId || "van3",
     reputation: migratedReputation,
     training: savedGame.training || [],
@@ -1248,6 +1262,9 @@ function resumeRequiredPrompt() {
   }
   if (state.sceneId === "serviceOffice" && state.serviceInstalled.length === content.serviceDispatch.swapItems.length && !state.flags.serviceComplete) {
     return showServiceResults();
+  }
+  if (state.flags.conshohockenFollowupStarted && !state.flags.conshohockenFollowupComplete) {
+    return showConshohockenFollowupChoice();
   }
   if (state.sceneId === "universitySurvey" && state.surveyInspections.length === content.surveyDispatch.inspections.length && !state.flags.surveyComplete) {
     return showSurveyReportChoice();
@@ -1867,6 +1884,7 @@ function getCurrentDispatchRouteId() {
     if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) return null;
     if (!state.flags.joshServiceDebriefed) return null;
     if (hasPendingTraining()) return null;
+    if (isConshohockenFollowupAvailable()) return "conshohockenService";
     return "universitySurvey";
   }
   return "conshohockenService";
@@ -2167,7 +2185,10 @@ function showTravelRouteModal({ routeId, dispatchEstimate, extraBody = "", actio
 function promptFastTravelRoute(routeId) {
   const route = getWorldRoute(routeId);
   if (!canFastTravelRoute(route)) return notify("That fast travel route is not available for the current dispatch.");
-  if (routeId === "conshohockenService") return state.flags.servicePreparation ? promptServiceTravel({ fastTravel: true }) : showServicePreparation();
+  if (routeId === "conshohockenService") {
+    if (isConshohockenFollowupAvailable()) return promptConshohockenFollowupTravel({ fastTravel: true });
+    return state.flags.servicePreparation ? promptServiceTravel({ fastTravel: true }) : showServicePreparation();
+  }
   if (routeId === "universitySurvey") return state.flags.surveyPreparation ? promptSurveyTravel({ fastTravel: true }) : showSurveyPreparation();
   if (routeId === "southPhillyCommissioning") return promptCommissioningTravel({ fastTravel: true });
   if (routeId === "navyYardAccess") return state.flags.secureAccessPreparation ? promptSecureAccessTravel({ fastTravel: true }) : showSecureAccessPreparation();
@@ -2803,6 +2824,7 @@ function showDispatchPreview() {
     }
     if (!state.flags.joshServiceDebriefed) return notify("Check in with Josh before dispatch adds another stop.");
     if (hasPendingTraining()) return notify("Mark your field-training focus on the clipboard before taking another dispatch.");
+    if (isConshohockenFollowupAvailable()) return showConshohockenFollowupPreview();
     return showSurveyDispatchPreview();
   }
   showModal({
@@ -2826,6 +2848,128 @@ function showDispatchPreview() {
       { label: "Accept Service Call", onClick: () => state.flags.servicePreparation ? promptServiceTravel() : showServicePreparation() },
       { label: "Return to Shop", className: "secondary-button" },
     ],
+  });
+}
+
+function isConshohockenFollowupAvailable() {
+  return state.flags.serviceComplete
+    && state.flags.joshServiceDebriefed
+    && !state.flags.conshohockenFollowupComplete;
+}
+
+function showConshohockenFollowupPreview() {
+  const route = getWorldRoute("conshohockenService");
+  const fastTravelReady = canFastTravelRoute(route);
+  showModal({
+    kicker: "Dispatch Board",
+    title: content.followupDispatch.title,
+    body: getDispatchBoardMarkup({
+      type: "Repeat Route",
+      familyId: "service",
+      setup: "The Conshohocken client found the unlabeled coupler note useful, which means someone now wants the actual coupler labeled.",
+      why: "This is a small repeat-route test: the route is already known, so the regional map can offer fast travel without skipping dispatch prep.",
+      stakes: [
+        "The regional map should show Conshohocken as fast-travel ready.",
+        "Fast travel still costs energy instead of becoming a free teleport.",
+        "Careful labeling improves the next service visit; dropping labels keeps management happy.",
+      ],
+      note: fastTravelReady
+        ? "Open the regional map from Van #3 to use the known Conshohocken shortcut."
+        : "The route has to be driven once before fast travel appears.",
+      managementNote: "Please avoid turning a label drop into a documentation project.",
+      taskCards: content.followupDispatch.taskCards,
+    }),
+    actions: [
+      ...(fastTravelReady ? [{ label: "Open Regional Map", onClick: showRegionalMap }] : []),
+      { label: "Drive Follow-up Route", className: fastTravelReady ? "secondary-button" : undefined, onClick: () => promptConshohockenFollowupTravel() },
+      { label: "Return to Shop", className: "secondary-button" },
+    ],
+  });
+}
+
+function promptConshohockenFollowupTravel({ fastTravel = false } = {}) {
+  showTravelRouteModal({
+    routeId: "conshohockenService",
+    dispatchEstimate: "Drop labels, update the note, avoid creating a second service call.",
+    extraBody: `<p class="muted">This is the same client route. The work is smaller; the bad note is not.</p>`,
+    fastTravel,
+    beforeTravel: () => {
+      state.flags.conshohockenFollowupStarted = true;
+      state.flags.prototypeSummaryViewed = false;
+    },
+    afterTravel: (route) => {
+      enterScene(route.destinationSceneId);
+      showConshohockenFollowupChoice();
+    },
+  });
+}
+
+function showConshohockenFollowupChoice() {
+  showModal({
+    kicker: "Repeat Route",
+    title: "The Coupler Gets A Name",
+    body: `
+      <p>The room is working. The exposed problem is simpler and more durable: nobody labeled the inline coupler or updated the service note in a way the next tech can find.</p>
+      ${getChoicePressureMarkup([
+        { label: "Label and update", detail: "Costs energy and annoys management, but makes the next service visit cleaner." },
+        { label: "Drop labels", detail: "Fast and management-friendly, but the route stays easier than the room notes." },
+      ])}
+    `,
+    actions: [
+      { label: "Label coupler and update note (-2 energy)", onClick: () => finishConshohockenFollowup("label") },
+      { label: "Drop labels and leave", className: "secondary-button", onClick: () => finishConshohockenFollowup("drop") },
+    ],
+  });
+}
+
+function finishConshohockenFollowup(approach) {
+  const documented = approach === "label";
+  const xp = documented ? 30 : 20;
+  if (documented) changeEnergy(-2);
+  state.flags.conshohockenFollowupComplete = true;
+  state.flags.conshohockenFollowupApproach = approach;
+  setClock(`${state.clock.slice(0, 3)} ${documented ? "10:02" : "9:46"} AM`);
+  if (!state.flags.conshohockenFollowupPaid) {
+    state.cash += documented ? 38 : 30;
+    state.flags.conshohockenFollowupPaid = true;
+  }
+  if (!state.flags.conshohockenFollowupProgressAwarded) {
+    awardCareerProgress({
+      xp,
+      reputation: documented
+        ? { clients: 1, coworkers: 1, management: -1 }
+        : { clients: 0, coworkers: 0, management: 1 },
+      source: content.followupDispatch.title,
+    });
+    state.flags.conshohockenFollowupProgressAwarded = true;
+  }
+  if (documented && !state.flags.conshohockenFollowupStatsRecorded) {
+    state.stats.documentedTaskRisks += 1;
+    state.flags.conshohockenFollowupStatsRecorded = true;
+  }
+  addLog(documented
+    ? "Returned to Conshohocken and labeled the coupler path for the next tech."
+    : "Dropped labels at Conshohocken and left the note mostly as-found.");
+  render();
+  showModal({
+    kicker: "Follow-up Complete",
+    title: documented ? "The Known Route Paid Off" : "Fast, Technically",
+    body: `
+      <div class="results-grid">
+        <span>Follow-up wages</span><strong>+$${documented ? 38 : 30}</strong>
+        <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
+        <span>Experience</span><strong>+${xp} XP</strong>
+        <span>Route memory</span><strong>${getFastTravelCount("conshohockenService") ? "Fast travel used" : "Repeat route driven"}</strong>
+        <span>Closeout</span><strong>${documented ? "Coupler path labeled" : "Labels dropped only"}</strong>
+      </div>
+      <p class="muted">${documented
+        ? "The next tech gets a route shortcut and a room note that finally points to the right thing."
+        : "Management likes the speed. The next tech still has to interpret the room note."}</p>
+    `,
+    actions: [{
+      label: "Return To Radnor Rack & Wire",
+      onClick: () => returnToShopAfterDispatch(content.followupDispatch.title, "Returned to Radnor Rack & Wire after the Conshohocken label follow-up."),
+    }],
   });
 }
 
@@ -4976,6 +5120,12 @@ function getInteractions() {
   }
 
   if (state.sceneId === "serviceOffice") {
+    if (state.flags.conshohockenFollowupStarted && !state.flags.conshohockenFollowupComplete) {
+      return [{
+        x: 760, y: 300, label: "Review coupler label follow-up",
+        action: showConshohockenFollowupChoice,
+      }];
+    }
     if (state.flags.serviceComplete) return [];
     return [
       {
@@ -5437,6 +5587,7 @@ function getObjective() {
     if (state.flags.endShiftPending) return "Close out the shift before taking another dispatch.";
     if (state.flags.serviceComplete && !state.flags.joshServiceDebriefed) return "Check in with Josh at the workbench.";
     if (state.flags.serviceComplete && hasPendingTraining()) return "Choose a field-training focus from the career clipboard.";
+    if (isConshohockenFollowupAvailable()) return "Review the Conshohocken label follow-up on the dispatch board.";
     if (state.flags.serviceComplete && !state.flags.surveyComplete) return "Review the University City site survey on the dispatch board.";
     if (state.flags.surveyComplete && !state.flags.commissioningComplete) return "Review the South Philadelphia commissioning visit on the dispatch board.";
     if (state.flags.warehouseStarted && !state.flags.warehouseComplete) {
@@ -5998,6 +6149,7 @@ function render() {
   const travelActive = state.flags.systemsComplete && !state.flags.travelComplete;
   const travelSummaryPending = state.flags.travelComplete && !state.flags.prototypeSummaryViewed;
   const warehouseActive = state.flags.warehouseStarted && !state.flags.warehouseComplete;
+  const followupActive = state.flags.conshohockenFollowupStarted && !state.flags.conshohockenFollowupComplete;
   const activeDispatch = travelActive || travelSummaryPending
     ? content.travelDispatch
     : systemsActive || (state.flags.systemsStarted && !state.flags.systemsComplete) || (state.flags.handoffComplete && !state.flags.systemsComplete)
@@ -6012,8 +6164,10 @@ function render() {
     ? content.warehouseDispatch
     : commissioningActive || state.flags.commissioningStarted || state.flags.commissioningComplete
       ? content.commissioningDispatch
-      : surveyActive || state.flags.surveyStarted || state.flags.surveyComplete
+      : surveyActive || state.flags.surveyStarted || state.flags.surveyComplete || (state.flags.conshohockenFollowupComplete && !state.flags.surveyComplete)
       ? content.surveyDispatch
+      : followupActive || isConshohockenFollowupAvailable()
+      ? content.followupDispatch
       : serviceActive || state.flags.serviceStarted || state.flags.serviceComplete
       ? content.serviceDispatch
       : { title: "Two Quick Carts", summary: "Build two mobile video conferencing carts at a Center City East office." };
@@ -6029,6 +6183,8 @@ function render() {
       ? "WARRANTY RETURN"
     : secureAccessActive
       ? "SECURE ACCESS"
+      : followupActive
+      ? "FOLLOW-UP"
       : commissioningActive
       ? "COMMISSIONING"
       : surveyActive

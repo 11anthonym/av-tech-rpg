@@ -195,9 +195,11 @@ be easy to verify in the browser.
 14. **Done - Fast-travel unlock pass:** Eligible routes now unlock fast travel
    after they have been driven once, but only when they match the current
    dispatch route, start from the current area, and pay an energy cost.
-15. **Next - Repeat route content pass:** Add one explicit repeated dispatch or
-   return visit so the fast-travel rule becomes naturally visible without test
-   state.
+15. **Done - Repeat route content pass:** A compact Conshohocken label
+   follow-up now appears after the service call and Josh debrief, reusing the
+   known route so fast travel becomes naturally visible.
+16. **Next - Route map polish pass:** Make the regional map easier to scan as
+   unlocked repeat routes, active dispatch routes, and locked candidates grow.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
