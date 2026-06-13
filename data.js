@@ -167,7 +167,7 @@ window.GAME_CONTENT = {
       homeBase: "Wayne Area, PA",
       summary: "A disorganized commercial AV shop where capable field people keep rescuing schedules that were never realistic.",
       strengths: ["Enough work to learn fast", "Josh still answers questions", "Sometimes the spare part actually exists"],
-      dysfunctions: ["Optimistic estimates", "Weak dispatch notes", "Delayed reimbursement", "Management blames the person fixing the issue"],
+      dysfunctions: ["Optimistic estimates", "Weak work-order notes", "Delayed reimbursement", "Management blames the person fixing the issue"],
       reputationPressure: "Management likes clean tickets. Clients and coworkers like honest closeout.",
       pressureRules: [
         {
@@ -189,7 +189,7 @@ window.GAME_CONTENT = {
           fieldReality: "Prep choices and tools reduce pain, but the company still calls it efficiency.",
         },
       ],
-      expansionUse: "Keep this as the first-company baseline. Future companies can change shop culture, supplied tools, dispatch expectations, and reputation pressure without changing technician data.",
+      expansionUse: "Keep this as the first-company baseline. Future companies can change shop culture, supplied tools, work-order pressure, and reputation pressure without changing technician data.",
     },
   },
 
@@ -359,7 +359,7 @@ window.GAME_CONTENT = {
       {
         id: "parts-brain",
         name: "Parts Brain",
-        effect: "Can search a personal organizer once per dispatch for a testing aid.",
+        effect: "Can search a personal organizer once per job for a testing aid.",
         skillBonuses: { fieldcraft: 1 },
         traits: ["circuitHutPartsBrain"],
         startingTools: ["circuitHutOrganizer"],
@@ -502,7 +502,7 @@ window.GAME_CONTENT = {
       id: "circuitHutOrganizer",
       name: "Circuit Hut Parts Organizer",
       description: "A battered small-parts case from Wiley's counter days. It contains useful adapters, odd connectors, and several things that should never become permanent.",
-      effect: "Once per dispatch, search for a small testing part. If used, reduce verification and testing energy by 1 for that dispatch.",
+      effect: "Once per job, search for a small testing part. If used, reduce verification and testing energy by 1 for that job.",
       modifiers: { partsBrainVerificationReduction: 1 },
       finds: [
         "right-angle HDMI adapter",
@@ -1193,7 +1193,7 @@ window.GAME_CONTENT = {
 
   secureAccessDispatch: {
     title: "Navy Yard Secure Access",
-    summary: "Deliver a small rack update to a secure building after dispatch sends the wrong access note.",
+    summary: "Deliver a small rack update to a secure building after the work order misses the access details.",
     taskCards: [
       {
         title: "Secure Access",
@@ -1221,8 +1221,8 @@ window.GAME_CONTENT = {
       {
         id: "building",
         label: "Building number",
-        log: "the dispatch ticket and the security booth disagree by one building",
-        detail: "Dispatch wrote Building 12. Security says the work order is for Building 13. The buildings are close enough to be annoying and far enough to matter.",
+        log: "the work order and the security booth disagree by one building",
+        detail: "The work order says Building 12. Security says the visitor list is for Building 13. The buildings are close enough to be annoying and far enough to matter.",
       },
       {
         id: "escort",
@@ -1311,7 +1311,7 @@ window.GAME_CONTENT = {
 
   systemsDispatch: {
     title: "King of Prussia Room Offline",
-    summary: "Service a conference room that dispatch described as 'probably just needs a reboot.'",
+    summary: "Service a conference room that the ticket described as 'probably just needs a reboot.'",
     taskCards: [
       {
         title: "Panel Status",
@@ -1353,13 +1353,13 @@ window.GAME_CONTENT = {
 
   travelDispatch: {
     title: "Cherry Hill Return Toll",
-    summary: "Handle a South Jersey return stop after dispatch forgot the bridge toll exists on the way back.",
+    summary: "Handle a South Jersey return stop after coordination forgot the bridge toll exists on the way back.",
     tollCost: 6,
     taskCards: [
       {
         title: "Bridge Toll",
         skill: "Commercial Process 2",
-        outcome: "Decides whether the cost is documented, absorbed, or kicked back to dispatch.",
+        outcome: "Decides whether the cost is documented, absorbed, or kicked back to coordination.",
       },
       {
         title: "Return ETA",

@@ -142,9 +142,9 @@ Jobs award experience and reputation in `app.js` when their result is recorded.
 Keep those awards guarded by a saved flag so reopening a result modal cannot
 grant the same progression twice.
 
-Completed dispatches should return through `returnToShopAfterDispatch()` or,
+Completed jobs should return through `returnToShopAfterDispatch()` or,
 for shop-based jobs, `finishWarehouseShift()`. Those helpers set up the
-end-of-shift closeout so the next dispatch does not unlock until the player
+end-of-shift closeout so the next job does not unlock until the player
 clocks out, stays late to prep, helps Josh, or takes a recovery day. Ordinary
 overnight rest restores energy with a burnout penalty; recovery days restore
 more but cost management reputation. Staying late should feel useful but heavy:
@@ -154,7 +154,7 @@ adding burnout, and sometimes hurting management reputation.
 The break area is for same-day choices. `showBreakArea()` supports short breaks,
 packed lunch, coffee, and unpaid recovery days. Packed lunch uses the shared
 `packedLunchReady` flag and is consumed by `consumePackedLunch()` when a
-dispatch starts.
+job starts.
 
 Career ledger stats can also create small future effects. Keep these effects
 readable and visible on the career clipboard. The current examples are:
@@ -177,7 +177,7 @@ supply counter. Keep the tool's `price` at `0`, give the relationship a readable
 reputation requirement in `data.js`, and award the stable tool ID from the
 shop interaction after the requirement is met.
 
-The Conshohocken dispatch and University City survey each have one lightweight
+The Conshohocken service call and University City survey each have one lightweight
 preparation choice before travel. Keep preparation effects small and legible:
 one saved flag, one visible payoff during the job, and no separate inventory
 screen.
@@ -324,7 +324,7 @@ Current early line IDs include:
 
 For quick-workaround versus proper-process choices, record future risk through
 `recordReturnTripRisk(riskId, detail)`. The current prototype stores those risks
-inside save `flags` so later dispatches can reference them without adding a new
+inside save `flags` so later jobs can reference them without adding a new
 inventory or issue-tracker system.
 
 ## Add a Vehicle
@@ -510,14 +510,19 @@ Keep the starter geography intact while expanding: Radnor Rack & Wire is near
 Wayne, and the first playable tutorial job still goes to Center City East in
 Philadelphia.
 
-Do not extract a fully generic job runner yet. The current dispatches still
+Terminology guardrail: "dispatch board" is the in-game board surface. In
+player-facing job copy, prefer the sharper term for the problem: work order,
+service ticket, coordination, scope, field change, site access, closeout,
+return trip, or limited energy.
+
+Do not extract a fully generic job runner yet. The current jobs still
 benefit from hand-authored scenes and choices. Extract only after two or three
 jobs repeat the same structure closely enough that the abstraction is obvious.
 
-### Current Dispatch Pattern To Copy
+### Current Job Pattern To Copy
 
 Use **King of Prussia Room Offline** as the current worked example for a compact
-new dispatch.
+new job.
 
 The implementation is intentionally hand-authored:
 
@@ -534,7 +539,7 @@ The implementation is intentionally hand-authored:
 - `getObjective()`, `render()`, `serializeGame()`, and `continueGame()` keep
   the new job visible, saved, and resumable.
 
-When adding the next dispatch, copy the shape, not the topic. Pick one primary
+When adding the next job, copy the shape, not the topic. Pick one primary
 RPG question, one prep choice, two or three checks, and one final consequence.
 
 ## Practical Rule

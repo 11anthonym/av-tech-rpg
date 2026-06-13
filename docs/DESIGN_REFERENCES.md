@@ -94,7 +94,7 @@ rest can wake the player below full energy unless they spend a recovery day.
   lists the current passenger/small-truck toll used as grounded detail for the
   Cherry Hill return-toll micro-job.
 
-These patterns support fictional dispatches such as underestimated downtown
+These patterns support fictional jobs such as underestimated downtown
 carries, undocumented couplers, rooms marked ready before commissioning, and
 equipment reportedly stored in one of the vans.
 

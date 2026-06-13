@@ -14,12 +14,12 @@ The game now has five reusable layers:
    skill baselines, traits, tools, strengths, weaknesses, and playstyle.
 2. **Career progression:** XP, ranks, training choices, goals, reputation,
    ledger stats, and active career effects describe how the player is growing.
-3. **Job families:** dispatches can identify whether they are install,
+3. **Job families:** jobs can identify whether they are install,
    service, survey, commissioning, logistics, or handoff work.
 4. **Company context:** the current employer describes shop culture,
    pressure, dysfunction, and the reputation tradeoff behind bad-company humor.
 5. **World skeleton:** regions, areas, portals, vehicles, and routes describe
-   where a dispatch happens and how the player moves between shop, van,
+   where a job happens and how the player moves between shop, van,
    parking, buildings, and job rooms.
 
 Keep those five layers readable in the UI. If a mechanic is invisible, players
@@ -47,7 +47,7 @@ What future job or goal can remember it:
 
 ### Job Design Checklist V1
 
-Use this checklist before implementing the job. If a proposed dispatch cannot
+Use this checklist before implementing the job. If a proposed job cannot
 answer most of these, keep it in the idea backlog until the hook is clearer.
 
 - **Place:** Where does the job start, where does it happen, and why does that
@@ -69,7 +69,7 @@ answer most of these, keep it in the idea backlog until the hook is clearer.
 - **Consequence:** Which visible values change: energy, burnout, cash, XP,
   client rep, coworker rep, management rep, callbacks, return-trip risk, or a
   career ledger stat?
-- **Memory:** What future dispatch, goal, or active career effect could remember
+- **Memory:** What future job, goal, or active career effect could remember
   the outcome?
 - **AV truth:** What detail would make a real AV tech nod without needing a
   simulator?
@@ -86,7 +86,7 @@ Job title: Law Office Intermittent Audio
 Job family: service
 Company: Radnor Rack & Wire
 Map/scene: Center City office conference room
-Why it is on the dispatch board: Client says audio drops after ten minutes; dispatch says "probably cable."
+Why it is on the dispatch board: Client says audio drops after ten minutes; the service ticket says "probably cable."
 Core skills: troubleshooting, documentation, clientCommunication
 Preparation choice: review ticket history, text someone who knows the room, or leave immediately
 Three things to inspect or do: check USB path, inspect table box, ask client what "drops" means
@@ -99,7 +99,7 @@ What remembers it: future callback return or a documentation-habit goal
 
 ### Implemented Worked Example: King Of Prussia Room Offline
 
-This is the current example for adding one compact dispatch without extracting a
+This is the current example for adding one compact job without extracting a
 generic job engine.
 
 ```txt
@@ -107,9 +107,9 @@ Job title: King of Prussia Room Offline
 Job family: service
 Company: Radnor Rack & Wire
 Map/scene: King of Prussia conference room with client table, display wall, rack/processer, panel note, and stale network note
-Why it is on the dispatch board: Client says the room is offline; dispatch says it probably just needs a reboot.
+Why it is on the dispatch board: Client says the room is offline; the service ticket says it probably just needs a reboot.
 Core skills: troubleshooting, networking, controlSystems, documentation
-Preparation choice: review room/network notes, ask Josh what changed, or leave with dispatch notes as written
+Preparation choice: review room/network notes, ask Josh what changed, or leave with work-order notes as written
 Three things to inspect or do: check touch panel status, verify device network path, compare rack note to the actual room
 Final choice: document the network/control mismatch, call out the scope miss, or quick reboot and close the ticket
 Good outcome: useful systems note, client/coworker trust, documented task risk, possible management friction
@@ -157,7 +157,7 @@ Do these in small commits. Each step should answer one playability question and
 be easy to verify in the browser.
 
 1. **Done - Job checklist pass:** Keep this document current and use it before
-   adding any new dispatch.
+   adding any new job.
 2. **Done - Choice clarity pass:** Add short skill/reputation hints to a few
    existing choices so players understand why stats matter.
 3. **Done - Company pressure pass:** Give Radnor Rack & Wire visible
@@ -247,11 +247,16 @@ be easy to verify in the browser.
    renderer. Verified organizer availability, fast-travel readiness, forced
    warranty return routing, clean-ledger handoff routing, and coordination-cost
    travel language.
-26. **Next - Industry terminology consistency pass:** Audit player-facing copy
+26. **Done - Industry terminology consistency pass:** Audited player-facing copy
    against the terminology guardrail: keep "dispatch board" as the game surface,
    but use sharper AV/integration terms such as work order, service ticket,
    scope, field change, coordination, closeout, return trip, site access, and
-   limited energy where they fit.
+   limited energy where they fit. Tightened next-job prep, parts-organizer,
+   access, systems, travel, and service wording without changing save data.
+27. **Next - Job-authoring queue pass:** Pick the next compact work order from
+   the checklist, write it as data first, and confirm the shared board renderer
+   explains its family, build edge, route memory, and consequence hooks before
+   adding another bespoke scene.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
@@ -332,7 +337,7 @@ effects until a job explicitly checks them.
 
 ## Add A New Job Family
 
-Use a job family when several dispatches share the same RPG rhythm. Each family
+Use a job family when several jobs share the same RPG rhythm. Each family
 should have:
 
 - `coreSkills`

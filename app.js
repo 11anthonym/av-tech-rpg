@@ -892,7 +892,7 @@ function getActiveCareerSummaryMarkup() {
     items.push({ label: "Careful-work support", detail: "Careful habits or traits reduce some repair and punch-list energy costs." });
   }
   if (state.flags.shiftPrepActive) {
-    items.push({ label: "Next-shift prep active", detail: "Stayed-late prep is boosting Fieldcraft and Documentation until this dispatch closes." });
+    items.push({ label: "Next-shift prep active", detail: "Stayed-late prep is boosting Fieldcraft and Documentation until this job closes." });
   }
   if (state.flags.consecutiveLateNights) {
     items.push({
@@ -1314,7 +1314,7 @@ function makeButton(label, onClick, className = "primary-button") {
   return button;
 }
 
-function showModal({ kicker = "Dispatch Update", title, body, actions }) {
+function showModal({ kicker = "Field Update", title, body, actions }) {
   state.modalOpen = true;
   elements.modalKicker.textContent = kicker;
   elements.modalTitle.textContent = title;
@@ -1370,7 +1370,7 @@ function recordExhaustionIncident() {
   const consequence = (incidentNumber - 1) % 3;
   if (consequence === 0) {
     state.reputation.management -= 1;
-    addLog("Exhaustion incident: dispatch noticed the job getting messy.");
+    addLog("Exhaustion incident: coordination noticed the job getting messy.");
   } else if (consequence === 1) {
     recordExhaustionMistake();
   } else {
@@ -1552,7 +1552,7 @@ function previewShiftChoice(choice) {
         : choice === "recovery-day"
           ? "Management may notice the schedule gap."
           : "No obvious reputation pressure.",
-    benefit: choice === "prep" ? "+1 Fieldcraft/Documentation next dispatch" : choice === "help-josh" ? helpJoshBenefit : choice === "recovery-day" ? "Skips next workday pressure" : "Clean rest",
+    benefit: choice === "prep" ? "+1 Fieldcraft/Documentation next job" : choice === "help-josh" ? helpJoshBenefit : choice === "recovery-day" ? "Skips next workday pressure" : "Clean rest",
     capNote: `${lateCapNote}${exhaustionCapNote}${exhaustionIncidentNote}` || (cappedRecovery ? ` ${cappedRecovery} recovery would be capped at max energy.` : ""),
   };
 }
@@ -1630,7 +1630,7 @@ function finishWarehouseShift(source) {
 }
 
 function showEndShiftModal() {
-  const source = state.flags.endShiftSource || "today's dispatch";
+  const source = state.flags.endShiftSource || "today's job";
   const helpJoshCopy = getHelpJoshShiftCopy();
   const ordinaryRecovery = getOvernightRecovery();
   const lateRecovery = getOvernightRecovery({ stayedLate: true, burnout: state.burnout + STAY_LATE_BURNOUT_GAIN });
@@ -1642,8 +1642,8 @@ function showEndShiftModal() {
     kicker: "End Of Shift",
     title: "Close Out The Workday",
     body: `
-      <p>${source} is wrapped. Dispatch has more work, but the next job should start after an actual shift reset.</p>
-      ${pendingServiceCallback ? `<p class="muted">A Conshohocken callback note is waiting on Josh's bench. Close out the shift, then talk to Josh before dispatch adds another stop.</p>` : ""}
+      <p>${source} is wrapped. The board has more work, but the next job should start after an actual shift reset.</p>
+      ${pendingServiceCallback ? `<p class="muted">A Conshohocken callback note is waiting on Josh's bench. Close out the shift, then talk to Josh before coordination adds another stop.</p>` : ""}
       <div class="results-grid">
         <span>Current time</span><strong>${state.clock}</strong>
         <span>Energy</span><strong>${state.energy}/${getMaxEnergy()}</strong>
@@ -1680,7 +1680,7 @@ function completeShift(choice) {
     state.flags.shiftPrepActive = true;
     state.reputation.management -= 1;
     state.stats.stayLatePrepDays += 1;
-    addLog("Stayed late to prep tomorrow's first dispatch. Fieldcraft and documentation get a next-shift boost, but the extra unpaid time landed hard.");
+    addLog("Stayed late to prep tomorrow's first job. Fieldcraft and documentation get a next-shift boost, but the extra unpaid time landed hard.");
   } else if (choice === "help-josh") {
     const helpJoshCopy = getHelpJoshShiftCopy();
     changeEnergy(-HELP_JOSH_ENERGY_COST);
@@ -1696,11 +1696,11 @@ function completeShift(choice) {
     state.flags.consecutiveLateNights = 0;
     state.reputation.management -= 1;
     state.stats.recoveryDays += 1;
-    addLog("Took a recovery day instead of accepting the next dispatch. Management reputation took a small hit.");
+    addLog("Took a recovery day instead of accepting the next job. Management reputation took a small hit.");
   } else {
     state.flags.shiftPrepActive = false;
     state.flags.consecutiveLateNights = 0;
-    addLog("Clocked out and went home instead of turning the next dispatch into the same tired day.");
+    addLog("Clocked out and went home instead of turning the next work order into the same tired day.");
   }
   const recovery = applyOvernightRecovery({ stayedLate, recoveryDay: choice === "recovery-day" });
   state.stats.shiftsCompleted += 1;
@@ -1721,7 +1721,7 @@ function showBreakArea() {
   if (state.flags.endShiftPending) return showEndShiftModal();
   showModal({
     kicker: "Break Area",
-    title: "Use The Quiet Corner Before Dispatch Finds You",
+    title: "Use The Quiet Corner Before Coordination Finds You",
     body: `
       <p>The break area is now same-day recovery and preparation, not a free time machine.</p>
       <div class="results-grid">
@@ -1734,7 +1734,7 @@ function showBreakArea() {
     `,
     actions: [
       { label: "Take 15-minute break (+10 energy)", onClick: takeShortBreak },
-      ...(!state.flags.packedLunchReady ? [{ label: "Pack lunch for next dispatch", className: "secondary-button", onClick: packLunchForNextDispatch }] : []),
+      ...(!state.flags.packedLunchReady ? [{ label: "Pack lunch for next job", className: "secondary-button", onClick: packLunchForNextDispatch }] : []),
       ...(state.cash >= 5 ? [{ label: "Buy bad shop coffee - $5 (+12 energy, +1 burnout)", className: "secondary-button", onClick: buyBreakCoffee }] : []),
       { label: "Take unpaid recovery day (full energy, management may notice)", className: "secondary-button", onClick: takeRecoveryDayFromShop },
       { label: "Leave Break Area", className: "text-button" },
@@ -1754,7 +1754,7 @@ function takeShortBreak() {
 function packLunchForNextDispatch() {
   state.flags.packedLunchReady = true;
   state.stats.lunchesPacked += 1;
-  addLog("Packed lunch for the next dispatch. It will restore energy when you head out.");
+  addLog("Packed lunch for the next job. It will restore energy when you head out.");
   render();
 }
 
@@ -2077,7 +2077,7 @@ function getRouteStatus(route) {
   if (travelCount > 0) return `Traveled ${travelCount} time${travelCount === 1 ? "" : "s"}`;
   if (canLaunchRouteFromRegionalMap(route.id)) return "Available now";
   if (route.id === "centerCityTutorial" && state.flags.shopBrief && !state.flags.finished) return "Needs van cargo";
-  if (route.fastTravelEligible) return "Dispatch board route";
+  if (route.fastTravelEligible) return "Board route";
   return "Story route";
 }
 
@@ -2168,7 +2168,7 @@ function showRegionalMap() {
         <span>Vehicle</span><strong>${escapeHtml(getVehicleName())}</strong>
         <span>Last route</span><strong>${escapeHtml(state.flags.lastRouteId || "None")}</strong>
       </div>
-      <p class="muted">Fast travel unlocks after you have driven an eligible route once. It still respects active dispatch prep and costs route energy.</p>
+      <p class="muted">Fast travel unlocks after you have driven an eligible route once. It still respects active board prep and costs route energy.</p>
       <h3>Regions</h3>
       ${getRegionalNodeMarkup()}
       ${getRegionalRouteMarkup()}
@@ -2310,7 +2310,7 @@ function finishPortal(portal) {
 function finishReturnPortal(portal) {
   recordPortalUse(portal);
   returnToShopAfterDispatch(
-    portal.returnSource || portal.label || "Dispatch",
+    portal.returnSource || portal.label || "Job",
     portal.returnLog || "Returned to Radnor Rack & Wire.",
   );
 }
@@ -2358,7 +2358,7 @@ function showRouteChoiceModal({ routeId, dispatchEstimate, extraBody = "", actio
     kicker: "Route Choice",
     title: `${route.fromLabel} -> ${route.toLabel}`,
     body: `
-      ${dispatchEstimate ? `<p><strong>Dispatch estimate:</strong> ${dispatchEstimate}</p>` : ""}
+      ${dispatchEstimate ? `<p><strong>Work-order estimate:</strong> ${dispatchEstimate}</p>` : ""}
       ${extraBody}
       ${getRouteLineMarkup(route)}
       <ul class="modal-list">
@@ -2394,7 +2394,7 @@ function showTravelRouteModal({ routeId, dispatchEstimate, extraBody = "", actio
     kicker: fastTravel ? "Fast Travel" : "Route Summary",
     title: `${route.fromLabel} -> ${route.toLabel}`,
     body: `
-      ${dispatchEstimate ? `<p><strong>Dispatch estimate:</strong> ${dispatchEstimate}</p>` : ""}
+      ${dispatchEstimate ? `<p><strong>Work-order estimate:</strong> ${dispatchEstimate}</p>` : ""}
       ${fastTravel ? `<p class="expense"><strong>Fast travel:</strong> Known route shortcut, -${fastTravelCost} energy.</p>` : ""}
       ${extraBody}
       ${getRouteLineMarkup(route)}
@@ -2408,7 +2408,7 @@ function showTravelRouteModal({ routeId, dispatchEstimate, extraBody = "", actio
 
 function promptFastTravelRoute(routeId) {
   const route = getWorldRoute(routeId);
-  if (!canFastTravelRoute(route)) return notify("That fast travel route is not available for the current dispatch.");
+  if (!canFastTravelRoute(route)) return notify("That fast travel route is not available for the current board route.");
   if (routeId === "conshohockenService") {
     if (isConshohockenFollowupAvailable()) return promptConshohockenFollowupTravel({ fastTravel: true });
     return state.flags.servicePreparation ? promptServiceTravel({ fastTravel: true }) : showServicePreparation();
@@ -2419,7 +2419,7 @@ function promptFastTravelRoute(routeId) {
   if (routeId === "warrantyReturn") return promptCallbackCleanupTravel({ fastTravel: true });
   if (routeId === "executiveHandoff") return promptHandoffTravel({ fastTravel: true });
   if (routeId === "systemsService") return state.flags.systemsPreparation ? promptSystemsTravel({ fastTravel: true }) : showSystemsPreparation();
-  return notify("That route needs a dispatch hook before fast travel can launch it.");
+  return notify("That route needs a board hook before fast travel can launch it.");
 }
 
 function getNextShopLoad() {
@@ -2485,7 +2485,7 @@ function showFinishChoice() {
     kicker: "Last Decision",
     title: "Cart 2 Works. The Cables Do Not Look Happy.",
     body: `
-      <p>Dispatch expected you to be done hours ago. You can clean up the cable routing or leave before traffic gets worse.</p>
+      <p>The work order expected you to be done hours ago. You can clean up the cable routing or leave before traffic gets worse.</p>
       ${canUseMakeThatWorkShortcut() ? `<p class="muted">${getCharacterLine("finishChoice", "You can make the awkward path work for now. The question is whether it deserves to become the install.")}</p>` : ""}
       ${state.flags.cartAssemblyStrained ? `<p class="muted">Some assembly checks were strained. Dressing the cables properly also gives you time to catch the shaky details.</p>` : ""}
       <p><strong>Energy:</strong> ${state.energy}/${getMaxEnergy()}</p>
@@ -2638,7 +2638,7 @@ function showPersonalKit() {
       <p class="muted">Garage carry capacity: ${getCarryCapacity("garage")} equipment group${getCarryCapacity("garage") === 1 ? "" : "s"}</p>
       <p class="muted">Assembly energy cost: ${getAssemblyEnergyCost(7)} per cart component</p>
       <p class="muted">Signal-path verification energy cost: ${getVerificationEnergyCost(4)}</p>
-      ${ownsTool("circuitHutOrganizer") ? `<p class="muted">Circuit Hut Parts Brain: ${partsBrainActive ? `active this dispatch (${getUsedPartsBrainDispatches()[getCurrentDispatchKey()]})` : "unused for this dispatch"}</p>` : ""}
+      ${ownsTool("circuitHutOrganizer") ? `<p class="muted">Circuit Hut Parts Brain: ${partsBrainActive ? `active this job (${getUsedPartsBrainDispatches()[getCurrentDispatchKey()]})` : "unused for this job"}</p>` : ""}
     `,
     actions: [
       ...(canUsePartsBrain() ? [{
@@ -2662,7 +2662,7 @@ function useCircuitHutPartsBrain() {
     title: "Small Part, Big Judgment Call",
     body: `
       <p>${state.technician.name} digs through the old parts organizer and finds a <strong>${find}</strong>.</p>
-      <p>This can help with testing during the current dispatch. It does not automatically make the workaround acceptable for final closeout.</p>
+      <p>This can help with testing during the current job. It does not automatically make the workaround acceptable for final closeout.</p>
       <blockquote>${state.technician.name}: "${getCharacterLine("partsBrainQuote", "This is fine for testing. Permanent is where the paperwork starts.")}"</blockquote>
     `,
     actions: [{ label: "Pocket It For Testing", onClick: render }],
@@ -2715,7 +2715,7 @@ function showCareerClipboard() {
       ${getCareerLedgerMarkup()}
       <p class="muted">${pendingTraining
         ? "You earned a new field-training focus. Pick the habit you want to develop next."
-        : "Complete more dispatches to unlock another field-training focus."}</p>
+        : "Complete more jobs to unlock another field-training focus."}</p>
     `,
     actions: [
       ...(pendingTraining ? content.career.trainingChoices
@@ -2760,7 +2760,7 @@ function getCareerEffectsMarkup() {
     {
       active: Boolean(state.flags.shiftPrepActive),
       name: "Next-shift prep",
-      description: "Staying late adds +1 Fieldcraft and +1 Documentation until the next dispatch closes.",
+      description: "Staying late adds +1 Fieldcraft and +1 Documentation until the next job closes.",
     },
     {
       active: Boolean(state.flags.energyExhaustedThisShift || state.flags.exhaustionIncidentsThisShift),
@@ -3040,7 +3040,7 @@ function showDispatchPreview() {
     return showSecureAccessDispatchPreview();
   }
   if (state.flags.commissioningComplete) {
-    if (hasPendingTraining()) return notify("Mark your new field-training focus on the clipboard before taking another dispatch.");
+    if (hasPendingTraining()) return notify("Mark your new field-training focus on the clipboard before taking another job.");
     return showWarehouseDispatchPreview();
   }
   if (state.flags.surveyComplete) {
@@ -3050,8 +3050,8 @@ function showDispatchPreview() {
     if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) {
       return notify("The Conshohocken callback note is still clipped to Josh's bench.");
     }
-    if (!state.flags.joshServiceDebriefed) return notify("Check in with Josh before dispatch adds another stop.");
-    if (hasPendingTraining()) return notify("Mark your field-training focus on the clipboard before taking another dispatch.");
+    if (!state.flags.joshServiceDebriefed) return notify("Check in with Josh before coordination adds another stop.");
+    if (hasPendingTraining()) return notify("Mark your field-training focus on the clipboard before taking another job.");
     if (isConshohockenFollowupAvailable()) return showConshohockenFollowupPreview();
     return showSurveyDispatchPreview();
   }
@@ -3095,7 +3095,7 @@ function showConshohockenFollowupPreview() {
       type: "Repeat Route",
       familyId: "service",
       setup: "The Conshohocken client found the unlabeled coupler note useful, which means someone now wants the actual coupler labeled.",
-      why: "This is a small repeat-route test: the route is already known, so the regional map can offer fast travel without skipping dispatch prep.",
+      why: "This is a small repeat-route test: the route is already known, so the regional map can offer fast travel without skipping board prep.",
       stakes: [
         "The regional map should show Conshohocken as fast-travel ready.",
         "Fast travel still costs energy instead of becoming a free teleport.",
@@ -3250,7 +3250,7 @@ function getBoardBuildEdgeMarkup(familyId) {
     notes.push(canUsePressureChoice() ? "pressure choices are available" : "pressure pushback may stay locked");
   }
   if (ownsTool("circuitHutOrganizer")) {
-    notes.push(hasActivePartsBrainFind() ? "parts organizer is active for this dispatch" : canUsePartsBrain() ? "parts organizer can still be checked from the kit" : "");
+    notes.push(hasActivePartsBrainFind() ? "parts organizer is active for this job" : canUsePartsBrain() ? "parts organizer can still be checked from the kit" : "");
   }
   if (familyId === "logistics" && hasCharacterTrait("badKnees")) notes.push("long carries and access moves hit harder");
   const detail = notes.filter(Boolean).join("; ");
@@ -3304,7 +3304,7 @@ function getDispatchBoardMarkup({ type, setup, why, stakes, note, managementNote
       ${getOpenCallbackBoardMarkup()}
       ${getBoardRoutingMarkup()}
       ${prep ? `<li><strong>Prep</strong><span>${prep}</span></li>` : ""}
-      ${state.flags.shiftPrepActive ? `<li><strong>Next-shift prep</strong><span>Stayed late last shift: +1 Fieldcraft and +1 Documentation until this dispatch closes.</span></li>` : ""}
+      ${state.flags.shiftPrepActive ? `<li><strong>Next-shift prep</strong><span>Stayed late last shift: +1 Fieldcraft and +1 Documentation until this job closes.</span></li>` : ""}
       <li><strong>Later work</strong><span>${getUpcomingDispatchText()}</span></li>
     </ul>
     ${getDispatchTaskCardsMarkup(taskCards)}
@@ -3346,7 +3346,7 @@ function showPrototypeSummary() {
       ${getActiveCareerSummaryMarkup()}
       <p><strong>Career ledger:</strong></p>
       ${getCareerLedgerMarkup()}
-      <p><strong>Upcoming dispatch:</strong></p>
+      <p><strong>Upcoming jobs:</strong></p>
       <ul class="modal-list">
         ${content.upcomingDispatches.map((dispatch) => `<li><strong>[LOCKED] ${dispatch.title}</strong><span>${dispatch.summary}</span></li>`).join("")}
       </ul>
@@ -3354,9 +3354,9 @@ function showPrototypeSummary() {
       <ul class="modal-list">
         <li><strong>Did the walking stay purposeful?</strong><span>Loading and carrying should explain the job without becoming repetitive.</span></li>
         <li><strong>Did your choices feel visible?</strong><span>Your tools, preparation, diagnosis, survey report, commissioning notes, stockroom decision, access-delay report, systems closeout, and travel-cost choice should change how the workday plays.</span></li>
-        <li><strong>Did progression make you curious?</strong><span>The shop, clipboard, and locked dispatches should make one more workday sound appealing.</span></li>
+        <li><strong>Did progression make you curious?</strong><span>The shop, clipboard, and locked jobs should make one more workday sound appealing.</span></li>
       </ul>
-      <blockquote>Dispatch note: "Please remain flexible. Several schedules are currently being finalized retroactively."</blockquote>
+      <blockquote>Coordination note: "Please remain flexible. Several schedules are currently being finalized retroactively."</blockquote>
     `,
     actions: [
       { label: "Review Career Clipboard", onClick: showCareerClipboard },
@@ -3373,7 +3373,7 @@ function showWarehouseDispatchPreview() {
     body: getDispatchBoardMarkup({
       type: "Warehouse Run",
       familyId: "logistics",
-      setup: "Find a replacement power supply before another technician leaves for a service call. Dispatch says it was stored in one of the vans.",
+      setup: "Find a replacement power supply before another technician leaves for a service call. The work order says it was stored in one of the vans.",
       why: "Unlocked after commissioning. The shop needs a quick change of pace that tests whether messy inventory can become gameplay.",
       stakes: [
         "Searching costs energy.",
@@ -3401,7 +3401,7 @@ function startWarehouseRun() {
     kicker: "Radnor Rack & Wire Warehouse Run",
     title: "Check The Obvious Places",
     body: `
-      <p>Search Van #3, the staging shelf, and the mystery-return pile. Dispatch has already asked whether you found it.</p>
+      <p>Search Van #3, the staging shelf, and the mystery-return pile. Coordination has already asked whether you found it.</p>
       <p class="muted">${ownsTool("toolBag") ? "Your tool bag makes it easier to work through the loose stock." : "Loose adapters have achieved a stable ecosystem."}</p>
     `,
     actions: [{ label: "Start Searching", onClick: render }],
@@ -3438,7 +3438,7 @@ function inspectWarehouseLocation(checkId) {
     body: `
       <p>${check.detail}</p>
       ${getSkillCheckMarkup(skillCheck)}
-      ${allChecked ? `<p class="muted">The matching power supply is in the mystery-return pile beneath a handwritten question mark. Decide how much cleanup dispatch is willing to survive.</p>` : ""}
+      ${allChecked ? `<p class="muted">The matching power supply is in the mystery-return pile beneath a handwritten question mark. Decide how much stockroom cleanup the schedule is willing to survive.</p>` : ""}
     `,
     actions: [{ label: allChecked ? "Review Found Power Supply" : "Keep Looking", onClick: allChecked ? showWarehouseChoice : render }],
   });
@@ -3450,7 +3450,7 @@ function showWarehouseChoice() {
     title: "Power Supply Located Technically",
     body: `
       <p>The correct power supply was placed in mystery returns beneath a box labeled <strong>HDMI EXTENDERS / DO NOT STOCK / RETURN?</strong></p>
-      <p>Dispatch wants the part immediately. Correcting the bin label would save the next search, but it would extend a task estimated at one minute.</p>
+      <p>Coordination wants the part immediately. Correcting the bin label would save the next search, but it would extend a task estimated at one minute.</p>
       ${getChoicePressureMarkup([
         {
           label: "Correct the label",
@@ -3511,7 +3511,7 @@ function finishWarehouseRun(approach) {
         <span>Stockroom</span><strong>${correctedLabel ? "Bin label corrected" : "Mystery pile preserved"}</strong>
       </div>
       ${correctedLabel
-        ? `<blockquote>Management note: "Please avoid spending excessive time reorganizing stock during urgent dispatch support."</blockquote>`
+        ? `<blockquote>Management note: "Please avoid spending excessive time reorganizing stock during urgent field support."</blockquote>`
         : `<blockquote>Management note: "Thanks for keeping the warehouse run efficient."</blockquote>`}
     `,
     actions: [{ label: "Return To Shop", onClick: () => finishWarehouseShift(content.warehouseDispatch.title) }],
@@ -3526,14 +3526,14 @@ function showSecureAccessDispatchPreview() {
       type: "Access Quest",
       familyId: "logistics",
       setup: "Drop off a small rack update at a Navy Yard building with secure access. The ticket says Building 12. The forwarded email subject says Building 13.",
-      why: "Unlocked after the warehouse run. Dispatch has moved from missing parts to missing access details.",
+      why: "Unlocked after the warehouse run. The board has moved from missing parts to missing site-access details.",
       stakes: [
         "Preparation can reduce access-check or report costs.",
         "Once you reach the room, the rack update still has to be patched and verified.",
         "Documenting the delay builds the documentation habit.",
         "Absorbing the delay protects the ticket and adds burnout.",
       ],
-      note: "Dispatch says the building mismatch is probably campus language.",
+      note: "The work order says the building mismatch is probably campus language.",
       managementNote: "Please do not let access delays affect today's schedule.",
       prep: state.flags.secureAccessPreparation ? `Preparation selected: ${getSecureAccessPreparationLabel()}` : "",
       taskCards: content.secureAccessDispatch.taskCards,
@@ -3549,7 +3549,7 @@ function getSecureAccessPreparationLabel() {
   return {
     review: "Reviewed access email",
     contact: "Called listed site contact",
-    none: "Trusted dispatch notes",
+    none: "Trusted work-order notes",
   }[state.flags.secureAccessPreparation] || "None";
 }
 
@@ -3564,7 +3564,7 @@ function showSecureAccessPreparation() {
     actions: [
       { label: "Review the access email", onClick: () => chooseSecureAccessPreparation("review") },
       { label: "Call the listed site contact", className: "secondary-button", onClick: () => chooseSecureAccessPreparation("contact") },
-      { label: "Trust dispatch notes", className: "secondary-button", onClick: () => chooseSecureAccessPreparation("none") },
+      { label: "Trust work-order notes", className: "secondary-button", onClick: () => chooseSecureAccessPreparation("none") },
     ],
   });
 }
@@ -3572,7 +3572,7 @@ function showSecureAccessPreparation() {
 function chooseSecureAccessPreparation(preparation) {
   state.flags.secureAccessPreparation = preparation;
   let title = "The Ticket Will Have To Do";
-  let body = `<p>The dispatch note says "security aware," which is doing a heroic amount of work for two words.</p>`;
+  let body = `<p>The work-order note says "security aware," which is doing a heroic amount of work for two words.</p>`;
   if (preparation === "review") {
     title = "Access Email Reviewed";
     body = `
@@ -3589,7 +3589,7 @@ function chooseSecureAccessPreparation(preparation) {
     `;
     addLog("Called the Navy Yard site contact and confirmed the building mismatch.");
   }
-  if (preparation === "none") addLog("Left for Navy Yard trusting the dispatch notes.");
+  if (preparation === "none") addLog("Left for Navy Yard trusting the work-order notes.");
   render();
   showModal({
     kicker: "Preparation Selected",
@@ -3708,7 +3708,7 @@ function showSecureAccessChoice() {
     kicker: "Navy Yard Closeout",
     title: "The Work Is Done, The Story Is Not",
     body: `
-      <p>The encoder feed is patched and the room signal verifies. Security, the building number, and the escort policy still disagree with the original dispatch estimate.</p>
+      <p>The encoder feed is patched and the room signal verifies. Security, the building number, and the escort policy still disagree with the original work-order estimate.</p>
       <p>Management wants the ticket kept clean. The client would prefer an honest ETA and a note that the stale rack label changed.</p>
       ${state.flags.secureAccessTaskStrained ? `<p class="muted">One rack-update check was strained. Better closeout notes can keep that from becoming the next mystery.</p>` : ""}
       ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits make the access-delay note faster to write.</p>` : ""}
@@ -3719,7 +3719,7 @@ function showSecureAccessChoice() {
           detail: "Costs energy to protect the ETA trail and future support notes. Likely helps clients and coworkers, with management friction possible.",
         },
         ...(canUsePressureChoice() ? [{
-          label: "Push dispatch",
+          label: "Push coordination",
           detail: "Stronger accountability if you can carry the conversation. Best process pressure, but management may not enjoy owning the access miss.",
         }] : []),
         {
@@ -3731,7 +3731,7 @@ function showSecureAccessChoice() {
     actions: [
       { label: `Document access delay and rack change (-${getSecureAccessReportEnergyCost(4)} energy)`, onClick: () => finishSecureAccess("document") },
       ...(canUsePressureChoice() ? [{
-        label: `Push dispatch to own the access miss and update notes (-${getSecureAccessReportEnergyCost(3)} energy)`,
+        label: `Push coordination to own the access miss and update notes (-${getSecureAccessReportEnergyCost(3)} energy)`,
         className: "secondary-button",
         onClick: () => finishSecureAccess("pushback"),
       }] : []),
@@ -3799,7 +3799,7 @@ function finishSecureAccess(approach) {
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Preparation</span><strong>${getSecureAccessPreparationLabel()}</strong>
         <span>Rack task</span><strong>${getSecureAccessTaskQualityLabel()}</strong>
-        <span>Closeout</span><strong>${approach === "pushback" ? "Dispatch access miss escalated" : approach === "document" ? "Delay and rack change documented" : "Delay absorbed"}</strong>
+        <span>Closeout</span><strong>${approach === "pushback" ? "Coordination access miss escalated" : approach === "document" ? "Delay and rack change documented" : "Delay absorbed"}</strong>
         ${strainedNotes ? `<span>Skill consequence</span><strong>Thin access notes limited client trust</strong>` : ""}
         ${createsRackReturnRisk ? `<span>Return-trip risk</span><strong>Stale rack note may send someone back</strong>` : ""}
       </div>
@@ -3822,7 +3822,7 @@ function showCallbackCleanupDispatchPreview() {
     body: getDispatchBoardMarkup({
       type: "Return Trip",
       familyId: "service",
-      setup: "A callback is still sitting in the career ledger, and dispatch wants it cleaned up before anyone says warranty hours out loud.",
+      setup: "A callback is still sitting in the career ledger, and coordination wants it cleaned up before anyone says warranty hours out loud.",
       why: `Triggered by unresolved callback pressure. Current unresolved callbacks: ${getUnresolvedCallbackCount()}.${returnTripSummary ? ` ${returnTripSummary}` : ""}`,
       stakes: [
         "A real fix resolves ledger pressure and helps client trust.",
@@ -3998,13 +3998,13 @@ function showHandoffDispatchPreview() {
       setup: "The room works, but the client needs to run the same meeting without becoming an unpaid AV tech.",
       why: state.flags.callbackCleanupComplete
         ? "Unlocked after the warranty return. The room is quieter now; the client still needs the human version."
-        : "Clean callback ledger skipped the warranty return, so dispatch moved you to a handoff.",
+        : "Clean callback ledger skipped the warranty return, so the board moved you to a handoff.",
       stakes: [
         "Confidence can unlock a better cheat-sheet option.",
         "Documentation habit reduces handoff prep costs.",
         "A quick demo keeps management happy and leaves a training gap.",
       ],
-      note: "Dispatch says this is just a quick demo. The client says the executive assistant has actual questions.",
+      note: "The service ticket says this is just a quick demo. The client says the executive assistant has actual questions.",
       managementNote: "Please keep training concise. The system is designed to be intuitive.",
     }),
     actions: [
@@ -4159,7 +4159,7 @@ function showSystemsDispatchPreview() {
     body: getDispatchBoardMarkup({
       type: "Systems Service",
       familyId: "service",
-      setup: "A King of Prussia conference room is reporting offline. Dispatch says the client already rebooted once, so maybe reboot it professionally.",
+      setup: "A King of Prussia conference room is reporting offline. The service ticket says the client already rebooted once, so maybe reboot it professionally.",
       why: "Unlocked after the executive handoff. The prototype is testing whether advanced systems skills can matter in one readable service job.",
       stakes: [
         "Networking and Control Systems can change how cleanly you identify the fault.",
@@ -4182,7 +4182,7 @@ function getSystemsPreparationLabel() {
   return {
     review: "Reviewed room/network notes",
     josh: "Asked Josh what changed",
-    leave: "Left with dispatch notes as written",
+    leave: "Left with work-order notes as written",
   }[state.flags.systemsPreparation] || "None";
 }
 
@@ -4191,7 +4191,7 @@ function showSystemsPreparation() {
     kicker: "Systems Prep",
     title: "Before The Reboot Request",
     body: `
-      <p>Dispatch wants this treated like a quick room reboot. The ticket also says "network maybe?" which is not a diagnosis so much as a shrug with punctuation.</p>
+      <p>Coordination wants this treated like a quick room reboot. The service ticket also says "network maybe?" which is not a diagnosis so much as a shrug with punctuation.</p>
       ${getChoicePressureMarkup([
         { label: "Review notes", detail: "Costs a little time now, but improves network and documentation checks." },
         { label: "Ask Josh", detail: "Improves the control-room read and keeps the joke aimed at bad process." },
@@ -4201,7 +4201,7 @@ function showSystemsPreparation() {
     actions: [
       { label: "Review room and network notes", onClick: () => chooseSystemsPreparation("review") },
       { label: "Ask Josh what changed", className: "secondary-button", onClick: () => chooseSystemsPreparation("josh") },
-      { label: "Leave with the dispatch notes", className: "secondary-button", onClick: () => chooseSystemsPreparation("leave") },
+      { label: "Leave with the work-order notes", className: "secondary-button", onClick: () => chooseSystemsPreparation("leave") },
     ],
   });
 }
@@ -4217,7 +4217,7 @@ function chooseSystemsPreparation(preparation) {
     addLog("Asked Josh about the offline room. Management asked why he was explaining work during work hours.");
   } else {
     state.reputation.management += 1;
-    addLog("Left with the dispatch notes as written. Management appreciated the velocity of not knowing more yet.");
+    addLog("Left with the work-order notes as written. Management appreciated the velocity of not knowing more yet.");
   }
   render();
   promptSystemsTravel();
@@ -4387,7 +4387,7 @@ function showTravelDispatchPreview() {
     body: getDispatchBoardMarkup({
       type: "Travel Cost",
       familyId: "logistics",
-      setup: "Dispatch added a quick Cherry Hill return stop after the King of Prussia service call. The work is tiny. The bridge toll and paperwork are somehow yours.",
+      setup: "Coordination added a quick Cherry Hill return stop after the King of Prussia service call. The work is tiny. The bridge toll and paperwork are somehow yours.",
       why: "Unlocked after the systems service job. This tests whether travel friction can be a readable RPG choice without adding a route simulator.",
       stakes: [
         `The current DRPA passenger toll is $${content.travelDispatch.tollCost || CHERRY_HILL_TOLL_COST}.`,
@@ -4411,17 +4411,17 @@ function showTravelChoice() {
     kicker: "Cherry Hill Return",
     title: "The Toll Exists Both Ways",
     body: `
-      <p>The return stop itself is small. The problem is that dispatch treated the bridge like a rumor and the van like it runs on optimism.</p>
+      <p>The return stop itself is small. The problem is that coordination treated the bridge like a rumor and the van like it runs on optimism.</p>
       ${getChoicePressureMarkup([
         { label: "File receipt", detail: "Costs a little energy and protects your cash. Management may grumble about the paper trail." },
-        { label: "Push dispatch", detail: "Best process outcome if you can handle the pressure, but it asks management to notice its own travel planning." },
+        { label: "Push coordination", detail: "Best process outcome if you can handle the pressure, but it asks management to notice its own travel planning." },
         { label: "Eat the toll", detail: `Fastest option. You pay $${tollCost}, and the bad process stays invisible for now.` },
       ])}
     `,
     actions: [
       { label: `File toll receipt and ETA note (-2 energy, $${tollCost} reimbursed)`, onClick: () => finishTravelDispatch("receipt") },
       ...(getSkillValue("commercialProcess") >= 3 || canUsePressureChoice() ? [{
-        label: "Push dispatch to own the return toll (-2 energy)",
+        label: "Push coordination to own the return toll (-2 energy)",
         className: "secondary-button",
         onClick: () => finishTravelDispatch("pushback"),
       }] : []),
@@ -4472,11 +4472,11 @@ function finishTravelDispatch(approach) {
   }
   addLog(documented
     ? "Documented the Cherry Hill return toll instead of letting the van become a charity with ladder racks."
-    : "Ate the Cherry Hill toll to keep the ticket moving. The receipt disappeared into the same place as accurate dispatch estimates.");
+    : "Ate the Cherry Hill toll to keep the ticket moving. The receipt disappeared into the same place as accurate route estimates.");
   render();
   showModal({
     kicker: "Travel Cost Complete",
-    title: approach === "pushback" ? "Dispatch Owns The Bridge Now" : approach === "receipt" ? "Receipt Filed Before It Became Folklore" : "The Toll Came Out Of Your Pocket",
+    title: approach === "pushback" ? "Coordination Owns The Bridge Now" : approach === "receipt" ? "Receipt Filed Before It Became Folklore" : "The Toll Came Out Of Your Pocket",
     body: `
       <div class="results-grid">
         <span>Base travel pay</span><strong>+$${basePay}</strong>
@@ -5153,7 +5153,7 @@ function showServicePreparation() {
     kicker: "Before You Leave",
     title: "Prepare For The Service Call",
     body: `
-      <p>Dispatch called this a quick display issue. You have time for one small preparation step before taking Van #3 to Conshohocken.</p>
+      <p>The service ticket called this a quick display issue. You have time for one small preparation step before taking Van #3 to Conshohocken.</p>
       <p class="muted">Cash available: ${formatCash(state.cash)}</p>
     `,
     actions: [
@@ -5178,7 +5178,7 @@ function showServicePreparation() {
 function chooseServicePreparation(preparation) {
   state.flags.servicePreparation = preparation;
   let title = "Van #3 Is Ready";
-  let body = "<p>You decide not to spend more time preparing. Dispatch already used the word quick twice.</p>";
+  let body = "<p>You decide not to spend more time preparing. The service ticket already used the word quick twice.</p>";
   if (preparation === "review") {
     title = "Read The Small Print";
     body = `<p>The work order is mostly a forwarded email chain. One buried note mentions an inline coupler behind the credenza.</p>
@@ -5330,7 +5330,7 @@ function getInteractions() {
         action: () => {
           if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
           if (state.flags.endShiftPending) return showEndShiftModal();
-          if (state.flags.serviceComplete && hasPendingTraining()) return notify('Supervisor: "You leveled up fast. Mark a training focus on the clipboard before dispatch adds anything else."');
+          if (state.flags.serviceComplete && hasPendingTraining()) return notify('Supervisor: "You leveled up fast. Mark a training focus on the clipboard before coordination adds anything else."');
           if (state.flags.finished) return notify('Supervisor: "Check the board when you are ready. It will still say quick, because coordination never learns."');
           if (!state.flags.shopBrief) {
             state.flags.shopBrief = true;
@@ -5358,7 +5358,7 @@ function getInteractions() {
               title: "Josh Has It On The Bench",
               body: `
                 <p>The Conshohocken callback note is clipped to Josh's bench, but the shift is still open.</p>
-                <p class="muted">Close out the workday first. Tomorrow's first shop stop will be Josh before dispatch can add another route.</p>
+                <p class="muted">Close out the workday first. Tomorrow's first shop stop will be Josh before coordination can add another route.</p>
               `,
               actions: [{ label: "Close Out Shift", onClick: showEndShiftModal }],
             });
@@ -5435,11 +5435,11 @@ function getInteractions() {
         x: 665, y: 360, label: "Talk to supervisor", npc: "SUP",
         action: () => {
           state.flags.garageBrief = true;
-          addLog("Supervisor confirmed the garage carry was not included in dispatch's estimate.");
+          addLog("Supervisor confirmed the garage carry was not included in the work-order estimate.");
           showModal({
             kicker: "Supervisor",
             title: "About the Loading Dock",
-            body: `<p>"Nobody booked one. We'll carry the boxes from here. It's not that far."</p><p>It is farther than dispatch estimated.</p>`,
+            body: `<p>"Nobody booked one. We'll carry the boxes from here. It's not that far."</p><p>It is farther than the work order estimated.</p>`,
             actions: [{ label: "Start Unloading", onClick: render }],
           });
         },
@@ -5993,7 +5993,7 @@ function getObjective() {
       if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) {
         return "Close out the shift; Josh has the Conshohocken callback note waiting.";
       }
-      return "Close out the shift before taking another dispatch.";
+      return "Close out the shift before taking another job.";
     }
     if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) return "Talk to Josh about the Conshohocken callback.";
     if (state.flags.serviceComplete && !state.flags.joshServiceDebriefed) return "Check in with Josh at the workbench.";
@@ -6352,7 +6352,7 @@ function getTechnicianEarlyReadout(technician) {
     : "";
 
   if (hasPreviewTrait(technician, "circuitHutPartsBrain") && toolIds.includes("circuitHutOrganizer")) {
-    earlyUnlocks.push("parts organizer testing aid once per dispatch");
+    earlyUnlocks.push("parts organizer testing aid once per job");
   }
   if (canPreviewMakeThatWorkShortcut(technician)) earlyUnlocks.push("adapter workaround at first closeout");
   if (canPreviewPressureChoice(technician)) earlyUnlocks.push("calmer pushback options");

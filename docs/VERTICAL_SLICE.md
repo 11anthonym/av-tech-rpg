@@ -27,7 +27,7 @@ The job becomes a small escalation:
 4. Handle one travel, parking, or building-access complication.
 5. Unload equipment and begin assembling the carts with the supervisor.
 6. Continue alone after the supervisor is pulled away.
-7. Receive interruptions from dispatch, sales, or the client.
+7. Receive interruptions from coordination, sales, or the client.
 8. Choose whether to work neatly, rush, ask for clarification, or improvise.
 9. Finish late, receive an unfair management note, and return to the shop.
 
@@ -139,7 +139,7 @@ Use a small first map and add destinations gradually:
 
 - **Shop:** A fictional trunkslammer warehouse near Wayne, along the Main Line
   near Lancaster Avenue and the Blue Route. The location makes many regional
-  dispatches look deceptively reasonable before traffic, tolls, parking, and
+  jobs look deceptively reasonable before traffic, tolls, parking, and
   access conditions are considered.
 - **Center City:** Expensive meters, garages, short loading windows, congestion,
   and a longer carry from the van.
@@ -154,7 +154,7 @@ Use a small first map and add destinations gradually:
 - **King of Prussia:** Office-park and retail traffic with easier parking but
   longer drives and spread-out buildings.
 - **Cherry Hill:** A South Jersey assignment that adds a Delaware River bridge
-  crossing and the possibility that dispatch forgot to account for tolls.
+  crossing and the possibility that coordination forgot to account for tolls.
 
 ### Early Travel Events
 
@@ -163,7 +163,7 @@ Use a small first map and add destinations gradually:
 - A South Philadelphia job overlaps with sports-complex traffic.
 - The Navy Yard security booth redirects the player to a different building.
 - A Conshohocken parking garage has public spaces only in a specific area.
-- Dispatch schedules a Cherry Hill service call after a Pennsylvania job and
+- Coordination schedules a Cherry Hill service call after a Pennsylvania job and
   forgets the return toll.
 - A verified traffic incident on a major route makes the player choose between
   arriving late or taking a slower alternate route.
@@ -188,7 +188,7 @@ destination on the map, then apply one readable travel or parking complication.
 The two-cart client site should be a fictional office with a real regional place
 name.
 
-Current prototype note: dispatch drives are now represented as `content.world`
+Current prototype note: job drives are now represented as `content.world`
 routes. A route connects a home area to a destination area, sets arrival time,
 consumes packed-lunch recovery when appropriate, and enters the destination
 scene. This is the stepping stone toward a future regional map, van interaction,
@@ -204,7 +204,7 @@ plan.
 The first trip from the Wayne-area shop introduces the game's logistics in a controlled
 way:
 
-1. Dispatch describes the assignment as a simple two-cart build.
+1. The work order describes the assignment as a simple two-cart build.
 2. The travel transition shows the trip from the Wayne-area shop toward Center City.
 3. The player parks in a fictional nearby garage.
 4. The player meets the supervisor at the parked van.
@@ -218,7 +218,7 @@ utility cart would eventually matter.
 
 ### Travel Choices After the Tutorial
 
-Script the first drive and garage parking sequence. Later dispatches can offer
+Script the first drive and garage parking sequence. Later jobs can offer
 short travel decisions before arrival:
 
 - Take a predictable route or risk a faster route with congestion.
@@ -226,7 +226,7 @@ short travel decisions before arrival:
 - Use a loading zone with a time limit or accept a longer carry.
 - Cross into New Jersey now or reorder the day's jobs to avoid an unnecessary
   return toll.
-- Ask dispatch to reserve a loading dock or trust that access will work out.
+- Ask coordination to reserve a loading dock or trust that access will work out.
 
 Keep these as quick planning choices and event cards. Do not build manual
 driving controls for the first prototype.
@@ -341,7 +341,7 @@ Use:
 - **Tool purchases:** Make personal-kit upgrades the main early money sink.
 - **Meals and coffee:** Spend a small amount to recover energy or soften a long
   day.
-- **Parking, tolls, and fuel:** Show the real cost of poor dispatch planning.
+- **Parking, tolls, and fuel:** Show the real cost of poor route coordination.
 - **Reimbursement friction:** Bad companies may require receipts, delay
   repayment, or question an expense they caused.
 - **Unpaid rest:** Taking time off can reduce burnout but gives up earning
@@ -371,7 +371,7 @@ recognizable employer dysfunction.
 - **Commissioning:** Test someone else's work and inherit unfinished problems.
 - **Site survey:** Discover constraints before a quote is finalized.
 - **Training and handoff:** Explain systems and handle last-minute questions.
-- **Warehouse run:** Recover parts that were not checked before dispatch.
+- **Warehouse run:** Recover parts that were not checked before the job.
 
 ## Grounded Event Library
 

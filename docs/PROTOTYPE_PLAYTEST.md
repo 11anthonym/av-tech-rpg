@@ -110,7 +110,7 @@ Watch a player complete the current build before expanding it. Look for:
 - Do stay-late choices feel heavy enough now that they add burnout and reduce
   tomorrow's comfort?
 - Are the AV jokes legible to newcomers and recognizable to working techs?
-- Does the completion card make players curious about one more dispatch?
+- Does the completion card make players curious about one more job?
 
 Keep notes on hesitation, missed interactions, and repeated actions. Prefer
 fixing unclear or tedious moments before adding systems.
@@ -144,7 +144,7 @@ playtests.
 3. **Fixed - Shortcut consequences exist, but the board should connect them more
    clearly.**
    Wiley's shortcut path correctly stacked callback debt and return-trip risk.
-   The next dispatch/clipboard flow should make that feel remembered rather than
+   The next job/clipboard flow should make that feel remembered rather than
    hidden in ledger math. Add a small "because of your choices" line to the
    dispatch board or shop objective when callback debt is open.
 
@@ -160,10 +160,10 @@ playtests.
    `0/2` with a note that crew trust is currently damaged, instead of making the
    progress meter look broken.
 
-6. **Fixed - "Locked next work" can imply the wrong next dispatch.**
+6. **Fixed - "Locked next work" can imply the wrong next job.**
    The service dispatch board still shows Burlington County as locked future
    work even though the next actual playable job is University City. Either show
-   the real next dispatch preview, rename this area to "Later work," or make the
+   the real next job preview, rename this area to "Later work," or make the
    locked list reflect the actual unlock chain.
 
 ### Secondary Tuning Notes
@@ -193,7 +193,7 @@ return-to-shop closeout.
   shift first, and Josh's interaction explains that the callback is on his
   bench after closeout.
 - **Verified:** After the shift closes, the callback, labeler gift, service
-  debrief, training gate, follow-up dispatch, regional-map fast travel, and
+  debrief, training gate, follow-up job, regional-map fast travel, and
   repeat-route return all advance in order.
 
 ### Mid-Board Regression Pass
@@ -284,7 +284,7 @@ The ledger now has a few direct gameplay effects:
 - Closing a shift restores energy overnight, with burnout reducing ordinary
   recovery. Staying late or helping Josh creates a stronger fatigue tradeoff:
   useful next-shift or coworker benefits, but more energy loss and burnout
-  before the next dispatch unlocks.
+  before the next job unlocks.
 
 These effects should make choices feel remembered while staying small enough for
 the prototype.
@@ -345,6 +345,17 @@ Smoke coverage checked Wiley's first service board, Jordan's Conshohocken
 follow-up with fast travel ready, unresolved-callback warranty routing,
 clean-ledger handoff routing, and Cherry Hill travel language.
 
+### Industry Terminology Consistency Pass
+
+The player-facing copy now keeps **dispatch board** as the named shop-board
+surface, while using sharper field terms for the actual problems: work order,
+service ticket, coordination, site access, closeout, return trip, scope, route
+estimate, and job.
+
+This pass updated next-shift prep, Circuit Hut parts-organizer effects, secure
+access notes, systems-service prep, travel-cost choices, and service-call setup.
+No save schema changed; mid-playthrough saves keep the same flags and job keys.
+
 ## Current RPG Skeleton Experiment
 
 The career clipboard now exposes three pieces of RPG structure that future
@@ -375,12 +386,12 @@ The **Alex** profile is the balanced commercial helper and keeps the internal
 The **Casey** profile starts with a tool bag, slightly more energy, stronger
 documentation habits, and weaker confidence. It tests whether starting stats,
 tools, and careful-work traits create a meaningfully different replay without
-changing the dispatch sequence.
+changing the job sequence.
 
 The **Wiley** profile starts as a residential install tech with stronger
 hands-on craft, lower commercial confidence, and a Circuit Hut parts organizer.
 His first-pass experiment is small: he can choose to search the organizer once
-per dispatch for a testing aid, and he gets an early tempting workaround option
+per job for a testing aid, and he gets an early tempting workaround option
 that saves time while creating callback debt.
 
 The **Jordan** profile tests a helpdesk/service path: strong troubleshooting,
@@ -444,7 +455,7 @@ sanitizes names, carries the tool bag, Circuit Hut organizer, drill, cash
 penalty, `circuitHutPartsBrain`, and `badKnees` into the career state, and
 keeps the combined tool-bag/bad-knees carry math stable. A mid-shift save in
 the client room resumed into the required finish-choice modal with the custom
-technician, custom tools, and current dispatch state intact.
+technician, custom tools, and current job state intact.
 
 **Process-heavy helpdesk build:** Helpdesk Convert + By The Book + Notebook
 Habit + Knows A Guy, with troubleshooting/documentation as primary skills and
@@ -499,7 +510,7 @@ Working title: King of Prussia Room Offline
 Job family: service
 Company: Radnor Rack & Wire
 Map/scene: client conference room or simplified telecom closet
-Why it is on the board: client says the room is offline; dispatch says "probably reboot it."
+Why it is on the board: client says the room is offline; the service ticket says "probably reboot it."
 Core skills: troubleshooting, networking, controlSystems, documentation
 Prep choice: review network notes, ask Josh what changed, or leave immediately
 Three things to inspect or do: check panel status, verify device/network path, compare room note to actual rack
@@ -613,20 +624,21 @@ tomorrow.
 
 ### Third Choice: Travel-Cost Micro-Job
 
-Playability question: can the game show the real cost of poor dispatch planning
+Playability question: can the game show the real cost of poor coordination
 with one travel decision instead of a route simulator?
 
 Candidate shape: a Cherry Hill return or toll/parking decision that tests cash,
-energy, management pressure, and documentation. Keep it as a single dispatch
+energy, management pressure, and documentation. Keep it as a single board
 beat unless the existing service loop needs a lighter change of pace.
 
 Initial implementation: **Cherry Hill Return Toll** now appears after the
-systems service job. It is a board-only micro-dispatch with one final choice:
-document the toll, push dispatch to own it, or eat the cost to keep management
+systems service job. It is a board-only micro-job with one final choice:
+document the toll, push coordination to own it, or eat the cost to keep management
 happy.
 
-Next playtest question: does the one-choice travel job feel like real dispatch
-friction, or does it feel too small after a full systems service dispatch?
+Next playtest question: does the one-choice travel job feel like real
+coordination friction, or does it feel too small after a full systems service
+job?
 
 Outcome check: June 10, 2026. Receipt and pushback preserve cash while costing
 energy and management friction; absorbing the toll saves energy but lowers net
