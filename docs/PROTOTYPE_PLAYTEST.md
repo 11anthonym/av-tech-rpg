@@ -196,6 +196,21 @@ return-to-shop closeout.
   debrief, training gate, follow-up dispatch, regional-map fast travel, and
   repeat-route return all advance in order.
 
+### Mid-Board Regression Pass
+
+Playtest pass: June 13, 2026. Path checked: Conshohocken follow-up complete into
+University City survey, South Philadelphia commissioning, second field-training
+choice, Wayne-area warehouse run, and Navy Yard access-plus-rack-update job.
+
+- **Verified:** Survey, commissioning, warehouse, and Navy Yard dispatch
+  previews all appear in order, and their return exits route through the
+  end-of-shift closeout.
+- **Verified:** Commissioning can unlock a second field-training focus before
+  the warehouse run, and the dispatch board respects that gate.
+- **Verified:** The Navy Yard job now reads as access friction plus a real rack
+  task: resolve access, enter the telecom room, patch/verify the rack update,
+  then close out the access and rack notes.
+
 ## Current Content Experiment
 
 The **University City Site Survey** is the third dispatch. It tests a different
@@ -233,10 +248,11 @@ existing hotspots, and ends with one stockroom-cleanup decision.
 
 ## Current Access Experiment
 
-The **Navy Yard Secure Access** dispatch tests whether a job can be about access
-friction rather than installing gear. It uses one preparation choice, three
-onsite access checks, and a closeout decision between honest documentation,
-confident pushback, or absorbing the delay to keep the ticket clean.
+The **Navy Yard Secure Access** dispatch tests whether access friction can lead
+into a real field task instead of stopping at the security desk. It uses one
+preparation choice, three onsite access checks, a telecom-room rack update, and
+a closeout decision between honest documentation, confident pushback, or
+absorbing the delay to keep the ticket clean.
 
 ## Current Consequence Experiment
 

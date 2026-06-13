@@ -79,13 +79,16 @@ closed on paper, one ceiling speaker is silent, and the closeout drawing belongs
 to the mirrored room across the hall. The loose termination now becomes a field
 task: the player can re-land it fast, re-terminate it cleanly, document the
 mismatch, or use Josh's labeler if they earned it, and that task outcome changes
-XP, reputation, and callback debt. A short Wayne-area warehouse run closes the
-slice by sending the player through Van #3, the staging shelf, and the
-mystery-return pile for a replacement power supply reportedly stored in one of
-the vans. The roster now includes Alex, Casey, Wiley, Jordan, and Morgan, with
-trait hooks that affect early prep choices, skill checks, careful closeout, and
-client-pressure decisions. The slice ends with a snapshot of the player's
-progress plus locked previews of future dispatches.
+XP, reputation, and callback debt. A short Wayne-area warehouse run sends the
+player through Van #3, the staging shelf, and the mystery-return pile before a
+Navy Yard secure-access job turns a bad building note into a telecom-room rack
+update with its own patch, verification, and closeout decision. Later board
+beats can branch into a warranty return, executive handoff, systems service,
+and Cherry Hill toll choice before the current snapshot. The roster now
+includes Alex, Casey, Wiley, Jordan, and Morgan, with trait hooks that affect
+early prep choices, skill checks, careful closeout, and client-pressure
+decisions. The slice ends with a snapshot of the player's progress plus locked
+previews of future dispatches.
 
 ## Design Notes
 

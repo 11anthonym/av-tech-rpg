@@ -214,10 +214,15 @@ be easy to verify in the browser.
    training gate, fast-travel follow-up, and return exits. Callback service
    returns now explain that the shift closes first and Josh has the note
    waiting.
-20. **Next - Mid-board route-and-dispatch pass:** Play from the Conshohocken
-   follow-up through University City, commissioning, warehouse, and Navy Yard to
-   verify that dispatch-board gates, route exits, training prompts, and callback
-   ledger language stay coherent as the board gets wider.
+20. **Done - Mid-board route-and-dispatch pass:** Simulated the path from the
+   Conshohocken follow-up through University City, South Philadelphia
+   commissioning, the warehouse run, and Navy Yard. Verified dispatch-board
+   gates, route exits, end-of-shift closeouts, the second training prompt,
+   warehouse exploration, and the Navy Yard access-plus-rack-update sequence.
+21. **Next - Late-board consequence pass:** Play from Navy Yard through the
+   conditional warranty return, executive handoff, systems service, Cherry Hill
+   toll beat, and completion snapshot to verify that callback-ledger branching,
+   skipped work, and end-of-board summary language stay readable.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
