@@ -364,6 +364,35 @@ character-specific lines live in `characterLines`, optional `characterStats` and
 contexts, and quick-workaround choices can record return-trip risk flags for
 future callbacks.
 
+### Character Replay Verification Pass
+
+Wiley and Jordan were replayed against the expanded board to check whether
+non-Alex builds still create intentional differences after the newer service,
+survey, commissioning, warehouse, secure-access, warranty, handoff, systems, and
+travel beats.
+
+**Wiley replay result:** his build still reads as fast, practical field work.
+He starts with the Circuit Hut organizer, can use it once for the service
+dispatch after the required Josh intro, and the early adapter workaround records
+callback/return-trip pressure. His install and practical troubleshooting checks
+stay strong, including secure-access rack work and commissioning termination,
+while survey documentation, handoff documentation, networking, and calm
+pushback remain weak. He does not see the survey/access/travel pressure
+shortcuts at low confidence, which keeps the residential-to-commercial learning
+curve visible.
+
+**Jordan replay result:** his build still reads as a process-minded service
+tech. "Knows A Guy" opens the site-contact service prep, and By The Book plus
+Notebook Habit lower survey, access, and handoff documentation costs. His
+service diagnosis, survey documentation, secure-access pressure, systems
+networking, and handoff documentation checks read cleanly. His physical install
+checks still strain, especially commissioning termination and the access rack
+task, so the profile does not become a universal best answer.
+
+**Resume check:** an older post-first-job save with `finished` set and no
+`metJosh` flag resumes into Josh's required introduction before the board,
+personal kit, vehicle, map, or break-area routes can skip ahead.
+
 ## Current Character Creation Experiment
 
 The first character-creation release is interactive. The selection screen shows

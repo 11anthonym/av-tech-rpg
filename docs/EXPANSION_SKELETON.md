@@ -225,10 +225,17 @@ be easy to verify in the browser.
    handoff. Verified executive handoff, systems service, Cherry Hill toll, and
    completion snapshot. Systems-created callback pressure now stays visible on
    the travel board and final summary without stealing the Cherry Hill beat.
-22. **Next - Character replay pass:** Run the full dispatch board with at least
-   two non-Alex profiles, probably Wiley and Jordan or Morgan, to verify that
-   profile-specific tools, traits, pressure choices, and weak spots still feel
-   intentional across the expanded board.
+22. **Done - Character replay pass:** Replayed the expanded board with Wiley
+   and Jordan. Verified Wiley's organizer/workaround, low-confidence pressure
+   locks, install/service strengths, and documentation/systems weak spots.
+   Verified Jordan's service contact prep, documentation reductions, pressure
+   choices, clean troubleshooting/process checks, and physical-install weak
+   spots. Also verified old post-first-job saves resume into the required Josh
+   intro before the next board route unlocks.
+23. **Next - Custom creator and save/resume pass:** Build at least two custom
+   technicians, continue them from saved mid-shift and post-dispatch states, and
+   verify creator-derived tools, traits, costs, and required prompts stay
+   readable against the same board.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
