@@ -4979,7 +4979,7 @@ function getInteractions() {
         action: () => {
           if (state.flags.endShiftPending) return showEndShiftModal();
           if (state.flags.serviceComplete && hasPendingTraining()) return notify('Supervisor: "You leveled up fast. Mark a training focus on the clipboard before dispatch adds anything else."');
-          if (state.flags.finished) return notify('Supervisor: "Check the board when you are ready. It will still say quick, because dispatch never learns."');
+          if (state.flags.finished) return notify('Supervisor: "Check the board when you are ready. It will still say quick, because coordination never learns."');
           if (!state.flags.shopBrief) {
             state.flags.shopBrief = true;
             addLog("Supervisor asked you to load the staged cart boxes into Van #3.");
