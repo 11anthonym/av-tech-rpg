@@ -431,6 +431,27 @@ Playtest whether the preview is enough to make the first-day differences clear.
 If the choices still feel abstract, the next pass should add more explicit
 first-job consequence text to the preview.
 
+### Creator Readability Pass
+
+Premade profile cards and the custom creator preview now share the same
+generated early-readout surface:
+
+- **Shop start:** starting tools and any custom cash modifier.
+- **Early unlocks:** parts-brain use, workaround choices, pressure choices,
+  site-contact prep, and documentation support.
+- **First job feel:** tool-bag pickup help, drill assembly reduction, hand-truck
+  carry capacity, bad-knees carry pressure, install strength, and careful-work
+  support.
+- **Watch-outs:** weak paperwork, commercial process, pressure conversations,
+  physical install, systems service, or stamina.
+
+The smoke pass checked Alex, Wiley, Jordan, and a custom build combining
+Residential Installer, Parts Brain, Tool Debt, and Bad Knees. Wiley now previews
+the organizer, workaround, and locked early pressure conversations; Jordan
+previews site-contact prep, documentation support, and fragile physical install;
+the custom retrofit build previews its derived drill, cash penalty, long-carry
+pressure, and parts organizer before the player starts the career.
+
 ## Next Build Prep
 
 Do not build all of these at once. Pick one small pass, play it, then commit.

@@ -238,10 +238,14 @@ be easy to verify in the browser.
    parts-brain use, bad-knees/tool-bag carry math, save summaries, mid-shift
    finish-choice resume, post-dispatch Josh intro resume, service contact prep,
    documentation reductions, pressure choices, and systems skill checks.
-24. **Next - Creator readability pass:** Make the custom creator and profile
-   cards better at previewing first-job consequences: which tools appear in the
-   shop, which early choices unlock, which costs change, and which weak spots
-   will hurt before the player learns it by surprise.
+24. **Done - Creator readability pass:** Added a shared early-readout surface
+   for premade profile cards and custom creator previews. Each build now shows
+   shop start, early unlocks, first-job feel, and watch-outs from the same
+   tools, traits, skills, and cash data used by play.
+25. **Next - Dispatch consequence readability pass:** Make dispatch-board
+   previews better at surfacing active state: callback pressure, shift prep,
+   creator/profile edges, route familiarity, and why a job may be skipped,
+   forced, or reordered.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

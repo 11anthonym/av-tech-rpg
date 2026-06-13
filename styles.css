@@ -51,6 +51,11 @@ section + section { margin-top: 22px; }
 .tech-stats { display: flex; gap: 11px; margin: 22px 0; color: var(--muted); font-size: 11px; text-transform: uppercase; }
 .tech-stats strong { color: var(--accent); }
 .technician-card .starting-kit { min-height: 0; margin: -6px 0 18px; color: var(--text); }
+.profile-readout { display: grid; gap: 8px; margin: 0 0 18px; padding: 0; list-style: none; }
+.profile-readout li { padding: 8px 0; border-top: 1px solid var(--line); }
+.profile-readout strong, .profile-readout span { display: block; }
+.profile-readout strong { color: var(--accent); font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.profile-readout span { margin-top: 3px; color: var(--muted); font-size: 12px; line-height: 1.45; }
 .selection-back { margin-top: 22px; }
 
 .game-layout { display: grid; grid-template-columns: 190px 780px 220px; gap: 14px; width: 1232px; min-height: calc(100vh - 84px); margin: 0 auto; padding: 16px; }

@@ -6228,6 +6228,116 @@ function getCreatorBuildFromForm() {
   return { error: "", technician: buildCustomTechnician(selections) };
 }
 
+function getTechnicianPreviewSkillValue(technician, skillId) {
+  return technician.characterStats?.[skillId]
+    || (skillId === "install" ? Math.max(1, technician.stats.craftsmanship || 0)
+    : skillId === "troubleshooting" ? Math.max(1, (technician.stats.confidence || 0) + 1)
+    : skillId === "documentation" ? Math.max(1, technician.stats.confidence || 0)
+    : skillId === "clientCommunication" ? Math.max(1, (technician.stats.confidence || 0) + 1)
+    : skillId === "fieldcraft" ? Math.max(1, Math.floor((technician.stats.energy || 100) / 45))
+    : 0);
+}
+
+function hasPreviewTrait(technician, traitId) {
+  return technician.traits?.includes(traitId) || false;
+}
+
+function hasAnyPreviewTrait(technician, traitIds) {
+  return traitIds.some((traitId) => hasPreviewTrait(technician, traitId));
+}
+
+function getTechnicianStartingToolIds(technician) {
+  return uniqueValues(["screwdriver", ...(technician.startingTools || [])]);
+}
+
+function getTechnicianStartingKitLabel(technician) {
+  return getTechnicianStartingToolIds(technician)
+    .map((toolId) => content.tools[toolId]?.name || toolId)
+    .join(", ");
+}
+
+function canPreviewPressureChoice(technician) {
+  return (technician.stats.confidence || 0) >= 2
+    || hasPreviewTrait(technician, "calmUnderFire")
+    || getTechnicianPreviewSkillValue(technician, "clientCommunication") >= 4;
+}
+
+function canPreviewMakeThatWorkShortcut(technician) {
+  return hasPreviewTrait(technician, "makeThatWork")
+    && (technician.characterStats?.improvisation || 0) >= 4;
+}
+
+function getTechnicianEarlyReadout(technician) {
+  const toolIds = getTechnicianStartingToolIds(technician);
+  const startingCash = technician.startingCash || 0;
+  const install = getTechnicianPreviewSkillValue(technician, "install");
+  const documentation = getTechnicianPreviewSkillValue(technician, "documentation");
+  const commercialProcess = getTechnicianPreviewSkillValue(technician, "commercialProcess");
+  const clientCommunication = getTechnicianPreviewSkillValue(technician, "clientCommunication");
+  const networking = getTechnicianPreviewSkillValue(technician, "networking");
+  const controlSystems = getTechnicianPreviewSkillValue(technician, "controlSystems");
+  const earlyUnlocks = [];
+  const firstJobFeel = [];
+  const watchOuts = [];
+  const cashDetail = startingCash < 0
+    ? ` and ${formatCash(startingCash)} starting cash`
+    : startingCash > 0
+    ? ` and ${formatCash(startingCash)} extra cash`
+    : "";
+
+  if (hasPreviewTrait(technician, "circuitHutPartsBrain") && toolIds.includes("circuitHutOrganizer")) {
+    earlyUnlocks.push("parts organizer testing aid once per dispatch");
+  }
+  if (canPreviewMakeThatWorkShortcut(technician)) earlyUnlocks.push("adapter workaround at first closeout");
+  if (canPreviewPressureChoice(technician)) earlyUnlocks.push("calmer pushback options");
+  if (hasPreviewTrait(technician, "knowsAGuy")) earlyUnlocks.push("site-contact prep options");
+  if (hasAnyPreviewTrait(technician, ["byTheBook", "notebookHabit"])) earlyUnlocks.push("faster documentation closeouts");
+
+  if (toolIds.includes("toolBag")) firstJobFeel.push("tool bag trims pickup effort");
+  if (toolIds.includes("drill")) firstJobFeel.push("drill cuts cart assembly cost");
+  if (toolIds.includes("handTruck")) firstJobFeel.push("hand truck carries more in the garage");
+  if (hasPreviewTrait(technician, "badKnees")) firstJobFeel.push("long carries bite harder");
+  if (install >= 4) firstJobFeel.push("cart assembly checks are strong");
+  else if (install <= 1) firstJobFeel.push("cart assembly checks are fragile");
+  if (hasPreviewTrait(technician, "measureTwice")) firstJobFeel.push("careful work gets cheaper after habits build");
+
+  if (documentation <= 1 && !hasAnyPreviewTrait(technician, ["byTheBook", "notebookHabit"])) watchOuts.push("paperwork-heavy surveys and handoffs");
+  if (commercialProcess <= 1) watchOuts.push("commercial process and access rules");
+  if (!canPreviewPressureChoice(technician) && clientCommunication < 4) watchOuts.push("pressure conversations stay locked early");
+  if (install <= 1) watchOuts.push("physical install tasks");
+  if (networking <= 1 && controlSystems <= 1) watchOuts.push("later systems service calls");
+  if ((technician.stats.energy || 0) < 100 || (technician.stats.burnout || 0) > 0) watchOuts.push("stamina on long days");
+
+  return [
+    {
+      label: "Shop start",
+      detail: `Starts with ${getTechnicianStartingKitLabel(technician)}${cashDetail}.`,
+    },
+    {
+      label: "Early unlocks",
+      detail: earlyUnlocks.length ? earlyUnlocks.join("; ") : "Baseline choices; growth comes from tools, training, and careful closeout.",
+    },
+    {
+      label: "First job feel",
+      detail: firstJobFeel.length ? firstJobFeel.join("; ") : "No special tool edge on the cart build.",
+    },
+    {
+      label: "Watch-outs",
+      detail: watchOuts.length ? watchOuts.slice(0, 3).join("; ") : "No sharp early penalty; build identity will come from later choices.",
+    },
+  ];
+}
+
+function getTechnicianEarlyReadoutMarkup(technician) {
+  return `
+    <ul class="profile-readout">
+      ${getTechnicianEarlyReadout(technician).map((item) => `
+        <li><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.detail)}</span></li>
+      `).join("")}
+    </ul>
+  `;
+}
+
 function getCreatorSelectMarkup(id, options, selectedId) {
   return `
     <select id="${id}">
@@ -6271,9 +6381,11 @@ function getCreatorPreviewMarkup(technician) {
       <span>Craftsmanship</span><strong>${technician.stats.craftsmanship}</strong>
       <span>Confidence</span><strong>${technician.stats.confidence}</strong>
       <span>Starting cash</span><strong>${formatCash(technician.startingCash)}</strong>
-      <span>Starting kit</span><strong>${technician.startingTools.map((toolId) => content.tools[toolId]?.name || toolId).join(", ")}</strong>
+      <span>Starting kit</span><strong>${getTechnicianStartingKitLabel(technician)}</strong>
       <span>Key skills</span><strong>${getTechnicianSkillPreview(technician)}</strong>
     </div>
+    <p><strong>Early read:</strong></p>
+    ${getTechnicianEarlyReadoutMarkup(technician)}
     <p class="muted"><strong>Tradeoff:</strong> ${escapeHtml(technician.description)}</p>
   `;
 }
@@ -6358,7 +6470,9 @@ function renderSelection() {
         ${technician.trait ? `<p class="starting-kit"><strong>Trait:</strong> ${technician.trait}</p>` : ""}
         ${technician.tendency ? `<p class="starting-kit"><strong>Tendency:</strong> ${technician.tendency}</p>` : ""}
         ${template ? `<p class="starting-kit"><strong>Creator formula:</strong> ${template.formula}</p>` : ""}
-        <p class="starting-kit"><strong>Starting kit:</strong> ${technician.startingTools.map((toolId) => content.tools[toolId]?.name || toolId).join(", ")}</p>
+        <p class="starting-kit"><strong>Starting kit:</strong> ${getTechnicianStartingKitLabel(technician)}</p>
+        <p class="starting-kit"><strong>Early read:</strong></p>
+        ${getTechnicianEarlyReadoutMarkup(technician)}
       `;
       card.append(makeButton("Start First Day", () => startGame(technician.id)));
       return card;
@@ -6395,13 +6509,7 @@ function renderCharacterCreatorCard() {
 
 function getTechnicianSkillPreview(technician, { limit = 5 } = {}) {
   const skillValues = getSkillDefinitions().map((skill) => {
-    const value = technician.characterStats?.[skill.id]
-      || (skill.id === "install" ? Math.max(1, technician.stats.craftsmanship || 0)
-      : skill.id === "troubleshooting" ? Math.max(1, (technician.stats.confidence || 0) + 1)
-      : skill.id === "documentation" ? Math.max(1, technician.stats.confidence || 0)
-      : skill.id === "clientCommunication" ? Math.max(1, (technician.stats.confidence || 0) + 1)
-      : skill.id === "fieldcraft" ? Math.max(1, Math.floor((technician.stats.energy || 100) / 45))
-      : 0);
+    const value = getTechnicianPreviewSkillValue(technician, skill.id);
     return { ...skill, value };
   });
   return skillValues
