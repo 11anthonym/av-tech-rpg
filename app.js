@@ -6133,15 +6133,28 @@ function getCreatorSelectionsFromForm() {
   };
 }
 
-function validateCreatorSelections(selections) {
-  const skillIds = [...selections.primarySkillIds, ...selections.secondarySkillIds];
+function validateCreatorSelections(selections = {}) {
+  const creator = getCreatorConfig();
+  const validSkillIds = new Set(getSkillDefinitions().map((skill) => skill.id));
+  const traitSlots = creator.traitSlots || 2;
+  const traitIds = selections.traitIds || [];
+  const primarySkillIds = selections.primarySkillIds || [];
+  const secondarySkillIds = selections.secondarySkillIds || [];
+  const skillIds = [...primarySkillIds, ...secondarySkillIds];
+  if (!getCreatorChoice(creator.backgrounds, selections.backgroundId)) return "Pick a valid background.";
+  if (!getCreatorChoice(creator.workStyles, selections.workStyleId)) return "Pick a valid work style.";
+  if (traitIds.length !== traitSlots) return `Pick ${traitSlots} different traits.`;
+  if (traitIds.some((traitId) => !getCreatorChoice(creator.traits, traitId))) return "Pick valid traits.";
+  if (primarySkillIds.length !== 2 || secondarySkillIds.length !== 2) return "Pick two primary and two secondary major skills.";
+  if (skillIds.some((skillId) => !validSkillIds.has(skillId))) return "Pick valid major skills.";
   if (new Set(skillIds).size !== skillIds.length) return "Pick four different major skills. Primary and secondary skills cannot overlap.";
-  if (new Set(selections.traitIds).size !== selections.traitIds.length) return "Pick two different traits.";
-  if (!selections.backgroundId || !selections.workStyleId || selections.traitIds.length !== 2) return "Pick a background, work style, and two traits.";
+  if (new Set(traitIds).size !== traitIds.length) return "Pick two different traits.";
   return "";
 }
 
 function buildCustomTechnician(selections) {
+  const validationError = validateCreatorSelections(selections);
+  if (validationError) throw new Error(validationError);
   const creator = getCreatorConfig();
   const background = getCreatorChoice(creator.backgrounds, selections.backgroundId);
   const workStyle = getCreatorChoice(creator.workStyles, selections.workStyleId);
@@ -6182,7 +6195,7 @@ function buildCustomTechnician(selections) {
   return {
     id: "custom-tech",
     custom: true,
-    name: selections.name,
+    name: sanitizeCreatorName(selections.name),
     role: `${background.name} / ${workStyle.name}`,
     tagline: `Custom build: ${background.name}, ${workStyle.name}.`,
     description: `${background.tradeoff} ${workStyle.tradeoff}`,

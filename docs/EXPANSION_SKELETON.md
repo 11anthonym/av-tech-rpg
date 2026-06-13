@@ -232,10 +232,16 @@ be easy to verify in the browser.
    choices, clean troubleshooting/process checks, and physical-install weak
    spots. Also verified old post-first-job saves resume into the required Josh
    intro before the next board route unlocks.
-23. **Next - Custom creator and save/resume pass:** Build at least two custom
-   technicians, continue them from saved mid-shift and post-dispatch states, and
-   verify creator-derived tools, traits, costs, and required prompts stay
-   readable against the same board.
+23. **Done - Custom creator and save/resume pass:** Built a tool-heavy retrofit
+   custom tech and a process-heavy helpdesk custom tech. Verified creator
+   validation, sanitized custom names, derived tools/traits/cash penalties,
+   parts-brain use, bad-knees/tool-bag carry math, save summaries, mid-shift
+   finish-choice resume, post-dispatch Josh intro resume, service contact prep,
+   documentation reductions, pressure choices, and systems skill checks.
+24. **Next - Creator readability pass:** Make the custom creator and profile
+   cards better at previewing first-job consequences: which tools appear in the
+   shop, which early choices unlock, which costs change, and which weak spots
+   will hurt before the player learns it by surprise.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

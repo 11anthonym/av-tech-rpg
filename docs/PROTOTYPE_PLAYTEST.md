@@ -401,6 +401,32 @@ player choose a name, background, work style, two traits, two primary skills,
 and two secondary skills, then previews the resulting stats, starting kit,
 tradeoffs, and skill values before starting.
 
+### Custom Creator Save/Resume Verification Pass
+
+Two custom builds were replayed through save/resume states to prove custom
+technicians behave like real careers instead of temporary previews.
+
+**Tool-heavy retrofit build:** Residential Installer + Parts Brain + Tool Debt
+and Bad Knees, with install/troubleshooting as primary skills and
+fieldcraft/documentation as secondary skills. This verified the custom builder
+sanitizes names, carries the tool bag, Circuit Hut organizer, drill, cash
+penalty, `circuitHutPartsBrain`, and `badKnees` into the career state, and
+keeps the combined tool-bag/bad-knees carry math stable. A mid-shift save in
+the client room resumed into the required finish-choice modal with the custom
+technician, custom tools, and current dispatch state intact.
+
+**Process-heavy helpdesk build:** Helpdesk Convert + By The Book + Notebook
+Habit + Knows A Guy, with troubleshooting/documentation as primary skills and
+networking/client communication as secondary skills. This verified the save
+summary uses the custom name, post-first-job saves restore the custom build,
+the Josh intro still gates the next board route, Knows A Guy opens the service
+contact prep, documentation traits reduce survey costs, pressure choices unlock
+from the built skill profile, and systems-networking checks remain strong.
+
+The implementation was hardened so invalid creator IDs are rejected by
+validation and direct builder calls sanitize custom names the same way the form
+path does.
+
 Playtest whether the preview is enough to make the first-day differences clear.
 If the choices still feel abstract, the next pass should add more explicit
 first-job consequence text to the preview.
