@@ -1194,6 +1194,23 @@ window.GAME_CONTENT = {
   secureAccessDispatch: {
     title: "Navy Yard Secure Access",
     summary: "Deliver a small rack update to a secure building after dispatch sends the wrong access note.",
+    taskCards: [
+      {
+        title: "Secure Access",
+        skill: "Documentation 3 / Client Communication 4",
+        outcome: "Gets you through the gate, correct building, and escort problem without hiding the delay.",
+      },
+      {
+        title: "Rack Update",
+        skill: "Install 3 / Troubleshooting 4",
+        outcome: "Turns the trip into a real field task: patch, verify, and leave the telecom room readable.",
+      },
+      {
+        title: "Closeout Note",
+        skill: "Documentation 3",
+        outcome: "Decides whether the access delay and rack change become useful history or another clean ticket.",
+      },
+    ],
     checks: [
       {
         id: "gate",
@@ -1212,6 +1229,32 @@ window.GAME_CONTENT = {
         label: "Escort requirement",
         log: "the telecom room requires an escort who is currently in another meeting",
         detail: "The telecom room is behind a badge reader and a policy nobody attached to the ticket. The escort is available after a meeting labeled 'quick sync.'",
+      },
+    ],
+    taskChecks: [
+      {
+        id: "rack-location",
+        label: "Find the correct rack unit",
+        skillId: "documentation",
+        difficulty: 3,
+        log: "the rack elevation is close, except for the part where someone moved the shelf",
+        detail: "The ticket says RU 18. The actual shelf is at RU 20 because a small network switch was added where the drawing still believes in empty space.",
+      },
+      {
+        id: "patch-update",
+        label: "Patch the encoder feed",
+        skillId: "install",
+        difficulty: 3,
+        log: "the short patch lead reaches only if the cable path is dressed like it has self-respect",
+        detail: "The update is simple: move the encoder feed to the reserved patch point and dress the short lead so the rack door still closes.",
+      },
+      {
+        id: "verify-signal",
+        label: "Verify room signal",
+        skillId: "troubleshooting",
+        difficulty: 4,
+        log: "the room comes online after the patch, but only after the stale label stops lying",
+        detail: "The room signal comes online after the patch. The old label still points to the previous port, which means future support will inherit a tiny trap unless you call it out.",
       },
     ],
   },

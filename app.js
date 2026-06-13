@@ -2,7 +2,7 @@ const content = window.GAME_CONTENT;
 const keys = new Set();
 const PLAYER_SPEED = 8;
 const SAVE_KEY = "av-tech-rpg-save-v1";
-const SAVE_VERSION = 18;
+const SAVE_VERSION = 19;
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const STAY_LATE_PREP_ENERGY_COST = 32;
 const HELP_JOSH_ENERGY_COST = 30;
@@ -37,6 +37,7 @@ function createInitialState() {
     commissioningChecks: [],
     warehouseChecks: [],
     secureAccessChecks: [],
+    secureAccessTaskChecks: [],
     callbackCleanupChecks: [],
     handoffChecks: [],
     systemsChecks: [],
@@ -204,6 +205,7 @@ function migrateSavedGame(savedGame) {
     commissioningChecks: savedGame.commissioningChecks || [],
     warehouseChecks: savedGame.warehouseChecks || [],
     secureAccessChecks: savedGame.secureAccessChecks || [],
+    secureAccessTaskChecks: savedGame.secureAccessTaskChecks || [],
     callbackCleanupChecks: savedGame.callbackCleanupChecks || [],
     handoffChecks: savedGame.handoffChecks || [],
     systemsChecks: savedGame.systemsChecks || [],
@@ -538,6 +540,7 @@ function serializeGame() {
     commissioningChecks: state.commissioningChecks,
     warehouseChecks: state.warehouseChecks,
     secureAccessChecks: state.secureAccessChecks,
+    secureAccessTaskChecks: state.secureAccessTaskChecks,
     callbackCleanupChecks: state.callbackCleanupChecks,
     handoffChecks: state.handoffChecks,
     systemsChecks: state.systemsChecks,
@@ -1232,6 +1235,7 @@ function continueGame() {
     commissioningChecks: savedGame.commissioningChecks || [],
     warehouseChecks: savedGame.warehouseChecks || [],
     secureAccessChecks: savedGame.secureAccessChecks || [],
+    secureAccessTaskChecks: savedGame.secureAccessTaskChecks || [],
     callbackCleanupChecks: savedGame.callbackCleanupChecks || [],
     handoffChecks: savedGame.handoffChecks || [],
     systemsChecks: savedGame.systemsChecks || [],
@@ -1280,7 +1284,8 @@ function resumeRequiredPrompt() {
     return showWarehouseChoice();
   }
   if (state.sceneId === "navyYardAccess" && state.secureAccessChecks.length === content.secureAccessDispatch.checks.length && !state.flags.secureAccessComplete) {
-    return showSecureAccessChoice();
+    if (state.secureAccessTaskChecks.length === content.secureAccessDispatch.taskChecks.length) return showSecureAccessChoice();
+    if (!state.flags.secureAccessRoomReached) return showSecureAccessWorkStart();
   }
   if (state.sceneId === "warrantyReturn" && state.callbackCleanupChecks.length === content.callbackCleanupDispatch.checks.length && !state.flags.callbackCleanupComplete) {
     return showCallbackCleanupChoice();
@@ -3447,12 +3452,14 @@ function showSecureAccessDispatchPreview() {
       why: "Unlocked after the warehouse run. Dispatch has moved from missing parts to missing access details.",
       stakes: [
         "Preparation can reduce access-check or report costs.",
+        "Once you reach the room, the rack update still has to be patched and verified.",
         "Documenting the delay builds the documentation habit.",
         "Absorbing the delay protects the ticket and adds burnout.",
       ],
       note: "Dispatch says the building mismatch is probably campus language.",
       managementNote: "Please do not let access delays affect today's schedule.",
       prep: state.flags.secureAccessPreparation ? `Preparation selected: ${getSecureAccessPreparationLabel()}` : "",
+      taskCards: content.secureAccessDispatch.taskCards,
     }),
     actions: [
       { label: "Accept Navy Yard Job", onClick: () => state.flags.secureAccessPreparation ? promptSecureAccessTravel() : showSecureAccessPreparation() },
@@ -3559,44 +3566,99 @@ function inspectSecureAccessCondition(checkId) {
     body: `
       <p>${check.detail}</p>
       ${getSkillCheckMarkup(skillCheck)}
-      ${allChecked ? `<p class="muted">You have enough facts to explain why the quick rack update is no longer quick.</p>` : ""}
+      ${allChecked ? `<p class="muted">Access is finally sorted. Now the quick rack update still has to actually happen.</p>` : ""}
     `,
-    actions: [{ label: allChecked ? "Review Access Delay" : "Keep Sorting Access", onClick: allChecked ? showSecureAccessChoice : render }],
+    actions: [{ label: allChecked ? "Enter Telecom Room" : "Keep Sorting Access", onClick: allChecked ? showSecureAccessWorkStart : render }],
   });
+}
+
+function showSecureAccessWorkStart() {
+  state.flags.secureAccessRoomReached = true;
+  showModal({
+    kicker: "Telecom Room",
+    title: "Now Do The Actual Job",
+    body: `
+      <p>The escort finally badges you into the telecom room. The rack update is small, but the rack does not know that.</p>
+      <p class="muted">Find the correct rack unit, patch the encoder feed, and verify the room signal before closeout.</p>
+    `,
+    actions: [{ label: "Start Rack Update", onClick: render }],
+  });
+}
+
+function getSecureAccessTaskEnergyCost(checkId) {
+  const accessDrag = state.flags.secureAccessNotesStrained ? 1 : 0;
+  const preparationHelp = state.flags.secureAccessPreparation === "contact" && checkId === "verify-signal" ? 1 : 0;
+  return Math.max(1, 3 + accessDrag - preparationHelp);
+}
+
+function inspectSecureAccessTask(checkId) {
+  const check = content.secureAccessDispatch.taskChecks.find((item) => item.id === checkId);
+  if (!check || state.secureAccessTaskChecks.includes(checkId)) return notify(`${check?.label || "That rack task"} is already handled.`);
+  state.secureAccessTaskChecks.push(checkId);
+  const skillCheck = resolveSkillCheck(`secure-access-task-${checkId}`, {
+    skillId: check.skillId,
+    difficulty: check.difficulty,
+    contextBonus: state.flags.secureAccessPreparation === "contact" && checkId === "verify-signal" ? 1 : 0,
+    contextId: check.skillId === "install" ? "secure-access-install" : check.skillId === "troubleshooting" ? "secure-access-verification" : "secure-access-documentation",
+  });
+  const energyCost = Math.max(0, getSecureAccessTaskEnergyCost(checkId) + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
+  changeEnergy(-energyCost);
+  if (!skillCheck.successful) state.flags.secureAccessTaskStrained = true;
+  addLog(`${check.label}: ${check.log}.`);
+  if (!skillCheck.successful) addLog(`Rack update check strained on ${check.label}; closeout will need clearer notes.`);
+  render();
+  const allChecked = state.secureAccessTaskChecks.length === content.secureAccessDispatch.taskChecks.length;
+  showModal({
+    kicker: "Rack Update",
+    title: check.label,
+    body: `
+      <p>${check.detail}</p>
+      ${getSkillCheckMarkup(skillCheck)}
+      ${allChecked ? `<p class="muted">The rack update is done. Now decide how honest the closeout gets about the access delay and the stale room label.</p>` : ""}
+    `,
+    actions: [{ label: allChecked ? "Close Out Navy Yard Job" : "Keep Working The Rack", onClick: allChecked ? showSecureAccessChoice : render }],
+  });
+}
+
+function getSecureAccessTaskQualityLabel() {
+  return state.flags.secureAccessTaskStrained
+    ? "Rack update completed with strained verification"
+    : "Rack update patched and verified";
 }
 
 function showSecureAccessChoice() {
   showModal({
-    kicker: "Access Decision",
-    title: "The Delay Is Real, The Schedule Is Fiction",
+    kicker: "Navy Yard Closeout",
+    title: "The Work Is Done, The Story Is Not",
     body: `
-      <p>Security, the building number, and the escort policy all disagree with the dispatch estimate. The rack update itself is small; getting permission to reach it is the job.</p>
-      <p>Management wants the ticket kept clean. The client would prefer an honest ETA over another vague "tech onsite" update.</p>
+      <p>The encoder feed is patched and the room signal verifies. Security, the building number, and the escort policy still disagree with the original dispatch estimate.</p>
+      <p>Management wants the ticket kept clean. The client would prefer an honest ETA and a note that the stale rack label changed.</p>
+      ${state.flags.secureAccessTaskStrained ? `<p class="muted">One rack-update check was strained. Better closeout notes can keep that from becoming the next mystery.</p>` : ""}
       ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits make the access-delay note faster to write.</p>` : ""}
       ${getOpenCallbackPenalty() ? `<p class="muted">The open callback still on the ledger made today's access shuffle feel heavier.</p>` : ""}
       ${getChoicePressureMarkup([
         {
-          label: "Document the delay",
-          detail: "Costs energy to protect the ETA trail. Likely helps clients and coworkers, with management friction possible.",
+          label: "Document access and rack change",
+          detail: "Costs energy to protect the ETA trail and future support notes. Likely helps clients and coworkers, with management friction possible.",
         },
         ...(canUsePressureChoice() ? [{
           label: "Push dispatch",
-          detail: "Stronger accountability if you can carry the conversation. Best process pressure, but management may not enjoy owning it.",
+          detail: "Stronger accountability if you can carry the conversation. Best process pressure, but management may not enjoy owning the access miss.",
         }] : []),
         {
           label: "Eat the delay",
-          detail: "Clean-ticket path. Saves the schedule story now, but hides the access problem and adds personal strain.",
+          detail: "Clean-ticket path. Saves the schedule story now, but hides the access problem and leaves the stale label easier to rediscover.",
         },
       ])}
     `,
     actions: [
-      { label: `Document access delay and update ETA (-${getSecureAccessReportEnergyCost(4)} energy)`, onClick: () => finishSecureAccess("document") },
+      { label: `Document access delay and rack change (-${getSecureAccessReportEnergyCost(4)} energy)`, onClick: () => finishSecureAccess("document") },
       ...(canUsePressureChoice() ? [{
-        label: `Push dispatch to own the access miss (-${getSecureAccessReportEnergyCost(3)} energy)`,
+        label: `Push dispatch to own the access miss and update notes (-${getSecureAccessReportEnergyCost(3)} energy)`,
         className: "secondary-button",
         onClick: () => finishSecureAccess("pushback"),
       }] : []),
-      { label: "Eat the delay and mark arrival on time", className: "secondary-button", onClick: () => finishSecureAccess("absorb") },
+      { label: "Mark rack update complete and eat the delay", className: "secondary-button", onClick: () => finishSecureAccess("absorb") },
     ],
   });
 }
@@ -3604,48 +3666,65 @@ function showSecureAccessChoice() {
 function finishSecureAccess(approach) {
   const honest = approach !== "absorb";
   const strainedNotes = Boolean(state.flags.secureAccessNotesStrained) && approach === "document";
-  const xp = (approach === "pushback" ? 60 : approach === "document" ? 55 : 35) - (strainedNotes ? 5 : 0);
+  const strainedTask = Boolean(state.flags.secureAccessTaskStrained);
+  const documentedTask = honest;
+  const createsRackReturnRisk = strainedTask && !documentedTask;
+  const xp = (approach === "pushback" ? 70 : approach === "document" ? 65 : 45) - (strainedNotes ? 5 : 0) - (strainedTask && !documentedTask ? 5 : 0);
   if (honest) changeEnergy(-getSecureAccessReportEnergyCost(approach === "pushback" ? 3 : 4));
   else state.burnout += 1;
   state.flags.secureAccessComplete = true;
   state.flags.secureAccessApproach = approach;
   state.flags.prototypeSummaryViewed = false;
-  setClock(`${state.clock.slice(0, 3)} ${approach === "absorb" ? "6:02" : "6:18"} PM`);
+  setClock(`${state.clock.slice(0, 3)} ${approach === "absorb" ? "6:22" : "6:38"} PM`);
   if (!state.flags.secureAccessPaid) {
-    state.cash += honest ? 92 : 76;
+    state.cash += honest ? 112 : 96;
     state.flags.secureAccessPaid = true;
   }
   if (!state.flags.secureAccessProgressAwarded) {
     awardCareerProgress({
       xp,
       reputation: honest
-        ? { clients: strainedNotes ? 0 : 1, coworkers: 1, management: approach === "pushback" ? -2 : -1 }
-        : { clients: 0, coworkers: 0, management: 1 },
+        ? { clients: strainedNotes ? 0 : 1, coworkers: strainedTask ? 1 : 2, management: approach === "pushback" ? -2 : -1 }
+        : { clients: strainedTask ? -1 : 0, coworkers: 0, management: 1 },
       source: content.secureAccessDispatch.title,
     });
     state.flags.secureAccessProgressAwarded = true;
   }
   if (!state.flags.secureAccessStatsRecorded) {
     state.stats.secureAccessJobsCompleted += 1;
-    if (honest) state.stats.accessDelaysDocumented += 1;
-    else state.stats.unpaidDelaysAbsorbed += 1;
+    state.stats.fieldTaskChoicesMade += 1;
+    if (honest) {
+      state.stats.accessDelaysDocumented += 1;
+      if (strainedTask) state.stats.documentedTaskRisks += 1;
+    } else {
+      state.stats.unpaidDelaysAbsorbed += 1;
+    }
+    if (createsRackReturnRisk) {
+      state.stats.callbacks += 1;
+      recordReturnTripRisk("navyYardRackUpdate", {
+        source: content.secureAccessDispatch.title,
+        detail: "A strained rack update was closed with the access delay hidden.",
+      });
+    }
     state.flags.secureAccessStatsRecorded = true;
   }
   addLog(honest
-    ? "Documented the Navy Yard access delay before the schedule could pretend it never happened."
-    : "Absorbed the Navy Yard access delay and marked the arrival time clean.");
+    ? "Documented the Navy Yard access delay and rack update before the schedule could pretend nothing happened."
+    : "Completed the Navy Yard rack update while absorbing the access delay into a clean-looking ticket.");
   render();
   showModal({
     kicker: "Secure Access Complete",
-    title: approach === "pushback" ? "The Access Miss Has An Owner" : approach === "document" ? "The Delay Has A Paper Trail" : "The Schedule Looks Fine If Nobody Asks",
+    title: approach === "pushback" ? "The Access Miss Has An Owner" : approach === "document" ? "The Delay And Rack Change Have A Trail" : "The Rack Works And The Ticket Looks Clean",
     body: `
       <div class="results-grid">
-        <span>Access job wages</span><strong>+$${honest ? 92 : 76}</strong>
+        <span>Access job wages</span><strong>+$${honest ? 112 : 96}</strong>
         <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Preparation</span><strong>${getSecureAccessPreparationLabel()}</strong>
-        <span>Closeout</span><strong>${approach === "pushback" ? "Dispatch access miss escalated" : approach === "document" ? "Delay documented" : "Delay absorbed"}</strong>
+        <span>Rack task</span><strong>${getSecureAccessTaskQualityLabel()}</strong>
+        <span>Closeout</span><strong>${approach === "pushback" ? "Dispatch access miss escalated" : approach === "document" ? "Delay and rack change documented" : "Delay absorbed"}</strong>
         ${strainedNotes ? `<span>Skill consequence</span><strong>Thin access notes limited client trust</strong>` : ""}
+        ${createsRackReturnRisk ? `<span>Return-trip risk</span><strong>Stale rack note may send someone back</strong>` : ""}
       </div>
       ${honest
         ? `<blockquote>Management note: "Please avoid creating client-facing narratives around internal scheduling friction."</blockquote>`
@@ -5652,12 +5731,16 @@ function getInteractions() {
   }
 
   if (state.sceneId === "navyYardAccess") {
-    const allChecked = state.secureAccessChecks.length === content.secureAccessDispatch.checks.length;
+    const accessChecked = state.secureAccessChecks.length === content.secureAccessDispatch.checks.length;
+    const roomReached = Boolean(state.flags.secureAccessRoomReached);
+    const taskDone = state.secureAccessTaskChecks.length === content.secureAccessDispatch.taskChecks.length;
+    if (state.flags.secureAccessComplete) return getScenePortalInteractions("navyYardAccess");
     return [
       {
-        x: 300, y: 185, label: allChecked ? "Close out access delay" : "Check in with security", npc: "SEC",
+        x: 300, y: 185, label: taskDone ? "Close out Navy Yard job" : accessChecked ? "Meet escort at telecom room" : "Check in with security", npc: "SEC",
         action: () => {
-          if (allChecked) return showSecureAccessChoice();
+          if (taskDone) return showSecureAccessChoice();
+          if (accessChecked) return showSecureAccessWorkStart();
           if (state.flags.secureAccessBrief) return notify('Security: "I can see the company in the system. I cannot see you in the system."');
           state.flags.secureAccessBrief = true;
           addLog("Security confirmed the company is expected and you personally are not.");
@@ -5670,26 +5753,33 @@ function getInteractions() {
         },
       },
       {
-        x: 430, y: 255, label: "Check building number",
+        x: 430, y: 255, label: roomReached ? "Review access notes" : "Check building number",
         action: () => {
+          if (accessChecked) return notify("The building mismatch is already in your access notes.");
           if (!state.flags.secureAccessBrief) return notify("Check in with security first.");
           inspectSecureAccessCondition("building");
         },
       },
       {
-        x: 785, y: 205, label: "Check loading dock",
+        x: 785, y: 205, label: roomReached ? "Patch encoder feed" : "Check loading dock",
         action: () => {
+          if (accessChecked) return roomReached ? inspectSecureAccessTask("patch-update") : notify("The loading dock issue is already in your access notes.");
           if (!state.flags.secureAccessBrief) return notify("Check in with security first.");
           inspectSecureAccessCondition("gate");
         },
       },
       {
-        x: 745, y: 385, label: "Check telecom room escort",
+        x: 745, y: 385, label: roomReached ? "Verify room signal" : "Check telecom room escort",
         action: () => {
+          if (accessChecked) return roomReached ? inspectSecureAccessTask("verify-signal") : showSecureAccessWorkStart();
           if (!state.flags.secureAccessBrief) return notify("Check in with security first.");
           inspectSecureAccessCondition("escort");
         },
       },
+      ...(roomReached && !taskDone ? [{
+        x: 635, y: 350, label: "Find correct rack unit",
+        action: () => inspectSecureAccessTask("rack-location"),
+      }] : []),
       ...getScenePortalInteractions("navyYardAccess"),
     ];
   }
@@ -5898,7 +5988,11 @@ function getObjective() {
     if (state.secureAccessChecks.length < content.secureAccessDispatch.checks.length) {
       return `Sort out secure access (${state.secureAccessChecks.length}/${content.secureAccessDispatch.checks.length}).`;
     }
-    return "Return to security and close out the access delay.";
+    if (!state.flags.secureAccessRoomReached) return "Meet the escort and enter the telecom room.";
+    if (state.secureAccessTaskChecks.length < content.secureAccessDispatch.taskChecks.length) {
+      return `Complete the rack update (${state.secureAccessTaskChecks.length}/${content.secureAccessDispatch.taskChecks.length}).`;
+    }
+    return "Return to security and close out the Navy Yard job.";
   }
   if (!state.flags.roomBrief) return "Ask the supervisor how to start the cart build.";
   if (state.flags.finished) return "Use the room exit to return to Radnor Rack & Wire.";

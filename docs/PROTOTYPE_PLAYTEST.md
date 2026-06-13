@@ -25,7 +25,7 @@ The playable slice now has:
 7. A short Wayne-area warehouse run that reuses the shop map and tests whether
    stockroom exploration works as a change of pace.
 8. A Navy Yard secure-access job with a preparation choice, three access checks,
-   and a bad-company closeout decision.
+   a telecom-room rack update, and a bad-company closeout decision.
 9. Lightweight career effects where repeated documentation, careful finishes,
    and unresolved callbacks change future energy costs.
 10. A conditional warranty return that appears only when the callback ledger has
