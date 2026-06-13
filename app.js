@@ -1630,11 +1630,13 @@ function showEndShiftModal() {
   const lateEnergyCap = getStayedLateEnergyCap((state.flags.consecutiveLateNights || 0) + 1);
   const exhaustionCap = state.flags.energyExhaustedThisShift ? getExhaustionEnergyCap() : null;
   const exhaustionPenalty = getExhaustionSkillPenalty();
+  const pendingServiceCallback = state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved;
   showModal({
     kicker: "End Of Shift",
     title: "Close Out The Workday",
     body: `
       <p>${source} is wrapped. Dispatch has more work, but the next job should start after an actual shift reset.</p>
+      ${pendingServiceCallback ? `<p class="muted">A Conshohocken callback note is waiting on Josh's bench. Close out the shift, then talk to Josh before dispatch adds another stop.</p>` : ""}
       <div class="results-grid">
         <span>Current time</span><strong>${state.clock}</strong>
         <span>Energy</span><strong>${state.energy}/${getMaxEnergy()}</strong>
@@ -5271,10 +5273,23 @@ function getInteractions() {
       },
       ...(state.flags.finished ? [{
         x: 690, y: 245, label: state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved
-          ? "Talk to Josh about callback"
+          ? state.flags.endShiftPending ? "Callback note waiting with Josh" : "Talk to Josh about callback"
           : "Talk to Josh",
         npc: "JOSH",
-        action: showJoshConversation,
+        action: () => {
+          if (state.flags.endShiftPending && state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) {
+            return showModal({
+              kicker: "Callback Note",
+              title: "Josh Has It On The Bench",
+              body: `
+                <p>The Conshohocken callback note is clipped to Josh's bench, but the shift is still open.</p>
+                <p class="muted">Close out the workday first. Tomorrow's first shop stop will be Josh before dispatch can add another route.</p>
+              `,
+              actions: [{ label: "Close Out Shift", onClick: showEndShiftModal }],
+            });
+          }
+          return showJoshConversation();
+        },
       }] : []),
       {
         x: 150, y: 270, label: "Read dispatch board",
@@ -5898,9 +5913,14 @@ function notify(message) {
 
 function getObjective() {
   if (state.sceneId === "shop") {
-    if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) return "Talk to Josh about the Conshohocken callback.";
     if (shouldIntroduceJoshBeforeNextDispatch()) return "Check in with Josh at the workbench before closing out.";
-    if (state.flags.endShiftPending) return "Close out the shift before taking another dispatch.";
+    if (state.flags.endShiftPending) {
+      if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) {
+        return "Close out the shift; Josh has the Conshohocken callback note waiting.";
+      }
+      return "Close out the shift before taking another dispatch.";
+    }
+    if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) return "Talk to Josh about the Conshohocken callback.";
     if (state.flags.serviceComplete && !state.flags.joshServiceDebriefed) return "Check in with Josh at the workbench.";
     if (state.flags.serviceComplete && hasPendingTraining()) return "Choose a field-training focus from the career clipboard.";
     if (isConshohockenFollowupAvailable()) return "Review the Conshohocken label follow-up on the dispatch board.";

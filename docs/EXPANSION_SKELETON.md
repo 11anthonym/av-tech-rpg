@@ -208,9 +208,16 @@ be easy to verify in the browser.
 18. **Done - Playtest debug helper pass:** Appending `?debug=1` exposes
    `AV_TECH_RPG_DEBUG.jump(...)` scenarios for post-first-job, service-ready,
    service-complete, and low-energy end-shift checks.
-19. **Next - Early-flow playtest pass:** Play from a new career through the
-   Conshohocken service return and verify that Josh, end-of-shift, training,
-   callbacks, and route exits are all explained in player-facing language.
+19. **Done - Early-flow playtest pass:** Simulated a tidy first-day closeout
+   into a rushed Conshohocken service callback, then verified the Josh intro,
+   end-of-shift closeout, callback note, labeler gift, Josh service debrief,
+   training gate, fast-travel follow-up, and return exits. Callback service
+   returns now explain that the shift closes first and Josh has the note
+   waiting.
+20. **Next - Mid-board route-and-dispatch pass:** Play from the Conshohocken
+   follow-up through University City, commissioning, warehouse, and Navy Yard to
+   verify that dispatch-board gates, route exits, training prompts, and callback
+   ledger language stay coherent as the board gets wider.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

@@ -180,6 +180,22 @@ playtests.
   explain why the outcome happened. This matters most when the player chose the
   careful path and still got a strained or partial result.
 
+### Early-Flow Regression Pass
+
+Playtest pass: June 13, 2026. Path checked: tidy first-day closeout into Josh's
+intro, normal rest, rushed Conshohocken service, callback note, Josh labeler,
+Josh service debrief, field-training choice, fast-travel label follow-up, and
+return-to-shop closeout.
+
+- **Fixed:** A rushed service return opened the end-of-shift modal while the
+  shop objective pointed straight to Josh's callback. The shift modal now calls
+  out the waiting callback note, the objective tells the player to close the
+  shift first, and Josh's interaction explains that the callback is on his
+  bench after closeout.
+- **Verified:** After the shift closes, the callback, labeler gift, service
+  debrief, training gate, follow-up dispatch, regional-map fast travel, and
+  repeat-route return all advance in order.
+
 ## Current Content Experiment
 
 The **University City Site Survey** is the third dispatch. It tests a different
