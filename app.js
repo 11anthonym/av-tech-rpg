@@ -3228,15 +3228,81 @@ function getJobFamilyMarkup(familyId) {
   `;
 }
 
-function getDispatchBoardMarkup({ type, setup, why, stakes, note, managementNote, prep = "", taskCards = [], familyId = "" }) {
+function getBoardBuildEdgeMarkup(familyId) {
+  const family = content.jobFamilies?.[familyId];
+  if (!family || !state.technician) return "";
+  const rankedSkills = family.coreSkills
+    .map((skillId) => ({
+      id: skillId,
+      name: getSkillDefinition(skillId)?.name || skillId,
+      value: getSkillValue(skillId),
+    }))
+    .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name));
+  const strongest = rankedSkills[0];
+  const weakest = rankedSkills[rankedSkills.length - 1];
+  const notes = [];
+  if (strongest) notes.push(`Best fit: ${strongest.name} ${strongest.value}`);
+  if (weakest && weakest.id !== strongest?.id && weakest.value <= 2) notes.push(`Watch: ${weakest.name} ${weakest.value}`);
+  if (family.coreSkills.includes("documentation") && getDocumentationSupportReduction()) {
+    notes.push("documentation support lowers some closeout costs");
+  }
+  if (family.coreSkills.includes("clientCommunication") || family.coreSkills.includes("commercialProcess")) {
+    notes.push(canUsePressureChoice() ? "pressure choices are available" : "pressure pushback may stay locked");
+  }
+  if (ownsTool("circuitHutOrganizer")) {
+    notes.push(hasActivePartsBrainFind() ? "parts organizer is active for this dispatch" : canUsePartsBrain() ? "parts organizer can still be checked from the kit" : "");
+  }
+  if (familyId === "logistics" && hasCharacterTrait("badKnees")) notes.push("long carries and access moves hit harder");
+  const detail = notes.filter(Boolean).join("; ");
+  return detail ? `<li><strong>Current build</strong><span>${escapeHtml(detail)}.</span></li>` : "";
+}
+
+function getBoardRouteMemoryMarkup(routeId = getCurrentDispatchRouteId()) {
+  if (!routeId) return "";
+  const route = getWorldRoute(routeId);
+  if (!route) return "";
+  const travelCount = getRouteTravelCount(route.id);
+  const lastRoute = getLastRouteChoiceLabel(route);
+  let detail = "New route; travel choice still matters before the work starts.";
+  if (canFastTravelRoute(route)) {
+    detail = `Known ${route.fromLabel} to ${route.toLabel} route; fast travel is ready from the regional map for ${getFastTravelEnergyCost(route)} energy.`;
+  } else if (isFastTravelUnlocked(route)) {
+    detail = `Known ${route.fromLabel} to ${route.toLabel} route; fast travel is unlocked when the active job starts from the right area.`;
+  } else if (travelCount > 0) {
+    detail = `Route has been driven ${travelCount} time${travelCount === 1 ? "" : "s"}; repeat-route memory can matter later.`;
+  }
+  if (lastRoute) detail += ` Last route choice: ${lastRoute}.`;
+  return `<li><strong>Route memory</strong><span>${escapeHtml(detail)}</span></li>`;
+}
+
+function getBoardRoutingMarkup() {
+  const notes = [];
+  if (shouldOfferCallbackCleanupDispatch()) {
+    notes.push("Warranty return is forced before handoff because unresolved callback pressure is still on the ledger.");
+  } else if (state.flags.secureAccessComplete && !state.flags.handoffComplete && getUnresolvedCallbackCount() === 0) {
+    notes.push("Clean callback ledger skips the warranty return and moves the board to client handoff.");
+  }
+  if (isConshohockenFollowupAvailable()) {
+    notes.push("Josh debrief unlocked the Conshohocken label follow-up before the next new site.");
+  }
+  if (state.flags.systemsComplete && !state.flags.travelComplete) {
+    notes.push("The next board item is a coordination-cost beat, not a full onsite service call.");
+  }
+  return notes.length ? `<li><strong>Board routing</strong><span>${escapeHtml(notes.join(" "))}</span></li>` : "";
+}
+
+function getDispatchBoardMarkup({ type, setup, why, stakes, note, managementNote, prep = "", taskCards = [], familyId = "", routeId = "" }) {
   return `
     <p><strong>${type}:</strong> ${setup}</p>
     <ul class="modal-list">
       <li><strong>Why this is on the board</strong><span>${why}</span></li>
       ${getJobFamilyMarkup(familyId)}
       ${getCompanyDispatchPressureMarkup()}
+      ${getBoardBuildEdgeMarkup(familyId)}
+      ${getBoardRouteMemoryMarkup(routeId || getCurrentDispatchRouteId())}
       <li><strong>Stakes</strong><span>${stakes.join(" ")}</span></li>
       ${getOpenCallbackBoardMarkup()}
+      ${getBoardRoutingMarkup()}
       ${prep ? `<li><strong>Prep</strong><span>${prep}</span></li>` : ""}
       ${state.flags.shiftPrepActive ? `<li><strong>Next-shift prep</strong><span>Stayed late last shift: +1 Fieldcraft and +1 Documentation until this dispatch closes.</span></li>` : ""}
       <li><strong>Later work</strong><span>${getUpcomingDispatchText()}</span></li>

@@ -64,6 +64,20 @@ rest can wake the player below full energy unless they spend a recovery day.
 
 ## Commercial AV Patterns
 
+- [AVIXA Glossary of Audiovisual Terms](https://www.avixa.org/certification/AVIXA-AV-Glossary-of-Terms)
+  is the baseline vocabulary reference for AV system terms. Use it when naming
+  devices, signal-path concepts, room conditions, and technical checks.
+- [AVIXA: Project Management in the AV Industry](https://xchange.avixa.org/posts/project-management-in-the-av-industry-ensuring-seamless-technological-integration)
+  frames AV project work around coordinating resources, managing timelines,
+  quality control, and multiple stakeholders.
+- [NSCA: Frontline PM & Jobsite Management](https://www.nsca.org/training-solutions/frontline-pm-jobsite-management/)
+  is a useful reference for jobsite language such as project team
+  responsibilities, field work, subcontractors, scope creep, field changes,
+  safety, and project financials.
+- [NSCA: Guide to State Licensing](https://www.nsca.org/resources/guide-to-state-licensing/)
+  uses "limited energy systems" as the broad commercial-electronic-systems
+  framing. Use this kind of term when the game needs a grounded trade category
+  rather than a jokey label.
 - [r/CommercialAV: How Do You Quote Labor for Larger AV Projects?](https://www.reddit.com/r/CommercialAV/comments/1hvbs7a)
   discusses underestimated labor, phased work, site access, partial installs,
   and the need for field input during estimates.
@@ -83,3 +97,9 @@ rest can wake the player below full energy unless they spend a recovery day.
 These patterns support fictional dispatches such as underestimated downtown
 carries, undocumented couplers, rooms marked ready before commissioning, and
 equipment reportedly stored in one of the vans.
+
+Terminology guardrail: "dispatch board" is acceptable as the game's shop-board
+surface, but do not blame every coordination failure on dispatch as a person or
+department. Use "coordination," "scope," "field change," "project handoff,"
+"service ticket," "work order," "site access," "closeout," and "return trip"
+when those are the sharper terms.

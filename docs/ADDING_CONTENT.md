@@ -266,8 +266,21 @@ RPG contract:
 
 Use `content.jobFamilies` to describe the kind of RPG work a dispatch is
 testing. Pass the family ID into `getDispatchBoardMarkup({ familyId })` so the
-dispatch board can explain the core skills and loop. Use this for writer-facing
-and player-facing clarity; it is not a generic quest engine.
+dispatch board can explain the core skills and loop. The shared board renderer
+also uses the family ID to show the current build's strongest relevant skill,
+weak spot, and trait/tool edges. Use this for writer-facing and player-facing
+clarity; it is not a generic quest engine.
+
+When a dispatch has a mapped travel route, let `getCurrentDispatchRouteId()`
+point to that route or pass `routeId` into `getDispatchBoardMarkup()`. The board
+can then show route memory, fast-travel readiness, and the last route choice
+without each dispatch duplicating that copy.
+
+If a dispatch appears because of career state, make that state visible in the
+board `why` text or through the shared board-routing rules. Current automatic
+rules cover unresolved callbacks forcing warranty return, clean callback ledgers
+skipping warranty, Josh debrief unlocking the Conshohocken follow-up, and the
+post-systems coordination-cost travel beat.
 
 Use `content.companies` and `currentCompanyId` to describe the current employer.
 The career clipboard renders the current company profile so future employers can

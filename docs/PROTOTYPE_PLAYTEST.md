@@ -309,10 +309,41 @@ gap.
 
 ## Current Board Clarity Experiment
 
-The dispatch board now explains each available job with four pieces of
-information: why it is on the board, what the stakes are, any prep already
-selected, and the locked future work. This should make the prototype feel less
-like a fixed script and more like a career reacting to the ledger.
+The dispatch board now explains each available job with a reusable consequence
+stack:
+
+1. **Why this is on the board:** the story and career reason this job appeared.
+2. **Job family and core skills:** the RPG loop being tested.
+3. **Company pressure:** the employer incentives shaping the bad choice.
+4. **Current build:** the active technician's strongest relevant skill, weak
+   spot, and trait/tool edges such as documentation support, pressure choices,
+   or parts-organizer availability.
+5. **Route memory:** whether this route is new, familiar, or fast-travel ready.
+6. **Stakes and active consequences:** callback pressure, shift prep, prep
+   choice, and why the board may force, skip, or reorder work.
+7. **Later work:** locked work that keeps the roadmap visible without implying
+   it is the immediate next job.
+
+This should make the prototype feel less like a fixed script and more like a
+career reacting to the ledger.
+
+### Dispatch Consequence Readability Pass
+
+The board renderer now adds three shared rows when relevant:
+
+- **Current build:** shows profile/creator edges for the job family, including
+  strongest skill, weak relevant skill, documentation support, pressure-choice
+  availability, parts-brain state, and long-carry pressure.
+- **Route memory:** shows new route, driven route, known route, fast-travel
+  readiness, and last route choice where available.
+- **Board routing:** explains forced or skipped beats such as unresolved
+  callbacks forcing warranty return before handoff, a clean callback ledger
+  skipping warranty, Josh debrief unlocking the Conshohocken follow-up, or a
+  coordination-cost travel beat after systems service.
+
+Smoke coverage checked Wiley's first service board, Jordan's Conshohocken
+follow-up with fast travel ready, unresolved-callback warranty routing,
+clean-ledger handoff routing, and Cherry Hill travel language.
 
 ## Current RPG Skeleton Experiment
 

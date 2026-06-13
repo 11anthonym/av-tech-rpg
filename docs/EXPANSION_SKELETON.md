@@ -242,10 +242,16 @@ be easy to verify in the browser.
    for premade profile cards and custom creator previews. Each build now shows
    shop start, early unlocks, first-job feel, and watch-outs from the same
    tools, traits, skills, and cash data used by play.
-25. **Next - Dispatch consequence readability pass:** Make dispatch-board
-   previews better at surfacing active state: callback pressure, shift prep,
-   creator/profile edges, route familiarity, and why a job may be skipped,
-   forced, or reordered.
+25. **Done - Dispatch consequence readability pass:** Dispatch-board previews
+   now surface current build edge, route memory, and board routing in the shared
+   renderer. Verified organizer availability, fast-travel readiness, forced
+   warranty return routing, clean-ledger handoff routing, and coordination-cost
+   travel language.
+26. **Next - Industry terminology consistency pass:** Audit player-facing copy
+   against the terminology guardrail: keep "dispatch board" as the game surface,
+   but use sharper AV/integration terms such as work order, service ticket,
+   scope, field change, coordination, closeout, return trip, site access, and
+   limited energy where they fit.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
