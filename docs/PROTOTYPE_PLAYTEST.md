@@ -211,6 +211,24 @@ choice, Wayne-area warehouse run, and Navy Yard access-plus-rack-update job.
   task: resolve access, enter the telecom room, patch/verify the rack update,
   then close out the access and rack notes.
 
+### Late-Board Regression Pass
+
+Playtest pass: June 13, 2026. Paths checked: Navy Yard complete with unresolved
+callback pressure into warranty return, executive handoff, systems service,
+Cherry Hill toll, and completion snapshot; plus the clean-ledger branch that
+skips warranty and goes straight to handoff.
+
+- **Fixed:** A systems quick reboot created fresh callback pressure after the
+  handoff path had already started, and the shop objective pointed back to the
+  warranty return while the board still offered Cherry Hill. Late systems
+  callback pressure now stays visible on the travel board and final summary
+  without stealing the current board sequence.
+- **Verified:** Pre-handoff callback pressure still triggers the warranty
+  return, and resolving it advances cleanly to executive handoff.
+- **Verified:** The completion snapshot now includes active consequences, so an
+  unresolved late callback is visible before the player leaves the current
+  board.
+
 ## Current Content Experiment
 
 The **University City Site Survey** is the third dispatch. It tests a different

@@ -219,10 +219,16 @@ be easy to verify in the browser.
    commissioning, the warehouse run, and Navy Yard. Verified dispatch-board
    gates, route exits, end-of-shift closeouts, the second training prompt,
    warehouse exploration, and the Navy Yard access-plus-rack-update sequence.
-21. **Next - Late-board consequence pass:** Play from Navy Yard through the
-   conditional warranty return, executive handoff, systems service, Cherry Hill
-   toll beat, and completion snapshot to verify that callback-ledger branching,
-   skipped work, and end-of-board summary language stay readable.
+21. **Done - Late-board consequence pass:** Simulated Navy Yard into both late
+   branches: unresolved callback pressure triggers the warranty return before
+   handoff, while a clean callback ledger skips warranty and goes straight to
+   handoff. Verified executive handoff, systems service, Cherry Hill toll, and
+   completion snapshot. Systems-created callback pressure now stays visible on
+   the travel board and final summary without stealing the Cherry Hill beat.
+22. **Next - Character replay pass:** Run the full dispatch board with at least
+   two non-Alex profiles, probably Wiley and Jordan or Morgan, to verify that
+   profile-specific tools, traits, pressure choices, and weak spots still feel
+   intentional across the expanded board.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

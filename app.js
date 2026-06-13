@@ -1004,6 +1004,13 @@ function getUnresolvedCallbackCount() {
   return Math.max(0, state.stats.callbacks - state.stats.callbacksResolved);
 }
 
+function shouldOfferCallbackCleanupDispatch() {
+  return state.flags.secureAccessComplete
+    && !state.flags.handoffComplete
+    && !state.flags.callbackCleanupComplete
+    && getUnresolvedCallbackCount() > 0;
+}
+
 function getCarryCapacity(sceneId = state.sceneId) {
   return ["garage", "serviceOffice"].includes(sceneId) ? 1 + getToolModifier("garageCarryCapacityBonus") : 1;
 }
@@ -2035,7 +2042,7 @@ function getCurrentDispatchRouteId() {
   if (state.flags.handoffComplete && !state.flags.systemsComplete) return "systemsService";
   if (state.flags.systemsComplete && !state.flags.travelComplete) return null;
   if (state.flags.secureAccessComplete) {
-    if (!state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0) return "warrantyReturn";
+    if (shouldOfferCallbackCleanupDispatch()) return "warrantyReturn";
     if (!state.flags.handoffComplete) return "executiveHandoff";
     return null;
   }
@@ -3025,7 +3032,7 @@ function showDispatchPreview() {
     return showTravelDispatchPreview();
   }
   if (state.flags.secureAccessComplete) {
-    if (!state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0) return showCallbackCleanupDispatchPreview();
+    if (shouldOfferCallbackCleanupDispatch()) return showCallbackCleanupDispatchPreview();
     if (!state.flags.handoffComplete) return showHandoffDispatchPreview();
     return showPrototypeSummary();
   }
@@ -3269,6 +3276,8 @@ function showPrototypeSummary() {
         <span>Coworker reputation</span><strong>${formatReputation(state.reputation.coworkers)}</strong>
         <span>Management reputation</span><strong>${formatReputation(state.reputation.management)}</strong>
       </div>
+      <p><strong>Active consequences:</strong></p>
+      ${getActiveCareerSummaryMarkup()}
       <p><strong>Career ledger:</strong></p>
       ${getCareerLedgerMarkup()}
       <p><strong>Upcoming dispatch:</strong></p>
@@ -5932,11 +5941,11 @@ function getObjective() {
     }
     if (state.flags.commissioningComplete && !state.flags.warehouseComplete) return "Review the warehouse run on the dispatch board.";
     if (state.flags.warehouseComplete && !state.flags.secureAccessComplete) return "Review the Navy Yard secure-access job on the dispatch board.";
-    if (state.flags.secureAccessComplete && !state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0) return "Review the warranty return on the dispatch board.";
-    if (state.flags.secureAccessComplete && !state.flags.handoffComplete) return "Review the executive handoff on the dispatch board.";
     if (state.flags.handoffComplete && !state.flags.systemsComplete) return "Review the King of Prussia systems service on the dispatch board.";
     if (state.flags.systemsComplete && !state.flags.travelComplete) return "Review the Cherry Hill return toll on the dispatch board.";
     if (state.flags.travelComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
+    if (shouldOfferCallbackCleanupDispatch()) return "Review the warranty return on the dispatch board.";
+    if (state.flags.secureAccessComplete && !state.flags.handoffComplete) return "Review the executive handoff on the dispatch board.";
     if (state.flags.secureAccessComplete) return "Current dispatch board complete. Explore the shop.";
     if (state.flags.finished) return "Prepare for the Conshohocken service call.";
     if (!state.flags.shopBrief) return "Find your supervisor.";
@@ -6505,7 +6514,7 @@ function render() {
     ? content.systemsDispatch
     : handoffActive || (state.flags.handoffStarted && !state.flags.handoffComplete) || (state.flags.secureAccessComplete && (state.flags.callbackCleanupComplete || getUnresolvedCallbackCount() === 0) && !state.flags.handoffComplete)
     ? content.handoffDispatch
-    : callbackCleanupActive || state.flags.callbackCleanupStarted || state.flags.callbackCleanupComplete || (state.flags.secureAccessComplete && !state.flags.callbackCleanupComplete && getUnresolvedCallbackCount() > 0)
+    : callbackCleanupActive || state.flags.callbackCleanupStarted || state.flags.callbackCleanupComplete || shouldOfferCallbackCleanupDispatch()
     ? content.callbackCleanupDispatch
     : secureAccessActive || state.flags.secureAccessStarted || state.flags.secureAccessComplete || (state.flags.warehouseComplete && !state.flags.secureAccessComplete)
     ? content.secureAccessDispatch
