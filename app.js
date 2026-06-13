@@ -8,6 +8,7 @@ const STAY_LATE_PREP_ENERGY_COST = 32;
 const HELP_JOSH_ENERGY_COST = 30;
 const STAY_LATE_BURNOUT_GAIN = 1;
 const CHERRY_HILL_TOLL_COST = 6;
+const DEBUG_MODE = new URLSearchParams(window.location.search).has("debug");
 const EXHAUSTION_DEBT_PER_BURNOUT = 10;
 const MIN_OVERNIGHT_RECOVERY = 28;
 const MIN_STAYED_LATE_RECOVERY = 16;
@@ -1093,6 +1094,7 @@ function showVehicleCargo() {
 }
 
 function showVehicleMenu() {
+  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
   const vehicle = getCurrentVehicle();
   const canDriveCurrentRoute = isTutorialRouteReady();
   showModal({
@@ -1252,6 +1254,7 @@ function continueGame() {
 }
 
 function resumeRequiredPrompt() {
+  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
   if (state.flags.endShiftPending) return showEndShiftModal();
   if (state.flags.finished && !state.flags.reward) return showResults();
   if (state.sceneId === "garage" && state.delivered.length === content.tutorial.garageUnload.length) {
@@ -1520,6 +1523,12 @@ function previewShiftChoice(choice) {
     : !stayedLate && nextEnergy >= Math.ceil(maxEnergy * 0.75)
       ? Math.max(0, burnoutAfterChoice - 1)
       : burnoutAfterChoice;
+  const helpJoshPressure = state.flags.metJosh
+    ? "Josh and the crew remember the help."
+    : "The lead tech and crew remember the help.";
+  const helpJoshBenefit = state.flags.metJosh
+    ? "Josh relationship progress"
+    : "Lead tech introduction";
   return {
     nextEnergy,
     nextBurnout,
@@ -1527,20 +1536,35 @@ function previewShiftChoice(choice) {
     pressure: choice === "prep"
       ? "Management may notice the extra time."
       : choice === "help-josh"
-        ? "Josh and the crew remember the help."
+        ? helpJoshPressure
         : choice === "recovery-day"
           ? "Management may notice the schedule gap."
           : "No obvious reputation pressure.",
-    benefit: choice === "prep" ? "+1 Fieldcraft/Documentation next dispatch" : choice === "help-josh" ? "Josh relationship progress" : choice === "recovery-day" ? "Skips next workday pressure" : "Clean rest",
+    benefit: choice === "prep" ? "+1 Fieldcraft/Documentation next dispatch" : choice === "help-josh" ? helpJoshBenefit : choice === "recovery-day" ? "Skips next workday pressure" : "Clean rest",
     capNote: `${lateCapNote}${exhaustionCapNote}${exhaustionIncidentNote}` || (cappedRecovery ? ` ${cappedRecovery} recovery would be capped at max energy.` : ""),
   };
 }
 
+function getHelpJoshShiftCopy() {
+  return state.flags.metJosh
+    ? {
+      previewLabel: "Help Josh",
+      actionLabel: `Help Josh clean up notes (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, crew remembers)`,
+      log: "Helped Josh clean up notes and labels before clocking out. Coworker reputation improved, and the longer day still took something out of you.",
+    }
+    : {
+      previewLabel: "Help the lead tech",
+      actionLabel: `Help the lead tech clean up notes (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, crew remembers)`,
+      log: "Met Josh, the lead technician, while helping clean up notes and labels before clocking out. Coworker reputation improved, and the longer day still took something out of you.",
+    };
+}
+
 function getEndShiftChoicePreviewMarkup() {
+  const helpJoshCopy = getHelpJoshShiftCopy();
   const choices = [
     { id: "clock-out", label: "Clock out" },
     { id: "prep", label: "Stay late prep" },
-    { id: "help-josh", label: "Help Josh" },
+    { id: "help-josh", label: helpJoshCopy.previewLabel },
     { id: "recovery-day", label: "Recovery day" },
   ];
   return `
@@ -1570,11 +1594,20 @@ function startEndShift(source) {
   state.flags.endShiftSummaryShown = false;
 }
 
+function shouldIntroduceJoshBeforeNextDispatch() {
+  return state.sceneId === "shop"
+    && state.flags.finished
+    && !state.flags.metJosh
+    && !state.flags.serviceStarted
+    && !state.flags.serviceComplete;
+}
+
 function returnToShopAfterDispatch(source, message) {
   state.carry = [];
   startEndShift(source);
   if (message) addLog(message);
   enterScene("shop");
+  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
   showEndShiftModal();
 }
 
@@ -1586,6 +1619,7 @@ function finishWarehouseShift(source) {
 
 function showEndShiftModal() {
   const source = state.flags.endShiftSource || "today's dispatch";
+  const helpJoshCopy = getHelpJoshShiftCopy();
   const ordinaryRecovery = getOvernightRecovery();
   const lateRecovery = getOvernightRecovery({ stayedLate: true, burnout: state.burnout + STAY_LATE_BURNOUT_GAIN });
   const lateEnergyCap = getStayedLateEnergyCap((state.flags.consecutiveLateNights || 0) + 1);
@@ -1613,7 +1647,7 @@ function showEndShiftModal() {
     actions: [
       { label: `Clock out and go home (+${ordinaryRecovery} energy overnight)`, onClick: () => completeShift("clock-out") },
       { label: `Stay late to prep tomorrow (-${STAY_LATE_PREP_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, prep advantage)`, className: "secondary-button", onClick: () => completeShift("prep") },
-      { label: `Help Josh clean up notes (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, crew remembers)`, className: "secondary-button", onClick: () => completeShift("help-josh") },
+      { label: helpJoshCopy.actionLabel, className: "secondary-button", onClick: () => completeShift("help-josh") },
       { label: "Take a recovery day (full energy, management may notice)", className: "secondary-button", onClick: () => completeShift("recovery-day") },
       { label: "Not Yet", className: "text-button", onClick: render },
     ],
@@ -1634,13 +1668,15 @@ function completeShift(choice) {
     state.stats.stayLatePrepDays += 1;
     addLog("Stayed late to prep tomorrow's first dispatch. Fieldcraft and documentation get a next-shift boost, but the extra unpaid time landed hard.");
   } else if (choice === "help-josh") {
+    const helpJoshCopy = getHelpJoshShiftCopy();
     changeEnergy(-HELP_JOSH_ENERGY_COST);
     state.burnout += STAY_LATE_BURNOUT_GAIN;
     stayedLate = true;
     state.flags.consecutiveLateNights = (state.flags.consecutiveLateNights || 0) + 1;
+    state.flags.metJosh = true;
     state.reputation.coworkers += 1;
     state.stats.shopHelpDays += 1;
-    addLog("Helped Josh clean up notes and labels before clocking out. Coworker reputation improved, and the longer day still took something out of you.");
+    addLog(helpJoshCopy.log);
   } else if (choice === "recovery-day") {
     days = 2;
     state.flags.consecutiveLateNights = 0;
@@ -1667,6 +1703,7 @@ function getShiftPrepSkillBonus(skillId) {
 }
 
 function showBreakArea() {
+  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
   if (state.flags.endShiftPending) return showEndShiftModal();
   showModal({
     kicker: "Break Area",
@@ -1765,10 +1802,128 @@ function startGame(technicianOrId) {
   state.burnout = state.technician.stats.burnout;
   state.cash = state.technician.startingCash || 0;
   addLog(`${state.technician.name}'s first day started${state.technician.custom ? " from a custom build" : ""}. Nobody mentioned an onboarding packet.`);
+  elements.titleScreen.classList.add("hidden");
   elements.selection.classList.add("hidden");
   elements.gameLayout.classList.remove("hidden");
   elements.menuButton.classList.remove("hidden");
   enterScene("shop");
+}
+
+function applyDebugCompletedFirstJob({ metJosh = true, endShiftPending = false } = {}) {
+  startGame("prototype-tech");
+  const rewardTool = "toolBag";
+  state.tools = uniqueValues(["screwdriver", rewardTool]);
+  state.loaded = [...content.tutorial.shopLoad];
+  state.delivered = [...content.tutorial.garageUnload];
+  state.assembled = content.tutorial.assembly.map((item) => item.id);
+  state.carry = [];
+  state.energy = 58;
+  state.burnout = 1;
+  state.cash = 152;
+  state.xp = 40;
+  state.jobsCompleted = 1;
+  state.reputation = { clients: 2, coworkers: 1, management: -1 };
+  state.stats.overtimeDays = 1;
+  state.stats.carefulFinishes = 1;
+  state.flags = {
+    ...state.flags,
+    shopBrief: true,
+    garageBrief: true,
+    centerCityEquipmentDelivered: true,
+    securityChecked: true,
+    roomBrief: true,
+    supervisorLeft: true,
+    finished: true,
+    finishChoice: "tidy",
+    reward: rewardTool,
+    tutorialPaid: true,
+    tutorialProgressAwarded: true,
+    tutorialStatsRecorded: true,
+    metJosh,
+    endShiftPending,
+    endShiftSource: endShiftPending ? "Two Quick Carts" : null,
+    currentAreaId: "shop",
+    routeHistory: { centerCityTutorial: 1 },
+    routeChoiceHistory: { centerCityTutorial: "garageRoute" },
+    portalHistory: {
+      garageToLobby: 1,
+      lobbyToConferenceRoom: 1,
+      ...(endShiftPending ? { centerCityConferenceRoomToShop: 1 } : {}),
+    },
+    lastRouteId: "centerCityTutorial",
+  };
+  setClock(endShiftPending ? "MON 6:35 PM" : "TUE 7:35 AM");
+  addLog(`Debug jump: first job complete${metJosh ? "" : ", Josh intro pending"}.`);
+  enterScene("shop");
+}
+
+function applyDebugServiceReady() {
+  applyDebugCompletedFirstJob({ metJosh: true, endShiftPending: false });
+  state.energy = 86;
+  state.burnout = 0;
+  state.flags.consecutiveLateNights = 0;
+  state.flags.shiftPrepActive = false;
+  addLog("Debug jump: service dispatch ready.");
+  render();
+}
+
+function applyDebugServiceComplete() {
+  applyDebugServiceReady();
+  state.energy = 64;
+  state.cash = 248;
+  state.xp = 90;
+  state.jobsCompleted = 2;
+  state.reputation = { clients: 4, coworkers: 2, management: -1 };
+  state.stats.carefulFinishes = 2;
+  state.flags = {
+    ...state.flags,
+    serviceStarted: true,
+    serviceComplete: true,
+    serviceApproach: "verify",
+    servicePreparation: "josh",
+    servicePaid: true,
+    serviceProgressAwarded: true,
+    serviceStatsRecorded: true,
+    joshServiceDebriefed: false,
+    routeHistory: { ...(state.flags.routeHistory || {}), conshohockenService: 1 },
+    lastRouteId: "conshohockenService",
+  };
+  setClock("WED 7:35 AM");
+  addLog("Debug jump: Conshohocken service complete; Josh debrief pending.");
+  enterScene("shop");
+}
+
+function applyDebugLowEnergyEndShift() {
+  applyDebugCompletedFirstJob({ metJosh: true, endShiftPending: true });
+  state.energy = 8;
+  state.burnout = 5;
+  state.flags.endShiftSource = "Debug Low-Energy Shift";
+  addLog("Debug jump: low-energy end-shift balance state.");
+  enterScene("shop");
+  showEndShiftModal();
+}
+
+function jumpDebugScenario(scenarioId) {
+  if (!DEBUG_MODE) return null;
+  closeModal();
+  if (scenarioId === "post-first-job") {
+    applyDebugCompletedFirstJob({ metJosh: false, endShiftPending: true });
+    return showJoshConversation();
+  }
+  if (scenarioId === "service-ready") return applyDebugServiceReady();
+  if (scenarioId === "service-complete") return applyDebugServiceComplete();
+  if (scenarioId === "low-energy") return applyDebugLowEnergyEndShift();
+  return notify(`Unknown debug scenario: ${scenarioId}`);
+}
+
+function installDebugTools() {
+  if (!DEBUG_MODE) return;
+  window.AV_TECH_RPG_DEBUG = {
+    scenarios: ["post-first-job", "service-ready", "service-complete", "low-energy"],
+    jump: jumpDebugScenario,
+    state,
+  };
+  console.info("AV Tech RPG debug helper ready: AV_TECH_RPG_DEBUG.jump('post-first-job')");
 }
 
 function enterScene(sceneId, playerPosition = null) {
@@ -1982,6 +2137,7 @@ function getRegionalNodeMarkup() {
 }
 
 function showRegionalMap() {
+  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
   const currentArea = getCurrentWorldArea();
   const currentRegion = getWorldRegion(currentArea?.regionId);
   const fastTravelRoutes = getFastTravelRoutes();
@@ -2028,7 +2184,10 @@ function getScenePortalInteractions(sceneId = state.sceneId) {
   const area = getWorldAreaByScene(sceneId);
   if (!area) return [];
   return Object.values(content.world?.portals || {})
-    .filter((portal) => portal.fromAreaId === area.id && typeof portal.x === "number" && typeof portal.y === "number")
+    .filter((portal) => portal.fromAreaId === area.id
+      && isPortalVisibleForState(portal)
+      && typeof portal.x === "number"
+      && typeof portal.y === "number")
     .map((portal) => ({
       x: portal.x,
       y: portal.y,
@@ -2036,6 +2195,23 @@ function getScenePortalInteractions(sceneId = state.sceneId) {
       portalId: portal.id,
       action: () => usePortal(portal.id),
     }));
+}
+
+function isPortalVisibleForState(portal) {
+  if (portal.hiddenWhenFlag && state.flags[portal.hiddenWhenFlag]) return false;
+  if (portal.showWhenFlag && !state.flags[portal.showWhenFlag]) return false;
+  return true;
+}
+
+function getCurrentReturnPortal() {
+  const area = getCurrentWorldArea();
+  if (!area) return null;
+  return Object.values(content.world?.portals || {}).find((portal) => (
+    portal.kind === "returnRoute"
+    && portal.fromAreaId === area.id
+    && isPortalVisibleForState(portal)
+    && (!portal.requiredFlag || state.flags[portal.requiredFlag])
+  )) || null;
 }
 
 function getRouteArrivalClock(route, routeChoice = null) {
@@ -2107,6 +2283,7 @@ function recordPortalUse(portal) {
 }
 
 function finishPortal(portal) {
+  if (portal.kind === "returnRoute") return finishReturnPortal(portal);
   const destination = getWorldArea(portal.toAreaId);
   if (!destination?.sceneId) return notify(`${portal.label} is not connected to a scene yet.`);
   const arrivalClock = getTimeOnCurrentDay(portal.arrivalClock);
@@ -2114,6 +2291,20 @@ function finishPortal(portal) {
   if (portal.arrivalLog) addLog(portal.arrivalLog);
   recordPortalUse(portal);
   enterScene(destination.sceneId, portal.toPlayerStart || null);
+}
+
+function finishReturnPortal(portal) {
+  recordPortalUse(portal);
+  returnToShopAfterDispatch(
+    portal.returnSource || portal.label || "Dispatch",
+    portal.returnLog || "Returned to Radnor Rack & Wire.",
+  );
+}
+
+function returnToShopViaCurrentExit(fallbackSource, fallbackMessage) {
+  const portal = getCurrentReturnPortal();
+  if (portal) return finishReturnPortal(portal);
+  returnToShopAfterDispatch(fallbackSource, fallbackMessage);
 }
 
 function usePortal(portalId) {
@@ -2393,7 +2584,7 @@ function showResults() {
       onClick: () => {
         state.flags.reward = "starter-kit";
         addLog("Starter kit already included the current upgrade choices.");
-        returnToShopAfterDispatch("Two Quick Carts", "Returned to Radnor Rack & Wire after the Center City cart build.");
+        returnToShopViaCurrentExit("Two Quick Carts", "Returned to Radnor Rack & Wire after the Center City cart build.");
       },
     }],
   });
@@ -2413,13 +2604,14 @@ function chooseReward(toolId) {
       label: "Return to Radnor Rack & Wire",
       onClick: () => {
         addLog(`${content.tools[toolId].name} added to your personal kit.`);
-        returnToShopAfterDispatch("Two Quick Carts", "Returned to Radnor Rack & Wire after the Center City cart build.");
+        returnToShopViaCurrentExit("Two Quick Carts", "Returned to Radnor Rack & Wire after the Center City cart build.");
       },
     }],
   });
 }
 
 function showPersonalKit() {
+  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
   const ownedTools = state.tools.map((toolId) => content.tools[toolId]);
   const partsBrainActive = hasActivePartsBrainFind();
   showModal({
@@ -2464,6 +2656,7 @@ function useCircuitHutPartsBrain() {
 }
 
 function showCareerClipboard() {
+  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
   const rank = getCareerRank();
   const nextRank = getNextCareerRank();
   const pendingTraining = hasPendingTraining();
@@ -2677,7 +2870,7 @@ function showJoshConversation() {
         <p><strong>Manager, from the sales office:</strong> "Josh, why are we missing two HDMI couplers? This inventory situation is becoming a pattern."</p>
         <p><strong>Josh:</strong> "Morning. Ignore that. They zip-tied both couplers behind a display yesterday and called it spare inventory. If you get stuck onsite, slow down and trace the path before you start swapping things."</p>
       `,
-      actions: [{ label: "Thank Josh", onClick: render }],
+      actions: [{ label: state.flags.endShiftPending ? "Close Out Shift" : "Thank Josh", onClick: state.flags.endShiftPending ? showEndShiftModal : render }],
     });
   }
   if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) return showJoshCallback();
@@ -2770,6 +2963,7 @@ function receiveJoshLabeler() {
 }
 
 function showSupplyCounter() {
+  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
   const availableTools = Object.values(content.tools).filter((tool) => tool.price > 0 && !ownsTool(tool.id));
   showModal({
     kicker: "Radnor Rack & Wire Supply Counter",
@@ -2815,6 +3009,7 @@ function takeBreak() {
 }
 
 function showDispatchPreview() {
+  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
   if (state.flags.endShiftPending) return showEndShiftModal();
   if (state.flags.handoffComplete && !state.flags.systemsComplete) {
     return showSystemsDispatchPreview();
@@ -2987,7 +3182,7 @@ function finishConshohockenFollowup(approach) {
     `,
     actions: [{
       label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopAfterDispatch(content.followupDispatch.title, "Returned to Radnor Rack & Wire after the Conshohocken label follow-up."),
+      onClick: () => returnToShopViaCurrentExit(content.followupDispatch.title, "Returned to Radnor Rack & Wire after the Conshohocken label follow-up."),
     }],
   });
 }
@@ -3458,7 +3653,7 @@ function finishSecureAccess(approach) {
     `,
     actions: [{
       label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopAfterDispatch(content.secureAccessDispatch.title, "Returned to Radnor Rack & Wire after the Navy Yard access job."),
+      onClick: () => returnToShopViaCurrentExit(content.secureAccessDispatch.title, "Returned to Radnor Rack & Wire after the Navy Yard access job."),
     }],
   });
 }
@@ -3632,7 +3827,7 @@ function finishCallbackCleanup(approach) {
     `,
     actions: [{
       label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopAfterDispatch(content.callbackCleanupDispatch.title, "Returned to Radnor Rack & Wire after the warranty return."),
+      onClick: () => returnToShopViaCurrentExit(content.callbackCleanupDispatch.title, "Returned to Radnor Rack & Wire after the warranty return."),
     }],
   });
 }
@@ -3796,7 +3991,7 @@ function finishHandoff(approach) {
     `,
     actions: [{
       label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopAfterDispatch(content.handoffDispatch.title, "Returned to Radnor Rack & Wire after the executive handoff."),
+      onClick: () => returnToShopViaCurrentExit(content.handoffDispatch.title, "Returned to Radnor Rack & Wire after the executive handoff."),
     }],
   });
 }
@@ -4024,7 +4219,7 @@ function finishSystemsService(approach) {
     `,
     actions: [{
       label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopAfterDispatch(content.systemsDispatch.title, "Returned to Radnor Rack & Wire after the King of Prussia systems service."),
+      onClick: () => returnToShopViaCurrentExit(content.systemsDispatch.title, "Returned to Radnor Rack & Wire after the King of Prussia systems service."),
     }],
   });
 }
@@ -4142,7 +4337,7 @@ function finishTravelDispatch(approach) {
     `,
     actions: [{
       label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopAfterDispatch(content.travelDispatch.title, "Returned to Radnor Rack & Wire after the Cherry Hill return stop."),
+      onClick: () => returnToShopViaCurrentExit(content.travelDispatch.title, "Returned to Radnor Rack & Wire after the Cherry Hill return stop."),
     }],
   });
 }
@@ -4561,7 +4756,7 @@ function finishCommissioning(approach) {
     `,
     actions: [{
       label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopAfterDispatch(content.commissioningDispatch.title, "Returned to Radnor Rack & Wire after the South Philadelphia commissioning visit."),
+      onClick: () => returnToShopViaCurrentExit(content.commissioningDispatch.title, "Returned to Radnor Rack & Wire after the South Philadelphia commissioning visit."),
     }],
   });
 }
@@ -4781,7 +4976,7 @@ function finishSurvey(approach) {
     `,
     actions: [{
       label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopAfterDispatch(content.surveyDispatch.title, "Returned to Radnor Rack & Wire after the University City survey."),
+      onClick: () => returnToShopViaCurrentExit(content.surveyDispatch.title, "Returned to Radnor Rack & Wire after the University City survey."),
     }],
   });
 }
@@ -4964,7 +5159,7 @@ function showServiceResults() {
           state.flags.serviceCallbackPending = true;
           addLog("A Conshohocken callback note appeared before you made it back to Radnor Rack & Wire.");
         }
-        returnToShopAfterDispatch(content.serviceDispatch.title, "Returned to Radnor Rack & Wire after the Conshohocken service call.");
+        returnToShopViaCurrentExit(content.serviceDispatch.title, "Returned to Radnor Rack & Wire after the Conshohocken service call.");
       },
     }],
   });
@@ -4977,6 +5172,7 @@ function getInteractions() {
       {
         x: 330, y: 330, label: "Talk to supervisor", npc: "SUP",
         action: () => {
+          if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
           if (state.flags.endShiftPending) return showEndShiftModal();
           if (state.flags.serviceComplete && hasPendingTraining()) return notify('Supervisor: "You leveled up fast. Mark a training focus on the clipboard before dispatch adds anything else."');
           if (state.flags.finished) return notify('Supervisor: "Check the board when you are ready. It will still say quick, because coordination never learns."');
@@ -5003,7 +5199,9 @@ function getInteractions() {
       }] : []),
       {
         x: 150, y: 270, label: "Read dispatch board",
-        action: () => state.flags.endShiftPending
+        action: () => shouldIntroduceJoshBeforeNextDispatch()
+          ? showJoshConversation()
+          : state.flags.endShiftPending
           ? showEndShiftModal()
           : state.flags.finished
           ? showDispatchPreview()
@@ -5143,9 +5341,9 @@ function getInteractions() {
       return [{
         x: 760, y: 300, label: "Review coupler label follow-up",
         action: showConshohockenFollowupChoice,
-      }];
+      }, ...getScenePortalInteractions("serviceOffice")];
     }
-    if (state.flags.serviceComplete) return [];
+    if (state.flags.serviceComplete) return getScenePortalInteractions("serviceOffice");
     return [
       {
         x: 300, y: 185, label: "Talk to client contact", npc: "CLIENT",
@@ -5213,6 +5411,7 @@ function getInteractions() {
           render();
         },
       },
+      ...getScenePortalInteractions("serviceOffice"),
     ];
   }
 
@@ -5258,6 +5457,7 @@ function getInteractions() {
           inspectSurveyConstraint("wall");
         },
       },
+      ...getScenePortalInteractions("universitySurvey"),
     ];
   }
 
@@ -5309,6 +5509,7 @@ function getInteractions() {
           inspectCommissioningCondition("drawing");
         },
       },
+      ...getScenePortalInteractions("southPhillyCommissioning"),
     ];
   }
 
@@ -5354,6 +5555,7 @@ function getInteractions() {
           inspectCallbackCleanupCondition("client-notes");
         },
       },
+      ...getScenePortalInteractions("warrantyReturn"),
     ];
   }
 
@@ -5399,6 +5601,7 @@ function getInteractions() {
           inspectHandoffCondition("client-need");
         },
       },
+      ...getScenePortalInteractions("executiveHandoff"),
     ];
   }
 
@@ -5444,6 +5647,7 @@ function getInteractions() {
           inspectSystemsCondition("rack-note");
         },
       },
+      ...getScenePortalInteractions("systemsService"),
     ];
   }
 
@@ -5486,6 +5690,7 @@ function getInteractions() {
           inspectSecureAccessCondition("escort");
         },
       },
+      ...getScenePortalInteractions("navyYardAccess"),
     ];
   }
 
@@ -5518,6 +5723,7 @@ function getInteractions() {
     },
     { x: 530, y: 220, label: "Install component on Cart 1", action: () => installCartPart("cart1") },
     { x: 755, y: 390, label: "Install component on Cart 2", action: () => installCartPart("cart2") },
+    ...getScenePortalInteractions("client"),
   ];
 }
 
@@ -5603,6 +5809,7 @@ function notify(message) {
 function getObjective() {
   if (state.sceneId === "shop") {
     if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) return "Talk to Josh about the Conshohocken callback.";
+    if (shouldIntroduceJoshBeforeNextDispatch()) return "Check in with Josh at the workbench before closing out.";
     if (state.flags.endShiftPending) return "Close out the shift before taking another dispatch.";
     if (state.flags.serviceComplete && !state.flags.joshServiceDebriefed) return "Check in with Josh at the workbench.";
     if (state.flags.serviceComplete && hasPendingTraining()) return "Choose a field-training focus from the career clipboard.";
@@ -5635,12 +5842,15 @@ function getObjective() {
     return "Take the elevator to the client floor.";
   }
   if (state.sceneId === "serviceOffice") {
+    if (state.flags.conshohockenFollowupComplete) return "Use the room exit to return to Radnor Rack & Wire.";
+    if (state.flags.serviceComplete) return "Use the room exit to return to Radnor Rack & Wire.";
+    if (state.flags.conshohockenFollowupStarted) return "Review the coupler label follow-up.";
     if (!state.flags.serviceBrief) return "Check in with the client contact.";
     if (!state.flags.serviceInspected) return "Inspect the failed display.";
-    if (state.flags.serviceComplete) return "Review the completed service call.";
     return `Install replacement gear (${state.serviceInstalled.length}/${content.serviceDispatch.swapItems.length}).`;
   }
   if (state.sceneId === "universitySurvey") {
+    if (state.flags.surveyComplete) return "Use the site exit to return to Radnor Rack & Wire.";
     if (!state.flags.surveyBrief) return "Check in with the facilities contact.";
     if (state.surveyInspections.length < content.surveyDispatch.inspections.length) {
       return `Inspect the campus access path (${state.surveyInspections.length}/${content.surveyDispatch.inspections.length}).`;
@@ -5648,6 +5858,7 @@ function getObjective() {
     return "Return to the facilities contact and file the survey report.";
   }
   if (state.sceneId === "southPhillyCommissioning") {
+    if (state.flags.commissioningComplete) return "Use the room exit to return to Radnor Rack & Wire.";
     if (!state.flags.commissioningBrief) return "Check in with the client contact.";
     if (state.commissioningChecks.includes("termination") && !state.flags.commissioningTerminationAction) {
       return "Choose how to handle the loose credenza termination.";
@@ -5658,6 +5869,7 @@ function getObjective() {
     return "Return to the client contact and close out the commissioning visit.";
   }
   if (state.sceneId === "warrantyReturn") {
+    if (state.flags.callbackCleanupComplete) return "Use the room exit to return to Radnor Rack & Wire.";
     if (!state.flags.callbackCleanupBrief) return "Check in with the client contact.";
     if (state.callbackCleanupChecks.length < content.callbackCleanupDispatch.checks.length) {
       return `Troubleshoot the warranty return (${state.callbackCleanupChecks.length}/${content.callbackCleanupDispatch.checks.length}).`;
@@ -5665,6 +5877,7 @@ function getObjective() {
     return "Return to the client contact and close out the warranty return.";
   }
   if (state.sceneId === "executiveHandoff") {
+    if (state.flags.handoffComplete) return "Use the room exit to return to Radnor Rack & Wire.";
     if (!state.flags.handoffBrief) return "Check in with the client contact.";
     if (state.handoffChecks.length < content.handoffDispatch.checks.length) {
       return `Prepare the client handoff (${state.handoffChecks.length}/${content.handoffDispatch.checks.length}).`;
@@ -5672,6 +5885,7 @@ function getObjective() {
     return "Return to the client contact and choose the handoff style.";
   }
   if (state.sceneId === "systemsService") {
+    if (state.flags.systemsComplete) return "Use the room exit to return to Radnor Rack & Wire.";
     if (!state.flags.systemsBrief) return "Check in with the client contact.";
     if (state.systemsChecks.length < content.systemsDispatch.checks.length) {
       return `Troubleshoot the offline room (${state.systemsChecks.length}/${content.systemsDispatch.checks.length}).`;
@@ -5679,6 +5893,7 @@ function getObjective() {
     return "Return to the client contact and choose the systems closeout.";
   }
   if (state.sceneId === "navyYardAccess") {
+    if (state.flags.secureAccessComplete) return "Use the site exit to return to Radnor Rack & Wire.";
     if (!state.flags.secureAccessBrief) return "Check in with security.";
     if (state.secureAccessChecks.length < content.secureAccessDispatch.checks.length) {
       return `Sort out secure access (${state.secureAccessChecks.length}/${content.secureAccessDispatch.checks.length}).`;
@@ -5686,6 +5901,7 @@ function getObjective() {
     return "Return to security and close out the access delay.";
   }
   if (!state.flags.roomBrief) return "Ask the supervisor how to start the cart build.";
+  if (state.flags.finished) return "Use the room exit to return to Radnor Rack & Wire.";
   if (state.assembled.length < 2) return `Assemble Cart 1 with your supervisor (${state.assembled.length}/2).`;
   if (state.assembled.length < 4) return `Finish Cart 2 alone (${state.assembled.length - 2}/2).`;
   return "Review the result of your first day.";
@@ -6252,5 +6468,6 @@ elements.selectionBackButton.addEventListener("click", showTitleScreen);
 elements.menuButton.addEventListener("click", showTitleScreen);
 setInterval(movePlayer, 16);
 
+installDebugTools();
 renderSelection();
 showTitleScreen();

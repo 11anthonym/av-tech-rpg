@@ -201,9 +201,16 @@ be easy to verify in the browser.
 16. **Done - Route map polish pass:** The regional map now groups routes into
    Active Route, Unlocked Fast Travel, and Route Atlas sections so route state
    stays readable as the map grows.
-17. **Next - Building exit pass:** Add a reusable return/exit portal pattern
-   for job rooms so compact interiors can lead back to vans, streets, or shops
-   without custom scene code.
+17. **Done - Building exit pass:** Completed job rooms now have reusable
+   `returnRoute` portals, and result screens use the same current-area exit
+   helper. Resumed saves can walk to the room/site exit instead of depending on
+   a one-off result modal.
+18. **Done - Playtest debug helper pass:** Appending `?debug=1` exposes
+   `AV_TECH_RPG_DEBUG.jump(...)` scenarios for post-first-job, service-ready,
+   service-complete, and low-energy end-shift checks.
+19. **Next - Early-flow playtest pass:** Play from a new career through the
+   Conshohocken service return and verify that Josh, end-of-shift, training,
+   callbacks, and route exits are all explained in player-facing language.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
