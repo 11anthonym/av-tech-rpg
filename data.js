@@ -545,6 +545,7 @@ window.GAME_CONTENT = {
       boardroom: { id: "boardroom", name: "Executive Boardroom", mapLabel: "BOARDROOM", role: "Client handoff and user-training pressure" },
       kingOfPrussia: { id: "kingOfPrussia", name: "King of Prussia", mapLabel: "KING OF PRUSSIA", role: "Office-park systems service and route timing" },
       cherryHill: { id: "cherryHill", name: "Cherry Hill", mapLabel: "CHERRY HILL", role: "Bridge tolls and cross-river scheduling" },
+      burlingtonCounty: { id: "burlingtonCounty", name: "Burlington County", mapLabel: "BURLINGTON COUNTY", role: "Retrofit walkdowns, pathway reality, and scope protection" },
     },
     areas: {
       shop: { id: "shop", sceneId: "shop", regionId: "wayne", kind: "interior", label: "Radnor Rack & Wire Shop" },
@@ -558,6 +559,7 @@ window.GAME_CONTENT = {
       warrantyReturn: { id: "warrantyReturn", sceneId: "warrantyReturn", regionId: "callbackSite", kind: "jobRoom", label: "Callback Room" },
       executiveHandoff: { id: "executiveHandoff", sceneId: "executiveHandoff", regionId: "boardroom", kind: "jobRoom", label: "Executive Boardroom" },
       systemsService: { id: "systemsService", sceneId: "systemsService", regionId: "kingOfPrussia", kind: "jobRoom", label: "Room Offline Service" },
+      burlingtonRetrofitWalkdown: { id: "burlingtonRetrofitWalkdown", regionId: "burlingtonCounty", kind: "futureJobSite", label: "Retrofit Walkdown Site" },
     },
     portals: {
       garageToLobby: {
@@ -894,6 +896,19 @@ window.GAME_CONTENT = {
         arrivalTime: "3:18 PM",
         arrivalLog: "Arrived for a room-offline service call where the reboot has already enjoyed several chances.",
         fastTravelEligible: true,
+      },
+      burlingtonRetrofitWalkdown: {
+        id: "burlingtonRetrofitWalkdown",
+        fromAreaId: "shop",
+        toAreaId: "burlingtonRetrofitWalkdown",
+        fromLabel: "WAYNE AREA",
+        toLabel: "BURLINGTON COUNTY",
+        actionLabel: "Drive To Retrofit Walkdown",
+        packedLunchContext: "the Burlington County retrofit walkdown",
+        arrivalTime: "10:26 AM",
+        arrivalLog: "Arrived in Burlington County for a retrofit walkdown that should have happened before the quote got confident.",
+        planned: true,
+        fastTravelEligible: false,
       },
     },
   },
@@ -1376,8 +1391,44 @@ window.GAME_CONTENT = {
 
   upcomingDispatches: [
     {
+      id: "burlington-retrofit-walkdown",
       title: "Burlington County Retrofit Walkdown",
-      summary: "The drawings say existing conduit. The ceiling says several other things.",
+      summary: "Confirm whether the existing pathway can actually support the retrofit before the quote becomes an install promise.",
+      type: "Retrofit Walkdown",
+      familyId: "survey",
+      routeId: "burlingtonRetrofitWalkdown",
+      setup: "The drawings say existing conduit. The ceiling says several other things.",
+      why: "This is the next data-first work order: a compact survey/process job that can prove the board shape before a new scene exists.",
+      prep: "Planned prep: compare drawings, ask facilities about ceiling access, and photograph pathway blockers before anyone calls it ready.",
+      stakes: [
+        "A real walkdown can protect the install crew from discovering pathway problems on install day.",
+        "The quote pressure wants a clean yes/no instead of a useful scope note.",
+        "Documentation and Commercial Process should matter before any cable gets pulled.",
+      ],
+      consequenceHooks: [
+        "Clean notes lower future retrofit install risk.",
+        "Thin notes can create a field change or return-trip risk.",
+        "Pushing the scope mismatch may help coworkers while annoying management.",
+      ],
+      taskCards: [
+        {
+          title: "Pathway Reality",
+          skill: "Fieldcraft 3",
+          outcome: "Checks ceiling access, conduit/pathway continuity, and whether the route exists outside the drawing.",
+        },
+        {
+          title: "Scope Note",
+          skill: "Commercial Process 3",
+          outcome: "Separates actual site conditions from the optimistic work-order assumption.",
+        },
+        {
+          title: "Install Handoff",
+          skill: "Documentation 3",
+          outcome: "Leaves the next tech photos, blockers, and a decision instead of a shrug.",
+        },
+      ],
+      note: "Future implementation should start with a walkdown prep choice, three survey checks, and one final scope/closeout choice.",
+      managementNote: "Please keep this quick. The quote already assumes the pathway is usable.",
     },
   ],
 

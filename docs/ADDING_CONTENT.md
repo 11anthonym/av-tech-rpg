@@ -186,6 +186,13 @@ Add future job ideas to `upcomingDispatches` in `data.js` before implementing
 them. The current-prototype summary renders these as locked previews so players
 can see nearby goals without expanding the playable scope prematurely.
 
+For a data-first planned job, include enough board data to prove the idea before
+adding a scene: `id`, `title`, `summary`, `type`, `familyId`, optional
+`routeId`, `setup`, `why`, `stakes`, `consequenceHooks`, `taskCards`, `note`,
+and `managementNote`. The planned-work preview uses the same
+`getDispatchBoardMarkup()` renderer as playable jobs, so the family, current
+build edge, route memory, and future consequence hooks should already read well.
+
 ## Add a Technician
 
 Add another entry inside `technicians`:
@@ -264,19 +271,19 @@ RPG contract:
 - job families
 - company context
 
-Use `content.jobFamilies` to describe the kind of RPG work a dispatch is
-testing. Pass the family ID into `getDispatchBoardMarkup({ familyId })` so the
+Use `content.jobFamilies` to describe the kind of RPG work a job is testing.
+Pass the family ID into `getDispatchBoardMarkup({ familyId })` so the
 dispatch board can explain the core skills and loop. The shared board renderer
 also uses the family ID to show the current build's strongest relevant skill,
 weak spot, and trait/tool edges. Use this for writer-facing and player-facing
 clarity; it is not a generic quest engine.
 
-When a dispatch has a mapped travel route, let `getCurrentDispatchRouteId()`
+When a job has a mapped travel route, let `getCurrentDispatchRouteId()`
 point to that route or pass `routeId` into `getDispatchBoardMarkup()`. The board
 can then show route memory, fast-travel readiness, and the last route choice
-without each dispatch duplicating that copy.
+without each job duplicating that copy.
 
-If a dispatch appears because of career state, make that state visible in the
+If a job appears because of career state, make that state visible in the
 board `why` text or through the shared board-routing rules. Current automatic
 rules cover unresolved callbacks forcing warranty return, clean callback ledgers
 skipping warranty, Josh debrief unlocking the Conshohocken follow-up, and the

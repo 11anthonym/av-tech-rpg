@@ -2072,6 +2072,7 @@ function canFastTravelRoute(route) {
 
 function getRouteStatus(route) {
   const travelCount = getRouteTravelCount(route.id);
+  if (route.planned) return "Planned route";
   if (canFastTravelRoute(route)) return "Fast travel ready";
   if (isFastTravelUnlocked(route)) return "Fast travel unlocked";
   if (travelCount > 0) return `Traveled ${travelCount} time${travelCount === 1 ? "" : "s"}`;
@@ -2087,7 +2088,7 @@ function getRouteMapDetail(route) {
   const lastChoice = getLastRouteChoiceLabel(route);
   if (lastChoice) tags.push(`last route: ${lastChoice}`);
   if (getFastTravelCount(route.id)) tags.push(`fast traveled ${getFastTravelCount(route.id)} time${getFastTravelCount(route.id) === 1 ? "" : "s"}`);
-  tags.push(route.fastTravelEligible ? `fast travel: ${getFastTravelEnergyCost(route)} energy` : "manual route");
+  tags.push(route.planned ? "future route" : route.fastTravelEligible ? `fast travel: ${getFastTravelEnergyCost(route)} energy` : "manual route");
   const destination = getWorldArea(route.toAreaId);
   if (destination?.label) tags.push(destination.label);
   return tags.join(" | ");
@@ -3264,7 +3265,9 @@ function getBoardRouteMemoryMarkup(routeId = getCurrentDispatchRouteId()) {
   const travelCount = getRouteTravelCount(route.id);
   const lastRoute = getLastRouteChoiceLabel(route);
   let detail = "New route; travel choice still matters before the work starts.";
-  if (canFastTravelRoute(route)) {
+  if (route.planned) {
+    detail = `Planned ${route.fromLabel} to ${route.toLabel} route; it is mapped for the work-order preview but not launchable yet.`;
+  } else if (canFastTravelRoute(route)) {
     detail = `Known ${route.fromLabel} to ${route.toLabel} route; fast travel is ready from the regional map for ${getFastTravelEnergyCost(route)} energy.`;
   } else if (isFastTravelUnlocked(route)) {
     detail = `Known ${route.fromLabel} to ${route.toLabel} route; fast travel is unlocked when the active job starts from the right area.`;
@@ -3291,7 +3294,12 @@ function getBoardRoutingMarkup() {
   return notes.length ? `<li><strong>Board routing</strong><span>${escapeHtml(notes.join(" "))}</span></li>` : "";
 }
 
-function getDispatchBoardMarkup({ type, setup, why, stakes, note, managementNote, prep = "", taskCards = [], familyId = "", routeId = "" }) {
+function getBoardConsequenceHooksMarkup(consequenceHooks = []) {
+  if (!consequenceHooks.length) return "";
+  return `<li><strong>Consequence hooks</strong><span>${escapeHtml(consequenceHooks.join(" "))}</span></li>`;
+}
+
+function getDispatchBoardMarkup({ type, setup, why, stakes = [], note, managementNote, prep = "", taskCards = [], familyId = "", routeId = "", consequenceHooks = [] }) {
   return `
     <p><strong>${type}:</strong> ${setup}</p>
     <ul class="modal-list">
@@ -3301,6 +3309,7 @@ function getDispatchBoardMarkup({ type, setup, why, stakes, note, managementNote
       ${getBoardBuildEdgeMarkup(familyId)}
       ${getBoardRouteMemoryMarkup(routeId || getCurrentDispatchRouteId())}
       <li><strong>Stakes</strong><span>${stakes.join(" ")}</span></li>
+      ${getBoardConsequenceHooksMarkup(consequenceHooks)}
       ${getOpenCallbackBoardMarkup()}
       ${getBoardRoutingMarkup()}
       ${prep ? `<li><strong>Prep</strong><span>${prep}</span></li>` : ""}
@@ -3320,10 +3329,80 @@ function getOpenCallbackBoardMarkup() {
   return `<li><strong>Because of your choices</strong><span>${openCallbacks} unresolved callback${openCallbacks === 1 ? "" : "s"} on the ledger. ${returnTripSummary || "Future work may feel heavier until the callback ledger catches up."}</span></li>`;
 }
 
+function getUpcomingJobs() {
+  return content.upcomingDispatches || [];
+}
+
+function getUpcomingJobFamilyLabel(job) {
+  return content.jobFamilies?.[job.familyId]?.name || "Future job";
+}
+
+function getUpcomingJobCompactText(job) {
+  const consequenceHint = job.consequenceHooks?.length ? ` Hook: ${job.consequenceHooks[0]}` : "";
+  return `[PLANNED] ${job.title} (${getUpcomingJobFamilyLabel(job)}): ${job.summary}${consequenceHint}`;
+}
+
 function getUpcomingDispatchText() {
-  return content.upcomingDispatches.length
-    ? content.upcomingDispatches.map((dispatch) => `[PLANNED] ${dispatch.title}: ${dispatch.summary}`).join(" ")
+  return getUpcomingJobs().length
+    ? getUpcomingJobs().map(getUpcomingJobCompactText).join(" ")
     : "More erasable-marker work will be added after this board clears.";
+}
+
+function getUpcomingJobListMarkup() {
+  const jobs = getUpcomingJobs();
+  if (!jobs.length) return `<p class="muted">More erasable-marker work will be added after this board clears.</p>`;
+  return `
+    <ul class="modal-list">
+      ${jobs.map((job) => {
+        const detail = [
+          `${getUpcomingJobFamilyLabel(job)}: ${job.summary}`,
+          job.consequenceHooks?.length ? `Hooks: ${job.consequenceHooks.join(" ")}` : "",
+        ].filter(Boolean).join(" ");
+        return `<li><strong>[LOCKED] ${escapeHtml(job.title)}</strong><span>${escapeHtml(detail)}</span></li>`;
+      }).join("")}
+    </ul>
+  `;
+}
+
+function getPlannedJob(jobId) {
+  return getUpcomingJobs().find((job) => job.id === jobId) || null;
+}
+
+function getPlannedJobPreviewActions() {
+  return getUpcomingJobs().map((job) => ({
+    label: `Preview ${job.title}`,
+    className: "secondary-button",
+    onClick: () => showPlannedJobPreview(job.id),
+  }));
+}
+
+function showPlannedJobPreview(jobId) {
+  const job = getPlannedJob(jobId);
+  if (!job) return notify("That planned work order is not on the board yet.");
+  showModal({
+    kicker: "Planned Work Order",
+    title: job.title,
+    body: `
+      ${getDispatchBoardMarkup({
+        type: job.type || "Future Job",
+        setup: job.setup || job.summary,
+        why: job.why || "This job is planned but not playable yet.",
+        stakes: job.stakes || [],
+        note: job.note,
+        managementNote: job.managementNote || "Please keep this quick.",
+        prep: job.prep || "",
+        taskCards: job.taskCards || [],
+        familyId: job.familyId || "",
+        routeId: job.routeId || "",
+        consequenceHooks: job.consequenceHooks || [],
+      })}
+      <p class="muted">Locked preview: this is a data-first work order, not a playable scene yet.</p>
+    `,
+    actions: [
+      { label: "Back To Career Snapshot", onClick: showPrototypeSummary },
+      { label: "Return To Shop", className: "secondary-button", onClick: render },
+    ],
+  });
 }
 
 function showPrototypeSummary() {
@@ -3347,9 +3426,7 @@ function showPrototypeSummary() {
       <p><strong>Career ledger:</strong></p>
       ${getCareerLedgerMarkup()}
       <p><strong>Upcoming jobs:</strong></p>
-      <ul class="modal-list">
-        ${content.upcomingDispatches.map((dispatch) => `<li><strong>[LOCKED] ${dispatch.title}</strong><span>${dispatch.summary}</span></li>`).join("")}
-      </ul>
+      ${getUpcomingJobListMarkup()}
       <p><strong>Career check-in:</strong></p>
       <ul class="modal-list">
         <li><strong>Did the walking stay purposeful?</strong><span>Loading and carrying should explain the job without becoming repetitive.</span></li>
@@ -3359,6 +3436,7 @@ function showPrototypeSummary() {
       <blockquote>Coordination note: "Please remain flexible. Several schedules are currently being finalized retroactively."</blockquote>
     `,
     actions: [
+      ...getPlannedJobPreviewActions(),
       { label: "Review Career Clipboard", onClick: showCareerClipboard },
       { label: "Return To Shop", className: "secondary-button", onClick: render },
       { label: "Return To Title Screen", className: "secondary-button", onClick: showTitleScreen },

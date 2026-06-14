@@ -70,6 +70,13 @@ rest can wake the player below full energy unless they spend a recovery day.
 - [AVIXA: Project Management in the AV Industry](https://xchange.avixa.org/posts/project-management-in-the-av-industry-ensuring-seamless-technological-integration)
   frames AV project work around coordinating resources, managing timelines,
   quality control, and multiple stakeholders.
+- [AVIXA: Site Survey](https://www.avixa.org/training-certification/courses/site-survey)
+  frames site survey as a project-management/general-knowledge topic. Use this
+  when a job is about documenting site reality before install work begins.
+- [BICSI: Cable Installation](https://shop.bicsi.org/technical-manuals/cable-installation)
+  points to job plans, site surveys, specialty-system installation, and
+  coordination with other trades and disciplines. Use this vocabulary for
+  pathway, ceiling access, and retrofit walkdown jobs.
 - [NSCA: Frontline PM & Jobsite Management](https://www.nsca.org/training-solutions/frontline-pm-jobsite-management/)
   is a useful reference for jobsite language such as project team
   responsibilities, field work, subcontractors, scope creep, field changes,

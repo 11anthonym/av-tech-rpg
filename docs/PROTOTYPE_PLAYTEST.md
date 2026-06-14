@@ -356,6 +356,21 @@ This pass updated next-shift prep, Circuit Hut parts-organizer effects, secure
 access notes, systems-service prep, travel-cost choices, and service-call setup.
 No save schema changed; mid-playthrough saves keep the same flags and job keys.
 
+### Job-Authoring Queue Pass
+
+The next compact work order is now data-first instead of scene-first:
+**Burlington County Retrofit Walkdown**. It remains locked, but the current-board
+summary can preview it through the same dispatch-board renderer used by playable
+jobs.
+
+The preview shows its Site Survey family, mapped Burlington County route, current
+build fit, stakes, task cards, and consequence hooks. This should answer whether
+the job sounds expandable before adding a new room, route launch, or walkdown
+scene.
+
+Next playtest question: does a locked planned-work preview make players curious,
+or does it feel like too much roadmap text inside the game?
+
 ## Current RPG Skeleton Experiment
 
 The career clipboard now exposes three pieces of RPG structure that future

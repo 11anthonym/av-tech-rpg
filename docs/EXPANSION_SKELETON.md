@@ -253,10 +253,15 @@ be easy to verify in the browser.
    scope, field change, coordination, closeout, return trip, site access, and
    limited energy where they fit. Tightened next-job prep, parts-organizer,
    access, systems, travel, and service wording without changing save data.
-27. **Next - Job-authoring queue pass:** Pick the next compact work order from
-   the checklist, write it as data first, and confirm the shared board renderer
-   explains its family, build edge, route memory, and consequence hooks before
-   adding another bespoke scene.
+27. **Done - Job-authoring queue pass:** Picked Burlington County Retrofit
+   Walkdown as the next compact work order and wrote it as a data-first planned
+   job. The locked preview now uses the shared board renderer, including job
+   family, current build edge, route memory, task cards, and consequence hooks,
+   before any bespoke scene exists.
+28. **Next - Playable walkdown pass:** Turn the Burlington planned job into the
+   smallest playable site-survey loop: one prep choice, three walkdown checks,
+   one scope/closeout decision, and saved consequences that can affect a later
+   retrofit install.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
