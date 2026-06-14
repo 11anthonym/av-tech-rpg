@@ -2,7 +2,7 @@ const content = window.GAME_CONTENT;
 const keys = new Set();
 const PLAYER_SPEED = 8;
 const SAVE_KEY = "av-tech-rpg-save-v1";
-const SAVE_VERSION = 21;
+const SAVE_VERSION = 22;
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const STAY_LATE_PREP_ENERGY_COST = 32;
 const HELP_JOSH_ENERGY_COST = 30;
@@ -42,6 +42,7 @@ function createInitialState() {
     handoffChecks: [],
     systemsChecks: [],
     retrofitWalkdownChecks: [],
+    retrofitInstallChecks: [],
     energy: 100,
     burnout: 0,
     cash: 0,
@@ -83,6 +84,10 @@ function createInitialState() {
       retrofitRisksDocumented: 0,
       retrofitScopePushbacks: 0,
       retrofitRisksAccepted: 0,
+      retrofitInstallsCompleted: 0,
+      retrofitPathwaysInstalled: 0,
+      retrofitInstallRisksResolved: 0,
+      retrofitInstallRisksInherited: 0,
       trainingGapsLeft: 0,
       skillChecksPassed: 0,
       skillChecksStrained: 0,
@@ -236,6 +241,7 @@ function migrateSavedGame(savedGame) {
     handoffChecks: savedGame.handoffChecks || [],
     systemsChecks: savedGame.systemsChecks || [],
     retrofitWalkdownChecks: savedGame.retrofitWalkdownChecks || [],
+    retrofitInstallChecks: savedGame.retrofitInstallChecks || [],
     vehicleId: savedGame.vehicleId || content.world?.defaultVehicleId || "van3",
     training: savedGame.training || [],
     log: savedGame.log || [],
@@ -254,6 +260,7 @@ function migrateSavedGame(savedGame) {
   if (flags.systemsComplete) flags.systemsProgressAwarded = true;
   if (flags.travelComplete) flags.travelProgressAwarded = true;
   if (flags.retrofitWalkdownComplete) flags.retrofitWalkdownProgressAwarded = true;
+  if (flags.retrofitInstallComplete) flags.retrofitInstallProgressAwarded = true;
   normalizeRetrofitInstallFlags(flags);
   if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
     flags.serviceCallbackPending = true;
@@ -284,7 +291,8 @@ function inferSavedXp(savedGame) {
     + (savedGame.flags?.handoffComplete ? (savedGame.flags.handoffApproach === "cheat" ? 60 : savedGame.flags.handoffApproach === "patient" ? 50 : 30) : 0)
     + (savedGame.flags?.systemsComplete ? (savedGame.flags.systemsApproach === "scope" ? 65 : savedGame.flags.systemsApproach === "document" ? 55 : 35) : 0)
     + (savedGame.flags?.travelComplete ? (savedGame.flags.travelApproach === "pushback" ? 45 : savedGame.flags.travelApproach === "receipt" ? 35 : 25) : 0)
-    + (savedGame.flags?.retrofitWalkdownComplete ? (savedGame.flags.retrofitWalkdownApproach === "scope" ? 65 : savedGame.flags.retrofitWalkdownApproach === "document" ? 55 : 35) : 0);
+    + (savedGame.flags?.retrofitWalkdownComplete ? (savedGame.flags.retrofitWalkdownApproach === "scope" ? 65 : savedGame.flags.retrofitWalkdownApproach === "document" ? 55 : 35) : 0)
+    + (savedGame.flags?.retrofitInstallComplete ? (savedGame.flags.retrofitInstallApproach === "record" ? 65 : 40) : 0);
 }
 
 function inferSavedReputation(savedGame) {
@@ -400,6 +408,16 @@ function inferSavedReputation(savedGame) {
       reputation.management += savedGame.flags.retrofitWalkdownApproach === "scope" ? -2 : -1;
     }
   }
+  if (savedGame.flags?.retrofitInstallComplete) {
+    if (savedGame.flags.retrofitInstallApproach === "record") {
+      reputation.clients += 1;
+      reputation.coworkers += savedGame.flags.retrofitInstallRiskResolved ? 2 : 1;
+      reputation.management -= savedGame.flags.retrofitInstallRiskResolved ? 1 : 0;
+    } else {
+      reputation.management += 1;
+      if (savedGame.flags.retrofitInstallRiskInherited) reputation.coworkers -= 1;
+    }
+  }
   return reputation;
 }
 
@@ -438,6 +456,10 @@ function inferSavedStats(savedGame) {
     retrofitRisksDocumented: 0,
     retrofitScopePushbacks: 0,
     retrofitRisksAccepted: 0,
+    retrofitInstallsCompleted: 0,
+    retrofitPathwaysInstalled: 0,
+    retrofitInstallRisksResolved: 0,
+    retrofitInstallRisksInherited: 0,
     skillChecksPassed: 0,
     skillChecksStrained: 0,
     fieldTaskChoicesMade: 0,
@@ -521,6 +543,12 @@ function inferSavedStats(savedGame) {
     else if (savedGame.flags.retrofitWalkdownApproach === "document") stats.retrofitRisksDocumented += 1;
     else stats.retrofitRisksAccepted += 1;
   }
+  if (savedGame.flags?.retrofitInstallComplete) {
+    stats.retrofitInstallsCompleted += 1;
+    stats.retrofitPathwaysInstalled += 1;
+    if (savedGame.flags.retrofitInstallRiskResolved) stats.retrofitInstallRisksResolved += 1;
+    if (savedGame.flags.retrofitInstallRiskInherited) stats.retrofitInstallRisksInherited += 1;
+  }
   return stats;
 }
 
@@ -594,6 +622,7 @@ function serializeGame() {
     handoffChecks: state.handoffChecks,
     systemsChecks: state.systemsChecks,
     retrofitWalkdownChecks: state.retrofitWalkdownChecks,
+    retrofitInstallChecks: state.retrofitInstallChecks,
     energy: state.energy,
     burnout: state.burnout,
     cash: state.cash,
@@ -943,7 +972,16 @@ function getActiveCareerSummaryMarkup() {
   }
   const retrofitInstallJob = getPlannedJob("burlington-retrofit-install");
   const retrofitInstallPreview = retrofitInstallJob ? getPlannedJobPresentation(retrofitInstallJob) : null;
-  if (retrofitInstallPreview?.branch && retrofitInstallPreview.branchId !== "pending") {
+  if (state.flags.retrofitInstallComplete) {
+    items.push({
+      label: "Retrofit install closeout",
+      detail: state.flags.retrofitInstallRiskInherited
+        ? "Burlington retrofit is installed, but weak pathway documentation is still visible on the return-trip ledger."
+        : state.flags.retrofitInstallRecordComplete
+        ? "Burlington retrofit is installed with record/as-built pathway notes."
+        : "Burlington retrofit is installed with a quick closeout note.",
+    });
+  } else if (retrofitInstallPreview?.branch && retrofitInstallPreview.branchId !== "pending") {
     items.push({
       label: "Retrofit install setup",
       detail: retrofitInstallPreview.branch.stateHint || "Burlington walkdown notes will shape the future retrofit install.",
@@ -1305,9 +1343,10 @@ function continueGame() {
     handoffChecks: savedGame.handoffChecks || [],
     systemsChecks: savedGame.systemsChecks || [],
     retrofitWalkdownChecks: savedGame.retrofitWalkdownChecks || [],
+    retrofitInstallChecks: savedGame.retrofitInstallChecks || [],
     cash: migratedCash,
     xp: migratedXp,
-    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.conshohockenFollowupComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0) + (flags.warehouseComplete ? 1 : 0) + (flags.secureAccessComplete ? 1 : 0) + (flags.callbackCleanupComplete ? 1 : 0) + (flags.handoffComplete ? 1 : 0) + (flags.systemsComplete ? 1 : 0) + (flags.travelComplete ? 1 : 0) + (flags.retrofitWalkdownComplete ? 1 : 0),
+    jobsCompleted: savedGame.jobsCompleted ?? (flags.finished ? 1 : 0) + (flags.serviceComplete ? 1 : 0) + (flags.conshohockenFollowupComplete ? 1 : 0) + (flags.surveyComplete ? 1 : 0) + (flags.commissioningComplete ? 1 : 0) + (flags.warehouseComplete ? 1 : 0) + (flags.secureAccessComplete ? 1 : 0) + (flags.callbackCleanupComplete ? 1 : 0) + (flags.handoffComplete ? 1 : 0) + (flags.systemsComplete ? 1 : 0) + (flags.travelComplete ? 1 : 0) + (flags.retrofitWalkdownComplete ? 1 : 0) + (flags.retrofitInstallComplete ? 1 : 0),
     vehicleId: savedGame.vehicleId || content.world?.defaultVehicleId || "van3",
     reputation: migratedReputation,
     training: savedGame.training || [],
@@ -1364,6 +1403,9 @@ function resumeRequiredPrompt() {
   }
   if (state.sceneId === "burlingtonRetrofitWalkdown" && state.retrofitWalkdownChecks.length === content.retrofitWalkdownDispatch.checks.length && !state.flags.retrofitWalkdownComplete) {
     return showRetrofitWalkdownChoice();
+  }
+  if (state.sceneId === "burlingtonRetrofitWalkdown" && state.retrofitInstallChecks.length === getRetrofitInstallChecks().length && state.flags.retrofitInstallStarted && !state.flags.retrofitInstallComplete) {
+    return showRetrofitInstallChoice();
   }
 }
 
@@ -2104,6 +2146,7 @@ function getCurrentDispatchRouteId() {
   if (state.flags.handoffComplete && !state.flags.systemsComplete) return "systemsService";
   if (state.flags.systemsComplete && !state.flags.travelComplete) return null;
   if (state.flags.travelComplete && !state.flags.retrofitWalkdownComplete) return "burlingtonRetrofitWalkdown";
+  if (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete) return "burlingtonRetrofitWalkdown";
   if (state.flags.secureAccessComplete) {
     if (shouldOfferCallbackCleanupDispatch()) return "warrantyReturn";
     if (!state.flags.handoffComplete) return "executiveHandoff";
@@ -2483,7 +2526,12 @@ function promptFastTravelRoute(routeId) {
   if (routeId === "warrantyReturn") return promptCallbackCleanupTravel({ fastTravel: true });
   if (routeId === "executiveHandoff") return promptHandoffTravel({ fastTravel: true });
   if (routeId === "systemsService") return state.flags.systemsPreparation ? promptSystemsTravel({ fastTravel: true }) : showSystemsPreparation();
-  if (routeId === "burlingtonRetrofitWalkdown") return state.flags.retrofitWalkdownPreparation ? promptRetrofitWalkdownTravel({ fastTravel: true }) : showRetrofitWalkdownPreparation();
+  if (routeId === "burlingtonRetrofitWalkdown") {
+    if (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete) {
+      return state.flags.retrofitInstallPackageReviewed ? promptRetrofitInstallTravel({ fastTravel: true }) : showRetrofitInstallPackage();
+    }
+    return state.flags.retrofitWalkdownPreparation ? promptRetrofitWalkdownTravel({ fastTravel: true }) : showRetrofitWalkdownPreparation();
+  }
   return notify("That route needs a board hook before fast travel can launch it.");
 }
 
@@ -2885,6 +2933,10 @@ function getCareerLedgerMarkup() {
       <span>Retrofit risks documented</span><strong>${state.stats.retrofitRisksDocumented || 0}</strong>
       <span>Retrofit scope pushbacks</span><strong>${state.stats.retrofitScopePushbacks || 0}</strong>
       <span>Retrofit risks accepted</span><strong>${state.stats.retrofitRisksAccepted || 0}</strong>
+      <span>Retrofit installs completed</span><strong>${state.stats.retrofitInstallsCompleted || 0}</strong>
+      <span>Retrofit pathways installed</span><strong>${state.stats.retrofitPathwaysInstalled || 0}</strong>
+      <span>Retrofit install risks resolved</span><strong>${state.stats.retrofitInstallRisksResolved || 0}</strong>
+      <span>Retrofit install risks inherited</span><strong>${state.stats.retrofitInstallRisksInherited || 0}</strong>
       <span>Training gaps left</span><strong>${state.stats.trainingGapsLeft}</strong>
       <span>Passed skill checks</span><strong>${state.stats.skillChecksPassed}</strong>
       <span>Strained skill checks</span><strong>${state.stats.skillChecksStrained}</strong>
@@ -3102,6 +3154,9 @@ function showDispatchPreview() {
   }
   if (state.flags.travelComplete && !state.flags.retrofitWalkdownComplete) {
     return showRetrofitWalkdownDispatchPreview();
+  }
+  if (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete) {
+    return showRetrofitInstallDispatchPreview();
   }
   if (state.flags.secureAccessComplete) {
     if (shouldOfferCallbackCleanupDispatch()) return showCallbackCleanupDispatchPreview();
@@ -3370,7 +3425,7 @@ function getBoardConsequenceHooksMarkup(consequenceHooks = []) {
   return `<li><strong>Consequence hooks</strong><span>${escapeHtml(consequenceHooks.join(" "))}</span></li>`;
 }
 
-function getDispatchBoardMarkup({ type, setup, why, stakes = [], note, managementNote, prep = "", taskCards = [], familyId = "", routeId = "", consequenceHooks = [] }) {
+function getDispatchBoardMarkup({ type, setup, why, stakes = [], note, managementNote, prep = "", taskCards = [], familyId = "", routeId = "", consequenceHooks = [], showLaterWork = true }) {
   return `
     <p><strong>${type}:</strong> ${setup}</p>
     <ul class="modal-list">
@@ -3385,7 +3440,7 @@ function getDispatchBoardMarkup({ type, setup, why, stakes = [], note, managemen
       ${getBoardRoutingMarkup()}
       ${prep ? `<li><strong>Prep</strong><span>${prep}</span></li>` : ""}
       ${state.flags.shiftPrepActive ? `<li><strong>Next-shift prep</strong><span>Stayed late last shift: +1 Fieldcraft and +1 Documentation until this job closes.</span></li>` : ""}
-      <li><strong>Later work</strong><span>${getUpcomingDispatchText()}</span></li>
+      ${showLaterWork ? `<li><strong>Later work</strong><span>${getUpcomingDispatchText()}</span></li>` : ""}
     </ul>
     ${getDispatchTaskCardsMarkup(taskCards)}
     ${note ? `<p class="muted">${note}</p>` : ""}
@@ -3401,7 +3456,10 @@ function getOpenCallbackBoardMarkup() {
 }
 
 function getUpcomingJobs() {
-  return content.upcomingDispatches || [];
+  return (content.upcomingDispatches || []).filter((job) => (
+    job.id !== "burlington-retrofit-install"
+    || (!state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete)
+  ));
 }
 
 function getUpcomingJobFamilyLabel(job) {
@@ -3490,7 +3548,7 @@ function getUpcomingJobListMarkup() {
 }
 
 function getPlannedJob(jobId) {
-  return getUpcomingJobs().find((job) => job.id === jobId) || null;
+  return (content.upcomingDispatches || []).find((job) => job.id === jobId) || null;
 }
 
 function getPlannedJobPreviewActions() {
@@ -4979,6 +5037,281 @@ function finishRetrofitWalkdown(approach) {
   });
 }
 
+function getRetrofitInstallJob() {
+  return getPlannedJob("burlington-retrofit-install");
+}
+
+function getRetrofitInstallPreview() {
+  const job = getRetrofitInstallJob();
+  return job ? getPlannedJobPresentation(job) : null;
+}
+
+function getRetrofitInstallChecks() {
+  return getRetrofitInstallJob()?.checks || [];
+}
+
+function getRetrofitInstallBranchLabel() {
+  return getRetrofitInstallPreview()?.branch?.label || "Walkdown result";
+}
+
+function getRetrofitInstallLoadoutText(branchId = getRetrofitInstallPreview()?.branchId || "pending") {
+  return {
+    protected: "Load display hardware, pathway fittings that match the photo set, labels, pull string, and the marked-up walkdown notes.",
+    partial: "Load display hardware, extra pathway hardware, pull string, labels, and the weak-note photos so the missing detail can be resolved onsite.",
+    risk: "Load display hardware, extra pathway hardware, warning labels, pull string, and enough closeout discipline to keep the shortcut from becoming folklore.",
+    pending: "Review the walkdown result before loading. The install should not leave as a blank work order.",
+  }[branchId] || "Review the walkdown result before loading.";
+}
+
+function showRetrofitInstallDispatchPreview() {
+  const preview = getRetrofitInstallPreview();
+  if (!preview) return notify("The Burlington install is not on the board yet.");
+  showModal({
+    kicker: "Dispatch Board",
+    title: preview.title,
+    body: `
+      ${getDispatchBoardMarkup({
+        type: preview.type || "Retrofit Install",
+        familyId: preview.familyId || "install",
+        routeId: preview.routeId || "burlingtonRetrofitWalkdown",
+        setup: preview.setup,
+        why: "Unlocked after the Burlington walkdown. This install starts by inheriting that closeout instead of pretending the site is new.",
+        stakes: preview.stakes,
+        consequenceHooks: preview.consequenceHooks,
+        note: preview.note,
+        managementNote: preview.managementNote,
+        prep: state.flags.retrofitInstallPackageReviewed ? `Walkdown package reviewed: ${getRetrofitInstallBranchLabel()}` : "Review the inherited walkdown package before loading the van.",
+        taskCards: preview.taskCards,
+        showLaterWork: false,
+      })}
+      ${getPlannedJobBranchMarkup(preview)}
+    `,
+    actions: [
+      { label: state.flags.retrofitInstallPackageReviewed ? "Head To Burlington County" : "Review Walkdown Package", onClick: () => state.flags.retrofitInstallPackageReviewed ? promptRetrofitInstallTravel() : showRetrofitInstallPackage() },
+      { label: "Return to Shop", className: "secondary-button" },
+    ],
+  });
+}
+
+function showRetrofitInstallPackage() {
+  const preview = getRetrofitInstallPreview();
+  if (!preview) return notify("The Burlington install package is not ready.");
+  state.flags.retrofitInstallPackageReviewed = true;
+  state.flags.retrofitInstallBranch = preview.branchId;
+  showModal({
+    kicker: "Install Package",
+    title: `Load For ${preview.branch?.label || "The Walkdown"}`,
+    body: `
+      <p>${preview.branch?.stateHint || "Walkdown result loaded."}</p>
+      <p><strong>Loadout:</strong> ${escapeHtml(getRetrofitInstallLoadoutText(preview.branchId))}</p>
+      <p class="muted">The install will use the same Burlington route. Fast travel is available after the first drive, but it still costs energy.</p>
+    `,
+    actions: [{ label: "Head To Burlington County", onClick: promptRetrofitInstallTravel }],
+  });
+}
+
+function promptRetrofitInstallTravel({ fastTravel = false } = {}) {
+  const preview = getRetrofitInstallPreview();
+  showTravelRouteModal({
+    routeId: "burlingtonRetrofitWalkdown",
+    dispatchEstimate: "Install the retrofit using the inherited walkdown result.",
+    actionLabel: fastTravel ? "Fast Travel To Retrofit Install" : "Drive To Retrofit Install",
+    extraBody: `
+      <p class="muted">Inherited result: ${escapeHtml(preview?.branch?.stateHint || "walkdown package reviewed")}.</p>
+      <p class="muted">${escapeHtml(getRetrofitInstallLoadoutText(preview?.branchId))}</p>
+    `,
+    fastTravel,
+    beforeTravel: () => {
+      state.flags.retrofitInstallStarted = true;
+      state.flags.retrofitInstallBranch = getRetrofitInstallBranchIdFromFlags(state.flags);
+      state.flags.prototypeSummaryViewed = false;
+    },
+  });
+}
+
+function getRetrofitInstallCheckDifficulty(branchId = getRetrofitInstallPreview()?.branchId || "pending") {
+  return {
+    protected: 3,
+    partial: 4,
+    risk: 5,
+    pending: 4,
+  }[branchId] || 4;
+}
+
+function getRetrofitInstallCheckEnergyCost(branchId = getRetrofitInstallPreview()?.branchId || "pending") {
+  return {
+    protected: 3,
+    partial: 5,
+    risk: 7,
+    pending: 5,
+  }[branchId] || 5;
+}
+
+function getRetrofitInstallCloseoutEnergyCost() {
+  const branchId = getRetrofitInstallPreview()?.branchId || "pending";
+  const baseCost = branchId === "protected" ? 3 : branchId === "partial" ? 4 : 5;
+  return Math.max(2, baseCost - getDocumentationSupportReduction());
+}
+
+function getRetrofitInstallCheckContextBonus(branchId = getRetrofitInstallPreview()?.branchId || "pending") {
+  if (branchId === "protected") return 1;
+  if (branchId === "partial" && state.flags.retrofitInstallPackageReviewed) return 1;
+  return 0;
+}
+
+function inspectRetrofitInstallCondition(checkId) {
+  const check = getRetrofitInstallChecks().find((item) => item.id === checkId);
+  if (!check || state.retrofitInstallChecks.includes(checkId)) return notify(`${check?.label || "That install task"} is already checked.`);
+  const preview = getRetrofitInstallPreview();
+  const branchId = preview?.branchId || "pending";
+  state.retrofitInstallChecks.push(checkId);
+  const skillCheck = resolveSkillCheck(`retrofit-install-${checkId}-${branchId}`, {
+    skillId: check.skillId,
+    difficulty: getRetrofitInstallCheckDifficulty(branchId),
+    contextBonus: getRetrofitInstallCheckContextBonus(branchId),
+    contextId: check.contextId,
+  });
+  const energyCost = Math.max(0, getRetrofitInstallCheckEnergyCost(branchId) + (skillCheck.successful ? 0 : 2) - (skillCheck.tier === "clean" ? 1 : 0));
+  changeEnergy(-energyCost);
+  if (!skillCheck.successful) state.flags.retrofitInstallCheckStrained = true;
+  addLog(`${check.label} complete: ${check.log}.`);
+  if (!skillCheck.successful) addLog("Retrofit install check strained; the closeout needs stronger record/as-built notes.");
+  render();
+  showModal({
+    kicker: "Install Task",
+    title: check.label,
+    body: `
+      <p>${check.detail}</p>
+      <p class="muted">${preview?.branch?.stateHint || ""}</p>
+      ${getSkillCheckMarkup(skillCheck)}
+      <p class="muted">The pathway is in. Closeout decides whether the actual route becomes a usable record or another vague handoff.</p>
+    `,
+    actions: [{ label: "Review Install Closeout", onClick: showRetrofitInstallChoice }],
+  });
+}
+
+function showRetrofitInstallChoice() {
+  const preview = getRetrofitInstallPreview();
+  const branchId = preview?.branchId || "pending";
+  const riskBranch = branchId === "partial" || branchId === "risk";
+  showModal({
+    kicker: "Retrofit Install Closeout",
+    title: riskBranch ? "The Ceiling Is Finally In The Notes" : "Known Pathway, Actual Record",
+    body: `
+      <p>The display pathway is installed. The closeout can turn the real route into record/as-built notes, or it can leave the next person with a clean-looking install and a thinner map.</p>
+      ${state.flags.retrofitInstallCheckStrained ? `<p class="muted">The install check was strained. A record/as-built closeout can still protect future service, but the upside is smaller.</p>` : ""}
+      ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits reduce the record/as-built closeout cost by 1 energy.</p>` : ""}
+      ${getChoicePressureMarkup([
+        {
+          label: "Record actual pathway",
+          detail: riskBranch ? "Costs energy, resolves the inherited pathway risk, and gives future service usable record/as-built notes." : "Costs energy and turns the protected pathway into useful closeout documentation.",
+        },
+        {
+          label: "Quick install note",
+          detail: riskBranch ? "Fast and management-friendly, but the weak pathway record stays on the ledger." : "Fast, but it wastes some of the walkdown's documentation value.",
+        },
+      ])}
+    `,
+    actions: [
+      { label: `Record actual pathway (-${getRetrofitInstallCloseoutEnergyCost()} energy)`, onClick: () => finishRetrofitInstall("record") },
+      { label: "Close with quick install note", className: "secondary-button", onClick: () => finishRetrofitInstall("quick") },
+    ],
+  });
+}
+
+function getRetrofitInstallReputationSummary(approach, riskResolved, riskInherited) {
+  if (approach === "quick" && riskInherited) return "Management likes the fast closeout; crew trust drops because the pathway record stays weak";
+  if (approach === "quick") return "Management likes the fast closeout; documentation value is left on the table";
+  if (riskResolved) return "Client and crew trust rise; management grumbles about the record/as-built trail";
+  return "Client trust rises; crew gets usable notes; management mostly tolerates it";
+}
+
+function getRetrofitInstallResultSummary(approach, branchId, strained) {
+  if (approach === "quick") return branchId === "protected" ? "Installed with thin closeout" : "Installed with inherited pathway risk still loose";
+  if (branchId === "protected") return strained ? "Protected route recorded with a strained install note" : "Protected route recorded cleanly";
+  if (branchId === "partial") return strained ? "Partial warning improved, but not fully erased" : "Partial warning resolved into record notes";
+  return strained ? "Risk documented after a strained install" : "Inherited risk resolved into record notes";
+}
+
+function finishRetrofitInstall(approach) {
+  const preview = getRetrofitInstallPreview();
+  const branchId = preview?.branchId || "pending";
+  const documented = approach === "record";
+  const strained = Boolean(state.flags.retrofitInstallCheckStrained);
+  const riskBranch = branchId === "partial" || branchId === "risk";
+  const riskResolved = documented && riskBranch && !strained;
+  const riskInherited = riskBranch && !riskResolved;
+  const xp = Math.max(30, (documented ? (branchId === "risk" ? 70 : branchId === "partial" ? 65 : 60) : (branchId === "protected" ? 45 : 38)) - (strained ? 5 : 0));
+  if (documented) changeEnergy(-getRetrofitInstallCloseoutEnergyCost());
+  state.flags.retrofitInstallComplete = true;
+  state.flags.retrofitInstallApproach = approach;
+  state.flags.retrofitInstallRecordComplete = documented;
+  state.flags.retrofitInstallRiskResolved = riskResolved;
+  state.flags.retrofitInstallRiskInherited = riskInherited;
+  state.flags.prototypeSummaryViewed = false;
+  setClock(`${state.clock.slice(0, 3)} ${documented ? "2:42" : "2:08"} PM`);
+  if (!state.flags.retrofitInstallPaid) {
+    state.cash += documented ? 94 : 76;
+    state.flags.retrofitInstallPaid = true;
+  }
+  if (!state.flags.retrofitInstallProgressAwarded) {
+    awardCareerProgress({
+      xp,
+      reputation: documented
+        ? { clients: 1, coworkers: riskResolved ? 2 : 1, management: riskResolved ? -1 : 0 }
+        : { clients: 0, coworkers: riskInherited ? -1 : 0, management: 1 },
+      source: preview?.title || "Burlington County Retrofit Install",
+    });
+    state.flags.retrofitInstallProgressAwarded = true;
+  }
+  if (!state.flags.retrofitInstallStatsRecorded) {
+    state.stats.retrofitInstallsCompleted += 1;
+    state.stats.retrofitPathwaysInstalled += 1;
+    if (riskResolved) {
+      state.stats.retrofitInstallRisksResolved += 1;
+      state.stats.documentedTaskRisks += 1;
+    }
+    if (riskInherited) state.stats.retrofitInstallRisksInherited += 1;
+    state.flags.retrofitInstallStatsRecorded = true;
+  }
+  if (riskInherited) {
+    recordReturnTripRisk("burlington-retrofit-install", {
+      source: preview?.title || "Burlington County Retrofit Install",
+      detail: documented
+        ? "Retrofit pathway installed, but a strained note leaves partial future-service risk."
+        : "Retrofit pathway installed with a quick note; weak pathway documentation remains.",
+    });
+  } else if (state.flags.returnTripRisks?.["burlington-retrofit-install"]) {
+    delete state.flags.returnTripRisks["burlington-retrofit-install"];
+  }
+  addLog(documented
+    ? "Closed the Burlington retrofit install with record/as-built pathway notes."
+    : "Closed the Burlington retrofit install with a quick note. The ceiling knows what happened, at least.");
+  render();
+  showModal({
+    kicker: "Retrofit Install Complete",
+    title: documented ? "The Actual Pathway Made It Into The Record" : "The Display Is Up, The Record Is Thin",
+    body: `
+      <div class="results-grid">
+        <span>Install wages</span><strong>+$${documented ? 94 : 76}</strong>
+        <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
+        <span>Experience</span><strong>+${xp} XP</strong>
+        <span>Inherited branch</span><strong>${preview?.branch?.label || branchId}</strong>
+        <span>Install result</span><strong>${getRetrofitInstallResultSummary(approach, branchId, strained)}</strong>
+        <span>Relationship result</span><strong>${getRetrofitInstallReputationSummary(approach, riskResolved, riskInherited)}</strong>
+        <span>Return-trip risk</span><strong>${riskInherited ? "Still visible on the ledger" : "Cleared for this install"}</strong>
+      </div>
+      ${documented
+        ? `<blockquote>Management note: "Please keep record drawing updates proportionate to the approved install."</blockquote>`
+        : `<blockquote>Management note: "Thanks for keeping the install moving."</blockquote>`}
+    `,
+    actions: [{
+      label: "Return To Radnor Rack & Wire",
+      onClick: () => returnToShopViaCurrentExit(preview?.title || "Burlington County Retrofit Install", "Returned to Radnor Rack & Wire after the Burlington County retrofit install."),
+    }],
+  });
+}
+
 function showCommissioningDispatchPreview() {
   showModal({
     kicker: "Dispatch Board",
@@ -6112,6 +6445,38 @@ function getInteractions() {
   }
 
   if (state.sceneId === "burlingtonRetrofitWalkdown") {
+    if (state.flags.retrofitInstallStarted && !state.flags.retrofitInstallComplete) {
+      const allInstalled = state.retrofitInstallChecks.length === getRetrofitInstallChecks().length;
+      return [
+        {
+          x: 300, y: 185, label: allInstalled ? "Close out retrofit install" : "Review walkdown package onsite", npc: "CLIENT",
+          action: () => {
+            if (allInstalled) return showRetrofitInstallChoice();
+            if (state.flags.retrofitInstallBrief) return notify('Facilities contact: "I remember the walkdown. I was hoping the ceiling would improve before you came back, but it did not."');
+            state.flags.retrofitInstallBrief = true;
+            addLog("Reviewed the walkdown package onsite before starting the retrofit install.");
+            showModal({
+              kicker: "Facilities Contact",
+              title: "Same Ceiling, Better Notes",
+              body: `
+                <p>"The display wall is ready. The ceiling access is exactly as charming as last time. Please tell me your notes say where the pathway actually goes."</p>
+                <p class="muted">${escapeHtml(getRetrofitInstallPreview()?.branch?.stateHint || "The install is inheriting the walkdown result.")}</p>
+              `,
+              actions: [{ label: "Start Retrofit Install", onClick: render }],
+            });
+          },
+        },
+        {
+          x: 690, y: 385, label: "Install display pathway",
+          action: () => {
+            if (!state.flags.retrofitInstallBrief) return notify("Review the walkdown package onsite first.");
+            inspectRetrofitInstallCondition("pathway-install");
+          },
+        },
+        ...getScenePortalInteractions("burlingtonRetrofitWalkdown"),
+      ];
+    }
+    if (state.flags.retrofitWalkdownComplete) return getScenePortalInteractions("burlingtonRetrofitWalkdown");
     const allChecked = state.retrofitWalkdownChecks.length === content.retrofitWalkdownDispatch.checks.length;
     return [
       {
@@ -6537,7 +6902,8 @@ function getObjective() {
     if (state.flags.handoffComplete && !state.flags.systemsComplete) return "Review the King of Prussia systems service on the dispatch board.";
     if (state.flags.systemsComplete && !state.flags.travelComplete) return "Review the Cherry Hill return toll on the dispatch board.";
     if (state.flags.travelComplete && !state.flags.retrofitWalkdownComplete) return "Review the Burlington County retrofit walkdown on the dispatch board.";
-    if (state.flags.retrofitWalkdownComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
+    if (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete) return "Review the Burlington County retrofit install on the dispatch board.";
+    if (state.flags.retrofitInstallComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
     if (shouldOfferCallbackCleanupDispatch()) return "Review the warranty return on the dispatch board.";
     if (state.flags.secureAccessComplete && !state.flags.handoffComplete) return "Review the executive handoff on the dispatch board.";
     if (state.flags.secureAccessComplete) return "Current dispatch board complete. Explore the shop.";
@@ -6606,6 +6972,13 @@ function getObjective() {
     return "Return to the client contact and choose the systems closeout.";
   }
   if (state.sceneId === "burlingtonRetrofitWalkdown") {
+    if (state.flags.retrofitInstallStarted && !state.flags.retrofitInstallComplete) {
+      if (!state.flags.retrofitInstallBrief) return "Review the walkdown package with the facilities contact.";
+      if (state.retrofitInstallChecks.length < getRetrofitInstallChecks().length) {
+        return `Install the retrofit pathway (${state.retrofitInstallChecks.length}/${getRetrofitInstallChecks().length}).`;
+      }
+      return "Choose the retrofit install closeout.";
+    }
     if (state.flags.retrofitWalkdownComplete) return "Use the site exit to return to Radnor Rack & Wire.";
     if (!state.flags.retrofitWalkdownBrief) return "Check in with the facilities contact.";
     if (state.retrofitWalkdownChecks.length < content.retrofitWalkdownDispatch.checks.length) {
@@ -7227,17 +7600,24 @@ function render() {
   const callbackCleanupActive = state.sceneId === "warrantyReturn";
   const handoffActive = state.sceneId === "executiveHandoff";
   const systemsActive = state.sceneId === "systemsService";
-  const retrofitWalkdownActive = state.sceneId === "burlingtonRetrofitWalkdown";
+  const retrofitInstallActive = state.sceneId === "burlingtonRetrofitWalkdown" && state.flags.retrofitInstallStarted && !state.flags.retrofitInstallComplete;
+  const retrofitWalkdownActive = state.sceneId === "burlingtonRetrofitWalkdown" && !retrofitInstallActive;
+  const retrofitInstallPreview = getRetrofitInstallPreview();
   const travelActive = state.flags.systemsComplete && !state.flags.travelComplete;
-  const travelSummaryPending = state.flags.retrofitWalkdownComplete && !state.flags.prototypeSummaryViewed;
+  const travelSummaryPending = state.flags.retrofitInstallComplete && !state.flags.prototypeSummaryViewed;
   const warehouseActive = state.flags.warehouseStarted && !state.flags.warehouseComplete;
   const followupActive = state.flags.conshohockenFollowupStarted && !state.flags.conshohockenFollowupComplete;
+  const retrofitInstallPending = retrofitInstallActive
+    || (state.flags.retrofitInstallStarted && !state.flags.retrofitInstallComplete)
+    || (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete);
   const retrofitWalkdownPending = retrofitWalkdownActive
     || (state.flags.retrofitWalkdownStarted && !state.flags.retrofitWalkdownComplete)
     || (state.flags.travelComplete && !state.flags.retrofitWalkdownComplete);
   const activeDispatch = travelActive
     ? content.travelDispatch
-    : travelSummaryPending || retrofitWalkdownPending
+    : travelSummaryPending || retrofitInstallPending
+    ? retrofitInstallPreview || { title: "Burlington County Retrofit Install", summary: "Install the retrofit using the inherited walkdown result." }
+    : retrofitWalkdownPending
     ? content.retrofitWalkdownDispatch
     : systemsActive || (state.flags.systemsStarted && !state.flags.systemsComplete) || (state.flags.handoffComplete && !state.flags.systemsComplete)
     ? content.systemsDispatch
@@ -7262,6 +7642,8 @@ function render() {
     ? "WAREHOUSE RUN"
     : travelActive
       ? "TRAVEL COST"
+    : retrofitInstallActive
+      ? "RETROFIT INSTALL"
     : retrofitWalkdownActive
       ? "RETROFIT WALKDOWN"
     : systemsActive
@@ -7281,6 +7663,8 @@ function render() {
       : serviceActive
       ? "SERVICE CALL"
       : state.flags.travelComplete && !state.flags.retrofitWalkdownComplete
+        ? "SHOP HUB"
+      : state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete
         ? "SHOP HUB"
       : state.flags.secureAccessComplete
         ? "DISPATCH COMPLETE"

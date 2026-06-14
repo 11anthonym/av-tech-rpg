@@ -267,10 +267,14 @@ be easy to verify in the browser.
    walkdown result first. The install now branches around protected pathway,
    partial warning, or inherited pathway risk instead of starting from a blank
    work order.
-30. **Next - Playable retrofit install pass:** Turn the locked Burlington
+30. **Done - Playable retrofit install pass:** Turned the locked Burlington
    install preview into the smallest playable install loop: read the inherited
    walkdown branch, load for known conditions, complete one pathway/install
    check, and close with record/as-built notes.
+31. **Next - Post-install pacing pass:** Recheck the late-board pacing now that
+   Burlington has both walkdown and install beats. Decide whether the final
+   career snapshot should appear immediately after the install or after a small
+   shop debrief / next-day recovery beat.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

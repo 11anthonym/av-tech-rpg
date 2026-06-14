@@ -564,6 +564,13 @@ planned preview can show inherited setup, prep, task cards, and implementation
 hooks from saved flags. This is a good middle step between a static future-job
 teaser and a full scene.
 
+When the planned job becomes playable, keep the branch reader and add only the
+smallest loop that proves the payoff. Burlington install reuses the Burlington
+route and site, reads `retrofitInstallBranch`, adds one `retrofitInstallChecks`
+entry, and closes with record/as-built notes or a quick install note. If a
+planned job already has useful branch data, make the first playable version
+inherit it instead of rewriting the setup from scratch.
+
 ## Practical Rule
 
 Add one small content item, reload the browser, and walk through the affected

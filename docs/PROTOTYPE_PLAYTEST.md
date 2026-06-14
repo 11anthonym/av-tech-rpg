@@ -407,6 +407,23 @@ Playtest question: when the player opens the career snapshot after Burlington,
 does the locked install clearly explain what the walkdown changed, or does the
 branch language need a more dramatic payoff before the install becomes playable?
 
+### Playable Retrofit Install Pass
+
+The **Burlington County Retrofit Install** now follows the walkdown as a
+playable install beat. The player reviews the inherited walkdown branch, loads
+for known conditions, returns to the Burlington site, completes one pathway
+install check, and chooses between record/as-built closeout notes or a quick
+install note.
+
+This pass adds `retrofitInstallChecks` and save version 22. Existing
+mid-playthrough saves after the walkdown should advance to the install board
+instead of the final career snapshot, while saves inside the install should
+resume to the closeout choice after the pathway check is complete.
+
+Playtest question: does the two-step Burlington arc feel like consequence and
+payoff, or does it need a shop debrief / recovery beat before the final career
+snapshot?
+
 ## Current RPG Skeleton Experiment
 
 The career clipboard now exposes three pieces of RPG structure that future

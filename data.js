@@ -246,10 +246,10 @@ window.GAME_CONTENT = {
 
   traitContextBonuses: {
     notebookHabit: [
-      { skillId: "documentation", contextIds: ["survey-documentation", "secure-access-documentation", "callback-documentation", "handoff-documentation", "commissioning-documentation", "systems-documentation", "retrofit-documentation"], bonus: 1 },
+      { skillId: "documentation", contextIds: ["survey-documentation", "secure-access-documentation", "callback-documentation", "handoff-documentation", "commissioning-documentation", "systems-documentation", "retrofit-documentation", "retrofit-install-closeout"], bonus: 1 },
     ],
     byTheBook: [
-      { skillId: "documentation", contextIds: ["survey-documentation", "secure-access-documentation", "callback-documentation", "handoff-documentation", "commissioning-documentation", "systems-documentation", "retrofit-documentation"], bonus: 1 },
+      { skillId: "documentation", contextIds: ["survey-documentation", "secure-access-documentation", "callback-documentation", "handoff-documentation", "commissioning-documentation", "systems-documentation", "retrofit-documentation", "retrofit-install-closeout"], bonus: 1 },
       { skillId: "troubleshooting", contextIds: ["service-diagnosis", "commissioning-troubleshooting", "callback-troubleshooting"], bonus: 1 },
     ],
     calmUnderFire: [
@@ -259,7 +259,7 @@ window.GAME_CONTENT = {
       { skillId: "clientCommunication", contextIds: ["survey-pressure", "secure-access-pressure", "handoff-pressure", "commissioning-pressure", "retrofit-pressure"], bonus: 1 },
     ],
     steadyHands: [
-      { skillId: "install", contextIds: ["cart-assembly", "service-install", "commissioning-termination"], bonus: 1 },
+      { skillId: "install", contextIds: ["cart-assembly", "service-install", "commissioning-termination", "retrofit-install"], bonus: 1 },
     ],
   },
 
@@ -559,7 +559,7 @@ window.GAME_CONTENT = {
       warrantyReturn: { id: "warrantyReturn", sceneId: "warrantyReturn", regionId: "callbackSite", kind: "jobRoom", label: "Callback Room" },
       executiveHandoff: { id: "executiveHandoff", sceneId: "executiveHandoff", regionId: "boardroom", kind: "jobRoom", label: "Executive Boardroom" },
       systemsService: { id: "systemsService", sceneId: "systemsService", regionId: "kingOfPrussia", kind: "jobRoom", label: "Room Offline Service" },
-      burlingtonRetrofitWalkdown: { id: "burlingtonRetrofitWalkdown", sceneId: "burlingtonRetrofitWalkdown", regionId: "burlingtonCounty", kind: "jobSite", label: "Retrofit Walkdown Site" },
+      burlingtonRetrofitWalkdown: { id: "burlingtonRetrofitWalkdown", sceneId: "burlingtonRetrofitWalkdown", regionId: "burlingtonCounty", kind: "jobSite", label: "Retrofit Site" },
     },
     portals: {
       garageToLobby: {
@@ -775,12 +775,12 @@ window.GAME_CONTENT = {
         y: 235,
         requiredFlag: "retrofitWalkdownComplete",
         requiredMessage: "Close out the retrofit walkdown before heading back.",
-        returnSource: "Burlington County Retrofit Walkdown",
-        returnLog: "Returned to Radnor Rack & Wire after the Burlington County retrofit walkdown.",
+        returnSource: "Burlington County Retrofit Site",
+        returnLog: "Returned to Radnor Rack & Wire after the Burlington County retrofit site visit.",
         transition: {
           kicker: "Walkdown Exit",
           title: "Back To The Shop",
-          body: "The ceiling did not get simpler, but at least the install crew gets notes before discovering that in public.",
+          body: "The ceiling did not get simpler, but at least the shop now has a clearer record of what happened there.",
           actionLabel: "Return To Shop",
         },
       },
@@ -923,7 +923,7 @@ window.GAME_CONTENT = {
         fromLabel: "WAYNE AREA",
         toLabel: "BURLINGTON COUNTY",
         destinationSceneId: "burlingtonRetrofitWalkdown",
-        actionLabel: "Drive To Retrofit Walkdown",
+        actionLabel: "Drive To Burlington Retrofit Site",
         packedLunchContext: "the Burlington County retrofit walkdown",
         arrivalTime: "10:26 AM",
         arrivalLog: "Arrived in Burlington County for a retrofit walkdown that should have happened before the quote got confident.",
@@ -1480,6 +1480,16 @@ window.GAME_CONTENT = {
         "Can branch install energy cost around pathway and scope notes.",
         "Can reward the documentation habit if photos and blockers were recorded.",
       ],
+      checks: [
+        {
+          id: "pathway-install",
+          label: "Pathway install",
+          skillId: "install",
+          contextId: "retrofit-install",
+          log: "the retrofit pathway is installed against the inherited walkdown note",
+          detail: "The display wall finally gets a real pathway. The work is easier when the walkdown protected the route, tense when the note was partial, and very loud when the quote pretended the ceiling was ready.",
+        },
+      ],
       resultBranches: {
         pending: {
           label: "Walkdown pending",
@@ -1787,11 +1797,11 @@ window.GAME_CONTENT = {
       ],
     },
     burlingtonRetrofitWalkdown: {
-      name: "Retrofit Walkdown Site",
+      name: "Burlington Retrofit Site",
       kicker: "Burlington County, NJ",
       playerStart: { x: 120, y: 430 },
       decor: [
-        { type: "label", x: 45, y: 36, w: 285, h: 38, text: "BURLINGTON RETROFIT WALKDOWN" },
+        { type: "label", x: 45, y: 36, w: 285, h: 38, text: "BURLINGTON RETROFIT SITE" },
         { type: "desk", x: 78, y: 110, w: 185, h: 92, text: "FACILITIES TABLE", solid: true },
         { type: "elevator", x: 735, y: 92, w: 155, h: 185, text: "CEILING ACCESS", solid: true },
         { type: "build", x: 635, y: 345, w: 225, h: 88, text: "NEW DISPLAY WALL", solid: true },

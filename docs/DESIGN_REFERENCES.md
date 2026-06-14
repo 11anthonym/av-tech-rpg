@@ -80,6 +80,14 @@ rest can wake the player below full energy unless they spend a recovery day.
 - [AVIXA: Mastering Fiber Optic Cable Installation in AV Systems](https://www.avixa.org/explore/articles/fiber-optic-cable-installation)
   emphasizes surveying the installation route, identifying obstacles, and
   confirming conduits, cable trays, and pathways before installation.
+- [AVIXA: AV Systems Performance Verification](https://www.avixa.org/resources/standards/av-systems-performance-verification)
+  frames verification around project-delivery timing, criteria/metrics, and
+  reporting procedures. Use this when install work needs a post-install proof
+  or closeout result instead of just "it powers on."
+- [AVIXA: Documentation Requirements for Audiovisual Systems](https://www.avixa.org/standards/standard-guide-for-audiovisual-systems-design-and-coordination-processes)
+  defines documentation requirements for AV projects and aligns construction,
+  infrastructure, coordination, and delivery documentation. Use this as the
+  clean reference for record/as-built closeout language.
 - [BICSI: Cable Installation](https://shop.bicsi.org/technical-manuals/cable-installation)
   points to job plans, site surveys, specialty-system installation, and
   coordination with other trades and disciplines. Use this vocabulary for
