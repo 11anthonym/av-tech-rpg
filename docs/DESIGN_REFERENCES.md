@@ -73,10 +73,21 @@ rest can wake the player below full energy unless they spend a recovery day.
 - [AVIXA: Site Survey](https://www.avixa.org/training-certification/courses/site-survey)
   frames site survey as a project-management/general-knowledge topic. Use this
   when a job is about documenting site reality before install work begins.
+- [AVIXA: The Power of a Well-Crafted Statement of Work in AV Projects](https://www.avixa.org/explore/articles/statement-of-work)
+  frames scope of work, assumptions, constraints, change management,
+  coordination points, and handoff requirements as project-control language.
+  Use this when a walkdown changes what a later install should promise.
+- [AVIXA: Mastering Fiber Optic Cable Installation in AV Systems](https://www.avixa.org/explore/articles/fiber-optic-cable-installation)
+  emphasizes surveying the installation route, identifying obstacles, and
+  confirming conduits, cable trays, and pathways before installation.
 - [BICSI: Cable Installation](https://shop.bicsi.org/technical-manuals/cable-installation)
   points to job plans, site surveys, specialty-system installation, and
   coordination with other trades and disciplines. Use this vocabulary for
   pathway, ceiling access, and retrofit walkdown jobs.
+- [BICSI: ANSI/BICSI 005-2013 preview](https://aux.bicsi.org/om/BICSI-005-2013.pdf)
+  anchors pathway language around verifying routes to drawings and
+  specifications, accommodating cabling and future change, and coordinating
+  device boxes, enclosures, and pull boxes with other trades.
 - [NSCA: Frontline PM & Jobsite Management](https://www.nsca.org/training-solutions/frontline-pm-jobsite-management/)
   is a useful reference for jobsite language such as project team
   responsibilities, field work, subcontractors, scope creep, field changes,

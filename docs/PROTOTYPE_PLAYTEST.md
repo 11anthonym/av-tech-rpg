@@ -358,10 +358,10 @@ No save schema changed; mid-playthrough saves keep the same flags and job keys.
 
 ### Job-Authoring Queue Pass
 
-The next compact work order is now data-first instead of scene-first:
-**Burlington County Retrofit Walkdown**. It remains locked, but the current-board
-summary can preview it through the same dispatch-board renderer used by playable
-jobs.
+The next compact work order started data-first instead of scene-first:
+**Burlington County Retrofit Walkdown**. At this pass it stayed locked, but the
+current-board summary could preview it through the same dispatch-board renderer
+used by playable jobs.
 
 The preview shows its Site Survey family, mapped Burlington County route, current
 build fit, stakes, task cards, and consequence hooks. This should answer whether
@@ -370,6 +370,26 @@ scene.
 
 Next playtest question: does a locked planned-work preview make players curious,
 or does it feel like too much roadmap text inside the game?
+
+### Playable Walkdown Pass
+
+The **Burlington County Retrofit Walkdown** is now a playable site-survey loop
+after the Cherry Hill coordination-cost travel beat. The job asks the player to
+choose a prep step, travel to the retrofit site, check ceiling access, trace the
+existing pathway, document the above-ceiling conflict, and decide whether the
+closeout records blockers, pushes a field change, or accepts the pathway as
+usable.
+
+The result writes saved flags for the later retrofit install preview:
+`retrofitInstallProtected`, `retrofitInstallRisk`, and
+`retrofitScopeChangeLogged`. Mid-playthrough saves should migrate safely through
+save version 20, old completed jobs keep their progress awards, and resumed
+Burlington saves should route back to the closeout prompt when all walkdown
+checks are complete.
+
+Playtest question: does a compact walkdown feel like useful work before an
+install, or does the player need more visible connection between the scope note
+and the locked retrofit install?
 
 ## Current RPG Skeleton Experiment
 

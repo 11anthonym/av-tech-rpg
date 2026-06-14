@@ -258,10 +258,15 @@ be easy to verify in the browser.
    job. The locked preview now uses the shared board renderer, including job
    family, current build edge, route memory, task cards, and consequence hooks,
    before any bespoke scene exists.
-28. **Next - Playable walkdown pass:** Turn the Burlington planned job into the
-   smallest playable site-survey loop: one prep choice, three walkdown checks,
-   one scope/closeout decision, and saved consequences that can affect a later
-   retrofit install.
+28. **Done - Playable walkdown pass:** Turned Burlington County Retrofit
+   Walkdown into the smallest playable site-survey loop: one prep choice, three
+   pathway/existing-conditions checks, one scope/closeout decision, and saved
+   consequences that can protect or risk the later retrofit install preview.
+29. **Next - Future install consequence pass:** Keep the retrofit install
+   locked, but make its preview and eventual first implementation read the
+   walkdown result first. The install should branch around protected pathway,
+   partial warning, or inherited pathway risk instead of starting from a blank
+   work order.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

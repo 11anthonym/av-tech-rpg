@@ -549,6 +549,14 @@ The implementation is intentionally hand-authored:
 When adding the next job, copy the shape, not the topic. Pick one primary
 RPG question, one prep choice, two or three checks, and one final consequence.
 
+For data-first planned work, use **Burlington County Retrofit Walkdown** as the
+current conversion example. Keep the future install in `upcomingDispatches`,
+move the playable site-survey loop into its own dispatch data, add one small
+scene, and save the closeout result as flags the future job can read. That keeps
+the dispatch board honest: the preview describes a later install, while the
+playable walkdown records whether that install is protected, partially warned,
+or inheriting pathway risk.
+
 ## Practical Rule
 
 Add one small content item, reload the browser, and walk through the affected
