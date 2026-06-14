@@ -262,11 +262,15 @@ be easy to verify in the browser.
    Walkdown into the smallest playable site-survey loop: one prep choice, three
    pathway/existing-conditions checks, one scope/closeout decision, and saved
    consequences that can protect or risk the later retrofit install preview.
-29. **Next - Future install consequence pass:** Keep the retrofit install
-   locked, but make its preview and eventual first implementation read the
-   walkdown result first. The install should branch around protected pathway,
+29. **Done - Future install consequence pass:** Kept the retrofit install
+   locked, but made its preview and eventual first implementation read the
+   walkdown result first. The install now branches around protected pathway,
    partial warning, or inherited pathway risk instead of starting from a blank
    work order.
+30. **Next - Playable retrofit install pass:** Turn the locked Burlington
+   install preview into the smallest playable install loop: read the inherited
+   walkdown branch, load for known conditions, complete one pathway/install
+   check, and close with record/as-built notes.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

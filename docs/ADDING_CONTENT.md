@@ -557,6 +557,13 @@ the dispatch board honest: the preview describes a later install, while the
 playable walkdown records whether that install is protected, partially warned,
 or inheriting pathway risk.
 
+When a locked job depends on earlier choices, add `resultBranches` to its
+`upcomingDispatches` entry before making the job playable. The Burlington
+install uses `pending`, `protected`, `partial`, and `risk` branches so the
+planned preview can show inherited setup, prep, task cards, and implementation
+hooks from saved flags. This is a good middle step between a static future-job
+teaser and a full scene.
+
 ## Practical Rule
 
 Add one small content item, reload the browser, and walk through the affected

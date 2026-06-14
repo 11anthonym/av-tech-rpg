@@ -391,6 +391,22 @@ Playtest question: does a compact walkdown feel like useful work before an
 install, or does the player need more visible connection between the scope note
 and the locked retrofit install?
 
+### Future Install Consequence Pass
+
+The locked **Burlington County Retrofit Install** preview now reads the saved
+walkdown result instead of staying generic. Its planned-work data has branches
+for pending walkdown, protected pathway, partial warning, and inherited pathway
+risk.
+
+This pass adds `retrofitInstallBranch` and `retrofitInstallPartialWarning`
+normalization in save version 21. Older Burlington saves should infer the branch
+from `retrofitWalkdownApproach`, `retrofitWalkdownChecksStrained`,
+`retrofitInstallProtected`, and `retrofitInstallRisk`.
+
+Playtest question: when the player opens the career snapshot after Burlington,
+does the locked install clearly explain what the walkdown changed, or does the
+branch language need a more dramatic payoff before the install becomes playable?
+
 ## Current RPG Skeleton Experiment
 
 The career clipboard now exposes three pieces of RPG structure that future

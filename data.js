@@ -1480,6 +1480,143 @@ window.GAME_CONTENT = {
         "Can branch install energy cost around pathway and scope notes.",
         "Can reward the documentation habit if photos and blockers were recorded.",
       ],
+      resultBranches: {
+        pending: {
+          label: "Walkdown pending",
+          stateHint: "Walkdown result pending; install branch is not chosen yet.",
+          setup: "The install is still waiting on a walkdown result. Without it, this would start from the same optimistic work order that caused the site-survey beat.",
+          prep: "Future prep is blocked until the walkdown closeout says whether the pathway is protected, partially warned, or risky.",
+          stakes: [
+            "The install should not start from a blank work order.",
+            "The walkdown result will decide whether discovery pressure moves to prep, pathway install, or closeout.",
+            "The first implementation should read the saved walkdown flags before any cable is loaded.",
+          ],
+          consequenceHooks: [
+            "Pending state waits for retrofitWalkdownComplete.",
+            "No install branch is selected until the walkdown writes its closeout flags.",
+          ],
+          taskCards: [
+            {
+              title: "Read Walkdown Result",
+              skill: "Commercial Process 2",
+              outcome: "Blocks the install plan until existing conditions are known.",
+            },
+            {
+              title: "Load For Known Conditions",
+              skill: "Fieldcraft 3",
+              outcome: "Future loadout should change after the walkdown result exists.",
+            },
+            {
+              title: "Closeout Package",
+              skill: "Documentation 3",
+              outcome: "Future closeout should produce record/as-built notes instead of another vague handoff.",
+            },
+          ],
+          note: "This locked preview is intentionally waiting on the playable walkdown.",
+        },
+        protected: {
+          label: "Protected pathway",
+          stateHint: "Walkdown result: future install protected by scope notes and photos.",
+          setup: "The walkdown protected the crew before install day. The future install can start from a known pathway condition instead of discovering the ceiling live.",
+          prep: "Load for the documented pathway, field-change note, and photo set before packing display hardware.",
+          stakes: [
+            "Discovery pressure moves out of the install and into execution.",
+            "Pathway work should cost less energy because the route is known before arrival.",
+            "Closeout should turn the protected route into record/as-built notes for future service.",
+          ],
+          consequenceHooks: [
+            "Lower future pathway-install energy cost.",
+            "Unlock cleaner closeout if documentation support is available.",
+            "Management friction may remain if the walkdown created a field-change note.",
+          ],
+          taskCards: [
+            {
+              title: "Load For Known Conditions",
+              skill: "Fieldcraft 3",
+              outcome: "Packs around the known route and avoids loading for the wrong assumption.",
+            },
+            {
+              title: "Pathway Install",
+              skill: "Install 4",
+              outcome: "Starts with the route already verified against the walkdown notes.",
+            },
+            {
+              title: "Record Drawing Closeout",
+              skill: "Documentation 3",
+              outcome: "Turns the actual pathway into record/as-built notes for future service.",
+            },
+          ],
+          note: "This branch should feel like the payoff for making the walkdown useful.",
+        },
+        partial: {
+          label: "Partial warning",
+          stateHint: "Walkdown result: blockers documented, but one strained note leaves partial pathway risk.",
+          setup: "The walkdown warned the future crew, but one strained note leaves enough uncertainty that the install can still hit discovery pressure.",
+          prep: "Load extra pathway hardware and review the weak note before leaving. The install should start warned, not surprised.",
+          stakes: [
+            "The install gets a warning, but not full protection.",
+            "One pathway step should carry extra energy or a skill-check penalty until the weak note is resolved.",
+            "The closeout can repair the record if the crew documents what the walkdown missed.",
+          ],
+          consequenceHooks: [
+            "Adds a partial-risk branch instead of treating all documentation as equally clean.",
+            "Can reward a careful record/as-built closeout for repairing the weak note.",
+            "Keeps return-trip pressure visible without making failure automatic.",
+          ],
+          taskCards: [
+            {
+              title: "Resolve Weak Note",
+              skill: "Commercial Process 3",
+              outcome: "Decides whether the partial warning becomes a field change or an install-day workaround.",
+            },
+            {
+              title: "Pathway Install",
+              skill: "Install 4",
+              outcome: "Tests the warned route with extra friction from the incomplete walkdown note.",
+            },
+            {
+              title: "Record Drawing Closeout",
+              skill: "Documentation 4",
+              outcome: "Repairs the partial warning by documenting the actual pathway used.",
+            },
+          ],
+          note: "This branch is the middle state: the player helped, but the install still inherits a question.",
+        },
+        risk: {
+          label: "Inherited pathway risk",
+          stateHint: "Walkdown result: pathway accepted; install inherits ceiling risk.",
+          setup: "The walkdown accepted the pathway as usable. The future install now owns the missing conduit, the ceiling conflict, and the clean quote.",
+          prep: "Load extra pathway hardware, warning labels, and patience. The approved quote still says this should be straightforward.",
+          stakes: [
+            "Discovery pressure lands on the install crew.",
+            "Pathway install should cost more energy or force a field-change decision.",
+            "A strong closeout can still document the actual route and reduce later return-trip risk.",
+          ],
+          consequenceHooks: [
+            "Raises future pathway-install energy cost.",
+            "Can force a field-change or workaround choice during install.",
+            "Keeps management happy early while risking crew trust and return-trip pressure.",
+          ],
+          taskCards: [
+            {
+              title: "Discover Missing Pathway",
+              skill: "Fieldcraft 4",
+              outcome: "Finds the problem the walkdown accepted too quickly.",
+            },
+            {
+              title: "Pathway Install",
+              skill: "Install 4",
+              outcome: "Tests whether the crew burns energy, pushes scope, or improvises.",
+            },
+            {
+              title: "Record Drawing Closeout",
+              skill: "Documentation 3",
+              outcome: "Documents the actual route so the next service call is not archaeology.",
+            },
+          ],
+          note: "This branch should make the earlier shortcut visible without making the future job unwinnable.",
+        },
+      },
       taskCards: [
         {
           title: "Load For Known Conditions",

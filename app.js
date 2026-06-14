@@ -2,7 +2,7 @@ const content = window.GAME_CONTENT;
 const keys = new Set();
 const PLAYER_SPEED = 8;
 const SAVE_KEY = "av-tech-rpg-save-v1";
-const SAVE_VERSION = 20;
+const SAVE_VERSION = 21;
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const STAY_LATE_PREP_ENERGY_COST = 32;
 const HELP_JOSH_ENERGY_COST = 30;
@@ -193,6 +193,26 @@ function migrateSavedRouteHistory(savedGame, flags) {
   flags.routeChoiceHistory ||= {};
 }
 
+function getRetrofitInstallBranchIdFromFlags(flags = {}) {
+  if (!flags.retrofitWalkdownComplete) return "pending";
+  const approach = flags.retrofitWalkdownApproach;
+  const partialWarning = Boolean(flags.retrofitInstallPartialWarning
+    || (approach === "document" && flags.retrofitWalkdownChecksStrained && !flags.retrofitInstallProtected));
+  if (partialWarning) return "partial";
+  if (flags.retrofitInstallProtected || approach === "scope" || approach === "document") return "protected";
+  if (flags.retrofitInstallRisk || approach === "accept") return "risk";
+  return "pending";
+}
+
+function normalizeRetrofitInstallFlags(flags = {}) {
+  const branchId = getRetrofitInstallBranchIdFromFlags(flags);
+  if (branchId === "pending") return;
+  flags.retrofitInstallBranch = branchId;
+  flags.retrofitInstallPartialWarning = branchId === "partial";
+  flags.retrofitInstallProtected = branchId === "protected";
+  flags.retrofitInstallRisk = branchId === "partial" || branchId === "risk";
+}
+
 function migrateSavedGame(savedGame) {
   if (!savedGame || typeof savedGame !== "object") return null;
   const flags = { ...(savedGame.flags || {}) };
@@ -234,6 +254,7 @@ function migrateSavedGame(savedGame) {
   if (flags.systemsComplete) flags.systemsProgressAwarded = true;
   if (flags.travelComplete) flags.travelProgressAwarded = true;
   if (flags.retrofitWalkdownComplete) flags.retrofitWalkdownProgressAwarded = true;
+  normalizeRetrofitInstallFlags(flags);
   if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
     flags.serviceCallbackPending = true;
   }
@@ -920,12 +941,12 @@ function getActiveCareerSummaryMarkup() {
   if (getCarefulTaskReduction()) {
     items.push({ label: "Careful-work support", detail: "Careful habits or traits reduce some repair and punch-list energy costs." });
   }
-  if (state.flags.retrofitInstallProtected || state.flags.retrofitInstallRisk) {
+  const retrofitInstallJob = getPlannedJob("burlington-retrofit-install");
+  const retrofitInstallPreview = retrofitInstallJob ? getPlannedJobPresentation(retrofitInstallJob) : null;
+  if (retrofitInstallPreview?.branch && retrofitInstallPreview.branchId !== "pending") {
     items.push({
       label: "Retrofit install setup",
-      detail: state.flags.retrofitInstallProtected
-        ? "Burlington walkdown notes should lower future retrofit install friction."
-        : "Burlington pathway risk is still loose and may complicate a future retrofit install.",
+      detail: retrofitInstallPreview.branch.stateHint || "Burlington walkdown notes will shape the future retrofit install.",
     });
   }
   if (state.flags.shiftPrepActive) {
@@ -3387,17 +3408,61 @@ function getUpcomingJobFamilyLabel(job) {
   return content.jobFamilies?.[job.familyId]?.name || "Future job";
 }
 
-function getUpcomingJobStateHint(job) {
+function getPlannedJobBranchId(job) {
   if (job.id !== "burlington-retrofit-install") return "";
-  if (state.flags.retrofitInstallProtected) return "Walkdown result: future install protected.";
-  if (state.flags.retrofitInstallRisk) return "Walkdown result: future install carries pathway risk.";
-  return "Walkdown result pending.";
+  return getRetrofitInstallBranchIdFromFlags(state.flags);
+}
+
+function getPlannedJobBranch(job) {
+  const branchId = getPlannedJobBranchId(job);
+  if (!branchId) return null;
+  return job.resultBranches?.[branchId] || null;
+}
+
+function getPlannedJobPresentation(job) {
+  const branchId = getPlannedJobBranchId(job);
+  const branch = getPlannedJobBranch(job);
+  return {
+    ...job,
+    branchId,
+    branch,
+    summary: branch?.summary || job.summary,
+    setup: branch?.setup || job.setup || job.summary,
+    prep: branch?.prep || job.prep || "",
+    stakes: branch?.stakes?.length ? branch.stakes : job.stakes || [],
+    consequenceHooks: branch?.consequenceHooks?.length ? branch.consequenceHooks : job.consequenceHooks || [],
+    taskCards: branch?.taskCards?.length ? branch.taskCards : job.taskCards || [],
+    note: branch?.note || job.note,
+    managementNote: branch?.managementNote || job.managementNote,
+  };
+}
+
+function getUpcomingJobStateHint(job) {
+  return getPlannedJobPresentation(job).branch?.stateHint || "";
+}
+
+function getPlannedJobBranchMarkup(preview) {
+  if (!preview.branch) return "";
+  const implementationHook = preview.branchId === "protected"
+    ? "Start the first playable install with reduced discovery friction and a record-drawing closeout."
+    : preview.branchId === "partial"
+    ? "Start the first playable install with one warned-but-unresolved pathway question."
+    : preview.branchId === "risk"
+    ? "Start the first playable install by surfacing the missing pathway as field-change pressure."
+    : "Keep the install locked until the walkdown chooses a branch.";
+  return `
+    <ul class="modal-list">
+      <li><strong>Inherited walkdown result</strong><span>${escapeHtml(preview.branch.stateHint || preview.branch.label)}</span></li>
+      <li><strong>First implementation hook</strong><span>${escapeHtml(implementationHook)}</span></li>
+    </ul>
+  `;
 }
 
 function getUpcomingJobCompactText(job) {
-  const consequenceHint = job.consequenceHooks?.length ? ` Hook: ${job.consequenceHooks[0]}` : "";
+  const preview = getPlannedJobPresentation(job);
+  const consequenceHint = preview.consequenceHooks?.length ? ` Hook: ${preview.consequenceHooks[0]}` : "";
   const stateHint = getUpcomingJobStateHint(job);
-  return `[PLANNED] ${job.title} (${getUpcomingJobFamilyLabel(job)}): ${job.summary}${stateHint ? ` ${stateHint}` : ""}${consequenceHint}`;
+  return `[PLANNED] ${preview.title} (${getUpcomingJobFamilyLabel(preview)}): ${preview.summary}${stateHint ? ` ${stateHint}` : ""}${consequenceHint}`;
 }
 
 function getUpcomingDispatchText() {
@@ -3412,12 +3477,13 @@ function getUpcomingJobListMarkup() {
   return `
     <ul class="modal-list">
       ${jobs.map((job) => {
+        const preview = getPlannedJobPresentation(job);
         const detail = [
-          `${getUpcomingJobFamilyLabel(job)}: ${job.summary}`,
+          `${getUpcomingJobFamilyLabel(preview)}: ${preview.summary}`,
           getUpcomingJobStateHint(job),
-          job.consequenceHooks?.length ? `Hooks: ${job.consequenceHooks.join(" ")}` : "",
+          preview.consequenceHooks?.length ? `Hooks: ${preview.consequenceHooks.join(" ")}` : "",
         ].filter(Boolean).join(" ");
-        return `<li><strong>[LOCKED] ${escapeHtml(job.title)}</strong><span>${escapeHtml(detail)}</span></li>`;
+        return `<li><strong>[LOCKED] ${escapeHtml(preview.title)}</strong><span>${escapeHtml(detail)}</span></li>`;
       }).join("")}
     </ul>
   `;
@@ -3438,23 +3504,25 @@ function getPlannedJobPreviewActions() {
 function showPlannedJobPreview(jobId) {
   const job = getPlannedJob(jobId);
   if (!job) return notify("That planned work order is not on the board yet.");
+  const preview = getPlannedJobPresentation(job);
   showModal({
     kicker: "Planned Work Order",
-    title: job.title,
+    title: preview.title,
     body: `
       ${getDispatchBoardMarkup({
-        type: job.type || "Future Job",
-        setup: job.setup || job.summary,
-        why: job.why || "This job is planned but not playable yet.",
-        stakes: job.stakes || [],
-        note: job.note,
-        managementNote: job.managementNote || "Please keep this quick.",
-        prep: job.prep || "",
-        taskCards: job.taskCards || [],
-        familyId: job.familyId || "",
-        routeId: job.routeId || "",
-        consequenceHooks: job.consequenceHooks || [],
+        type: preview.type || "Future Job",
+        setup: preview.setup || preview.summary,
+        why: preview.why || "This job is planned but not playable yet.",
+        stakes: preview.stakes || [],
+        note: preview.note,
+        managementNote: preview.managementNote || "Please keep this quick.",
+        prep: preview.prep || "",
+        taskCards: preview.taskCards || [],
+        familyId: preview.familyId || "",
+        routeId: preview.routeId || "",
+        consequenceHooks: preview.consequenceHooks || [],
       })}
+      ${getPlannedJobBranchMarkup(preview)}
       <p class="muted">Locked preview: this is a data-first work order, not a playable scene yet.</p>
     `,
     actions: [
@@ -4836,10 +4904,14 @@ function finishRetrofitWalkdown(approach) {
   state.flags.retrofitWalkdownComplete = true;
   state.flags.retrofitWalkdownApproach = approach;
   state.flags.prototypeSummaryViewed = false;
-  const futureInstallProtected = approach === "scope" || (approach === "document" && !strained);
-  const futureInstallRisk = approach === "accept" || strained;
+  const futureInstallPartialWarning = approach === "document" && strained;
+  const futureInstallProtected = approach === "scope" || (approach === "document" && !futureInstallPartialWarning);
+  const futureInstallRisk = approach === "accept" || futureInstallPartialWarning;
+  const futureInstallBranch = futureInstallProtected ? "protected" : futureInstallPartialWarning ? "partial" : "risk";
   state.flags.retrofitInstallProtected = futureInstallProtected;
   state.flags.retrofitInstallRisk = futureInstallRisk;
+  state.flags.retrofitInstallPartialWarning = futureInstallPartialWarning;
+  state.flags.retrofitInstallBranch = futureInstallBranch;
   state.flags.retrofitScopeChangeLogged = approach === "scope";
   setClock(`${state.clock.slice(0, 3)} ${approach === "accept" ? "11:34" : "11:58"} AM`);
   if (!state.flags.retrofitWalkdownPaid) {

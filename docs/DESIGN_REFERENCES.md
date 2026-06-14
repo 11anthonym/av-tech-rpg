@@ -87,7 +87,9 @@ rest can wake the player below full energy unless they spend a recovery day.
 - [BICSI: ANSI/BICSI 005-2013 preview](https://aux.bicsi.org/om/BICSI-005-2013.pdf)
   anchors pathway language around verifying routes to drawings and
   specifications, accommodating cabling and future change, and coordinating
-  device boxes, enclosures, and pull boxes with other trades.
+  device boxes, enclosures, and pull boxes with other trades. It also supports
+  record/as-built closeout language for drawings that reflect actual pathways
+  after installation.
 - [NSCA: Frontline PM & Jobsite Management](https://www.nsca.org/training-solutions/frontline-pm-jobsite-management/)
   is a useful reference for jobsite language such as project team
   responsibilities, field work, subcontractors, scope creep, field changes,
