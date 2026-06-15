@@ -372,6 +372,8 @@ async function clickButton(page, name) {
       window.resolveCommissioningTerminationTask("document");
       const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
       const result = state.flags.fieldTaskResults?.["commissioning-termination-document"];
+      window.showCareerClipboard();
+      const clipboardText = document.querySelector("#modal-backdrop")?.innerText || "";
       return {
         actionSaved: state.flags.commissioningTerminationAction === "document",
         resultSaved: Boolean(result),
@@ -379,6 +381,7 @@ async function clickButton(page, name) {
         resultSkill: result?.skillId || "",
         energyChanged: state.energy !== beforeEnergy,
         showsResultRows: modalText.includes("Task type") && modalText.includes("Skill check") && modalText.includes("Risk flag"),
+        clipboardShowsHistory: clipboardText.includes("Field task history") && clipboardText.includes("Document first"),
       };
     });
     assert(commissioningTerminationTask.actionSaved, "Commissioning termination task should save the selected action");
@@ -387,6 +390,7 @@ async function clickButton(page, name) {
     assert(commissioningTerminationTask.resultSkill === "clientCommunication", "Commissioning termination task should use data-backed skill");
     assert(commissioningTerminationTask.energyChanged, "Commissioning termination task should affect energy");
     assert(commissioningTerminationTask.showsResultRows, "Commissioning termination task should show structured field-task rows");
+    assert(commissioningTerminationTask.clipboardShowsHistory, "Career clipboard should show saved commissioning field-task history");
 
     const saveRoundTrip = await page.evaluate(() => {
       const state = window.AV_TECH_RPG_DEBUG.state;

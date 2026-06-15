@@ -338,7 +338,9 @@ be easy to verify in the browser.
    type, skill, difficulty, energy, tools, context, success/strained text, and
    named risk metadata. Shared field-task result recording now supports both
    ordinary skill checks and choice-style tasks, and the commissioning preview
-   shows termination tasks before the job is accepted.
+   shows termination tasks before the job is accepted. Career clipboard and
+   final snapshot now include a field-task history sourced from the reusable
+   result entries.
 42. **Current roadmap complete, remaining hardening lane:** The current
    incremental roadmap has no remaining `Next` item. The remaining work is
    consolidation: broaden reusable task/check patterns to older bespoke checks

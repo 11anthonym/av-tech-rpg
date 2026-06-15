@@ -824,6 +824,30 @@ function recordFieldTaskResult({ flagKey, check, checkId = check?.id || flagKey,
   };
 }
 
+function getFieldTaskResultEntries() {
+  return Object.entries(state.flags.fieldTaskResults || {})
+    .map(([id, result]) => ({ id, ...result }));
+}
+
+function getFieldTaskResultLedgerMarkup({ limit = 6 } = {}) {
+  const entries = getFieldTaskResultEntries().slice(-limit).reverse();
+  if (!entries.length) return `<p class="muted">No field-task results have been recorded yet.</p>`;
+  return `
+    <ul class="modal-list">
+      ${entries.map((entry) => {
+        const skillName = getSkillDefinition(entry.skillId)?.name || entry.skillId || "No skill roll";
+        const riskText = entry.riskFlag ? ` Risk flag: ${entry.riskFlag}.` : "";
+        return `
+          <li>
+            <strong>${escapeHtml(`${entry.successful ? "Resolved" : "Risk"} - ${entry.label}`)}</strong>
+            <span>${escapeHtml(`${entry.type || "field check"} | ${skillName}${entry.difficulty ? ` ${entry.difficulty}` : ""} | energy ${entry.energyCost || 0} | ${entry.tier || "recorded"}.${riskText}`)}</span>
+          </li>
+        `;
+      }).join("")}
+    </ul>
+  `;
+}
+
 function resolveFieldTaskCheck({
   check,
   checkId,
@@ -3584,6 +3608,8 @@ function showCareerClipboard() {
       ${getActiveCareerSummaryMarkup()}
       <p><strong>Consequence ledger:</strong></p>
       ${getConsequenceLedgerMarkup({ includeResolved: true })}
+      <p><strong>Field task history:</strong></p>
+      ${getFieldTaskResultLedgerMarkup()}
       <p><strong>Build identity:</strong></p>
       ${getBuildIdentityMarkup()}
       <p><strong>Skill tree details:</strong></p>
@@ -4528,6 +4554,8 @@ function showPrototypeSummary() {
       ${getActiveCareerSummaryMarkup()}
       <p><strong>Consequence ledger:</strong></p>
       ${getConsequenceLedgerMarkup({ includeResolved: true })}
+      <p><strong>Field task history:</strong></p>
+      ${getFieldTaskResultLedgerMarkup()}
       <p><strong>Career ledger:</strong></p>
       ${getCareerLedgerMarkup()}
       <p><strong>Upcoming jobs:</strong></p>

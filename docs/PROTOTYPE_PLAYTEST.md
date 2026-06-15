@@ -89,7 +89,7 @@ The playable slice now has:
    sync.
 35. Data-backed commissioning termination task choices that preview as field
    tasks, resolve through shared result recording, and preserve their task
-   outcome in save data.
+   outcome in save data and career clipboard history.
 
 ## Playtest Questions
 
@@ -693,11 +693,14 @@ Changed:
 - Resolving the termination task records a `fieldTaskResults` entry, so
   save/continue and future closeout surfaces can inspect the task result without
   re-parsing bespoke flags.
+- Career clipboard and final snapshot now include a compact field-task history
+  sourced from those reusable result entries.
 
 Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
 commissioning field-task preview text, data-backed task type/skill, energy
 change, structured result rows, and save/continue preservation of the
-commissioning field-task result.
+commissioning field-task result. It also checks that the career clipboard shows
+the saved field-task history.
 
 ## Current RPG Skeleton Experiment
 
