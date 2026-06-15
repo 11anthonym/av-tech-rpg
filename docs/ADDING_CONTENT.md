@@ -374,10 +374,12 @@ instead of hardcoding a specific van inside new scene interactions.
 the current area, current vehicle, regional nodes, known routes, route history,
 and which routes are candidates for later fast travel.
 
-For now, most route launching still belongs to the dispatch board or specific
-story gates. Add new destinations to `content.world.regions`, `areas`, and
-`routes` first, then expose direct map launching only after the route's prep,
-cost, unlock, and save-state rules are clear.
+Route launching should flow through dispatch-board state and route helpers, not
+through another one-off prompt. Add new destinations to `content.world.regions`,
+`areas`, and `routes` first, then connect the playable board item through
+`getDispatchBoardEntryDefinitions()`, route metadata in `content.routeJobs`,
+and the shared travel helpers only after the route's prep, cost, unlock, and
+save-state rules are clear.
 
 Fast travel is deliberately conservative:
 
@@ -393,10 +395,12 @@ return visit that reuses `conshohockenService` after the player has already
 driven that route. Copy that pattern when adding a repeat route before adding
 manual driving or broad map teleports.
 
-The regional map groups routes into Active Route, Unlocked Fast Travel, and
-Route Atlas. If a route appears in the wrong section, check
-`getCurrentDispatchRouteId()`, `fastTravelEligible`, and whether
-`routeHistory[route.id]` is being recorded when the route is driven.
+The regional map groups routes into Active Job Route, Known Destinations,
+Available Repeat / Fast-Travel Routes, Locked Future Candidates, and Completed
+Route History. If a route appears in the wrong section, check
+`getCurrentDispatchBoardEntry()`, `getCurrentDispatchRouteId()`,
+`fastTravelEligible`, and whether `routeHistory[route.id]` is being recorded
+when the route is driven.
 
 ## Add a World Area or Route
 

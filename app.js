@@ -2,7 +2,7 @@ const content = window.GAME_CONTENT;
 const keys = new Set();
 const PLAYER_SPEED = 8;
 const SAVE_KEY = "av-tech-rpg-save-v1";
-const SAVE_VERSION = 22;
+const SAVE_VERSION = 23;
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const STAY_LATE_PREP_ENERGY_COST = 32;
 const HELP_JOSH_ENERGY_COST = 30;
@@ -261,6 +261,9 @@ function migrateSavedGame(savedGame) {
   if (flags.travelComplete) flags.travelProgressAwarded = true;
   if (flags.retrofitWalkdownComplete) flags.retrofitWalkdownProgressAwarded = true;
   if (flags.retrofitInstallComplete) flags.retrofitInstallProgressAwarded = true;
+  if (flags.retrofitInstallComplete && flags.prototypeSummaryViewed && flags.retrofitInstallDebriefed === undefined) {
+    flags.retrofitInstallDebriefed = true;
+  }
   normalizeRetrofitInstallFlags(flags);
   if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
     flags.serviceCallbackPending = true;
@@ -770,6 +773,90 @@ function getSkillCheckMarkup(result) {
   return `<p class="muted">Skill check: ${getSkillCheckLabel(result)}.</p>`;
 }
 
+function getFieldTaskToolText(toolId) {
+  if (!toolId) return "";
+  return content.tools?.[toolId] ? getToolDisplayName(toolId) : toolId;
+}
+
+function getFieldTaskRiskText(check) {
+  if (!check.riskFlag) return "No named risk flag";
+  return check.riskLabel || check.riskFlag;
+}
+
+function getFieldTaskOutcomeText(check, skillCheck) {
+  if (skillCheck.successful) return check.successText || "Task completed cleanly enough to support closeout.";
+  return check.strainedText || "Task completed under strain; closeout may inherit risk.";
+}
+
+function getFieldTaskResultMarkup({ check, skillCheck, energyCost }) {
+  const rows = [
+    ["Task type", check.type || "field check"],
+    ["Skill check", getSkillCheckLabel(skillCheck)],
+    ["Energy spent", energyCost ? `-${energyCost} energy` : "0 energy"],
+    ...(check.requiredTool ? [["Required tool", getFieldTaskToolText(check.requiredTool)]] : []),
+    ...(check.optionalTool ? [["Helpful tool", getFieldTaskToolText(check.optionalTool)]] : []),
+    ["Risk flag", getFieldTaskRiskText(check)],
+  ];
+  return `
+    <div class="results-grid">
+      ${rows.map(([label, value]) => `<span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>`).join("")}
+    </div>
+    <p class="muted">${escapeHtml(getFieldTaskOutcomeText(check, skillCheck))}</p>
+  `;
+}
+
+function resolveFieldTaskCheck({
+  check,
+  checkId,
+  completedChecks,
+  flagKey,
+  skillId,
+  difficulty,
+  contextBonus = 0,
+  contextId,
+  baseEnergyCost,
+  failedEnergyPenalty,
+  cleanEnergyReduction,
+  strainedFlag = "",
+  logText = "",
+  strainedLogText = "",
+}) {
+  const resolvedSkillId = skillId || check.skillId;
+  const resolvedDifficulty = difficulty ?? check.difficulty ?? 0;
+  const resolvedContextId = contextId ?? check.contextId ?? "";
+  const resolvedBaseEnergyCost = baseEnergyCost ?? check.energyCost ?? 0;
+  const resolvedFailedEnergyPenalty = failedEnergyPenalty ?? check.failedEnergyPenalty ?? 1;
+  const resolvedCleanEnergyReduction = cleanEnergyReduction ?? check.cleanEnergyReduction ?? 1;
+  const resolvedStrainedFlag = strainedFlag || check.strainedFlag || "";
+  completedChecks.push(checkId);
+  const skillCheck = resolveSkillCheck(flagKey, {
+    skillId: resolvedSkillId,
+    difficulty: resolvedDifficulty,
+    contextBonus,
+    contextId: resolvedContextId,
+  });
+  const energyCost = Math.max(0, resolvedBaseEnergyCost + (skillCheck.successful ? 0 : resolvedFailedEnergyPenalty) - (skillCheck.tier === "clean" ? resolvedCleanEnergyReduction : 0));
+  changeEnergy(-energyCost);
+  if (!skillCheck.successful && resolvedStrainedFlag) state.flags[resolvedStrainedFlag] = true;
+  state.flags.fieldTaskResults ||= {};
+  state.flags.fieldTaskResults[flagKey] = {
+    id: checkId,
+    label: check.label,
+    type: check.type || "field check",
+    skillId: resolvedSkillId,
+    difficulty: resolvedDifficulty,
+    contextId: resolvedContextId,
+    energyCost,
+    tier: skillCheck.tier,
+    successful: skillCheck.successful,
+    riskFlag: check.riskFlag || "",
+  };
+  addLog(logText || check.logText || `${check.label} checked: ${check.log}`);
+  const resolvedStrainedLogText = strainedLogText || check.strainedLogText || "";
+  if (!skillCheck.successful && resolvedStrainedLogText) addLog(resolvedStrainedLogText);
+  return { skillCheck, energyCost };
+}
+
 function getChoicePressureMarkup(hints = []) {
   if (!hints.length) return "";
   return `
@@ -927,32 +1014,200 @@ function getBuildIdentityMarkup() {
 
 function recordReturnTripRisk(riskId, detail) {
   state.flags.returnTripRisks ||= {};
-  state.flags.returnTripRisks[riskId] = detail;
+  state.flags.returnTripRisks[riskId] = { status: "open", ...detail };
+  if (state.flags.resolvedReturnTripRisks?.[riskId]) delete state.flags.resolvedReturnTripRisks[riskId];
+}
+
+function resolveReturnTripRisk(riskId, resolution = {}) {
+  const existing = state.flags.returnTripRisks?.[riskId];
+  if (!existing) return;
+  delete state.flags.returnTripRisks[riskId];
+  state.flags.resolvedReturnTripRisks ||= {};
+  state.flags.resolvedReturnTripRisks[riskId] = {
+    source: resolution.source || existing.source || "Return-trip risk",
+    detail: existing.detail || "A weak closeout was carried on the ledger.",
+    resolution: resolution.resolution || "Resolved by later field work.",
+    resolvedAt: state.clock,
+    status: "resolved",
+  };
 }
 
 function getReturnTripRiskEntries() {
-  return Object.values(state.flags.returnTripRisks || {});
+  return Object.entries(state.flags.returnTripRisks || {})
+    .map(([id, risk]) => ({ id, status: risk.status || "open", ...risk }));
+}
+
+function getResolvedReturnTripRiskEntries() {
+  return Object.entries(state.flags.resolvedReturnTripRisks || {})
+    .map(([id, risk]) => ({ id, status: "resolved", ...risk }));
+}
+
+function getReturnTripRiskAffectedWork(riskId) {
+  if (riskId === "usedTemporaryAdapterPermanently") return "future Center City service or warranty work";
+  if (riskId === "navyYardRackUpdate") return "future Navy Yard support and warranty routing";
+  if (riskId === "southPhillySpeakerTermination") return "commissioning follow-up and warranty return pressure";
+  if (riskId === "systemsQuickReboot") return "future systems service or warranty return pressure";
+  if (riskId === "burlington-retrofit-install") return "Burlington retrofit install and future service";
+  if (riskId?.startsWith("exhaustion-")) return "the next return trip tied to this tired closeout";
+  return "future dispatch-board routing";
+}
+
+function getConsequenceStatusLabel(status = "open") {
+  if (status === "resolved") return "Resolved";
+  if (status === "inherited") return "Inherited";
+  if (status === "documented") return "Documented";
+  if (status === "controlled") return "Controlled";
+  if (status === "protected") return "Protected";
+  return "Open";
+}
+
+function getConsequenceLedgerEntries({ includeResolved = false } = {}) {
+  const entries = [];
+  const openCallbacks = getUnresolvedCallbackCount();
+  if (openCallbacks > 0) {
+    entries.push({
+      id: "callback-debt",
+      source: "Callback ledger",
+      cause: `${openCallbacks} unresolved callback${openCallbacks === 1 ? "" : "s"} remain after closeout choices.`,
+      status: "open",
+      affects: "dispatch routing, access friction, and warranty return pressure",
+      detail: "Fast or strained closeouts can stay on the board until a later job resolves them.",
+    });
+  }
+  getReturnTripRiskEntries().forEach((risk) => {
+    entries.push({
+      id: risk.id,
+      source: risk.source || "Return-trip risk",
+      cause: risk.cause || risk.detail || "A weak closeout is still on the ledger.",
+      status: risk.status || "open",
+      affects: risk.affects || getReturnTripRiskAffectedWork(risk.id),
+      detail: risk.detail || "A weak closeout is still on the ledger.",
+    });
+  });
+  if (includeResolved) {
+    getResolvedReturnTripRiskEntries().forEach((risk) => {
+      entries.push({
+        id: risk.id,
+        source: risk.source || "Resolved return-trip risk",
+        cause: risk.detail || "A prior risk was cleared by later field work.",
+        status: "resolved",
+        affects: risk.affects || getReturnTripRiskAffectedWork(risk.id),
+        detail: risk.resolution || "Resolved by later field work.",
+      });
+    });
+    const hasResolvedBurlingtonRisk = Boolean(state.flags.resolvedReturnTripRisks?.["burlington-retrofit-install"]);
+    if (state.flags.retrofitInstallRiskResolved && !hasResolvedBurlingtonRisk) {
+      entries.push({
+        id: "retrofit-install-risk-resolved",
+        source: "Burlington County Retrofit Install",
+        cause: "Inherited pathway risk from the walkdown was handled during install closeout.",
+        status: "resolved",
+        affects: "Burlington future service",
+        detail: "Record/as-built notes cleared the inherited pathway risk.",
+      });
+    } else if (state.flags.retrofitInstallRiskInherited) {
+      entries.push({
+        id: "retrofit-install-risk-inherited",
+        source: "Burlington County Retrofit Install",
+        cause: "Install closeout left the pathway record weak.",
+        status: "inherited",
+        affects: "Burlington future service",
+        detail: "Future service inherits a thinner record of the actual pathway.",
+      });
+    }
+    if (state.flags.commissioningRiskDocumented && !state.flags.commissioningCallbackRiskAdded) {
+      entries.push({
+        id: "commissioning-risk-controlled",
+        source: content.commissioningDispatch.title,
+        cause: "Speaker-path risk was documented before it became a surprise callback.",
+        status: "controlled",
+        affects: "South Philadelphia commissioning follow-up",
+        detail: "Closeout made the technical risk visible instead of hiding it.",
+      });
+    }
+    if (state.flags.secureAccessComplete && state.flags.secureAccessTaskStrained && state.flags.secureAccessApproach !== "absorb") {
+      entries.push({
+        id: "secure-access-task-documented",
+        source: content.secureAccessDispatch.title,
+        cause: "A strained rack task was documented in closeout.",
+        status: "documented",
+        affects: getReturnTripRiskAffectedWork("navyYardRackUpdate"),
+        detail: "Documentation keeps the rack strain from becoming hidden return-trip debt.",
+      });
+    }
+    if (state.flags.systemsComplete && state.flags.systemsApproach !== "reboot") {
+      entries.push({
+        id: "systems-risk-documented",
+        source: content.systemsDispatch.title,
+        cause: "The room-offline cause was documented instead of flattened into a reboot.",
+        status: "documented",
+        affects: getReturnTripRiskAffectedWork("systemsQuickReboot"),
+        detail: "Future service starts from the mismatch note instead of the old ticket.",
+      });
+    }
+  }
+  return entries;
+}
+
+function getConsequenceLedgerMarkup({ includeResolved = false, emptyMessage = "No consequence ledger entries are active right now." } = {}) {
+  const entries = getConsequenceLedgerEntries({ includeResolved });
+  if (!entries.length) return `<p class="muted">${emptyMessage}</p>`;
+  return `
+    <ul class="modal-list">
+      ${entries.map((entry) => `
+        <li>
+          <strong>${escapeHtml(`${getConsequenceStatusLabel(entry.status)} - ${entry.source}`)}</strong>
+          <span>${escapeHtml(`Cause: ${entry.cause} Affects: ${entry.affects}. Result: ${entry.detail}`)}</span>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function getCloseoutConsequenceMarkup(entries = []) {
+  if (!entries.length) return "";
+  return `
+    <p><strong>Closeout consequence:</strong></p>
+    <ul class="modal-list">
+      ${entries.map((entry) => `
+        <li>
+          <strong>${escapeHtml(`${getConsequenceStatusLabel(entry.status)} - ${entry.source}`)}</strong>
+          <span>${escapeHtml(`Because: ${entry.cause} Future effect: ${entry.affects}. ${entry.detail}`)}</span>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function getReturnTripRiskSummaryText(risk) {
+  return `${risk.source || "Return-trip risk"}: ${risk.detail || "A weak closeout is still on the ledger."} Affects ${risk.affects || getReturnTripRiskAffectedWork(risk.id)}.`;
 }
 
 function getOpenReturnTripRiskSummary() {
   const risks = getReturnTripRiskEntries();
   if (!risks.length) return "";
-  return risks.map((risk) => `${risk.source}: ${risk.detail}`).join(" ");
+  return risks.map(getReturnTripRiskSummaryText).join(" ");
+}
+
+function getReturnTripRiskRowsMarkup() {
+  return getConsequenceLedgerEntries()
+    .filter((entry) => entry.id !== "callback-debt")
+    .map((entry) => `
+      <li>
+        <strong>${escapeHtml(`${getConsequenceStatusLabel(entry.status)} - ${entry.source}`)}</strong>
+        <span>${escapeHtml(`Cause: ${entry.cause} Affects: ${entry.affects}. Result: ${entry.detail}`)}</span>
+      </li>
+    `).join("");
 }
 
 function getActiveCareerSummaryMarkup() {
-  const openCallbacks = getUnresolvedCallbackCount();
   const items = [];
-  if (openCallbacks > 0) {
+  getConsequenceLedgerEntries().forEach((entry) => {
     items.push({
-      label: "Open callback pressure",
-      detail: `${openCallbacks} unresolved callback${openCallbacks === 1 ? "" : "s"} can make later access and board choices heavier.`,
+      label: `${getConsequenceStatusLabel(entry.status)} consequence: ${entry.source}`,
+      detail: `Cause: ${entry.cause} Affects: ${entry.affects}. Result: ${entry.detail}`,
     });
-  }
-  const returnTripSummary = getOpenReturnTripRiskSummary();
-  if (returnTripSummary) {
-    items.push({ label: "Return-trip risks remembered", detail: returnTripSummary });
-  }
+  });
   if (state.flags.energyExhaustedThisShift || state.flags.exhaustionDebt) {
     const exhaustionPenalty = getExhaustionSkillPenalty();
     const exhaustionCap = getExhaustionEnergyCap();
@@ -1199,10 +1454,53 @@ function showVehicleCargo() {
   });
 }
 
+function getVehicleMenuFlowMarkup() {
+  const tutorialRoute = getWorldRoute("centerCityTutorial");
+  const activeRoute = getWorldRoute(getCurrentDispatchRouteId()) || (isTutorialRouteReady() ? tutorialRoute : null);
+  const canReviewBoard = state.flags.finished && !state.flags.endShiftPending;
+  const rows = [
+    {
+      label: "Review cargo",
+      detail: `${state.loaded.length}/${getVehicleCargoCapacity()} loaded: ${getVehicleCargoSummary()}.`,
+    },
+    {
+      label: "Load carried items",
+      detail: hasCarriedItems()
+        ? `Ready to load: ${getCarriedLabels().join(", ")}.`
+        : "Nothing is currently being carried to the van.",
+    },
+    {
+      label: "Review dispatch board routes",
+      detail: canReviewBoard
+        ? "Open job cards, prep choices, route memory, risks, and upcoming work."
+        : state.flags.endShiftPending
+        ? "Close out the current shift before taking another board route."
+        : "Unlocks after the first Center City route closes out.",
+    },
+    {
+      label: "Open regional map",
+      detail: "Shows active route, known destinations, fast-travel candidates, locks, and route history.",
+    },
+    {
+      label: "Drive active route",
+      detail: activeRoute
+        ? `${activeRoute.fromLabel} to ${activeRoute.toLabel}. ${getRouteStatus(activeRoute)}.`
+        : "No active route is launchable from the van right now.",
+    },
+  ];
+  return `
+    <ul class="modal-list">
+      ${rows.map((row) => `<li><strong>${escapeHtml(row.label)}</strong><span>${escapeHtml(row.detail)}</span></li>`).join("")}
+    </ul>
+  `;
+}
+
 function showVehicleMenu() {
   if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
   const vehicle = getCurrentVehicle();
-  const canDriveCurrentRoute = isTutorialRouteReady();
+  const tutorialRoute = getWorldRoute("centerCityTutorial");
+  const activeRoute = getWorldRoute(getCurrentDispatchRouteId()) || (isTutorialRouteReady() ? tutorialRoute : null);
+  const canDriveCurrentRoute = Boolean(activeRoute) && !state.flags.endShiftPending;
   showModal({
     kicker: "Vehicle",
     title: vehicle.name,
@@ -1215,16 +1513,19 @@ function showVehicleMenu() {
         <span>Clearance</span><strong>${escapeHtml(vehicle.clearance)}</strong>
         <span>Comfort</span><strong>${escapeHtml(vehicle.comfort)}</strong>
       </div>
-      <p class="muted">The van is now the route surface: load gear here, review cargo here, and open the regional map when you want to see where the day can branch.</p>
+      <p class="muted">The van is the route, cargo, and world interface for the workday.</p>
+      <h3>Current Loop</h3>
+      ${getWorkdayLoopGuidanceMarkup()}
+      ${getVehicleMenuFlowMarkup()}
     `,
     actions: [
       ...(hasCarriedItems() ? [{
-        label: `Load ${getCarriedLabels().join(" and ")}`,
+        label: `Load Carried Items: ${getCarriedLabels().join(" and ")}`,
         onClick: loadCarriedItemsIntoVehicle,
       }] : []),
       ...(canDriveCurrentRoute ? [{
-        label: "Drive to Center City East",
-        onClick: promptTravel,
+        label: `Drive Active Route: ${activeRoute.toLabel}`,
+        onClick: () => launchRouteFromBoard(activeRoute.id),
       }] : []),
       { label: "Review Cargo", className: "secondary-button", onClick: showVehicleCargo },
       ...(state.flags.finished && !state.flags.endShiftPending ? [{
@@ -1718,6 +2019,13 @@ function shouldIntroduceJoshBeforeNextDispatch() {
     && !state.flags.serviceComplete;
 }
 
+function shouldShowRetrofitInstallDebrief() {
+  return state.sceneId === "shop"
+    && state.flags.retrofitInstallComplete
+    && !state.flags.retrofitInstallDebriefed
+    && !state.flags.endShiftPending;
+}
+
 function returnToShopAfterDispatch(source, message) {
   state.carry = [];
   startEndShift(source);
@@ -2141,28 +2449,319 @@ function canLaunchRouteFromRegionalMap(routeId) {
   return routeId === "centerCityTutorial" && isTutorialRouteReady();
 }
 
+function getDispatchBoardEntryDefinitions() {
+  return [
+    {
+      id: "service",
+      contentKey: "serviceDispatch",
+      routeId: "conshohockenService",
+      statusLabel: "SERVICE CALL",
+      objective: "Review the Conshohocken service call on the dispatch board.",
+      availableReason: "First install day is complete and the shop has a small service call ready.",
+      isAvailable: () => state.flags.finished && !state.flags.serviceComplete,
+      isInProgress: () => (state.sceneId === "serviceOffice" && !state.flags.conshohockenFollowupStarted && !state.flags.serviceComplete)
+        || (state.flags.serviceStarted && !state.flags.serviceComplete),
+      isComplete: () => Boolean(state.flags.serviceComplete),
+      previewAction: showServiceDispatchPreview,
+    },
+    {
+      id: "followup",
+      contentKey: "followupDispatch",
+      routeId: "conshohockenService",
+      statusLabel: "FOLLOW-UP",
+      objective: "Review the Conshohocken label follow-up on the dispatch board.",
+      availableReason: "Josh's service debrief unlocked a repeat-route label cleanup before the next new site.",
+      isAvailable: () => isConshohockenFollowupAvailable()
+        && !(state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved)
+        && !hasPendingTraining(),
+      isInProgress: () => state.flags.conshohockenFollowupStarted && !state.flags.conshohockenFollowupComplete,
+      isComplete: () => Boolean(state.flags.conshohockenFollowupComplete),
+      blockedReason: () => {
+        if (!state.flags.serviceComplete || state.flags.conshohockenFollowupComplete) return "";
+        if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) {
+          return "The Conshohocken callback note is still clipped to Josh's bench.";
+        }
+        if (!state.flags.joshServiceDebriefed) return "Check in with Josh before coordination adds another stop.";
+        if (hasPendingTraining()) return "Mark your field-training focus on the clipboard before taking another job.";
+        return "";
+      },
+      previewAction: showConshohockenFollowupPreview,
+    },
+    {
+      id: "survey",
+      contentKey: "surveyDispatch",
+      routeId: "universitySurvey",
+      statusLabel: "SITE SURVEY",
+      objective: "Review the University City site survey on the dispatch board.",
+      availableReason: "The Conshohocken sequence is closed and the board has moved to a site survey.",
+      isAvailable: () => state.flags.serviceComplete
+        && state.flags.joshServiceDebriefed
+        && !(state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved)
+        && state.flags.conshohockenFollowupComplete
+        && !state.flags.surveyComplete
+        && !hasPendingTraining(),
+      isInProgress: () => state.sceneId === "universitySurvey" || (state.flags.surveyStarted && !state.flags.surveyComplete),
+      isComplete: () => Boolean(state.flags.surveyComplete),
+      previewAction: showSurveyDispatchPreview,
+    },
+    {
+      id: "commissioning",
+      contentKey: "commissioningDispatch",
+      routeId: "southPhillyCommissioning",
+      statusLabel: "COMMISSIONING",
+      objective: "Review the South Philadelphia commissioning visit on the dispatch board.",
+      availableReason: "The University City survey is complete and a closeout-quality commissioning visit is ready.",
+      isAvailable: () => state.flags.surveyComplete && !state.flags.commissioningComplete,
+      isInProgress: () => state.sceneId === "southPhillyCommissioning"
+        || (state.flags.commissioningStarted && !state.flags.commissioningComplete),
+      isComplete: () => Boolean(state.flags.commissioningComplete),
+      previewAction: showCommissioningDispatchPreview,
+    },
+    {
+      id: "warehouse",
+      contentKey: "warehouseDispatch",
+      routeId: "",
+      statusLabel: "WAREHOUSE RUN",
+      objective: "Review the warehouse run on the dispatch board.",
+      availableReason: "Commissioning is complete and the shop needs an inventory problem resolved before the next site.",
+      isAvailable: () => state.flags.commissioningComplete && !state.flags.warehouseComplete && !hasPendingTraining(),
+      isInProgress: () => state.flags.warehouseStarted && !state.flags.warehouseComplete,
+      isComplete: () => Boolean(state.flags.warehouseComplete),
+      blockedReason: () => {
+        if (state.flags.commissioningComplete && !state.flags.warehouseComplete && hasPendingTraining()) {
+          return "Mark your new field-training focus on the clipboard before taking another job.";
+        }
+        return "";
+      },
+      previewAction: showWarehouseDispatchPreview,
+    },
+    {
+      id: "secureAccess",
+      contentKey: "secureAccessDispatch",
+      routeId: "navyYardAccess",
+      statusLabel: "SECURE ACCESS",
+      objective: "Review the Navy Yard secure-access job on the dispatch board.",
+      availableReason: "The warehouse run is closed and the board has a secure-site rack update ready.",
+      isAvailable: () => state.flags.warehouseComplete && !state.flags.secureAccessComplete,
+      isInProgress: () => state.sceneId === "navyYardAccess"
+        || (state.flags.secureAccessStarted && !state.flags.secureAccessComplete),
+      isComplete: () => Boolean(state.flags.secureAccessComplete),
+      previewAction: showSecureAccessDispatchPreview,
+    },
+    {
+      id: "callbackCleanup",
+      contentKey: "callbackCleanupDispatch",
+      routeId: "warrantyReturn",
+      statusLabel: "WARRANTY RETURN",
+      objective: "Review the warranty return on the dispatch board.",
+      availableReason: "Callback pressure is still open, so the board is forcing a cleanup before handoff.",
+      isAvailable: () => shouldOfferCallbackCleanupDispatch(),
+      isInProgress: () => state.sceneId === "warrantyReturn"
+        || (state.flags.callbackCleanupStarted && !state.flags.callbackCleanupComplete),
+      isComplete: () => Boolean(state.flags.callbackCleanupComplete),
+      previewAction: showCallbackCleanupDispatchPreview,
+    },
+    {
+      id: "handoff",
+      contentKey: "handoffDispatch",
+      routeId: "executiveHandoff",
+      statusLabel: "CLIENT HANDOFF",
+      objective: "Review the executive handoff on the dispatch board.",
+      availableReason: "Secure access is complete and callback pressure no longer blocks the client handoff.",
+      isAvailable: () => state.flags.secureAccessComplete
+        && !state.flags.handoffComplete
+        && !shouldOfferCallbackCleanupDispatch(),
+      isInProgress: () => state.sceneId === "executiveHandoff" || (state.flags.handoffStarted && !state.flags.handoffComplete),
+      isComplete: () => Boolean(state.flags.handoffComplete),
+      previewAction: showHandoffDispatchPreview,
+    },
+    {
+      id: "systems",
+      contentKey: "systemsDispatch",
+      routeId: "systemsService",
+      statusLabel: "SYSTEMS SERVICE",
+      objective: "Review the King of Prussia systems service on the dispatch board.",
+      availableReason: "The executive handoff is complete and the board has a systems service call ready.",
+      isAvailable: () => state.flags.handoffComplete && !state.flags.systemsComplete,
+      isInProgress: () => state.sceneId === "systemsService" || (state.flags.systemsStarted && !state.flags.systemsComplete),
+      isComplete: () => Boolean(state.flags.systemsComplete),
+      previewAction: showSystemsDispatchPreview,
+    },
+    {
+      id: "travelCost",
+      contentKey: "travelDispatch",
+      routeId: "",
+      statusLabel: "TRAVEL COST",
+      objective: "Review the Cherry Hill return toll on the dispatch board.",
+      availableReason: "The systems service closed, but coordination left a cross-river travel cost for the board.",
+      isAvailable: () => state.flags.systemsComplete && !state.flags.travelComplete,
+      isInProgress: () => state.flags.systemsComplete && !state.flags.travelComplete,
+      isComplete: () => Boolean(state.flags.travelComplete),
+      previewAction: showTravelDispatchPreview,
+    },
+    {
+      id: "retrofitWalkdown",
+      contentKey: "retrofitWalkdownDispatch",
+      routeId: "burlingtonRetrofitWalkdown",
+      statusLabel: "RETROFIT WALKDOWN",
+      objective: "Review the Burlington County retrofit walkdown on the dispatch board.",
+      availableReason: "The travel-cost beat is closed and the retrofit needs a protective walkdown before install day.",
+      isAvailable: () => state.flags.travelComplete && !state.flags.retrofitWalkdownComplete,
+      isInProgress: () => (state.sceneId === "burlingtonRetrofitWalkdown" && !state.flags.retrofitInstallStarted)
+        || (state.flags.retrofitWalkdownStarted && !state.flags.retrofitWalkdownComplete),
+      isComplete: () => Boolean(state.flags.retrofitWalkdownComplete),
+      previewAction: showRetrofitWalkdownDispatchPreview,
+    },
+    {
+      id: "retrofitInstall",
+      contentGetter: getRetrofitInstallPreview,
+      fallbackTitle: "Burlington County Retrofit Install",
+      fallbackSummary: "Install the retrofit using the inherited walkdown result.",
+      routeId: "burlingtonRetrofitWalkdown",
+      statusLabel: "RETROFIT INSTALL",
+      objective: "Review the Burlington County retrofit install on the dispatch board.",
+      availableReason: "The walkdown closeout exists, so the install can inherit that saved branch.",
+      isAvailable: () => state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete,
+      isInProgress: () => (state.sceneId === "burlingtonRetrofitWalkdown" && state.flags.retrofitInstallStarted && !state.flags.retrofitInstallComplete)
+        || (state.flags.retrofitInstallStarted && !state.flags.retrofitInstallComplete),
+      isComplete: () => Boolean(state.flags.retrofitInstallComplete),
+      previewAction: showRetrofitInstallDispatchPreview,
+    },
+    {
+      id: "careerSnapshot",
+      fallbackTitle: "Career Snapshot",
+      fallbackSummary: "Review the completed dispatch board, consequence ledger, and upcoming locked work.",
+      routeId: "",
+      statusLabel: "CAREER SNAPSHOT",
+      blockedStatusLabel: "SHOP DEBRIEF",
+      objective: "Review your career snapshot on the dispatch board.",
+      availableReason: "The Burlington install is debriefed and the board is ready for a career snapshot.",
+      isAvailable: () => state.flags.retrofitInstallComplete
+        && state.flags.retrofitInstallDebriefed
+        && !state.flags.prototypeSummaryViewed,
+      isInProgress: () => false,
+      isComplete: () => Boolean(state.flags.prototypeSummaryViewed),
+      blockedReason: () => {
+        if (state.flags.retrofitInstallComplete && !state.flags.prototypeSummaryViewed && !state.flags.retrofitInstallDebriefed) {
+          return "Check in with Josh about the Burlington retrofit before reviewing the career snapshot.";
+        }
+        return "";
+      },
+      previewAction: showPrototypeSummary,
+    },
+  ];
+}
+
+function resolveDispatchBoardEntry(entry) {
+  const contentData = typeof entry.contentGetter === "function" ? entry.contentGetter() || {} : content[entry.contentKey] || {};
+  const routeId = typeof entry.routeId === "function" ? entry.routeId() : entry.routeId || "";
+  const isAvailable = Boolean(entry.isAvailable?.());
+  const isInProgress = Boolean(entry.isInProgress?.());
+  const isComplete = Boolean(entry.isComplete?.());
+  const blockedReason = !isAvailable && !isComplete ? entry.blockedReason?.() || "" : "";
+  const route = routeId ? getWorldRoute(routeId) : null;
+  const boardStatus = isInProgress
+    ? "In progress"
+    : isAvailable
+    ? "Active board item"
+    : blockedReason
+    ? "Blocked"
+    : isComplete
+    ? "Complete"
+    : "Locked";
+  return {
+    ...entry,
+    title: contentData.title || entry.fallbackTitle || "Dispatch Board Item",
+    summary: contentData.summary || contentData.setup || entry.fallbackSummary || "",
+    routeId,
+    route,
+    routeLabel: route ? `${route.fromLabel} -> ${route.toLabel}` : "Shop / board task",
+    isAvailable,
+    isInProgress,
+    isComplete,
+    blockedReason,
+    boardStatus,
+  };
+}
+
+function getDispatchBoardEntries() {
+  return getDispatchBoardEntryDefinitions().map(resolveDispatchBoardEntry);
+}
+
+function getCurrentDispatchBoardEntry(entries = getDispatchBoardEntries()) {
+  if (state.flags.endShiftPending) return null;
+  return entries.find((entry) => entry.isAvailable) || null;
+}
+
+function getBlockedDispatchBoardEntry(entries = getDispatchBoardEntries()) {
+  return entries.find((entry) => entry.blockedReason) || null;
+}
+
+function getInProgressDispatchBoardEntry(entries = getDispatchBoardEntries()) {
+  return entries.find((entry) => entry.isInProgress) || null;
+}
+
+function getLastCompletedDispatchBoardEntry(entries = getDispatchBoardEntries()) {
+  const completed = entries.filter((entry) => entry.isComplete);
+  return completed.length ? completed[completed.length - 1] : null;
+}
+
+function getCurrentDispatchBoardObjective() {
+  return getCurrentDispatchBoardEntry()?.objective || "";
+}
+
+function getDispatchBoardStateMarkup({ showBlocked = true } = {}) {
+  const entry = getCurrentDispatchBoardEntry() || (showBlocked ? getBlockedDispatchBoardEntry() : null);
+  if (!entry) return "";
+  const routeDetail = entry.route
+    ? `Route: ${entry.routeLabel}.`
+    : "Route: no drive route; this resolves from the board or shop.";
+  const why = entry.blockedReason
+    ? `Why blocked: ${entry.blockedReason}`
+    : `Why active: ${entry.availableReason || "Unlocked by current board progression."}`;
+  return `<li><strong>Board state</strong><span>${escapeHtml(`${entry.boardStatus}: ${entry.title}. ${routeDetail} ${why}`)}</span></li>`;
+}
+
+function getFallbackDispatchPresentation() {
+  if (!state.flags.finished) {
+    return {
+      title: "Two Quick Carts",
+      summary: "Build two mobile video conferencing carts at a Center City East office.",
+      statusLabel: "FIRST DAY",
+    };
+  }
+  if (state.flags.prototypeSummaryViewed) {
+    return {
+      title: "Current Board Complete",
+      summary: "You cleared the current Radnor Rack & Wire dispatch board. Review the career clipboard or explore the shop.",
+      statusLabel: "BOARD COMPLETE",
+    };
+  }
+  return {
+    title: "Shop Hub",
+    summary: "Use the dispatch board, Van #3, career clipboard, or nearby shop interactions to choose the next step.",
+    statusLabel: state.flags.endShiftPending ? "END SHIFT" : "SHOP HUB",
+  };
+}
+
+function getHudDispatchPresentation() {
+  if (state.flags.endShiftPending) return getFallbackDispatchPresentation();
+  const entries = getDispatchBoardEntries();
+  const entry = getInProgressDispatchBoardEntry(entries)
+    || (state.sceneId === "shop" ? getCurrentDispatchBoardEntry(entries) || getBlockedDispatchBoardEntry(entries) : null)
+    || getLastCompletedDispatchBoardEntry(entries);
+  const fallback = getFallbackDispatchPresentation();
+  if (!entry) return fallback;
+  return {
+    title: entry.title || fallback.title,
+    summary: entry.summary || fallback.summary,
+    statusLabel: entry.blockedReason ? entry.blockedStatusLabel || "SHOP BLOCKED" : entry.statusLabel || fallback.statusLabel,
+  };
+}
+
 function getCurrentDispatchRouteId() {
   if (!state.flags.finished || state.flags.endShiftPending) return null;
-  if (state.flags.handoffComplete && !state.flags.systemsComplete) return "systemsService";
-  if (state.flags.systemsComplete && !state.flags.travelComplete) return null;
-  if (state.flags.travelComplete && !state.flags.retrofitWalkdownComplete) return "burlingtonRetrofitWalkdown";
-  if (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete) return "burlingtonRetrofitWalkdown";
-  if (state.flags.secureAccessComplete) {
-    if (shouldOfferCallbackCleanupDispatch()) return "warrantyReturn";
-    if (!state.flags.handoffComplete) return "executiveHandoff";
-    return null;
-  }
-  if (state.flags.warehouseComplete) return "navyYardAccess";
-  if (state.flags.commissioningComplete) return null;
-  if (state.flags.surveyComplete) return "southPhillyCommissioning";
-  if (state.flags.serviceComplete) {
-    if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) return null;
-    if (!state.flags.joshServiceDebriefed) return null;
-    if (hasPendingTraining()) return null;
-    if (isConshohockenFollowupAvailable()) return "conshohockenService";
-    return "universitySurvey";
-  }
-  return "conshohockenService";
+  return getCurrentDispatchBoardEntry()?.routeId || null;
 }
 
 function isFastTravelUnlocked(route) {
@@ -2176,9 +2775,40 @@ function canFastTravelRoute(route) {
     && getCurrentDispatchRouteId() === route.id;
 }
 
+function getDispatchReference(dispatchId) {
+  return dispatchId ? content[dispatchId] || null : null;
+}
+
+function getRouteJobVariant(routeId, routeJob) {
+  if (routeId === "conshohockenService" && isConshohockenFollowupAvailable()) return routeJob.followup || null;
+  if (
+    routeId === "burlingtonRetrofitWalkdown"
+    && state.flags.retrofitWalkdownComplete
+    && !state.flags.retrofitInstallComplete
+  ) return routeJob.install || null;
+  return null;
+}
+
+function getRouteJobData(routeId) {
+  const defaults = content.routeJobDefaults || {};
+  const routeJob = content.routeJobs?.[routeId] || {};
+  const variant = getRouteJobVariant(routeId, routeJob) || {};
+  const dispatch = getDispatchReference(variant.dispatchId || routeJob.dispatchId);
+  return {
+    title: variant.title || routeJob.title || dispatch?.title || defaults.title || "Mapped route",
+    familyId: variant.familyId || routeJob.familyId || defaults.familyId || "logistics",
+    purpose: variant.purpose || routeJob.purpose || defaults.purpose || "Move from the shop to a mapped work area.",
+    summary: variant.summary || routeJob.summary || dispatch?.summary || defaults.summary || "",
+    unlockCondition: variant.unlockCondition || routeJob.unlockCondition || defaults.unlockCondition || "Unlocked by dispatch-board progression.",
+    rewards: variant.rewards || routeJob.rewards || defaults.rewards || "Job pay, XP, reputation, and route history if the work closes cleanly.",
+    riskTags: variant.riskTags || routeJob.riskTags || defaults.riskTags || [],
+  };
+}
+
 function getRouteStatus(route) {
   const travelCount = getRouteTravelCount(route.id);
   if (route.planned) return "Planned route";
+  if (getCurrentDispatchRouteId() === route.id) return "Active board route";
   if (canFastTravelRoute(route)) return "Fast travel ready";
   if (isFastTravelUnlocked(route)) return "Fast travel unlocked";
   if (travelCount > 0) return `Traveled ${travelCount} time${travelCount === 1 ? "" : "s"}`;
@@ -2188,16 +2818,85 @@ function getRouteStatus(route) {
   return "Story route";
 }
 
-function getRouteMapDetail(route) {
-  const tags = [getRouteStatus(route)];
-  if (isRouteActiveOnMap(route)) tags.push("active route");
-  const lastChoice = getLastRouteChoiceLabel(route);
-  if (lastChoice) tags.push(`last route: ${lastChoice}`);
-  if (getFastTravelCount(route.id)) tags.push(`fast traveled ${getFastTravelCount(route.id)} time${getFastTravelCount(route.id) === 1 ? "" : "s"}`);
-  tags.push(route.planned ? "future route" : route.fastTravelEligible ? `fast travel: ${getFastTravelEnergyCost(route)} energy` : "manual route");
+function getRouteDrivenText(route) {
+  const travelCount = getRouteTravelCount(route.id);
+  return travelCount > 0 ? `Yes (${travelCount} drive${travelCount === 1 ? "" : "s"})` : "No";
+}
+
+function getRouteFastTravelText(route) {
+  if (!route.fastTravelEligible) return "Not available for this story route.";
+  if (canFastTravelRoute(route)) return `Available now for ${getFastTravelEnergyCost(route)} energy.`;
+  if (isFastTravelUnlocked(route)) return `Unlocked, but only from ${route.fromLabel} while this route is active on the board.`;
+  return `Locked until this route has been driven once; then costs ${getFastTravelEnergyCost(route)} energy.`;
+}
+
+function getRouteTravelCostRisk(route) {
+  const choices = getRouteChoices(route);
+  const costs = [];
+  if (route.arrivalTime) costs.push(`arrival ${route.arrivalTime}`);
+  if (choices.length) {
+    const choiceImpacts = choices.map((choice) => {
+      const impacts = [];
+      if (choice.energyDelta) impacts.push(`${choice.energyDelta > 0 ? "+" : ""}${choice.energyDelta} energy`);
+      if (choice.cashDelta) impacts.push(`${choice.cashDelta > 0 ? "+" : "-"}$${Math.abs(choice.cashDelta)}`);
+      if (choice.burnoutDelta) impacts.push(`${choice.burnoutDelta > 0 ? "+" : ""}${choice.burnoutDelta} burnout`);
+      if (choice.arrivalTime && choice.arrivalTime !== route.arrivalTime) impacts.push(`arrival ${choice.arrivalTime}`);
+      return `${choice.label}${impacts.length ? ` (${impacts.join(", ")})` : ""}`;
+    });
+    costs.push(`choices: ${choiceImpacts.join("; ")}`);
+  } else {
+    costs.push(route.fastTravelEligible ? "standard drive; fast travel can unlock after route history" : "standard drive");
+  }
+  if (route.fastTravelEligible) costs.push(`fast travel cost ${getFastTravelEnergyCost(route)} energy`);
+  return costs.join("; ");
+}
+
+function getRouteLockReason(route) {
+  if (route.planned) return "Future candidate; mapped for preview but not launchable yet.";
+  if (canLaunchRouteFromRegionalMap(route.id) || getCurrentDispatchRouteId() === route.id || canFastTravelRoute(route)) return "";
+  if (state.flags.endShiftPending) return "End-shift closeout is pending.";
+  if (route.id === "centerCityTutorial") {
+    if (state.flags.finished) return "First-day Center City route is already complete.";
+    if (!state.flags.shopBrief) return "Talk to the supervisor before loading the van.";
+    if (!hasLoadedItems(content.tutorial.shopLoad)) return "Load all staged cargo into Van #3.";
+  }
+  if (!state.flags.finished) return "Complete the first Center City job before later board routes unlock.";
+  const activeRoute = getWorldRoute(getCurrentDispatchRouteId());
+  if (activeRoute && activeRoute.id !== route.id) return `Current board route is ${activeRoute.toLabel}.`;
+  const currentArea = getCurrentWorldArea();
+  if (currentArea?.id && route.fromAreaId !== currentArea.id) return `Starts from ${route.fromLabel}; current area is ${currentArea.label || currentArea.id}.`;
+  if (route.fastTravelEligible && !isFastTravelUnlocked(route)) return "Drive this route once from the dispatch board to unlock fast travel.";
+  return "Not active on the current dispatch board.";
+}
+
+function getRouteCardMarkup(route) {
+  const job = getRouteJobData(route.id);
   const destination = getWorldArea(route.toAreaId);
-  if (destination?.label) tags.push(destination.label);
-  return tags.join(" | ");
+  const region = getWorldRegion(destination?.regionId);
+  const lastChoice = getLastRouteChoiceLabel(route);
+  const fastTravelCount = getFastTravelCount(route.id);
+  const lockReason = getRouteLockReason(route);
+  const details = [
+    `Destination: ${destination?.label || route.toLabel}${region?.name ? `, ${region.name}` : ""}`,
+    `Job/purpose: ${job.title} - ${job.purpose}`,
+    `Route status: ${getRouteStatus(route)}`,
+    `Travel cost/risk: ${getRouteTravelCostRisk(route)}`,
+    `Driven before: ${getRouteDrivenText(route)}`,
+    `Fast travel: ${getRouteFastTravelText(route)}${fastTravelCount ? ` Used ${fastTravelCount} time${fastTravelCount === 1 ? "" : "s"}.` : ""}`,
+    lastChoice ? `Last route choice: ${lastChoice}` : "",
+    lockReason ? `Locked reason: ${lockReason}` : "",
+  ].filter(Boolean);
+  return `
+    <li>
+      <strong>${escapeHtml(route.toLabel)} - ${escapeHtml(job.title)}</strong>
+      <span>${escapeHtml(details.join(" "))}</span>
+    </li>
+  `;
+}
+
+function getRouteMapDetail(route) {
+  const job = getRouteJobData(route.id);
+  return `${getRouteStatus(route)} | ${job.title} | ${getRouteTravelCostRisk(route)} | fast travel: ${getRouteFastTravelText(route)}`;
 }
 
 function getFastTravelRoutes() {
@@ -2212,12 +2911,7 @@ function getRouteListMarkup(routes, emptyMessage) {
   if (!routes.length) return `<p class="muted">${emptyMessage}</p>`;
   return `
     <ul class="modal-list">
-      ${routes.map((route) => `
-        <li>
-          <strong>${escapeHtml(route.fromLabel)} -> ${escapeHtml(route.toLabel)}</strong>
-          <span>${escapeHtml(getRouteMapDetail(route))}</span>
-        </li>
-      `).join("")}
+      ${routes.map((route) => getRouteCardMarkup(route)).join("")}
     </ul>
   `;
 }
@@ -2226,30 +2920,38 @@ function getRegionalRouteMarkup() {
   const routes = getWorldRoutes();
   if (!routes.length) return "<p class=\"muted\">No routes mapped yet.</p>";
   const activeRoutes = routes.filter(isRouteActiveOnMap);
-  const unlockedRoutes = routes.filter((route) => !isRouteActiveOnMap(route) && isFastTravelUnlocked(route));
-  const atlasRoutes = routes.filter((route) => !isRouteActiveOnMap(route) && !isFastTravelUnlocked(route));
+  const repeatRoutes = routes.filter((route) => !isRouteActiveOnMap(route) && isFastTravelUnlocked(route));
+  const completedRoutes = routes.filter((route) => !isRouteActiveOnMap(route) && !isFastTravelUnlocked(route) && getRouteTravelCount(route.id) > 0);
+  const lockedRoutes = routes.filter((route) => !isRouteActiveOnMap(route) && !isFastTravelUnlocked(route) && getRouteTravelCount(route.id) === 0);
   return `
-    <h3>Active Route</h3>
+    <h3>Active Job Route</h3>
     ${getRouteListMarkup(activeRoutes, "No active route is ready from the map. Check the dispatch board.")}
-    <h3>Unlocked Fast Travel</h3>
-    ${getRouteListMarkup(unlockedRoutes, "No repeat routes have unlocked fast travel yet.")}
-    <h3>Route Atlas</h3>
-    ${getRouteListMarkup(atlasRoutes, "No locked route candidates remain.")}
+    <h3>Available Repeat / Fast-Travel Routes</h3>
+    ${getRouteListMarkup(repeatRoutes, "No repeat routes have unlocked fast travel yet.")}
+    <h3>Completed Route History</h3>
+    ${getRouteListMarkup(completedRoutes, "No completed non-repeat routes are on the history ledger yet.")}
+    <h3>Locked Future Candidates</h3>
+    ${getRouteListMarkup(lockedRoutes, "No locked route candidates remain.")}
   `;
 }
 
-function getRegionalNodeMarkup() {
-  const regions = Object.values(content.world?.regions || {});
-  if (!regions.length) return "<p class=\"muted\">No regions mapped yet.</p>";
+function getKnownDestinationMarkup() {
+  const routes = getWorldRoutes();
+  const destinationIds = new Set([content.world?.homeAreaId, ...routes.map((route) => route.toAreaId)]);
   const currentArea = getCurrentWorldArea();
+  const destinations = [...destinationIds].map((areaId) => getWorldArea(areaId)).filter(Boolean);
+  if (!destinations.length) return "<p class=\"muted\">No destinations mapped yet.</p>";
   return `
     <ul class="modal-list">
-      ${regions.map((region) => {
-        const isCurrent = currentArea?.regionId === region.id;
+      ${destinations.map((area) => {
+        const region = getWorldRegion(area.regionId);
+        const inboundRoutes = routes.filter((route) => route.toAreaId === area.id);
+        const driven = inboundRoutes.some((route) => getRouteTravelCount(route.id) > 0);
+        const active = inboundRoutes.some(isRouteActiveOnMap);
         return `
           <li>
-            <strong>${escapeHtml(region.mapLabel || region.name)}${isCurrent ? " (current)" : ""}</strong>
-            <span>${escapeHtml(region.role || "Regional node")}</span>
+            <strong>${escapeHtml(area.label)}${currentArea?.id === area.id ? " (current)" : ""}</strong>
+            <span>${escapeHtml(`${region?.name || "Unmapped region"} | ${active ? "active route" : driven ? "visited" : "mapped candidate"}`)}</span>
           </li>
         `;
       }).join("")}
@@ -2276,8 +2978,10 @@ function showRegionalMap() {
         <span>Last route</span><strong>${escapeHtml(state.flags.lastRouteId || "None")}</strong>
       </div>
       <p class="muted">Fast travel unlocks after you have driven an eligible route once. It still respects active board prep and costs route energy.</p>
-      <h3>Regions</h3>
-      ${getRegionalNodeMarkup()}
+      <h3>Current Loop</h3>
+      ${getWorkdayLoopGuidanceMarkup()}
+      <h3>Known Destinations</h3>
+      ${getKnownDestinationMarkup()}
       ${getRegionalRouteMarkup()}
     `,
     actions: [
@@ -2313,6 +3017,7 @@ function getScenePortalInteractions(sceneId = state.sceneId) {
       x: portal.x,
       y: portal.y,
       label: portal.label,
+      detail: getPortalDetailText(portal),
       portalId: portal.id,
       action: () => usePortal(portal.id),
     }));
@@ -2333,6 +3038,40 @@ function getCurrentReturnPortal() {
     && isPortalVisibleForState(portal)
     && (!portal.requiredFlag || state.flags[portal.requiredFlag])
   )) || null;
+}
+
+function isPortalReady(portal) {
+  return Boolean(portal) && (!portal.requiredFlag || Boolean(state.flags[portal.requiredFlag]));
+}
+
+function getPortalDestinationLabel(portal) {
+  const destination = getWorldArea(portal?.toAreaId);
+  const region = getWorldRegion(destination?.regionId);
+  if (!destination) return "Unmapped destination";
+  return `${destination.label}${region?.name ? `, ${region.name}` : ""}`;
+}
+
+function getPortalStatusText(portal) {
+  if (!portal) return "Unmapped";
+  if (isPortalReady(portal)) return "Ready";
+  return `Locked: ${portal.requiredMessage || `${portal.label} is not available yet.`}`;
+}
+
+function getPortalDetailText(portal) {
+  if (!portal) return "Transition is not mapped.";
+  const destination = getPortalDestinationLabel(portal);
+  return `${getPortalStatusText(portal)} Destination: ${destination}.`;
+}
+
+function getPortalTransitionMarkup(portal) {
+  return `
+    <div class="results-grid">
+      <span>From</span><strong>${escapeHtml(getCurrentWorldArea()?.label || "Current area")}</strong>
+      <span>To</span><strong>${escapeHtml(getPortalDestinationLabel(portal))}</strong>
+      <span>Status</span><strong>${escapeHtml(getPortalStatusText(portal))}</strong>
+      <span>Loop step</span><strong>${escapeHtml(getWorkdayLoopStage(getObjective()))}</strong>
+    </div>
+  `;
 }
 
 function getRouteArrivalClock(route, routeChoice = null) {
@@ -2432,13 +3171,25 @@ function usePortal(portalId) {
   const portal = getWorldPortal(portalId);
   if (!portal) return notify(`Portal ${portalId} is not mapped yet.`);
   if (portal.requiredFlag && !state.flags[portal.requiredFlag]) {
-    return notify(portal.requiredMessage || `${portal.label} is not available yet.`);
+    return showModal({
+      kicker: "Area Transition",
+      title: `${portal.label} Locked`,
+      body: `
+        ${getPortalTransitionMarkup(portal)}
+        <p class="muted">${escapeHtml(portal.requiredMessage || `${portal.label} is not available yet.`)}</p>
+        <p class="muted">Current step: ${escapeHtml(getObjective())}</p>
+      `,
+      actions: [{ label: "Back To Area", onClick: render }],
+    });
   }
   if (portal.transition) {
     return showModal({
       kicker: portal.transition.kicker || "Area Transition",
       title: portal.transition.title || portal.label,
-      body: `<p>${escapeHtml(portal.transition.body || portal.label)}</p>`,
+      body: `
+        ${getPortalTransitionMarkup(portal)}
+        <p>${escapeHtml(portal.transition.body || portal.label)}</p>
+      `,
       actions: [{ label: portal.transition.actionLabel || portal.label, onClick: () => finishPortal(portal) }],
     });
   }
@@ -2505,6 +3256,12 @@ function showTravelRouteModal({ routeId, dispatchEstimate, extraBody = "", actio
       ${fastTravel ? `<p class="expense"><strong>Fast travel:</strong> Known route shortcut, -${fastTravelCost} energy.</p>` : ""}
       ${extraBody}
       ${getRouteLineMarkup(route)}
+      <div class="results-grid">
+        <span>Route status</span><strong>${escapeHtml(getRouteStatus(route))}</strong>
+        <span>Travel cost / risk</span><strong>${escapeHtml(getRouteTravelCostRisk(route))}</strong>
+        <span>Driven before</span><strong>${escapeHtml(getRouteDrivenText(route))}</strong>
+        <span>Fast travel</span><strong>${escapeHtml(getRouteFastTravelText(route))}</strong>
+      </div>
     `,
     actions: [{
       label: actionLabel || (fastTravel ? `Fast Travel to ${route.toLabel}` : route.actionLabel || `Drive to ${route.toLabel}`),
@@ -2513,26 +3270,31 @@ function showTravelRouteModal({ routeId, dispatchEstimate, extraBody = "", actio
   });
 }
 
+function launchRouteFromBoard(routeId, { fastTravel = false } = {}) {
+  if (routeId === "conshohockenService") {
+    if (isConshohockenFollowupAvailable()) return promptConshohockenFollowupTravel({ fastTravel });
+    return state.flags.servicePreparation ? promptServiceTravel({ fastTravel }) : showServicePreparation();
+  }
+  if (routeId === "universitySurvey") return state.flags.surveyPreparation ? promptSurveyTravel({ fastTravel }) : showSurveyPreparation();
+  if (routeId === "centerCityTutorial") return promptTravel();
+  if (routeId === "southPhillyCommissioning") return promptCommissioningTravel({ fastTravel });
+  if (routeId === "navyYardAccess") return state.flags.secureAccessPreparation ? promptSecureAccessTravel({ fastTravel }) : showSecureAccessPreparation();
+  if (routeId === "warrantyReturn") return promptCallbackCleanupTravel({ fastTravel });
+  if (routeId === "executiveHandoff") return promptHandoffTravel({ fastTravel });
+  if (routeId === "systemsService") return state.flags.systemsPreparation ? promptSystemsTravel({ fastTravel }) : showSystemsPreparation();
+  if (routeId === "burlingtonRetrofitWalkdown") {
+    if (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete) {
+      return state.flags.retrofitInstallPackageReviewed ? promptRetrofitInstallTravel({ fastTravel }) : showRetrofitInstallPackage();
+    }
+    return state.flags.retrofitWalkdownPreparation ? promptRetrofitWalkdownTravel({ fastTravel }) : showRetrofitWalkdownPreparation();
+  }
+  return notify("That route needs a board hook before it can launch from the van.");
+}
+
 function promptFastTravelRoute(routeId) {
   const route = getWorldRoute(routeId);
   if (!canFastTravelRoute(route)) return notify("That fast travel route is not available for the current board route.");
-  if (routeId === "conshohockenService") {
-    if (isConshohockenFollowupAvailable()) return promptConshohockenFollowupTravel({ fastTravel: true });
-    return state.flags.servicePreparation ? promptServiceTravel({ fastTravel: true }) : showServicePreparation();
-  }
-  if (routeId === "universitySurvey") return state.flags.surveyPreparation ? promptSurveyTravel({ fastTravel: true }) : showSurveyPreparation();
-  if (routeId === "southPhillyCommissioning") return promptCommissioningTravel({ fastTravel: true });
-  if (routeId === "navyYardAccess") return state.flags.secureAccessPreparation ? promptSecureAccessTravel({ fastTravel: true }) : showSecureAccessPreparation();
-  if (routeId === "warrantyReturn") return promptCallbackCleanupTravel({ fastTravel: true });
-  if (routeId === "executiveHandoff") return promptHandoffTravel({ fastTravel: true });
-  if (routeId === "systemsService") return state.flags.systemsPreparation ? promptSystemsTravel({ fastTravel: true }) : showSystemsPreparation();
-  if (routeId === "burlingtonRetrofitWalkdown") {
-    if (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete) {
-      return state.flags.retrofitInstallPackageReviewed ? promptRetrofitInstallTravel({ fastTravel: true }) : showRetrofitInstallPackage();
-    }
-    return state.flags.retrofitWalkdownPreparation ? promptRetrofitWalkdownTravel({ fastTravel: true }) : showRetrofitWalkdownPreparation();
-  }
-  return notify("That route needs a board hook before fast travel can launch it.");
+  return launchRouteFromBoard(routeId, { fastTravel: true });
 }
 
 function getNextShopLoad() {
@@ -2804,6 +3566,8 @@ function showCareerClipboard() {
       </div>
       <p><strong>Active consequences:</strong></p>
       ${getActiveCareerSummaryMarkup()}
+      <p><strong>Consequence ledger:</strong></p>
+      ${getConsequenceLedgerMarkup({ includeResolved: true })}
       <p><strong>Build identity:</strong></p>
       ${getBuildIdentityMarkup()}
       <p><strong>Skill tree details:</strong></p>
@@ -3030,8 +3794,50 @@ function showJoshConversation() {
       }],
     });
   }
+  if (shouldShowRetrofitInstallDebrief()) return showRetrofitInstallDebrief();
   if (canReceiveJoshLabeler()) return showJoshLabelerOffer();
   notify(`Josh: "Label both ends. Future you is also a technician, and future you is already annoyed."`);
+}
+
+function showRetrofitInstallDebrief() {
+  const branchId = state.flags.retrofitInstallBranch || getRetrofitInstallBranchIdFromFlags(state.flags);
+  const branchLabel = getRetrofitInstallPreview()?.branch?.label || branchId;
+  const resultSummary = getRetrofitInstallResultSummary(
+    state.flags.retrofitInstallApproach,
+    branchId,
+    Boolean(state.flags.retrofitInstallCheckStrained),
+  );
+  const riskCopy = state.flags.retrofitInstallRiskInherited
+    ? "Still visible on the ledger"
+    : state.flags.retrofitInstallRiskResolved
+    ? "Resolved by record/as-built notes"
+    : "Controlled for this install";
+  state.flags.retrofitInstallDebriefed = true;
+  addLog("Debriefed the Burlington retrofit install with Josh before reviewing the career snapshot.");
+  render();
+  showModal({
+    kicker: "Josh / Lead Technician",
+    title: "The Ceiling Finally Has A Paper Trail",
+    body: `
+      <p>Josh has the Burlington photos open beside a label cassette and the kind of coffee that has become a troubleshooting tool by accident.</p>
+      <p><strong>Josh:</strong> "Walkdown, install, then notes that admit what the ceiling actually did. That is a real little project. The board will call it one line item because the board has never held a ladder."</p>
+      <div class="results-grid">
+        <span>Inherited branch</span><strong>${escapeHtml(branchLabel)}</strong>
+        <span>Install closeout</span><strong>${escapeHtml(resultSummary)}</strong>
+        <span>Return-trip risk</span><strong>${escapeHtml(riskCopy)}</strong>
+        <span>Energy after recovery</span><strong>${state.energy}/${getMaxEnergy()}</strong>
+        <span>Burnout</span><strong>${state.burnout}</strong>
+      </div>
+      <p class="muted">${state.flags.retrofitInstallRiskInherited
+        ? "The install is done, but Josh flags the weak pathway record as the kind of thing that can become somebody else's first hour later."
+        : "The install is done, and the record is strong enough that the next tech should not have to rediscover the route from ceiling dust."}</p>
+    `,
+    actions: [
+      { label: "Review Career Snapshot", onClick: showPrototypeSummary },
+      ...(canReceiveJoshLabeler() ? [{ label: "Talk Tools", className: "secondary-button", onClick: showJoshLabelerOffer }] : []),
+      { label: "Return To Shop", className: "secondary-button", onClick: render },
+    ],
+  });
 }
 
 function showJoshCallback() {
@@ -3146,42 +3952,15 @@ function takeBreak() {
 function showDispatchPreview() {
   if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
   if (state.flags.endShiftPending) return showEndShiftModal();
-  if (state.flags.handoffComplete && !state.flags.systemsComplete) {
-    return showSystemsDispatchPreview();
-  }
-  if (state.flags.systemsComplete && !state.flags.travelComplete) {
-    return showTravelDispatchPreview();
-  }
-  if (state.flags.travelComplete && !state.flags.retrofitWalkdownComplete) {
-    return showRetrofitWalkdownDispatchPreview();
-  }
-  if (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete) {
-    return showRetrofitInstallDispatchPreview();
-  }
-  if (state.flags.secureAccessComplete) {
-    if (shouldOfferCallbackCleanupDispatch()) return showCallbackCleanupDispatchPreview();
-    if (!state.flags.handoffComplete) return showHandoffDispatchPreview();
-    return showPrototypeSummary();
-  }
-  if (state.flags.warehouseComplete) {
-    return showSecureAccessDispatchPreview();
-  }
-  if (state.flags.commissioningComplete) {
-    if (hasPendingTraining()) return notify("Mark your new field-training focus on the clipboard before taking another job.");
-    return showWarehouseDispatchPreview();
-  }
-  if (state.flags.surveyComplete) {
-    return showCommissioningDispatchPreview();
-  }
-  if (state.flags.serviceComplete) {
-    if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) {
-      return notify("The Conshohocken callback note is still clipped to Josh's bench.");
-    }
-    if (!state.flags.joshServiceDebriefed) return notify("Check in with Josh before coordination adds another stop.");
-    if (hasPendingTraining()) return notify("Mark your field-training focus on the clipboard before taking another job.");
-    if (isConshohockenFollowupAvailable()) return showConshohockenFollowupPreview();
-    return showSurveyDispatchPreview();
-  }
+  const entry = getCurrentDispatchBoardEntry();
+  if (entry?.previewAction) return entry.previewAction();
+  const blockedEntry = getBlockedDispatchBoardEntry();
+  if (blockedEntry?.blockedReason) return notify(blockedEntry.blockedReason);
+  if (state.flags.secureAccessComplete) return showPrototypeSummary();
+  return showServiceDispatchPreview();
+}
+
+function showServiceDispatchPreview() {
   showModal({
     kicker: "Dispatch Board",
     title: "One Quick Display Swap",
@@ -3343,6 +4122,43 @@ function getDispatchTaskCardsMarkup(taskCards = []) {
   `;
 }
 
+function getFieldTaskPreviewSkillText(check) {
+  const skillName = getSkillDefinition(check.skillId)?.name || check.skill || check.skillId || "Variable skill";
+  const difficulty = check.difficulty != null
+    ? `Difficulty ${check.difficulty}`
+    : check.difficultyHint || "Difficulty varies";
+  return `${skillName} | ${difficulty}`;
+}
+
+function getFieldTaskPreviewEnergyText(check) {
+  if (check.energyHint) return check.energyHint;
+  if (check.energyCost != null) return `Base energy ${check.energyCost}`;
+  return "Energy varies by route, prep, or branch";
+}
+
+function getFieldTaskPreviewMarkup(fieldTasks = []) {
+  if (!fieldTasks.length) return "";
+  return `
+    <h3>Field Task Checks</h3>
+    <div class="dispatch-task-grid">
+      ${fieldTasks.map((check) => {
+        const toolText = [
+          check.requiredTool ? `Required: ${getFieldTaskToolText(check.requiredTool)}` : "",
+          check.optionalTool ? `Helpful: ${getFieldTaskToolText(check.optionalTool)}` : "",
+          check.riskLabel ? `Risk: ${check.riskLabel}` : "",
+        ].filter(Boolean).join(" | ");
+        return `
+          <div class="dispatch-task-card">
+            <strong>${escapeHtml(check.label)}</strong>
+            <span>${escapeHtml(`${check.type || "field check"} | ${getFieldTaskPreviewSkillText(check)} | ${getFieldTaskPreviewEnergyText(check)}`)}</span>
+            <small>${escapeHtml(toolText || check.successText || check.detail || "Complete this task before closeout.")}</small>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
 function getJobFamilyMarkup(familyId) {
   const family = content.jobFamilies?.[familyId];
   if (!family) return "";
@@ -3425,10 +4241,89 @@ function getBoardConsequenceHooksMarkup(consequenceHooks = []) {
   return `<li><strong>Consequence hooks</strong><span>${escapeHtml(consequenceHooks.join(" "))}</span></li>`;
 }
 
-function getDispatchBoardMarkup({ type, setup, why, stakes = [], note, managementNote, prep = "", taskCards = [], familyId = "", routeId = "", consequenceHooks = [], showLaterWork = true }) {
+function getToolDisplayName(toolId) {
+  const tool = content.tools?.[toolId];
+  if (!tool) return toolId;
+  return `${tool.name}${ownsTool(toolId) ? " (owned)" : ""}`;
+}
+
+function getDispatchToolPlan(familyId, routeId = "") {
+  const plans = content.dispatchToolPlans || {};
+  const basePlan = plans[familyId] || plans.default || { required: ["work-order notes"], recommended: ["toolBag"] };
+  const routePlan = plans.routeOverrides?.[routeId] || {};
+  return {
+    required: uniqueValues([...(basePlan.required || []), ...(routePlan.required || [])]),
+    recommended: uniqueValues([...(basePlan.recommended || []), ...(routePlan.recommended || [])]),
+  };
+}
+
+function getToolPlanText(items = []) {
+  return [...new Set(items)]
+    .map((item) => content.tools?.[item] ? getToolDisplayName(item) : item)
+    .join(", ");
+}
+
+function getDispatchLocationSummary(route) {
+  if (!route) return "Radnor Rack & Wire shop / Wayne Area";
+  const area = getWorldArea(route.toAreaId);
+  const region = getWorldRegion(area?.regionId);
+  return `${area?.label || route.toLabel}${region?.name ? `, ${region.name}` : ""}`;
+}
+
+function getDispatchRiskTags({ routeId = "", familyId = "", consequenceHooks = [] }) {
+  const routeJob = routeId ? getRouteJobData(routeId) : null;
+  const tags = [
+    ...(routeJob?.riskTags || []),
+    ...(consequenceHooks.length ? ["consequence hook"] : []),
+    ...(getUnresolvedCallbackCount() ? ["callback debt"] : []),
+    ...(state.flags.shiftPrepActive ? ["late-shift prep"] : []),
+  ];
+  if (familyId === "logistics") tags.push("process friction");
+  if (familyId === "service") tags.push("return-trip risk");
+  return [...new Set(tags)].join(", ") || "ordinary field pressure";
+}
+
+function getDispatchCallbackEffectsText(consequenceHooks = []) {
+  const effects = [];
+  if (consequenceHooks.length) effects.push(consequenceHooks.join(" "));
+  if (getUnresolvedCallbackCount()) effects.push(`${getUnresolvedCallbackCount()} unresolved callback${getUnresolvedCallbackCount() === 1 ? "" : "s"} can affect routing and pressure.`);
+  const risks = getOpenReturnTripRiskSummary();
+  if (risks) effects.push(risks);
+  return effects.join(" ") || "No open callback or return-trip effect is currently attached to this job.";
+}
+
+function getDispatchJobOverviewRowsMarkup({ type, setup, familyId = "", routeId = "", consequenceHooks = [] }) {
+  const route = getWorldRoute(routeId || getCurrentDispatchRouteId());
+  const routeJob = route ? getRouteJobData(route.id) : null;
+  const resolvedFamilyId = familyId || routeJob?.familyId || "";
+  const toolPlan = getDispatchToolPlan(resolvedFamilyId, route?.id || "");
+  const routeDetail = route
+    ? `${route.fromLabel} -> ${route.toLabel}. ${getRouteTravelCostRisk(route)} ${getRouteFastTravelText(route)}`
+    : "Shop-based task; no drive route launches for this board item.";
+  const unlockDetail = routeJob?.unlockCondition
+    ? `${routeJob.unlockCondition}${route ? ` ${getRouteLockReason(route) || "Launchable when this card is accepted."}` : ""}`
+    : "Unlocked by the current dispatch-board progression.";
+  return `
+    <li><strong>Title</strong><span>${escapeHtml(routeJob?.title || type)}</span></li>
+    <li><strong>Location / region</strong><span>${escapeHtml(getDispatchLocationSummary(route))}</span></li>
+    <li><strong>Summary</strong><span>${escapeHtml(routeJob?.summary || setup)}</span></li>
+    <li><strong>Required / expected tools</strong><span>${escapeHtml(getToolPlanText(toolPlan.required))}</span></li>
+    <li><strong>Recommended tools</strong><span>${escapeHtml(getToolPlanText(toolPlan.recommended))}</span></li>
+    <li><strong>Risk tags</strong><span>${escapeHtml(getDispatchRiskTags({ routeId: route?.id || "", familyId: resolvedFamilyId, consequenceHooks }))}</span></li>
+    <li><strong>Route</strong><span>${escapeHtml(routeDetail)}</span></li>
+    <li><strong>Rewards</strong><span>${escapeHtml(routeJob?.rewards || "Cash, XP, reputation, and ledger changes on closeout.")}</span></li>
+    <li><strong>Unlock condition</strong><span>${escapeHtml(unlockDetail)}</span></li>
+    <li><strong>Callback / return-trip effects</strong><span>${escapeHtml(getDispatchCallbackEffectsText(consequenceHooks))}</span></li>
+  `;
+}
+
+function getDispatchBoardMarkup({ type, setup, why, stakes = [], note, managementNote, prep = "", taskCards = [], fieldTasks = [], familyId = "", routeId = "", consequenceHooks = [], showLaterWork = true, showBoardState = true }) {
   return `
     <p><strong>${type}:</strong> ${setup}</p>
+    ${getWorkdayLoopGuidanceMarkup()}
     <ul class="modal-list">
+      ${showBoardState ? getDispatchBoardStateMarkup() : ""}
+      ${getDispatchJobOverviewRowsMarkup({ type, setup, familyId, routeId, consequenceHooks })}
       <li><strong>Why this is on the board</strong><span>${why}</span></li>
       ${getJobFamilyMarkup(familyId)}
       ${getCompanyDispatchPressureMarkup()}
@@ -3443,6 +4338,7 @@ function getDispatchBoardMarkup({ type, setup, why, stakes = [], note, managemen
       ${showLaterWork ? `<li><strong>Later work</strong><span>${getUpcomingDispatchText()}</span></li>` : ""}
     </ul>
     ${getDispatchTaskCardsMarkup(taskCards)}
+    ${getFieldTaskPreviewMarkup(fieldTasks)}
     ${note ? `<p class="muted">${note}</p>` : ""}
     <blockquote>Management note: "${managementNote}"</blockquote>
   `;
@@ -3450,9 +4346,13 @@ function getDispatchBoardMarkup({ type, setup, why, stakes = [], note, managemen
 
 function getOpenCallbackBoardMarkup() {
   const openCallbacks = getUnresolvedCallbackCount();
-  if (!openCallbacks) return "";
+  const ledgerEntries = getConsequenceLedgerEntries();
+  if (!openCallbacks && !ledgerEntries.length) return "";
   const returnTripSummary = getOpenReturnTripRiskSummary();
-  return `<li><strong>Because of your choices</strong><span>${openCallbacks} unresolved callback${openCallbacks === 1 ? "" : "s"} on the ledger. ${returnTripSummary || "Future work may feel heavier until the callback ledger catches up."}</span></li>`;
+  return `
+    <li><strong>Open consequence ledger</strong><span>${openCallbacks} unresolved callback${openCallbacks === 1 ? "" : "s"} on the ledger. ${returnTripSummary || "Future work may feel heavier until the callback ledger catches up."}</span></li>
+    ${getReturnTripRiskRowsMarkup()}
+  `;
 }
 
 function getUpcomingJobs() {
@@ -3579,6 +4479,7 @@ function showPlannedJobPreview(jobId) {
         familyId: preview.familyId || "",
         routeId: preview.routeId || "",
         consequenceHooks: preview.consequenceHooks || [],
+        showBoardState: false,
       })}
       ${getPlannedJobBranchMarkup(preview)}
       <p class="muted">Locked preview: this is a data-first work order, not a playable scene yet.</p>
@@ -3608,6 +4509,8 @@ function showPrototypeSummary() {
       </div>
       <p><strong>Active consequences:</strong></p>
       ${getActiveCareerSummaryMarkup()}
+      <p><strong>Consequence ledger:</strong></p>
+      ${getConsequenceLedgerMarkup({ includeResolved: true })}
       <p><strong>Career ledger:</strong></p>
       ${getCareerLedgerMarkup()}
       <p><strong>Upcoming jobs:</strong></p>
@@ -3800,6 +4703,7 @@ function showSecureAccessDispatchPreview() {
       managementNote: "Please do not let access delays affect today's schedule.",
       prep: state.flags.secureAccessPreparation ? `Preparation selected: ${getSecureAccessPreparationLabel()}` : "",
       taskCards: content.secureAccessDispatch.taskCards,
+      fieldTasks: content.secureAccessDispatch.taskChecks,
     }),
     actions: [
       { label: "Accept Navy Yard Job", onClick: () => state.flags.secureAccessPreparation ? promptSecureAccessTravel() : showSecureAccessPreparation() },
@@ -3934,18 +4838,17 @@ function getSecureAccessTaskEnergyCost(checkId) {
 function inspectSecureAccessTask(checkId) {
   const check = content.secureAccessDispatch.taskChecks.find((item) => item.id === checkId);
   if (!check || state.secureAccessTaskChecks.includes(checkId)) return notify(`${check?.label || "That rack task"} is already handled.`);
-  state.secureAccessTaskChecks.push(checkId);
-  const skillCheck = resolveSkillCheck(`secure-access-task-${checkId}`, {
-    skillId: check.skillId,
-    difficulty: check.difficulty,
+  const { skillCheck, energyCost } = resolveFieldTaskCheck({
+    check,
+    checkId,
+    completedChecks: state.secureAccessTaskChecks,
+    flagKey: `secure-access-task-${checkId}`,
     contextBonus: state.flags.secureAccessPreparation === "contact" && checkId === "verify-signal" ? 1 : 0,
-    contextId: check.skillId === "install" ? "secure-access-install" : check.skillId === "troubleshooting" ? "secure-access-verification" : "secure-access-documentation",
+    baseEnergyCost: getSecureAccessTaskEnergyCost(checkId),
+    strainedFlag: "secureAccessTaskStrained",
+    logText: `${check.label}: ${check.log}.`,
+    strainedLogText: `Rack update check strained on ${check.label}; closeout will need clearer notes.`,
   });
-  const energyCost = Math.max(0, getSecureAccessTaskEnergyCost(checkId) + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
-  changeEnergy(-energyCost);
-  if (!skillCheck.successful) state.flags.secureAccessTaskStrained = true;
-  addLog(`${check.label}: ${check.log}.`);
-  if (!skillCheck.successful) addLog(`Rack update check strained on ${check.label}; closeout will need clearer notes.`);
   render();
   const allChecked = state.secureAccessTaskChecks.length === content.secureAccessDispatch.taskChecks.length;
   showModal({
@@ -3953,7 +4856,7 @@ function inspectSecureAccessTask(checkId) {
     title: check.label,
     body: `
       <p>${check.detail}</p>
-      ${getSkillCheckMarkup(skillCheck)}
+      ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
       ${allChecked ? `<p class="muted">The rack update is done. Now decide how honest the closeout gets about the access delay and the stale room label.</p>` : ""}
     `,
     actions: [{ label: allChecked ? "Close Out Navy Yard Job" : "Keep Working The Rack", onClick: allChecked ? showSecureAccessChoice : render }],
@@ -4051,6 +4954,21 @@ function finishSecureAccess(approach) {
   addLog(honest
     ? "Documented the Navy Yard access delay and rack update before the schedule could pretend nothing happened."
     : "Completed the Navy Yard rack update while absorbing the access delay into a clean-looking ticket.");
+  const closeoutConsequences = [{
+    source: content.secureAccessDispatch.title,
+    status: createsRackReturnRisk ? "open" : honest ? "documented" : "inherited",
+    cause: createsRackReturnRisk
+      ? "A strained rack update was closed while the access delay stayed hidden."
+      : honest
+      ? "The access delay and rack change were written into the closeout."
+      : "The access delay was absorbed into a clean-looking ticket.",
+    affects: getReturnTripRiskAffectedWork("navyYardRackUpdate"),
+    detail: createsRackReturnRisk
+      ? "Stale rack context stays on the return-trip ledger."
+      : honest
+      ? "Future support gets the rack/access context before guessing."
+      : "The process problem remains hidden even though no named rack risk was recorded.",
+  }];
   render();
   showModal({
     kicker: "Secure Access Complete",
@@ -4066,6 +4984,7 @@ function finishSecureAccess(approach) {
         ${strainedNotes ? `<span>Skill consequence</span><strong>Thin access notes limited client trust</strong>` : ""}
         ${createsRackReturnRisk ? `<span>Return-trip risk</span><strong>Stale rack note may send someone back</strong>` : ""}
       </div>
+      ${getCloseoutConsequenceMarkup(closeoutConsequences)}
       ${honest
         ? `<blockquote>Management note: "Please avoid creating client-facing narratives around internal scheduling friction."</blockquote>`
         : `<blockquote>Management note: "Thanks for keeping the ticket clean. Please improve onsite arrival efficiency."</blockquote>`}
@@ -4194,6 +5113,8 @@ function finishCallbackCleanup(approach) {
   const resolved = approach !== "bandage";
   const strainedFix = Boolean(state.flags.callbackTroubleshootingStrained) && approach === "root";
   const xp = (approach === "craft" ? 65 : approach === "root" ? 55 : 35) - (strainedFix ? 5 : 0);
+  const callbackRiskIds = ["usedTemporaryAdapterPermanently", "navyYardRackUpdate", "southPhillySpeakerTermination", "systemsQuickReboot"];
+  const resolvedRiskId = resolved ? callbackRiskIds.find((riskId) => state.flags.returnTripRisks?.[riskId]) : "";
   if (resolved) changeEnergy(-(getCallbackCleanupRepairEnergyCost(approach === "craft" ? 5 : 6) + (strainedFix ? 2 : 0)));
   else state.burnout += 1;
   state.flags.callbackCleanupComplete = true;
@@ -4224,9 +5145,26 @@ function finishCallbackCleanup(approach) {
     }
     state.flags.callbackCleanupStatsRecorded = true;
   }
+  if (resolvedRiskId) {
+    resolveReturnTripRisk(resolvedRiskId, {
+      source: content.callbackCleanupDispatch.title,
+      resolution: "Warranty return fixed the cause and rebuilt the notes enough to remove this return-trip risk.",
+    });
+  }
   addLog(resolved
     ? "Resolved the warranty return and wrote notes the next tech can actually use."
     : "Closed the warranty ticket with a bandage. The callback ledger remains spiritually aware.");
+  const closeoutConsequences = [{
+    source: content.callbackCleanupDispatch.title,
+    status: resolved ? "resolved" : "inherited",
+    cause: resolved
+      ? "Warranty return fixed the root cause instead of hiding the callback."
+      : "Warranty return was bandaged to protect the ticket.",
+    affects: resolvedRiskId ? getReturnTripRiskAffectedWork(resolvedRiskId) : "callback ledger and future warranty pressure",
+    detail: resolved
+      ? "Callback pressure drops and any matched return-trip risk moves into resolved history."
+      : "Callback debt remains visible for future routing and trust pressure.",
+  }];
   render();
   showModal({
     kicker: "Warranty Return Complete",
@@ -4240,6 +5178,7 @@ function finishCallbackCleanup(approach) {
         <span>Unresolved callbacks</span><strong>${getUnresolvedCallbackCount()}</strong>
         ${strainedFix ? `<span>Skill consequence</span><strong>Root cause fixed, notes needed extra cleanup</strong>` : ""}
       </div>
+      ${getCloseoutConsequenceMarkup(closeoutConsequences)}
       ${resolved
         ? `<blockquote>Management note: "Please avoid implying previous closeout was incomplete when documenting warranty support."</blockquote>`
         : `<blockquote>Management note: "Thanks for keeping warranty hours contained."</blockquote>`}
@@ -4423,7 +5362,7 @@ function showSystemsDispatchPreview() {
       type: "Systems Service",
       familyId: "service",
       setup: "A King of Prussia conference room is reporting offline. The service ticket says the client already rebooted once, so maybe reboot it professionally.",
-      why: "Unlocked after the executive handoff. The prototype is testing whether advanced systems skills can matter in one readable service job.",
+      why: "Unlocked after the executive handoff. This board is testing whether advanced systems skills can matter in one readable service job.",
       stakes: [
         "Networking and Control Systems can change how cleanly you identify the fault.",
         "Documentation can turn a weird room note into future-proof closeout.",
@@ -4433,6 +5372,7 @@ function showSystemsDispatchPreview() {
       managementNote: "Please avoid turning a simple offline room into a network investigation.",
       prep: state.flags.systemsPreparation ? `Preparation selected: ${getSystemsPreparationLabel()}` : "",
       taskCards: content.systemsDispatch.taskCards,
+      fieldTasks: content.systemsDispatch.checks,
     }),
     actions: [
       { label: "Accept Systems Service", onClick: () => state.flags.systemsPreparation ? promptSystemsTravel() : showSystemsPreparation() },
@@ -4514,20 +5454,17 @@ function getSystemsCheckEnergyCost(checkId) {
 function inspectSystemsCondition(checkId) {
   const check = content.systemsDispatch.checks.find((item) => item.id === checkId);
   if (!check || state.systemsChecks.includes(checkId)) return notify(`${check?.label || "That systems note"} is already checked.`);
-  state.systemsChecks.push(checkId);
-  const skillId = checkId === "panel-status" ? "controlSystems" : checkId === "network-path" ? "networking" : "documentation";
-  const contextId = checkId === "panel-status" ? "systems-control" : checkId === "network-path" ? "systems-networking" : "systems-documentation";
-  const skillCheck = resolveSkillCheck(`systems-${checkId}`, {
-    skillId,
-    difficulty: 3,
+  const { skillCheck, energyCost } = resolveFieldTaskCheck({
+    check,
+    checkId,
+    completedChecks: state.systemsChecks,
+    flagKey: `systems-${checkId}`,
     contextBonus: getSystemsCheckContextBonus(checkId),
-    contextId,
+    baseEnergyCost: getSystemsCheckEnergyCost(checkId),
+    strainedFlag: "systemsChecksStrained",
+    logText: `${check.label} checked: ${check.log}`,
+    strainedLogText: `Systems check strained on ${check.label}; the room is still more confident than the ticket.`,
   });
-  const energyCost = Math.max(0, getSystemsCheckEnergyCost(checkId) + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
-  changeEnergy(-energyCost);
-  if (!skillCheck.successful) state.flags.systemsChecksStrained = true;
-  addLog(`${check.label} checked: ${check.log}`);
-  if (!skillCheck.successful) addLog(`Systems check strained on ${check.label}; the room is still more confident than the ticket.`);
   render();
   const allChecked = state.systemsChecks.length === content.systemsDispatch.checks.length;
   showModal({
@@ -4535,7 +5472,7 @@ function inspectSystemsCondition(checkId) {
     title: check.label,
     body: `
       <p>${check.detail}</p>
-      ${getSkillCheckMarkup(skillCheck)}
+      ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
       ${allChecked ? `<p class="muted">You know enough to choose between a useful closeout and a clean-looking ticket.</p>` : ""}
     `,
     actions: [{ label: allChecked ? "Review Systems Closeout" : "Keep Troubleshooting", onClick: allChecked ? showSystemsChoice : render }],
@@ -4615,9 +5552,31 @@ function finishSystemsService(approach) {
     }
     state.flags.systemsStatsRecorded = true;
   }
+  if (!documented) {
+    recordReturnTripRisk("systemsQuickReboot", {
+      source: content.systemsDispatch.title,
+      detail: "Room was closed with a quick reboot while the control/network mismatch stayed loose.",
+    });
+  } else if (state.flags.returnTripRisks?.systemsQuickReboot) {
+    resolveReturnTripRisk("systemsQuickReboot", {
+      source: content.systemsDispatch.title,
+      resolution: "Systems closeout documented the mismatch instead of leaving the reboot as the explanation.",
+    });
+  }
   addLog(documented
     ? "Closed the systems service with a usable mismatch note instead of pretending the reboot explained itself."
     : "Closed the systems service with a reboot. The room came online, and the callback ledger quietly found a chair.");
+  const closeoutConsequences = [{
+    source: content.systemsDispatch.title,
+    status: documented ? "documented" : "open",
+    cause: documented
+      ? "Control/network mismatch was written into the closeout."
+      : "Quick reboot restored the room without explaining the mismatch.",
+    affects: getReturnTripRiskAffectedWork("systemsQuickReboot"),
+    detail: documented
+      ? "Future service gets a usable mismatch trail."
+      : "Systems quick-reboot debt is now visible on the return-trip ledger.",
+  }];
   render();
   showModal({
     kicker: "Systems Service Complete",
@@ -4632,6 +5591,7 @@ function finishSystemsService(approach) {
         <span>Return-trip risk</span><strong>${documented ? "Lowered by documenting the mismatch" : "Increased by leaving the mismatch loose"}</strong>
         <span>Career record</span><strong>${documented ? "Systems mismatch documented" : "Quick reboot closed"}</strong>
       </div>
+      ${getCloseoutConsequenceMarkup(closeoutConsequences)}
       ${documented
         ? `<blockquote>Management note: "Please keep technical closeout proportionate to the original ticket."</blockquote>`
         : `<blockquote>Management note: "Thanks for resolving this quickly."</blockquote>`}
@@ -4785,6 +5745,7 @@ function showRetrofitWalkdownDispatchPreview() {
       managementNote: "Please keep this quick. The quote already assumes the pathway is usable.",
       prep: state.flags.retrofitWalkdownPreparation ? `Preparation selected: ${getRetrofitWalkdownPreparationLabel()}` : "",
       taskCards: content.retrofitWalkdownDispatch.taskCards,
+      fieldTasks: content.retrofitWalkdownDispatch.checks,
     }),
     actions: [
       { label: "Accept Retrofit Walkdown", onClick: () => state.flags.retrofitWalkdownPreparation ? promptRetrofitWalkdownTravel() : showRetrofitWalkdownPreparation() },
@@ -4879,18 +5840,19 @@ function getRetrofitWalkdownCloseoutEnergyCost(baseCost) {
 function inspectRetrofitWalkdownCondition(checkId) {
   const check = content.retrofitWalkdownDispatch.checks.find((item) => item.id === checkId);
   if (!check || state.retrofitWalkdownChecks.includes(checkId)) return notify(`${check?.label || "That walkdown note"} is already checked.`);
-  state.retrofitWalkdownChecks.push(checkId);
-  const skillCheck = resolveSkillCheck(`retrofit-walkdown-${checkId}`, {
-    skillId: check.skillId,
-    difficulty: check.difficulty,
+  const { skillCheck, energyCost } = resolveFieldTaskCheck({
+    check,
+    checkId,
+    completedChecks: state.retrofitWalkdownChecks,
+    flagKey: `retrofit-walkdown-${checkId}`,
     contextBonus: getRetrofitWalkdownCheckContextBonus(checkId),
-    contextId: check.contextId,
+    baseEnergyCost: getRetrofitWalkdownCheckEnergyCost(checkId),
+    failedEnergyPenalty: 1,
+    cleanEnergyReduction: 1,
+    strainedFlag: "retrofitWalkdownChecksStrained",
+    logText: `${check.label} checked: ${check.log}.`,
+    strainedLogText: `Walkdown check strained on ${check.label}; closeout will need a clearer scope call.`,
   });
-  const energyCost = Math.max(0, getRetrofitWalkdownCheckEnergyCost(checkId) + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
-  changeEnergy(-energyCost);
-  if (!skillCheck.successful) state.flags.retrofitWalkdownChecksStrained = true;
-  addLog(`${check.label} checked: ${check.log}.`);
-  if (!skillCheck.successful) addLog(`Walkdown check strained on ${check.label}; closeout will need a clearer scope call.`);
   render();
   const allChecked = state.retrofitWalkdownChecks.length === content.retrofitWalkdownDispatch.checks.length;
   showModal({
@@ -4898,7 +5860,7 @@ function inspectRetrofitWalkdownCondition(checkId) {
     title: check.label,
     body: `
       <p>${check.detail}</p>
-      ${getSkillCheckMarkup(skillCheck)}
+      ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
       ${allChecked ? `<p class="muted">You have enough to decide whether this becomes a clean install handoff, a field change, or another optimistic ticket.</p>` : ""}
     `,
     actions: [{ label: allChecked ? "Review Walkdown Closeout" : "Keep Walking The Site", onClick: allChecked ? showRetrofitWalkdownChoice : render }],
@@ -5007,11 +5969,27 @@ function finishRetrofitWalkdown(approach) {
         : "Walkdown documented blockers, but one strained read leaves partial install risk.",
     });
   } else if (state.flags.returnTripRisks?.["burlington-retrofit-install"]) {
-    delete state.flags.returnTripRisks["burlington-retrofit-install"];
+    resolveReturnTripRisk("burlington-retrofit-install", {
+      source: content.retrofitWalkdownDispatch.title,
+      resolution: "Walkdown closeout protected the future install before the risk reached install day.",
+    });
   }
   addLog(documented
     ? "Closed the Burlington walkdown with pathway blockers visible before install day."
     : "Accepted the Burlington pathway as usable. The future install now owns whatever the ceiling remembers.");
+  const closeoutConsequences = [{
+    source: content.retrofitWalkdownDispatch.title,
+    status: futureInstallRisk ? "open" : "protected",
+    cause: futureInstallRisk
+      ? approach === "accept"
+        ? "Pathway was accepted as usable without a field-change note."
+        : "Blockers were documented, but a strained walkdown note left partial risk."
+      : "Walkdown closeout protected the install with photos, scope language, or field-change ownership.",
+    affects: getReturnTripRiskAffectedWork("burlington-retrofit-install"),
+    detail: futureInstallRisk
+      ? "The install branch inherits pathway risk."
+      : "The install branch starts from a protected pathway note.",
+  }];
   render();
   showModal({
     kicker: "Retrofit Walkdown Complete",
@@ -5026,6 +6004,7 @@ function finishRetrofitWalkdown(approach) {
         <span>Future install hook</span><strong>${getRetrofitInstallHookSummary(approach, strained)}</strong>
         ${strained ? `<span>Skill consequence</span><strong>Strained walkdown note leaves partial install risk</strong>` : ""}
       </div>
+      ${getCloseoutConsequenceMarkup(closeoutConsequences)}
       ${documented
         ? `<blockquote>Management note: "Please avoid creating field changes from preliminary walkdowns unless the pathway is truly unavailable."</blockquote>`
         : `<blockquote>Management note: "Thanks for confirming the quoted pathway."</blockquote>`}
@@ -5082,6 +6061,7 @@ function showRetrofitInstallDispatchPreview() {
         managementNote: preview.managementNote,
         prep: state.flags.retrofitInstallPackageReviewed ? `Walkdown package reviewed: ${getRetrofitInstallBranchLabel()}` : "Review the inherited walkdown package before loading the van.",
         taskCards: preview.taskCards,
+        fieldTasks: getRetrofitInstallChecks(),
         showLaterWork: false,
       })}
       ${getPlannedJobBranchMarkup(preview)}
@@ -5164,18 +6144,22 @@ function inspectRetrofitInstallCondition(checkId) {
   if (!check || state.retrofitInstallChecks.includes(checkId)) return notify(`${check?.label || "That install task"} is already checked.`);
   const preview = getRetrofitInstallPreview();
   const branchId = preview?.branchId || "pending";
-  state.retrofitInstallChecks.push(checkId);
-  const skillCheck = resolveSkillCheck(`retrofit-install-${checkId}-${branchId}`, {
+  const { skillCheck, energyCost } = resolveFieldTaskCheck({
+    check,
+    checkId,
+    completedChecks: state.retrofitInstallChecks,
+    flagKey: `retrofit-install-${checkId}-${branchId}`,
     skillId: check.skillId,
     difficulty: getRetrofitInstallCheckDifficulty(branchId),
     contextBonus: getRetrofitInstallCheckContextBonus(branchId),
     contextId: check.contextId,
+    baseEnergyCost: getRetrofitInstallCheckEnergyCost(branchId),
+    failedEnergyPenalty: 2,
+    cleanEnergyReduction: 1,
+    strainedFlag: "retrofitInstallCheckStrained",
+    logText: `${check.label} complete: ${check.log}.`,
+    strainedLogText: "Retrofit install check strained; the closeout needs stronger record/as-built notes.",
   });
-  const energyCost = Math.max(0, getRetrofitInstallCheckEnergyCost(branchId) + (skillCheck.successful ? 0 : 2) - (skillCheck.tier === "clean" ? 1 : 0));
-  changeEnergy(-energyCost);
-  if (!skillCheck.successful) state.flags.retrofitInstallCheckStrained = true;
-  addLog(`${check.label} complete: ${check.log}.`);
-  if (!skillCheck.successful) addLog("Retrofit install check strained; the closeout needs stronger record/as-built notes.");
   render();
   showModal({
     kicker: "Install Task",
@@ -5183,7 +6167,7 @@ function inspectRetrofitInstallCondition(checkId) {
     body: `
       <p>${check.detail}</p>
       <p class="muted">${preview?.branch?.stateHint || ""}</p>
-      ${getSkillCheckMarkup(skillCheck)}
+      ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
       <p class="muted">The pathway is in. Closeout decides whether the actual route becomes a usable record or another vague handoff.</p>
     `,
     actions: [{ label: "Review Install Closeout", onClick: showRetrofitInstallChoice }],
@@ -5282,11 +6266,35 @@ function finishRetrofitInstall(approach) {
         : "Retrofit pathway installed with a quick note; weak pathway documentation remains.",
     });
   } else if (state.flags.returnTripRisks?.["burlington-retrofit-install"]) {
-    delete state.flags.returnTripRisks["burlington-retrofit-install"];
+    resolveReturnTripRisk("burlington-retrofit-install", {
+      source: preview?.title || "Burlington County Retrofit Install",
+      resolution: riskResolved
+        ? "Record/as-built closeout resolved the inherited pathway risk."
+        : "Install closeout cleared the active Burlington risk.",
+    });
   }
   addLog(documented
     ? "Closed the Burlington retrofit install with record/as-built pathway notes."
     : "Closed the Burlington retrofit install with a quick note. The ceiling knows what happened, at least.");
+  const closeoutConsequences = [{
+    source: preview?.title || "Burlington County Retrofit Install",
+    status: riskInherited ? "inherited" : riskResolved ? "resolved" : documented ? "documented" : "controlled",
+    cause: riskInherited
+      ? "Install closeout left the inherited pathway record weak."
+      : riskResolved
+      ? "Record/as-built notes answered the inherited pathway risk."
+      : documented
+      ? "Protected route was turned into usable closeout documentation."
+      : "Quick note left less documentation value, but no inherited pathway risk was active.",
+    affects: getReturnTripRiskAffectedWork("burlington-retrofit-install"),
+    detail: riskInherited
+      ? "Future service inherits a thinner map of the actual pathway."
+      : riskResolved
+      ? "The prior Burlington risk is cleared into resolved history."
+      : documented
+      ? "Future service gets record/as-built context."
+      : "The install is complete, but documentation value was left on the table.",
+  }];
   render();
   showModal({
     kicker: "Retrofit Install Complete",
@@ -5301,6 +6309,7 @@ function finishRetrofitInstall(approach) {
         <span>Relationship result</span><strong>${getRetrofitInstallReputationSummary(approach, riskResolved, riskInherited)}</strong>
         <span>Return-trip risk</span><strong>${riskInherited ? "Still visible on the ledger" : "Cleared for this install"}</strong>
       </div>
+      ${getCloseoutConsequenceMarkup(closeoutConsequences)}
       ${documented
         ? `<blockquote>Management note: "Please keep record drawing updates proportionate to the approved install."</blockquote>`
         : `<blockquote>Management note: "Thanks for keeping the install moving."</blockquote>`}
@@ -5703,6 +6712,25 @@ function finishCommissioning(approach) {
     ? `${getCommissioningTerminationTaskLabel()} and closed the South Philadelphia room with ${approach === "craft" ? "a clean punch list" : "a documented repair"}.`
     : `Marked the South Philadelphia room passed after: ${getCommissioningTerminationTaskLabel()}.`);
   if (callbackRiskAdded) addLog(`Return-trip risk recorded: ${callbackDetail}`);
+  const closeoutConsequences = [{
+    source: content.commissioningDispatch.title,
+    status: callbackRiskAdded ? "open" : documentedRisk ? "documented" : stableTask ? "controlled" : "inherited",
+    cause: callbackRiskAdded
+      ? callbackDetail
+      : documentedRisk
+      ? "Speaker-path risk was documented in closeout."
+      : stableTask
+      ? "Termination work was stable enough to avoid a callback."
+      : "Room was passed with thin task notes.",
+    affects: getReturnTripRiskAffectedWork("southPhillySpeakerTermination"),
+    detail: callbackRiskAdded
+      ? "Speaker-path risk is now visible on the return-trip ledger."
+      : documentedRisk
+      ? "Future work sees the discrepancy before it becomes a surprise."
+      : stableTask
+      ? "No speaker callback was created by this closeout."
+      : "Future support inherits less clarity about the speaker path.",
+  }];
   render();
   showModal({
     kicker: "Commissioning Visit Complete",
@@ -5718,6 +6746,7 @@ function finishCommissioning(approach) {
         <span>Reputation</span><strong>${formatReputationDelta(reputation)}</strong>
         <span>Callback ledger</span><strong>${callbackRiskAdded ? callbackDetail : stableTask ? "No speaker callback created" : "Risk documented before callback"}</strong>
       </div>
+      ${getCloseoutConsequenceMarkup(closeoutConsequences)}
       ${careful
         ? `<blockquote>Management note: "Please distinguish between commissioning and reopening completed installation work."</blockquote>`
         : callbackRiskAdded
@@ -6275,6 +7304,9 @@ function getInteractions() {
       },
       ...(hasCarriedItems() || !state.flags.centerCityEquipmentDelivered ? [{
         x: 116, y: 185, label: hasCarriedItems() ? "Carry equipment to client entrance" : "Walk to client entrance",
+        detail: hasCarriedItems()
+          ? `Ready: deliver ${getCarriedLabels().join(" and ")} to the client entrance.`
+          : "Locked: The equipment still needs to be carried from the van.",
         action: () => {
           if (hasCarriedItems()) {
             const carriedLabels = getCarriedLabels();
@@ -6878,6 +7910,59 @@ function notify(message) {
   render();
 }
 
+function getWorkdayLoopStage(objective = "") {
+  if (!state.sceneId) return "Workday";
+  if (state.sceneId === "shop") {
+    if (state.flags.endShiftPending) return "Return / End Shift";
+    if (!state.flags.finished) {
+      if (!state.flags.shopBrief) return "Shop";
+      if (state.loaded.length < content.tutorial.shopLoad.length) return "Shop / Van Prep";
+      return "Van / Route";
+    }
+    if (state.flags.serviceComplete && hasPendingTraining()) return "Shop / Career Growth";
+    if (state.flags.retrofitInstallComplete && !state.flags.retrofitInstallDebriefed) return "Shop / Debrief";
+    if (state.flags.retrofitInstallComplete && !state.flags.prototypeSummaryViewed) return "Shop / Career Snapshot";
+    return "Shop / Dispatch Board";
+  }
+  if (["garage", "lobby"].includes(state.sceneId)) return "Route / Building Transition";
+  if (/return to radnor|use .*exit/i.test(objective)) return "Closeout / Return";
+  if (/close out|choose|review the result|file the survey|handoff style/i.test(objective)) return "Job Site / Closeout";
+  return "Job Site / Field Tasks";
+}
+
+function getWorkdayLoopInterfaceHint(objective = "") {
+  if (/dispatch board/i.test(objective)) return "Interface: dispatch board or van route review.";
+  if (/van|load staged equipment|center city east/i.test(objective)) return "Interface: Van #3 connects cargo, map, and routes.";
+  if (/exit|return to radnor/i.test(objective)) return "Interface: use the marked exit/return transition.";
+  if (/career clipboard|training|career snapshot/i.test(objective)) return "Interface: career clipboard or dispatch board.";
+  if (/josh|supervisor|client|facilities|security|escort/i.test(objective)) return "Interface: talk to the nearby contact.";
+  return "Interface: use the nearest highlighted interaction.";
+}
+
+function getWorkdayLoopGuidance(objective = getObjective()) {
+  return {
+    stage: getWorkdayLoopStage(objective),
+    objective,
+    interfaceHint: getWorkdayLoopInterfaceHint(objective),
+  };
+}
+
+function getWorkdayLoopGuidanceText() {
+  const guidance = getWorkdayLoopGuidance();
+  return `${guidance.stage}: ${guidance.objective} ${guidance.interfaceHint}`;
+}
+
+function getWorkdayLoopGuidanceMarkup() {
+  const guidance = getWorkdayLoopGuidance();
+  return `
+    <ul class="modal-list">
+      <li><strong>Loop step</strong><span>${escapeHtml(guidance.stage)}</span></li>
+      <li><strong>Next action</strong><span>${escapeHtml(guidance.objective)}</span></li>
+      <li><strong>Where to look</strong><span>${escapeHtml(guidance.interfaceHint)}</span></li>
+    </ul>
+  `;
+}
+
 function getObjective() {
   if (state.sceneId === "shop") {
     if (shouldIntroduceJoshBeforeNextDispatch()) return "Check in with Josh at the workbench before closing out.";
@@ -6890,22 +7975,13 @@ function getObjective() {
     if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) return "Talk to Josh about the Conshohocken callback.";
     if (state.flags.serviceComplete && !state.flags.joshServiceDebriefed) return "Check in with Josh at the workbench.";
     if (state.flags.serviceComplete && hasPendingTraining()) return "Choose a field-training focus from the career clipboard.";
-    if (isConshohockenFollowupAvailable()) return "Review the Conshohocken label follow-up on the dispatch board.";
-    if (state.flags.serviceComplete && !state.flags.surveyComplete) return "Review the University City site survey on the dispatch board.";
-    if (state.flags.surveyComplete && !state.flags.commissioningComplete) return "Review the South Philadelphia commissioning visit on the dispatch board.";
     if (state.flags.warehouseStarted && !state.flags.warehouseComplete) {
       if (state.warehouseChecks.length === content.warehouseDispatch.checks.length) return "Review the found power supply.";
       return `Search the shop for the replacement power supply (${state.warehouseChecks.length}/${content.warehouseDispatch.checks.length}).`;
     }
-    if (state.flags.commissioningComplete && !state.flags.warehouseComplete) return "Review the warehouse run on the dispatch board.";
-    if (state.flags.warehouseComplete && !state.flags.secureAccessComplete) return "Review the Navy Yard secure-access job on the dispatch board.";
-    if (state.flags.handoffComplete && !state.flags.systemsComplete) return "Review the King of Prussia systems service on the dispatch board.";
-    if (state.flags.systemsComplete && !state.flags.travelComplete) return "Review the Cherry Hill return toll on the dispatch board.";
-    if (state.flags.travelComplete && !state.flags.retrofitWalkdownComplete) return "Review the Burlington County retrofit walkdown on the dispatch board.";
-    if (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete) return "Review the Burlington County retrofit install on the dispatch board.";
-    if (state.flags.retrofitInstallComplete && !state.flags.prototypeSummaryViewed) return "Review your career snapshot on the dispatch board.";
-    if (shouldOfferCallbackCleanupDispatch()) return "Review the warranty return on the dispatch board.";
-    if (state.flags.secureAccessComplete && !state.flags.handoffComplete) return "Review the executive handoff on the dispatch board.";
+    if (state.flags.retrofitInstallComplete && !state.flags.retrofitInstallDebriefed) return "Check in with Josh about the Burlington retrofit install.";
+    const boardObjective = getCurrentDispatchBoardObjective();
+    if (boardObjective) return boardObjective;
     if (state.flags.secureAccessComplete) return "Current dispatch board complete. Explore the shop.";
     if (state.flags.finished) return "Prepare for the Conshohocken service call.";
     if (!state.flags.shopBrief) return "Find your supervisor.";
@@ -7533,7 +8609,11 @@ function renderPlayer() {
 
 function renderNearby() {
   const nearest = getNearestInteraction();
-  elements.nearbyCard.textContent = nearest ? nearest.label : "Walk toward an object or person.";
+  elements.nearbyCard.textContent = nearest
+    ? nearest.detail
+      ? `${nearest.label}: ${nearest.detail}`
+      : nearest.label
+    : "Walk toward an object or person.";
   elements.interactButton.disabled = !nearest;
   elements.interactButton.textContent = nearest ? `Interact: ${nearest.label}` : "Interact";
 }
@@ -7593,92 +8673,12 @@ function render() {
   elements.sceneKicker.textContent = scene.kicker;
   elements.sceneName.textContent = scene.name;
   elements.clock.textContent = state.clock;
-  const serviceActive = state.sceneId === "serviceOffice";
-  const surveyActive = state.sceneId === "universitySurvey";
-  const commissioningActive = state.sceneId === "southPhillyCommissioning";
-  const secureAccessActive = state.sceneId === "navyYardAccess";
-  const callbackCleanupActive = state.sceneId === "warrantyReturn";
-  const handoffActive = state.sceneId === "executiveHandoff";
-  const systemsActive = state.sceneId === "systemsService";
-  const retrofitInstallActive = state.sceneId === "burlingtonRetrofitWalkdown" && state.flags.retrofitInstallStarted && !state.flags.retrofitInstallComplete;
-  const retrofitWalkdownActive = state.sceneId === "burlingtonRetrofitWalkdown" && !retrofitInstallActive;
-  const retrofitInstallPreview = getRetrofitInstallPreview();
-  const travelActive = state.flags.systemsComplete && !state.flags.travelComplete;
-  const travelSummaryPending = state.flags.retrofitInstallComplete && !state.flags.prototypeSummaryViewed;
-  const warehouseActive = state.flags.warehouseStarted && !state.flags.warehouseComplete;
-  const followupActive = state.flags.conshohockenFollowupStarted && !state.flags.conshohockenFollowupComplete;
-  const retrofitInstallPending = retrofitInstallActive
-    || (state.flags.retrofitInstallStarted && !state.flags.retrofitInstallComplete)
-    || (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete);
-  const retrofitWalkdownPending = retrofitWalkdownActive
-    || (state.flags.retrofitWalkdownStarted && !state.flags.retrofitWalkdownComplete)
-    || (state.flags.travelComplete && !state.flags.retrofitWalkdownComplete);
-  const activeDispatch = travelActive
-    ? content.travelDispatch
-    : travelSummaryPending || retrofitInstallPending
-    ? retrofitInstallPreview || { title: "Burlington County Retrofit Install", summary: "Install the retrofit using the inherited walkdown result." }
-    : retrofitWalkdownPending
-    ? content.retrofitWalkdownDispatch
-    : systemsActive || (state.flags.systemsStarted && !state.flags.systemsComplete) || (state.flags.handoffComplete && !state.flags.systemsComplete)
-    ? content.systemsDispatch
-    : handoffActive || (state.flags.handoffStarted && !state.flags.handoffComplete) || (state.flags.secureAccessComplete && (state.flags.callbackCleanupComplete || getUnresolvedCallbackCount() === 0) && !state.flags.handoffComplete)
-    ? content.handoffDispatch
-    : callbackCleanupActive || state.flags.callbackCleanupStarted || state.flags.callbackCleanupComplete || shouldOfferCallbackCleanupDispatch()
-    ? content.callbackCleanupDispatch
-    : secureAccessActive || state.flags.secureAccessStarted || state.flags.secureAccessComplete || (state.flags.warehouseComplete && !state.flags.secureAccessComplete)
-    ? content.secureAccessDispatch
-    : state.flags.warehouseStarted || state.flags.warehouseComplete
-    ? content.warehouseDispatch
-    : commissioningActive || state.flags.commissioningStarted || state.flags.commissioningComplete
-      ? content.commissioningDispatch
-      : surveyActive || state.flags.surveyStarted || state.flags.surveyComplete || (state.flags.conshohockenFollowupComplete && !state.flags.surveyComplete)
-      ? content.surveyDispatch
-      : followupActive || isConshohockenFollowupAvailable()
-      ? content.followupDispatch
-      : serviceActive || state.flags.serviceStarted || state.flags.serviceComplete
-      ? content.serviceDispatch
-      : { title: "Two Quick Carts", summary: "Build two mobile video conferencing carts at a Center City East office." };
-  elements.jobStatus.textContent = warehouseActive
-    ? "WAREHOUSE RUN"
-    : travelActive
-      ? "TRAVEL COST"
-    : retrofitInstallActive
-      ? "RETROFIT INSTALL"
-    : retrofitWalkdownActive
-      ? "RETROFIT WALKDOWN"
-    : systemsActive
-      ? "SYSTEMS SERVICE"
-    : handoffActive
-      ? "CLIENT HANDOFF"
-    : callbackCleanupActive
-      ? "WARRANTY RETURN"
-    : secureAccessActive
-      ? "SECURE ACCESS"
-      : followupActive
-      ? "FOLLOW-UP"
-      : commissioningActive
-      ? "COMMISSIONING"
-      : surveyActive
-      ? "SITE SURVEY"
-      : serviceActive
-      ? "SERVICE CALL"
-      : state.flags.travelComplete && !state.flags.retrofitWalkdownComplete
-        ? "SHOP HUB"
-      : state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete
-        ? "SHOP HUB"
-      : state.flags.secureAccessComplete
-        ? "DISPATCH COMPLETE"
-        : state.flags.warehouseComplete
-          ? "SHOP HUB"
-        : state.flags.commissioningComplete
-          ? "SHOP HUB"
-      : state.flags.finished
-        ? "SHOP HUB"
-        : "FIRST DAY";
+  const activeDispatch = getHudDispatchPresentation();
+  elements.jobStatus.textContent = activeDispatch.statusLabel;
   elements.dispatchTitle.textContent = activeDispatch.title;
   elements.dispatchSummary.textContent = activeDispatch.summary;
   elements.objective.textContent = getObjective();
-  elements.taskCopy.textContent = getObjective();
+  elements.taskCopy.textContent = getWorkdayLoopGuidanceText();
   renderDecor();
   renderPlayer();
   renderNearby();

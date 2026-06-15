@@ -271,10 +271,75 @@ be easy to verify in the browser.
    install preview into the smallest playable install loop: read the inherited
    walkdown branch, load for known conditions, complete one pathway/install
    check, and close with record/as-built notes.
-31. **Next - Post-install pacing pass:** Recheck the late-board pacing now that
-   Burlington has both walkdown and install beats. Decide whether the final
-   career snapshot should appear immediately after the install or after a small
-   shop debrief / next-day recovery beat.
+31. **Done - Post-install pacing pass:** Rechecked the late-board pacing now
+   that Burlington has both walkdown and install beats. The final career
+   snapshot now waits until the player closes the shift and checks in with Josh
+   for a short retrofit debrief, so the two-step job gets a recovery breath
+   before the board summary.
+32. **Done - Burlington branch playtest pass:** Played the protected, partial,
+   and inherited-risk Burlington branches through install closeout, return
+   portal, end-of-shift closeout, Josh debrief, and the final career snapshot.
+   The branch labels, risk state, debrief, and snapshot consequence text all
+   preserved the install outcome.
+33. **Done - Post-debrief save continuity pass:** Bumped the internal save
+   version to 23. Older saves that already viewed the final career snapshot
+   infer the retrofit debrief as complete, while mid-flow Burlington saves still
+   route through Josh before the snapshot.
+34. **Done - Late-board manual playthrough pass:** Ran the late board forward
+   in-browser from the existing service-complete debug helper through
+   Conshohocken follow-up, survey, commissioning, warehouse, secure access,
+   handoff, systems, Cherry Hill, Burlington walkdown, Burlington install, Josh
+   debrief, and the final career snapshot. The Cherry Hill-to-Burlington pacing
+   held together, no browser errors appeared, and the final board still landed
+   as complete.
+35. **Done - Playable loop consolidation pass:** Stabilized the shop -> van ->
+   map -> route -> job -> closeout loop without adding new content. The van now
+   clearly separates cargo review, loading, dispatch review, regional map, and
+   active route launch. Regional map route cards now show destination, purpose,
+   status, travel cost/risk, route history, fast-travel state, and lock reason.
+   Dispatch cards now expose tools, risk tags, rewards, unlocks, and
+   callback/return-trip effects. Secure-access rack tasks and systems checks now
+   share a reusable field-task resolver.
+36. **Done - Route data consolidation and smoke QA pass:** Moved route job
+   presentation and dispatch tool expectations into content data keyed by stable
+   route IDs. The app now resolves stateful route variants, such as Conshohocken
+   follow-up and Burlington install, from data-backed helpers instead of a
+   hardcoded route-job object. Retrofit walkdown and install task checks now use
+   the shared field-task resolver. Added a lightweight Playwright smoke harness
+   for roster/custom start, van/map route cards, fast-travel gating,
+   task-check state, and save/continue continuity.
+37. **Done - Field-task data pass:** Existing secure-access, systems service,
+   retrofit walkdown, and Burlington install checks now carry structured task
+   metadata for type, skill, difficulty or branch difficulty, base energy or
+   branch energy, tools, success text, strained text, and named risk flags. The
+   shared field-task resolver records result data in save flags, and dispatch
+   previews show field-task cards before the player accepts the job.
+38. **Done - Consequence ledger pass:** Added a reusable consequence ledger
+   surface over callback debt, open return-trip risks, and resolved risk
+   history. Systems quick-reboot closeout now records a named systems risk,
+   warranty root-cause cleanup can move matching risk into resolved history, and
+   secure access, commissioning, systems, Burlington walkdown, and Burlington
+   install closeout cards explain cause, future effect, and open/resolved/
+   inherited status.
+39. **Done - Loop guidance and transition clarity pass:** Added reusable
+   workday-loop guidance for the current step, van menu, regional map, and
+   dispatch-board previews. Portal transitions now show from/to/status details,
+   locked transitions explain their blocker, and the early garage entrance
+   interaction exposes why the client entrance is blocked before cargo is
+   delivered.
+40. **Done - Dispatch board state consolidation pass:** Centralized the active
+   dispatch-board item, blocked item, in-progress item, route ID, HUD
+   title/status, and preview action. `getCurrentDispatchRouteId()` now reads
+   from board state, dispatch previews report blocked reasons from the same
+   helper, and job cards show a Board state row with active/blocked status,
+   route/no-route state, and why the item is on the board.
+41. **Current roadmap complete, remaining hardening lane:** The current
+   incremental roadmap has no remaining `Next` item. The remaining work is
+   consolidation: broaden reusable task/check patterns to older bespoke checks
+   when they are touched, keep dispatch/route/consequence state visible on
+   player-facing cards, keep smoke coverage close to the full RPG loop, and
+   avoid new content, manual driving, or engine migration until the menu/card
+   loop is stable enough to be uneventful.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

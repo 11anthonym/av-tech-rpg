@@ -59,6 +59,34 @@ The playable slice now has:
    pressure without adding a technical minigame.
 23. A Cherry Hill return-toll micro-job that tests cash, reimbursement pressure,
    management optics, and documentation without adding a route simulator.
+24. Burlington retrofit walkdown and install beats that carry pathway risk from
+   survey closeout into a later install and debrief.
+25. A clearer van and regional-map layer where cargo, dispatch routes, active
+   route launch, route history, fast travel, and locked candidates are visible
+   as menu/card systems.
+26. Stronger dispatch cards that show route, location, tools, skills, rewards,
+   unlocks, risk tags, and callback or return-trip effects before accepting a
+   job.
+27. A shared field-task resolver now used by secure-access rack tasks and
+   systems service checks as the first step toward reusable task/check patterns.
+28. Data-backed route job metadata and dispatch tool plans, so route and job
+   cards can expand without adding a bespoke app helper for every route.
+29. A lightweight smoke QA script that checks roster/custom start, van/map
+   route cards, fast-travel gating, reusable task checks, and save/continue.
+30. Structured field-task metadata for secure access, systems service,
+   retrofit walkdown, and Burlington install checks, including type, skill,
+   difficulty or branch difficulty, energy, tools, success/strained text, and
+   named risk flags.
+31. Field-task previews and result rows that show task cost, skill check,
+   helpful tools, and risk state before and during field work.
+32. A reusable consequence ledger that shows open callback debt, named
+   return-trip risks, resolved risk history, and closeout cause/effect language.
+33. Workday-loop guidance on the current-step panel, van menu, regional map,
+   and dispatch-board previews, plus clearer locked/ready transition text for
+   portals and early building-entry blockers.
+34. A centralized dispatch-board state helper that keeps the active board item,
+   route ID, blocker reason, HUD title/status, and dispatch preview action in
+   sync.
 
 ## Playtest Questions
 
@@ -423,6 +451,225 @@ resume to the closeout choice after the pathway check is complete.
 Playtest question: does the two-step Burlington arc feel like consequence and
 payoff, or does it need a shop debrief / recovery beat before the final career
 snapshot?
+
+### Post-Install Pacing Pass
+
+The Burlington arc now takes the slower answer: after the retrofit install
+returns through the normal end-of-shift closeout, the final career snapshot
+waits for a one-time Josh debrief at the shop. The debrief summarizes the
+inherited walkdown branch, install closeout, return-trip risk, recovered energy,
+and burnout before offering the career snapshot.
+
+This pass also split the Burlington return portal so the walkdown exit hides
+once the install starts, and the install exit requires `retrofitInstallComplete`
+before returning to Radnor Rack & Wire.
+
+Playtest question: does the Josh debrief feel like a satisfying breath after
+the two-step Burlington job, or does it feel like an unnecessary gate before the
+career snapshot?
+
+### Burlington Branch Playtest Pass
+
+Seeded branch checks covered protected pathway, partial warning repaired by
+record/as-built notes, and inherited pathway risk left loose by a quick install
+note. Each branch used the actual install closeout, returned through the
+Burlington install portal, closed the shift, opened the Josh debrief, and then
+opened the final career snapshot.
+
+Verified results:
+
+- Protected pathway: record closeout clears the install and the snapshot shows
+  record/as-built pathway notes.
+- Partial warning: clean record closeout resolves the partial warning and keeps
+  return-trip risk cleared.
+- Inherited pathway risk: quick closeout keeps the risk visible in the debrief,
+  active consequences, and final snapshot.
+
+Save continuity note: this pass bumps the internal save version to 23. Older
+saves that already viewed the final career snapshot infer
+`retrofitInstallDebriefed`; saves before the snapshot still route to Josh first.
+
+Next playtest question: does an ordinary unseeded run from Cherry Hill through
+both Burlington beats still feel like a coherent final arc, or does the added
+debrief make the late board feel too stop-start?
+
+### Late-Board Manual Playthrough Pass
+
+Browser automation ran the board forward from the existing service-complete
+debug helper through Conshohocken follow-up, University City survey, South
+Philadelphia commissioning, warehouse run, Navy Yard secure access, executive
+handoff, King of Prussia systems service, Cherry Hill toll, Burlington
+walkdown, Burlington install, Josh debrief, and final career snapshot.
+
+Result: the Cherry Hill-to-Burlington pacing held together. The final debrief
+read as a useful breath before the snapshot, the objective advanced to
+"Current dispatch board complete," and no browser errors appeared.
+
+Current roadmap state: the incremental roadmap is complete. Pick the next
+playability question before adding another content beat.
+
+### Loop Consolidation Regression Pass
+
+Pass date: June 15, 2026.
+
+Goal: stabilize the playable RPG loop instead of adding another dispatch.
+
+Verified:
+
+- Clean title-screen start, five premade technicians, custom technician start,
+  and custom save payload.
+- Alex, Casey, Wiley, Jordan, and Morgan start with the expected tools and first
+  objective.
+- Wiley's Circuit Hut organizer appears only for Wiley, activates once per job,
+  and cannot be reused in the same job.
+- Fresh-shop flow through supervisor, staged cargo, van menu, cargo review,
+  regional map, route choice, travel confirmation, Center City route history,
+  and save/continue.
+- Regional map displays known destinations, active route, repeat/fast-travel
+  routes, completed history, locked candidates, route cost/risk, driven-before
+  state, fast-travel state, and lock reasons.
+- Fast travel stays hidden before unlock, then appears for the known
+  Conshohocken repeat route only when the current board route and start area
+  allow it.
+- Dispatch-board previews from service through Burlington install render the
+  strengthened job card rows.
+- Garage/lobby and Burlington walkdown/install return portals route correctly
+  and do not trap the player.
+- Save/continue preserves route history, systems checks, retrofit install flags,
+  end-shift state, and return-trip risk summaries.
+
+### Route Data And Smoke QA Pass
+
+Pass date: June 15, 2026.
+
+Goal: keep the playable loop stable while moving route/job surfaces closer to a
+data-backed RPG structure.
+
+Changed:
+
+- Route job card metadata now lives in content data keyed by route ID, with app
+  helpers only resolving stateful variants such as the Conshohocken follow-up
+  and Burlington install.
+- Dispatch tool expectations now live in content data with route-specific
+  add-ons.
+- Retrofit walkdown and retrofit install checks now use the shared field-task
+  resolver, joining secure access and systems service as reusable task/check
+  examples.
+- Added `scripts/qa-smoke.js` for a fast browser smoke pass over roster/custom
+  start, van/map route cards, fast-travel gating, route job metadata,
+  walkdown task-check state, and save/continue continuity.
+
+Verified: `node --check` passed for `app.js`, `data.js`, and the smoke script.
+The smoke script passed in Chrome with the bundled Codex Playwright runtime.
+
+### Field-Task Data Pass
+
+Pass date: June 15, 2026.
+
+Goal: make current field work easier to inspect and extend without adding
+another dispatch.
+
+Changed:
+
+- Secure-access rack tasks, systems service checks, retrofit walkdown checks,
+  and the Burlington install task now carry structured task metadata.
+- The shared field-task resolver now records compact result data in save flags,
+  including task type, skill, difficulty, context, energy cost, tier, success
+  state, and risk flag.
+- Dispatch previews can show actual field-task cards, including base energy,
+  skill/difficulty, helpful tools, and named risks.
+- Field-task modals now show structured result rows for task type, skill check,
+  energy spent, relevant tools, and risk flag.
+
+Verified: syntax checks passed for `app.js`, `data.js`, and
+`scripts/qa-smoke.js`. The smoke script passed, and a focused Chrome check
+confirmed secure-access and systems field-task previews/results save and render.
+
+### Consequence Ledger Pass
+
+Pass date: June 15, 2026.
+
+Goal: make closeout debt readable as the RPG consequence layer.
+
+Changed:
+
+- Added a reusable consequence ledger that gathers unresolved callback pressure,
+  named open return-trip risks, and resolved return-trip risk history.
+- Systems quick-reboot closeout now records a named systems return-trip risk
+  instead of only incrementing callback debt.
+- Warranty root-cause cleanup can move a matching return-trip risk into resolved
+  history.
+- Secure access, commissioning, systems service, Burlington walkdown, and
+  Burlington install result modals now show closeout consequence cards with
+  cause, future effect, and open/resolved/inherited status.
+- Career clipboard and current-board summary now include the consequence ledger
+  alongside active consequences.
+
+Verified: syntax checks and the smoke script passed. The smoke script now
+asserts systems quick-reboot risk creation, career clipboard ledger visibility,
+and warranty cleanup resolved-risk history.
+
+### Loop Guidance And Transition Pass
+
+Pass date: June 15, 2026.
+
+Goal: make it easier for a player to understand where they are in the playable
+loop and what action advances the workday.
+
+Changed:
+
+- Added reusable workday-loop guidance that labels the current loop step, next
+  action, and interface to check.
+- The Current Step panel now includes loop-stage guidance while the scene header
+  keeps the shorter objective.
+- The van menu, regional map, and dispatch-board previews now show the current
+  loop guidance block.
+- Portal transitions now show from/to/status details, and locked transitions
+  open a readable blocker modal instead of only logging a message.
+- The early garage/client-entrance interaction now explains when it is locked by
+  undelivered equipment and when it is ready to enter the client lobby.
+
+Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
+loop guidance in van/map surfaces, locked/ready transition cards, nearby-card
+transition status, and the current-step loop label.
+
+### Dispatch Board State Consolidation Pass
+
+Pass date: June 15, 2026.
+
+Goal: answer what remains after the named roadmap completed, then keep moving
+on the biggest non-content hardcoding risk.
+
+What is left now:
+
+- Keep broadening reusable task/check structure to older bespoke checks when a
+  job is touched.
+- Keep dispatch, route, consequence, and closeout data easy to inspect from the
+  player-facing board.
+- Keep smoke coverage close to the full RPG loop, especially board gates,
+  blockers, and save/continue after late-game flags.
+- Avoid new dispatches, manual driving, or engine migration until the menu/card
+  loop is boringly reliable.
+
+Changed:
+
+- Added a centralized dispatch-board state helper for current board item,
+  blocked board item, in-progress item, route ID, HUD title/status, and preview
+  action.
+- `getCurrentDispatchRouteId()` now reads from that board state instead of a
+  separate route ladder.
+- The dispatch-board preview action now routes through the active board entry
+  and reports blocked reasons from the same data.
+- The HUD dispatch title, summary, and status now read from board state, so the
+  shop surface points at the next playable step instead of stale completed work.
+- Dispatch job cards now include a compact Board state row that says whether the
+  item is active or blocked, whether it has a drive route, and why it is on the
+  board.
+
+Verified: syntax checks passed for `app.js`, `data.js`, and
+`scripts/qa-smoke.js`. The smoke script passed and now asserts service-board
+selection, Josh-blocked follow-up state, no-route Cherry Hill board behavior,
+Burlington install route reuse, and HUD/title/objective alignment.
 
 ## Current RPG Skeleton Experiment
 
