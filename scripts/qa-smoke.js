@@ -354,6 +354,40 @@ async function clickButton(page, name) {
     assert(walkdownTask.usedResolverLog, "Retrofit walkdown task should log through shared resolver");
     assert(walkdownTask.showsResultRows, "Retrofit walkdown task should show structured result rows");
 
+    await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.finished = true;
+      state.flags.surveyComplete = true;
+      state.flags.currentAreaId = "shop";
+      window.showCommissioningDispatchPreview();
+    });
+    await assertModalIncludes(page, ["Field Task Checks", "Re-terminate cleanly", "closeout documentation", "Risk: weak strain relief"], "commissioning field task preview");
+
+    const commissioningTerminationTask = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("southPhillyCommissioning");
+      const beforeEnergy = state.energy;
+      window.resolveCommissioningTerminationTask("document");
+      const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const result = state.flags.fieldTaskResults?.["commissioning-termination-document"];
+      return {
+        actionSaved: state.flags.commissioningTerminationAction === "document",
+        resultSaved: Boolean(result),
+        resultType: result?.type || "",
+        resultSkill: result?.skillId || "",
+        energyChanged: state.energy !== beforeEnergy,
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Skill check") && modalText.includes("Risk flag"),
+      };
+    });
+    assert(commissioningTerminationTask.actionSaved, "Commissioning termination task should save the selected action");
+    assert(commissioningTerminationTask.resultSaved, "Commissioning termination task should save field-task result data");
+    assert(commissioningTerminationTask.resultType === "closeout documentation", "Commissioning termination task should use data-backed task type");
+    assert(commissioningTerminationTask.resultSkill === "clientCommunication", "Commissioning termination task should use data-backed skill");
+    assert(commissioningTerminationTask.energyChanged, "Commissioning termination task should affect energy");
+    assert(commissioningTerminationTask.showsResultRows, "Commissioning termination task should show structured field-task rows");
+
     const saveRoundTrip = await page.evaluate(() => {
       const state = window.AV_TECH_RPG_DEBUG.state;
       state.flags.routeHistory = { centerCityTutorial: 1, conshohockenService: 1 };
@@ -373,14 +407,14 @@ async function clickButton(page, name) {
         retrofitWalkdownComplete: Boolean(state.flags.retrofitWalkdownComplete),
         systemsComplete: Boolean(state.flags.systemsComplete),
         endShiftPending: Boolean(state.flags.endShiftPending),
-        fieldTaskResultSaved: Boolean(state.flags.fieldTaskResults?.["retrofit-walkdown-pathway"]),
+        fieldTaskResultSaved: Boolean(state.flags.fieldTaskResults?.["commissioning-termination-document"]),
       };
     });
     assert(continued.routeHistory.conshohockenService === 1, "Continue should preserve route history");
     assert(continued.retrofitWalkdownComplete, "Continue should preserve retrofit flags");
     assert(continued.systemsComplete, "Continue should preserve systems flags");
     assert(continued.endShiftPending, "Continue should preserve end-shift state");
-    assert(continued.fieldTaskResultSaved, "Continue should preserve field-task result flags");
+    assert(continued.fieldTaskResultSaved, "Continue should preserve commissioning field-task result flags");
 
     assert(pageErrors.length === 0, `Browser errors were reported:\n${pageErrors.join("\n")}`);
     console.log("AV Tech RPG smoke QA passed: roster, custom creator, board state, van/map cards, fast travel, task checks, save/continue.");

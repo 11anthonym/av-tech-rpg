@@ -783,15 +783,16 @@ function getFieldTaskRiskText(check) {
   return check.riskLabel || check.riskFlag;
 }
 
-function getFieldTaskOutcomeText(check, skillCheck) {
-  if (skillCheck.successful) return check.successText || "Task completed cleanly enough to support closeout.";
+function getFieldTaskOutcomeText(check, skillCheck, successful = skillCheck?.successful ?? true) {
+  if (successful) return check.successText || "Task completed cleanly enough to support closeout.";
   return check.strainedText || "Task completed under strain; closeout may inherit risk.";
 }
 
-function getFieldTaskResultMarkup({ check, skillCheck, energyCost }) {
+function getFieldTaskResultMarkup({ check, skillCheck = null, energyCost, successful }) {
+  const resolvedSuccessful = successful ?? skillCheck?.successful ?? true;
   const rows = [
     ["Task type", check.type || "field check"],
-    ["Skill check", getSkillCheckLabel(skillCheck)],
+    ["Skill check", skillCheck ? getSkillCheckLabel(skillCheck) : "No skill roll"],
     ["Energy spent", energyCost ? `-${energyCost} energy` : "0 energy"],
     ...(check.requiredTool ? [["Required tool", getFieldTaskToolText(check.requiredTool)]] : []),
     ...(check.optionalTool ? [["Helpful tool", getFieldTaskToolText(check.optionalTool)]] : []),
@@ -801,8 +802,26 @@ function getFieldTaskResultMarkup({ check, skillCheck, energyCost }) {
     <div class="results-grid">
       ${rows.map(([label, value]) => `<span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>`).join("")}
     </div>
-    <p class="muted">${escapeHtml(getFieldTaskOutcomeText(check, skillCheck))}</p>
+    <p class="muted">${escapeHtml(getFieldTaskOutcomeText(check, skillCheck, resolvedSuccessful))}</p>
   `;
+}
+
+function recordFieldTaskResult({ flagKey, check, checkId = check?.id || flagKey, skillCheck = null, energyCost = 0, skillId = "", difficulty = 0, contextId = "", successful } = {}) {
+  if (!flagKey || !check) return;
+  const resolvedSuccessful = successful ?? skillCheck?.successful ?? true;
+  state.flags.fieldTaskResults ||= {};
+  state.flags.fieldTaskResults[flagKey] = {
+    id: checkId,
+    label: check.label,
+    type: check.type || "field check",
+    skillId: skillId || skillCheck?.skillId || check.skillId || "",
+    difficulty: difficulty ?? skillCheck?.difficulty ?? check.difficulty ?? 0,
+    contextId: contextId || check.contextId || "",
+    energyCost,
+    tier: skillCheck?.tier || (resolvedSuccessful ? "resolved" : "risk"),
+    successful: resolvedSuccessful,
+    riskFlag: check.riskFlag || "",
+  };
 }
 
 function resolveFieldTaskCheck({
@@ -838,19 +857,16 @@ function resolveFieldTaskCheck({
   const energyCost = Math.max(0, resolvedBaseEnergyCost + (skillCheck.successful ? 0 : resolvedFailedEnergyPenalty) - (skillCheck.tier === "clean" ? resolvedCleanEnergyReduction : 0));
   changeEnergy(-energyCost);
   if (!skillCheck.successful && resolvedStrainedFlag) state.flags[resolvedStrainedFlag] = true;
-  state.flags.fieldTaskResults ||= {};
-  state.flags.fieldTaskResults[flagKey] = {
-    id: checkId,
-    label: check.label,
-    type: check.type || "field check",
+  recordFieldTaskResult({
+    flagKey,
+    check,
+    checkId,
+    skillCheck,
+    energyCost,
     skillId: resolvedSkillId,
     difficulty: resolvedDifficulty,
     contextId: resolvedContextId,
-    energyCost,
-    tier: skillCheck.tier,
-    successful: skillCheck.successful,
-    riskFlag: check.riskFlag || "",
-  };
+  });
   addLog(logText || check.logText || `${check.label} checked: ${check.log}`);
   const resolvedStrainedLogText = strainedLogText || check.strainedLogText || "";
   if (!skillCheck.successful && resolvedStrainedLogText) addLog(resolvedStrainedLogText);
@@ -4123,6 +4139,7 @@ function getDispatchTaskCardsMarkup(taskCards = []) {
 }
 
 function getFieldTaskPreviewSkillText(check) {
+  if (!check.skillId && !check.skill && !check.difficulty && !check.difficultyHint) return "No skill check";
   const skillName = getSkillDefinition(check.skillId)?.name || check.skill || check.skillId || "Variable skill";
   const difficulty = check.difficulty != null
     ? `Difficulty ${check.difficulty}`
@@ -6338,6 +6355,7 @@ function showCommissioningDispatchPreview() {
       note: "The completion sheet has already been signed internally.",
       managementNote: "Room complete except final commissioning. Please avoid creating a punch list unless necessary.",
       taskCards: content.commissioningDispatch.taskCards,
+      fieldTasks: content.commissioningDispatch.terminationTasks,
     }),
     actions: [
       { label: "Accept Commissioning Visit", onClick: promptCommissioningTravel },
@@ -6366,10 +6384,31 @@ function getCommissioningRepairEnergyCost(baseCost) {
   return Math.max(0, getVerificationEnergyCost(baseCost) - getCarefulTaskReduction());
 }
 
+function getCommissioningTerminationTask(action = state.flags.commissioningTerminationAction) {
+  return content.commissioningDispatch.terminationTasks?.find((task) => task.id === action) || null;
+}
+
+function getCommissioningTerminationContextBonus(task) {
+  if (!task) return 0;
+  if (task.contextBonusSource === "carefulWork") return getCarefulWorkReduction();
+  if (task.contextBonusSource === "documentationSupport") return getDocumentationSupportReduction();
+  if (task.contextBonusSource === "ownedOptionalTool" && task.optionalTool && ownsTool(task.optionalTool)) {
+    return task.optionalToolBonus || 1;
+  }
+  return task.contextBonus || 0;
+}
+
+function getCommissioningTerminationTaskDifficulty(action) {
+  const task = getCommissioningTerminationTask(action);
+  if (!task) return 0;
+  if (action === "clean" && state.flags.terminationSkillStrained) return task.strainedDifficulty ?? task.difficulty ?? 0;
+  return task.difficulty ?? 0;
+}
+
 function getCommissioningTerminationTaskEnergyCost(action) {
-  const baseCosts = { quick: 2, clean: 5, label: 4, document: 3 };
-  const carefulDiscount = action === "quick" ? 0 : getCarefulTaskReduction();
-  return Math.max(0, getVerificationEnergyCost(baseCosts[action] || 3) - carefulDiscount);
+  const task = getCommissioningTerminationTask(action);
+  const carefulDiscount = task?.carefulDiscount === false ? 0 : getCarefulTaskReduction();
+  return Math.max(0, getVerificationEnergyCost(task?.energyCost ?? 3) - carefulDiscount);
 }
 
 function getCommissioningCloseoutEnergyCost(approach) {
@@ -6381,13 +6420,13 @@ function getCommissioningCloseoutEnergyCost(approach) {
 }
 
 function getCommissioningTerminationTaskLabel(action = state.flags.commissioningTerminationAction) {
-  const labels = {
-    quick: "Re-landed fast",
-    clean: "Re-terminated cleanly",
-    label: "Traced and labeled",
-    document: "Documented before touching",
-  };
-  return labels[action] || "No termination task selected";
+  const task = getCommissioningTerminationTask(action);
+  return task?.resultLabel || task?.label || "No termination task selected";
+}
+
+function getCommissioningTerminationActionLabel(action) {
+  const task = getCommissioningTerminationTask(action);
+  return `${task?.label || getCommissioningTerminationTaskLabel(action)} (-${getCommissioningTerminationTaskEnergyCost(action)} energy)`;
 }
 
 function getCommissioningTerminationQualityLabel(quality = state.flags.commissioningTerminationQuality) {
@@ -6443,33 +6482,20 @@ function getCommissioningTerminationTaskSummaryMarkup() {
 }
 
 function getCommissioningTerminationSkillCheck(action) {
-  if (action === "quick") return null;
-  if (action === "clean") {
-    return resolveSkillCheck("commissioning-termination-action-clean", {
-      skillId: "install",
-      difficulty: state.flags.terminationSkillStrained ? 5 : 4,
-      contextBonus: getCarefulWorkReduction(),
-      contextId: "commissioning-termination",
-    });
-  }
-  if (action === "label") {
-    return resolveSkillCheck("commissioning-termination-action-label", {
-      skillId: "documentation",
-      difficulty: 4,
-      contextBonus: ownsTool("labeler") ? 2 : 0,
-      contextId: "commissioning-documentation",
-    });
-  }
-  return resolveSkillCheck("commissioning-termination-action-document", {
-    skillId: "clientCommunication",
-    difficulty: 3,
-    contextBonus: getDocumentationSupportReduction(),
-    contextId: "commissioning-pressure",
+  const task = getCommissioningTerminationTask(action);
+  if (!task?.skillId) return null;
+  return resolveSkillCheck(`commissioning-termination-action-${action}`, {
+    skillId: task.skillId,
+    difficulty: getCommissioningTerminationTaskDifficulty(action),
+    contextBonus: getCommissioningTerminationContextBonus(task),
+    contextId: task.contextId,
   });
 }
 
 function resolveCommissioningTerminationTask(action) {
   if (state.flags.commissioningTerminationAction) return notify("The termination task is already in your closeout notes.");
+  const task = getCommissioningTerminationTask(action);
+  if (!task) return notify("That termination task is not available.");
   const energyCost = getCommissioningTerminationTaskEnergyCost(action);
   const skillCheck = getCommissioningTerminationSkillCheck(action);
   let quality = "temporary";
@@ -6505,6 +6531,17 @@ function resolveCommissioningTerminationTask(action) {
   state.flags.commissioningTerminationQuality = quality;
   state.flags.commissioningTerminationCallbackRisk = callbackRisk;
   state.flags.commissioningTerminationTaskOutcome = outcome;
+  recordFieldTaskResult({
+    flagKey: `commissioning-termination-${action}`,
+    check: task,
+    checkId: action,
+    skillCheck,
+    energyCost,
+    skillId: task.skillId || "",
+    difficulty: getCommissioningTerminationTaskDifficulty(action),
+    contextId: task.contextId || "",
+    successful: skillCheck ? skillCheck.successful : !callbackRisk,
+  });
   state.stats.fieldTaskChoicesMade += 1;
   addLog(`${getCommissioningTerminationTaskLabel(action)}: ${outcome}`);
   render();
@@ -6513,9 +6550,8 @@ function resolveCommissioningTerminationTask(action) {
     title: getCommissioningTerminationTaskLabel(action),
     body: `
       <p>${outcome}</p>
-      ${skillCheck ? getSkillCheckMarkup(skillCheck) : `<p class="muted">Skill check: none. Fast work creates a return-trip risk instead.</p>`}
+      ${getFieldTaskResultMarkup({ check: task, skillCheck, energyCost, successful: skillCheck ? skillCheck.successful : !callbackRisk })}
       <div class="results-grid">
-        <span>Energy spent</span><strong>${energyCost}</strong>
         <span>Task outcome</span><strong>${getCommissioningTerminationQualityLabel(quality)}</strong>
         <span>Return-trip risk</span><strong>${callbackRisk ? "Possible" : "Controlled"}</strong>
       </div>
@@ -6556,14 +6592,14 @@ function showCommissioningTerminationChoice() {
       ])}
     `,
     actions: [
-      { label: `Re-land it fast (-${getCommissioningTerminationTaskEnergyCost("quick")} energy)`, onClick: () => resolveCommissioningTerminationTask("quick") },
-      { label: `Re-terminate it cleanly (-${getCommissioningTerminationTaskEnergyCost("clean")} energy)`, onClick: () => resolveCommissioningTerminationTask("clean") },
+      { label: getCommissioningTerminationActionLabel("quick"), onClick: () => resolveCommissioningTerminationTask("quick") },
+      { label: getCommissioningTerminationActionLabel("clean"), onClick: () => resolveCommissioningTerminationTask("clean") },
       ...(ownsTool("labeler") ? [{
-        label: `Trace and label both ends (-${getCommissioningTerminationTaskEnergyCost("label")} energy)`,
+        label: getCommissioningTerminationActionLabel("label"),
         className: "secondary-button",
         onClick: () => resolveCommissioningTerminationTask("label"),
       }] : []),
-      { label: `Document mismatch before touching it (-${getCommissioningTerminationTaskEnergyCost("document")} energy)`, className: "secondary-button", onClick: () => resolveCommissioningTerminationTask("document") },
+      { label: getCommissioningTerminationActionLabel("document"), className: "secondary-button", onClick: () => resolveCommissioningTerminationTask("document") },
     ],
   });
 }

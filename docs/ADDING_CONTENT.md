@@ -126,17 +126,24 @@ make a later choice more important.
 When adding a new task check:
 
 1. Add or reuse a skill in `data.js`.
-2. Call `resolveSkillCheck("stable-flag-key", { skillId, difficulty, contextBonus })`.
-3. Show `getSkillCheckMarkup(result)` in the modal when useful.
-4. Record consequences through existing energy, reputation, XP, callback, and
+2. Prefer structured task metadata with `id`, `label`, `type`, `skillId`,
+   `difficulty`, `energyCost`, `requiredTool`, `optionalTool`, `contextId`,
+   success/strained text, and risk labels.
+3. Use `resolveFieldTaskCheck()` for ordinary check lists, or
+   `recordFieldTaskResult()` when a bespoke choice still needs to save the same
+   reusable result shape.
+4. Show `getFieldTaskPreviewMarkup()` before the job and
+   `getFieldTaskResultMarkup()` in the result modal when useful.
+5. Record consequences through existing energy, reputation, XP, callback, and
    ledger fields instead of adding a separate hidden system.
 
 For richer jobs, separate the inspection from the field-task choice. The South
 Philadelphia commissioning visit does this with the loose credenza termination:
 inspection identifies the fault, then the player chooses whether to re-land it
 fast, re-terminate cleanly, trace it with the labeler, or document the mismatch.
-The chosen task stores its own saved flags and then changes the final closeout,
-reputation, XP, callback debt, and career ledger.
+The chosen task lives in `content.commissioningDispatch.terminationTasks`, writes
+to `fieldTaskResults`, and then changes the final closeout, reputation, XP,
+callback debt, and career ledger.
 
 Jobs award experience and reputation in `app.js` when their result is recorded.
 Keep those awards guarded by a saved flag so reopening a result modal cannot

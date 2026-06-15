@@ -87,6 +87,9 @@ The playable slice now has:
 34. A centralized dispatch-board state helper that keeps the active board item,
    route ID, blocker reason, HUD title/status, and dispatch preview action in
    sync.
+35. Data-backed commissioning termination task choices that preview as field
+   tasks, resolve through shared result recording, and preserve their task
+   outcome in save data.
 
 ## Playtest Questions
 
@@ -670,6 +673,31 @@ Verified: syntax checks passed for `app.js`, `data.js`, and
 `scripts/qa-smoke.js`. The smoke script passed and now asserts service-board
 selection, Josh-blocked follow-up state, no-route Cherry Hill board behavior,
 Burlington install route reuse, and HUD/title/objective alignment.
+
+### Commissioning Field-Task Choice Pass
+
+Pass date: June 15, 2026.
+
+Goal: continue the remaining hardening lane by moving an older bespoke field
+choice closer to the shared task/check model.
+
+Changed:
+
+- South Philadelphia termination choices now live in
+  `content.commissioningDispatch.terminationTasks` with type, skill, difficulty,
+  energy, tools, context, success/strained text, and named risk metadata.
+- Shared field-task result recording now supports both ordinary skill checks and
+  choice-style field tasks that may not roll a skill.
+- The commissioning dispatch preview now shows termination field-task choices
+  before accepting the job.
+- Resolving the termination task records a `fieldTaskResults` entry, so
+  save/continue and future closeout surfaces can inspect the task result without
+  re-parsing bespoke flags.
+
+Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
+commissioning field-task preview text, data-backed task type/skill, energy
+change, structured result rows, and save/continue preservation of the
+commissioning field-task result.
 
 ## Current RPG Skeleton Experiment
 
