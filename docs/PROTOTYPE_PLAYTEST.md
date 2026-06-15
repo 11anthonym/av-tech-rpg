@@ -90,6 +90,8 @@ The playable slice now has:
 35. Data-backed commissioning termination task choices that preview as field
    tasks, resolve through shared result recording, and preserve their task
    outcome in save data and career clipboard history.
+36. Callback cleanup and executive handoff checks now use structured field-task
+   metadata, shared resolver output, and saved field-task result history.
 
 ## Playtest Questions
 
@@ -701,6 +703,28 @@ commissioning field-task preview text, data-backed task type/skill, energy
 change, structured result rows, and save/continue preservation of the
 commissioning field-task result. It also checks that the career clipboard shows
 the saved field-task history.
+
+### Callback And Handoff Task Consolidation Pass
+
+Pass date: June 15, 2026.
+
+Goal: keep broadening reusable task/check structure across existing jobs without
+adding a new dispatch.
+
+Changed:
+
+- Warranty return checks now carry structured task metadata for callback
+  documentation, closeout history, and root-cause troubleshooting.
+- Executive handoff checks now carry structured task metadata for control-panel
+  labels, daily user path, and client need.
+- Both jobs now preview those checks as field tasks on their dispatch cards.
+- Both inspection flows now use `resolveFieldTaskCheck()` and show
+  `getFieldTaskResultMarkup()`, so their outcomes write to `fieldTaskResults`
+  and appear in field-task history.
+
+Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
+callback and handoff field-task preview text, data-backed task type/skill,
+energy changes, saved field-task results, and structured result rows.
 
 ## Current RPG Skeleton Experiment
 

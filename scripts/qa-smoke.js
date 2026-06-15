@@ -330,6 +330,76 @@ async function clickButton(page, name) {
     assert(consequenceLedger.resolvedRiskSaved, "Warranty cleanup should save resolved return-trip risk history");
     assert(consequenceLedger.cleanupShowsResolved, "Warranty cleanup should show resolved consequence language");
 
+    await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.finished = true;
+      state.flags.secureAccessComplete = true;
+      state.stats.callbacks = 1;
+      state.flags.currentAreaId = "shop";
+      window.showCallbackCleanupDispatchPreview();
+    });
+    await assertModalIncludes(page, ["Field Task Checks", "Actual fault", "callback troubleshooting", "Risk: unclear root cause"], "callback cleanup field task preview");
+
+    const callbackTask = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("warrantyReturn");
+      const beforeEnergy = state.energy;
+      window.inspectCallbackCleanupCondition("actual-fault");
+      const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const result = state.flags.fieldTaskResults?.["callback-actual-fault"];
+      return {
+        checked: state.callbackCleanupChecks.includes("actual-fault"),
+        resultSaved: Boolean(result),
+        resultType: result?.type || "",
+        resultSkill: result?.skillId || "",
+        energyChanged: state.energy !== beforeEnergy,
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("unclear root cause"),
+      };
+    });
+    assert(callbackTask.checked, "Callback cleanup check should complete");
+    assert(callbackTask.resultSaved, "Callback cleanup check should save field-task result data");
+    assert(callbackTask.resultType === "callback troubleshooting", "Callback cleanup check should use data-backed task type");
+    assert(callbackTask.resultSkill === "troubleshooting", "Callback cleanup check should use data-backed skill");
+    assert(callbackTask.energyChanged, "Callback cleanup check should affect energy");
+    assert(callbackTask.showsResultRows, "Callback cleanup check should show structured result rows");
+
+    await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.finished = true;
+      state.flags.secureAccessComplete = true;
+      state.flags.callbackCleanupComplete = true;
+      state.flags.currentAreaId = "shop";
+      window.showHandoffDispatchPreview();
+    });
+    await assertModalIncludes(page, ["Field Task Checks", "Client's actual need", "client handoff", "Risk: missed client need"], "handoff field task preview");
+
+    const handoffTask = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("executiveHandoff");
+      const beforeEnergy = state.energy;
+      window.inspectHandoffCondition("client-need");
+      const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const result = state.flags.fieldTaskResults?.["handoff-client-need"];
+      return {
+        checked: state.handoffChecks.includes("client-need"),
+        resultSaved: Boolean(result),
+        resultType: result?.type || "",
+        resultSkill: result?.skillId || "",
+        energyChanged: state.energy !== beforeEnergy,
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("missed client need"),
+      };
+    });
+    assert(handoffTask.checked, "Handoff check should complete");
+    assert(handoffTask.resultSaved, "Handoff check should save field-task result data");
+    assert(handoffTask.resultType === "client handoff", "Handoff check should use data-backed task type");
+    assert(handoffTask.resultSkill === "clientCommunication", "Handoff check should use data-backed skill");
+    assert(handoffTask.energyChanged, "Handoff check should affect energy");
+    assert(handoffTask.showsResultRows, "Handoff check should show structured result rows");
+
     const walkdownTask = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;

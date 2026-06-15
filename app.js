@@ -5058,6 +5058,7 @@ function showCallbackCleanupDispatchPreview() {
       ],
       note: "The client says the room was marked complete, then immediately started acting like it read the closeout note.",
       managementNote: "Please determine whether this is truly a callback or simply extended closeout support.",
+      fieldTasks: content.callbackCleanupDispatch.checks,
       taskCards: returnTripSummary ? [{
         title: "Open Return-Trip Risk",
         skill: "Troubleshooting 4",
@@ -5095,17 +5096,16 @@ function getCallbackCleanupRepairEnergyCost(baseCost) {
 function inspectCallbackCleanupCondition(checkId) {
   const check = content.callbackCleanupDispatch.checks.find((item) => item.id === checkId);
   if (!check || state.callbackCleanupChecks.includes(checkId)) return notify(`${check?.label || "That callback note"} is already checked.`);
-  state.callbackCleanupChecks.push(checkId);
-  const skillCheck = resolveSkillCheck(`callback-${checkId}`, {
-    skillId: checkId === "actual-fault" ? "troubleshooting" : "documentation",
-    difficulty: checkId === "actual-fault" ? 4 : 3,
-    contextId: checkId === "actual-fault" ? "callback-troubleshooting" : "callback-documentation",
+  const { skillCheck, energyCost } = resolveFieldTaskCheck({
+    check,
+    checkId,
+    completedChecks: state.callbackCleanupChecks,
+    flagKey: `callback-${checkId}`,
+    baseEnergyCost: getCallbackCleanupCheckEnergyCost(),
+    strainedFlag: "callbackTroubleshootingStrained",
+    logText: `${check.label} checked: ${check.log}`,
+    strainedLogText: `Callback skill check strained on ${check.label}; the fix will take more discipline to close cleanly.`,
   });
-  const energyCost = Math.max(0, getCallbackCleanupCheckEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
-  changeEnergy(-energyCost);
-  if (!skillCheck.successful) state.flags.callbackTroubleshootingStrained = true;
-  addLog(`${check.label} checked: ${check.log}`);
-  if (!skillCheck.successful) addLog(`Callback skill check strained on ${check.label}; the fix will take more discipline to close cleanly.`);
   render();
   const allChecked = state.callbackCleanupChecks.length === content.callbackCleanupDispatch.checks.length;
   showModal({
@@ -5113,7 +5113,7 @@ function inspectCallbackCleanupCondition(checkId) {
     title: check.label,
     body: `
       <p>${check.detail}</p>
-      ${getSkillCheckMarkup(skillCheck)}
+      ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
       ${allChecked ? `<p class="muted">You found enough to decide whether this becomes a real fix or another quiet bandage.</p>` : ""}
     `,
     actions: [{ label: allChecked ? "Review Warranty Fix" : "Keep Troubleshooting", onClick: allChecked ? showCallbackCleanupChoice : render }],
@@ -5253,6 +5253,7 @@ function showHandoffDispatchPreview() {
       ],
       note: "The service ticket says this is just a quick demo. The client says the executive assistant has actual questions.",
       managementNote: "Please keep training concise. The system is designed to be intuitive.",
+      fieldTasks: content.handoffDispatch.checks,
     }),
     actions: [
       { label: "Accept Handoff", onClick: promptHandoffTravel },
@@ -5285,18 +5286,17 @@ function getHandoffEnergyCost(baseCost) {
 function inspectHandoffCondition(checkId) {
   const check = content.handoffDispatch.checks.find((item) => item.id === checkId);
   if (!check || state.handoffChecks.includes(checkId)) return notify(`${check?.label || "That handoff note"} is already checked.`);
-  state.handoffChecks.push(checkId);
-  const skillCheck = resolveSkillCheck(`handoff-${checkId}`, {
-    skillId: checkId === "client-need" ? "clientCommunication" : "documentation",
-    difficulty: checkId === "client-need" ? 4 : 3,
+  const { skillCheck, energyCost } = resolveFieldTaskCheck({
+    check,
+    checkId,
+    completedChecks: state.handoffChecks,
+    flagKey: `handoff-${checkId}`,
     contextBonus: getDocumentationSupportReduction(),
-    contextId: checkId === "client-need" ? "handoff-pressure" : "handoff-documentation",
+    baseEnergyCost: getHandoffCheckEnergyCost(),
+    strainedFlag: "handoffPrepStrained",
+    logText: `${check.label} checked: ${check.log}`,
+    strainedLogText: `Handoff skill check strained on ${check.label}; the walkthrough risks sounding like button labels.`,
   });
-  const energyCost = Math.max(0, getHandoffCheckEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
-  changeEnergy(-energyCost);
-  if (!skillCheck.successful) state.flags.handoffPrepStrained = true;
-  addLog(`${check.label} checked: ${check.log}`);
-  if (!skillCheck.successful) addLog(`Handoff skill check strained on ${check.label}; the walkthrough risks sounding like button labels.`);
   render();
   const allChecked = state.handoffChecks.length === content.handoffDispatch.checks.length;
   showModal({
@@ -5304,7 +5304,7 @@ function inspectHandoffCondition(checkId) {
     title: check.label,
     body: `
       <p>${check.detail}</p>
-      ${getSkillCheckMarkup(skillCheck)}
+      ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
       ${allChecked ? `<p class="muted">You know enough to decide whether this is a real handoff or a fast button tour.</p>` : ""}
     `,
     actions: [{ label: allChecked ? "Review Handoff Plan" : "Keep Preparing Handoff", onClick: allChecked ? showHandoffChoice : render }],
