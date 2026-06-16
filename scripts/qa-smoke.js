@@ -113,7 +113,7 @@ async function clickButton(page, name) {
         resultType: result?.type || "",
         resultSkill: result?.skillId || "",
         energyChanged: state.energy !== beforeEnergy,
-        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("frame alignment"),
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk tracked") && modalText.includes("frame alignment"),
       };
     });
     assert(cartAssemblyTask.assembled, "Tutorial cart assembly should keep assembled progress");
@@ -252,7 +252,7 @@ async function clickButton(page, name) {
         resultSkill: result?.skillId || "",
         approach: state.flags.serviceApproach || "",
         energyChanged: state.energy !== beforeEnergy,
-        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("unlabeled coupler"),
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk tracked") && modalText.includes("unlabeled coupler"),
       };
     });
     assert(serviceSignalTask.resultSaved, "Service signal-path check should save field-task result data");
@@ -278,7 +278,7 @@ async function clickButton(page, name) {
         resultType: result?.type || "",
         resultSkill: result?.skillId || "",
         energyChanged: state.energy !== beforeEnergy,
-        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("strained display swap"),
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk tracked") && modalText.includes("strained display swap"),
       };
     });
     assert(serviceInstallTask.installed, "Service install should keep installed-item progress");
@@ -331,7 +331,7 @@ async function clickButton(page, name) {
         resultType: result?.type || "",
         resultSkill: result?.skillId || "",
         energyChanged: state.energy !== beforeEnergy,
-        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("visitor-list mismatch"),
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk tracked") && modalText.includes("visitor-list mismatch"),
       };
     });
     assert(secureAccessTask.inspected, "Secure access check should complete");
@@ -356,7 +356,7 @@ async function clickButton(page, name) {
         resultType: result?.type || "",
         resultSkill: result?.skillId || "",
         energyChanged: state.energy !== beforeEnergy,
-        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("thin access measurement"),
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk tracked") && modalText.includes("thin access measurement"),
       };
     });
     assert(surveyTask.inspected, "Survey inspection should complete");
@@ -556,7 +556,7 @@ async function clickButton(page, name) {
         resultType: result?.type || "",
         resultSkill: result?.skillId || "",
         energyChanged: state.energy !== beforeEnergy,
-        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("unclear root cause"),
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk tracked") && modalText.includes("unclear root cause"),
       };
     });
     assert(callbackTask.checked, "Callback cleanup check should complete");
@@ -591,7 +591,7 @@ async function clickButton(page, name) {
         resultType: result?.type || "",
         resultSkill: result?.skillId || "",
         energyChanged: state.energy !== beforeEnergy,
-        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("missed client need"),
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk tracked") && modalText.includes("missed client need"),
       };
     });
     assert(handoffTask.checked, "Handoff check should complete");
@@ -626,7 +626,7 @@ async function clickButton(page, name) {
         resultType: result?.type || "",
         resultSkill: result?.skillId || "",
         energyChanged: state.energy !== beforeEnergy,
-        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("mystery-return pile"),
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk tracked") && modalText.includes("mystery-return pile"),
       };
     });
     assert(warehouseTask.checked, "Warehouse search should complete");
@@ -650,7 +650,7 @@ async function clickButton(page, name) {
         fieldTaskResultSaved: Boolean(state.flags.fieldTaskResults?.["retrofit-walkdown-pathway"]),
         energyChanged: state.energy !== beforeEnergy,
         usedResolverLog: state.log.some((entry) => entry.includes("Existing pathway checked:")),
-        showsResultRows: modalText.includes("Energy spent") && modalText.includes("Risk flag") && modalText.includes("pathway assumption"),
+        showsResultRows: modalText.includes("Energy spent") && modalText.includes("Risk tracked") && modalText.includes("pathway assumption"),
       };
     });
     assert(walkdownTask.completed, "Retrofit walkdown task should mark completion");
@@ -684,7 +684,7 @@ async function clickButton(page, name) {
         resultType: result?.type || "",
         resultSkill: result?.skillId || "",
         energyChanged: state.energy !== beforeEnergy,
-        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("mirrored drawing note"),
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk tracked") && modalText.includes("mirrored drawing note"),
       };
     });
     assert(commissioningInspectionTask.checked, "Commissioning inspection should complete");
@@ -712,7 +712,7 @@ async function clickButton(page, name) {
         resultRiskLabel: result?.riskLabel || "",
         resultOutcomeText: result?.outcomeText || "",
         energyChanged: state.energy !== beforeEnergy,
-        showsResultRows: modalText.includes("Task type") && modalText.includes("Skill check") && modalText.includes("Risk flag"),
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Skill check") && modalText.includes("Risk tracked"),
         clipboardShowsHistory: clipboardText.includes("Field task history")
           && clipboardText.includes("Document first")
           && clipboardText.includes("thin mismatch explanation")

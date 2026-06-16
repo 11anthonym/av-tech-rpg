@@ -112,6 +112,8 @@ The playable slice now has:
    and task outcome text instead of relying on internal risk flag names.
 45. Route travel now records compact travel results and route cards show the
    latest mode, stat deltas, arrival clock, and drive count.
+46. Field-task result modals now label consequence rows as tracked risk instead
+   of exposing "risk flag" as player-facing terminology.
 
 ## Playtest Questions
 
@@ -604,7 +606,7 @@ Changed:
 - Dispatch previews can show actual field-task cards, including base energy,
   skill/difficulty, helpful tools, and named risks.
 - Field-task modals now show structured result rows for task type, skill check,
-  energy spent, relevant tools, and risk flag.
+  energy spent, relevant tools, and tracked risk.
 
 Verified: syntax checks passed for `app.js`, `data.js`, and
 `scripts/qa-smoke.js`. The smoke script passed, and a focused Chrome check
@@ -913,6 +915,21 @@ Changed:
 Verified: syntax checks and the smoke script passed. Smoke coverage now drives
 the Center City loading-zone choice, checks the saved travel result, and asserts
 that the regional map route card shows the result.
+
+### Field Task Result Wording Pass
+
+Pass date: June 15, 2026.
+
+Goal: keep the field-task result modal readable as player consequence language.
+
+Changed:
+
+- Field-task result rows now say `Risk tracked` instead of `Risk flag`.
+- The no-risk fallback now reads `No named risk`.
+
+Verified: syntax checks and the smoke script passed. Smoke coverage now expects
+the updated result-row label across tutorial, service, secure access, survey,
+callback, handoff, warehouse, retrofit, and commissioning tasks.
 
 ## Current RPG Skeleton Experiment
 

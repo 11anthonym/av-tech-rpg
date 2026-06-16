@@ -779,7 +779,7 @@ function getFieldTaskToolText(toolId) {
 }
 
 function getFieldTaskRiskText(check) {
-  if (!check.riskFlag) return "No named risk flag";
+  if (!check.riskFlag) return "No named risk";
   return check.riskLabel || check.riskFlag;
 }
 
@@ -796,7 +796,7 @@ function getFieldTaskResultMarkup({ check, skillCheck = null, energyCost, succes
     ["Energy spent", energyCost ? `-${energyCost} energy` : "0 energy"],
     ...(check.requiredTool ? [["Required tool", getFieldTaskToolText(check.requiredTool)]] : []),
     ...(check.optionalTool ? [["Helpful tool", getFieldTaskToolText(check.optionalTool)]] : []),
-    ["Risk flag", getFieldTaskRiskText(check)],
+    ["Risk tracked", getFieldTaskRiskText(check)],
   ];
   return `
     <div class="results-grid">
