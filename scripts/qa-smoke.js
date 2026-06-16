@@ -213,6 +213,30 @@ async function clickButton(page, name) {
     assert(transitionGuidance.readyNearby.includes("Ready") && transitionGuidance.readyNearby.includes("Client Lobby"), "Nearby card should explain ready transition destination");
     assert(transitionGuidance.taskCopy.includes("Route / Building Transition") && transitionGuidance.taskCopy.includes("Interface:"), "Current step should include loop-stage guidance");
 
+    const returnMarkerFlow = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("serviceOffice");
+      state.flags.serviceComplete = true;
+      window.returnToShopViaCurrentExit("One Quick Display Swap", "Returned to Radnor Rack & Wire after the Conshohocken service call.");
+      const promptText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const markerText = document.querySelector(".return-portal-marker")?.textContent || "";
+      const sceneAfterPrompt = state.sceneId;
+      window.closeModal();
+      window.usePortal("serviceOfficeToShop");
+      const portalText = document.querySelector("#modal-backdrop")?.innerText || "";
+      return {
+        sceneAfterPrompt,
+        promptText,
+        markerText,
+        portalText,
+      };
+    });
+    assert(returnMarkerFlow.sceneAfterPrompt === "serviceOffice", "Return helper should leave player onsite after closeout");
+    assert(returnMarkerFlow.promptText.toLowerCase().includes("return route ready") && returnMarkerFlow.promptText.includes("RETURN marker"), "Return helper should explain the marked return point");
+    assert(returnMarkerFlow.markerText === "RETURN", "Return portal marker should render as a readable RETURN control");
+    assert(returnMarkerFlow.portalText.toLowerCase().includes("service exit") && returnMarkerFlow.portalText.includes("Back To The Shop"), "Return portal should still open the mapped transition");
+
     const routeJobData = await page.evaluate(() => {
       return Object.keys(window.GAME_CONTENT.world.routes).map((routeId) => ({
         routeId,

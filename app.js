@@ -3087,6 +3087,8 @@ function getScenePortalInteractions(sceneId = state.sceneId) {
       label: portal.label,
       detail: getPortalDetailText(portal),
       portalId: portal.id,
+      portalKind: portal.kind,
+      markerText: portal.kind === "returnRoute" ? "RETURN" : "DOOR",
       action: () => usePortal(portal.id),
     }));
 }
@@ -3257,9 +3259,24 @@ function finishReturnPortal(portal) {
   );
 }
 
+function showReturnMarkerReady(portal) {
+  addLog(`${portal.label} is ready. Walk to the marked RETURN point when you are ready to leave.`);
+  render();
+  showModal({
+    kicker: "Return Route Ready",
+    title: "Walk To The Marked Return",
+    body: `
+      ${getPortalTransitionMarkup(portal)}
+      <p>The closeout is done. The route back to Radnor Rack & Wire now lives in the room instead of this modal.</p>
+      <p class="muted">Walk to the RETURN marker and interact with it when you want to leave the area.</p>
+    `,
+    actions: [{ label: "Back To Area", onClick: render }],
+  });
+}
+
 function returnToShopViaCurrentExit(fallbackSource, fallbackMessage) {
   const portal = getCurrentReturnPortal();
-  if (portal) return finishReturnPortal(portal);
+  if (portal) return showReturnMarkerReady(portal);
   returnToShopAfterDispatch(fallbackSource, fallbackMessage);
 }
 
@@ -8807,12 +8824,12 @@ function renderDecor() {
     marker.className = item.npc
       ? "interaction-marker npc-marker"
       : item.portalId
-        ? "interaction-marker portal-marker"
+        ? `interaction-marker portal-marker${item.portalKind === "returnRoute" ? " return-portal-marker" : ""}`
         : "interaction-marker";
-    marker.style.left = `${item.x - 11}px`;
-    marker.style.top = `${item.y - 11}px`;
+    marker.style.left = item.portalId ? `${item.x}px` : `${item.x - 11}px`;
+    marker.style.top = item.portalId ? `${item.y}px` : `${item.y - 11}px`;
     marker.title = item.label;
-    marker.textContent = item.npc || (item.portalId ? ">" : "");
+    marker.textContent = item.npc || item.markerText || "";
     return marker;
   });
   elements.sceneLayer.replaceChildren(...decor, ...interactions);

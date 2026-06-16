@@ -498,8 +498,16 @@ lobbyToConferenceRoom: {
 
 Then include `getScenePortalInteractions("sceneId")` in that scene's
 interaction list, or call `usePortal("portalId")` when a scripted beat should
-open the portal immediately. Portal history is saved in `flags.portalHistory`,
-and the most recent portal ID is saved as `flags.lastPortalId`.
+open the portal immediately.
+
+For return routes, prefer closing the job and then sending the player back to
+the room with `returnToShopViaCurrentExit()`. If a ready `returnRoute` portal
+exists, the helper should point the player to the marked `RETURN` control
+instead of teleporting them to the shop from a closeout modal. The actual return
+to the shop should happen when the player interacts with that portal.
+
+Portal history is saved in `flags.portalHistory`, and the most recent portal ID
+is saved as `flags.lastPortalId`.
 
 ## Add a Scene Layout
 

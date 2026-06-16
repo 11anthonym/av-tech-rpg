@@ -20,10 +20,20 @@ The long-term feel is:
   traversal object. Driving should eventually feel like moving through a city
   with routes, parking, travel friction, music/radio flavor, and shortcuts, but
   the prototype can use route cards and fast travel first.
+- **The Long Dark-style pressure, not survival simulation:** ordinary actions
+  should feel different when the tech is tired, underprepared, overloaded,
+  low on cash, or carrying unresolved risk. The lesson to borrow is readable
+  condition pressure and tradeoffs, not wilderness meters.
 
 The game should not become a literal sim of Philadelphia traffic, AV wiring, or
 personal finances. The fun is making readable RPG choices inside recognizable
 field-work pressure.
+
+RPG consequence should increasingly come from small contextual pressure:
+choosing a shortcut, skipping documentation, carrying too much, staying late,
+or arriving underprepared should change what the next walk, check, closeout, or
+route costs. A good choice can still hurt now; a bad choice can still feel
+tempting because it saves time, energy, cash, or social friction in the moment.
 
 ## Research Anchors
 

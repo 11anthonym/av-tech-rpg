@@ -116,6 +116,11 @@ The playable slice now has:
    of exposing "risk flag" as player-facing terminology.
 47. Current-loop guidance now shows the full workday path and brackets the
    current step on van/map/dispatch surfaces.
+48. Completed job closeouts now keep the player onsite and point them to a
+   readable RETURN marker instead of teleporting directly back to the shop.
+49. The roadmap now includes a condition-pressure lane inspired by The Long
+   Dark: fatigue, loadout, carry burden, route friction, and unresolved risk
+   should change what actions cost without adding a survival sim.
 
 ## Playtest Questions
 
@@ -949,6 +954,43 @@ Changed:
 
 Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
 that the van and regional-map surfaces show the loop path.
+
+### Return Marker Flow Pass
+
+Pass date: June 16, 2026.
+
+Goal: make closeout feel less like a modal script and more like leaving a place.
+
+Changed:
+
+- Closeout buttons that use `returnToShopViaCurrentExit()` now leave the player
+  onsite when a ready return portal exists.
+- The player gets a short prompt telling them to walk to the marked return
+  point.
+- Return portals render as a wider `RETURN` marker instead of the small generic
+  portal dot.
+
+Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
+that service closeout leaves the player in the service office, renders a
+readable RETURN marker, and still opens the mapped shop-return transition when
+the portal is used.
+
+### Consequence Pressure Roadmap Pass
+
+Pass date: June 16, 2026.
+
+Goal: make future small passes aim at RPG consequence pressure rather than more
+scripted content.
+
+Roadmap direction:
+
+- Treat fatigue, burnout, cash, carry load, prep, confidence, and unresolved
+  risk as field condition.
+- Make condition affect walks, route choices, field checks, closeout choices,
+  and end-shift recovery one helper at a time.
+- Borrow The Long Dark's feeling of readable pressure and costly tradeoffs, but
+  keep the fantasy grounded in AV workdays instead of survival meters.
+- Prefer one visible pressure hook in an existing loop over another dispatch.
 
 ## Current RPG Skeleton Experiment
 

@@ -69,6 +69,9 @@ answer most of these, keep it in the idea backlog until the hook is clearer.
 - **Consequence:** Which visible values change: energy, burnout, cash, XP,
   client rep, coworker rep, management rep, callbacks, return-trip risk, or a
   career ledger stat?
+- **Condition pressure:** What will feel harder, easier, unavailable, or more
+  expensive because of energy, burnout, carry load, cash, route friction,
+  preparation, confidence, or unresolved risk?
 - **Memory:** What future job, goal, or active career effect could remember
   the outcome?
 - **AV truth:** What detail would make a real AV tech nod without needing a
@@ -150,6 +153,25 @@ Then implement in this order:
 
 Avoid making a job that only pays cash. A good dispatch should test at least one
 RPG identity: a skill, a trait, a tool, a reputation lean, or a ledger habit.
+
+### RPG Consequence Pressure Direction
+
+The current stats need to feel less like end-of-modal numbers and more like
+field condition. Borrow the pressure-design lesson from games like The Long
+Dark without turning AV Tech RPG into a survival sim:
+
+- **Condition, not punishment:** low energy, burnout, weak prep, and heavy carry
+  should change what actions cost or how risky they feel before they become a
+  fail state.
+- **Tradeoffs with texture:** a shortcut can save energy now but increase
+  callback risk, social pressure, or the next check's difficulty.
+- **Small consequences in the room:** walking back to exits, carrying gear,
+  talking to contacts, and choosing closeout paths should be places where
+  condition and prior choices matter.
+- **Uncertainty over math walls:** show likely pressure in plain language, then
+  reveal exact consequences after the action.
+- **No giant rewrite:** add one pressure hook at a time to existing helpers:
+  route travel, carrying, portals, field tasks, closeout, and end-shift recovery.
 
 ## Incremental Roadmap
 
@@ -386,7 +408,14 @@ be easy to verify in the browser.
 53. **Done - Workday loop path pass:** Current-loop guidance now shows the
    full Shop-to-next-job path and brackets the current step on shared van/map
    and dispatch guidance surfaces.
-54. **Current roadmap complete, remaining hardening lane:** The current
+54. **Done - Return marker flow pass:** Ready return-route portals now keep the
+   player on site after closeout, point them to a readable `RETURN` marker, and
+   only send them back to the shop when they interact with the marked portal.
+55. **Done - RPG consequence pressure roadmap pass:** Added a condition-pressure
+   roadmap lane inspired by The Long Dark's readable pressure design: fatigue,
+   carry load, route friction, prep, confidence, and unresolved risk should
+   change action costs and future friction without becoming a survival sim.
+56. **Current roadmap complete, remaining hardening lane:** The current
    incremental roadmap has no remaining `Next` item. The remaining work is
    consolidation: broaden reusable task/check patterns to older bespoke checks
    when they are touched, keep dispatch/route/consequence state visible on
