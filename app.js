@@ -2877,6 +2877,25 @@ function getRouteFastTravelText(route) {
   return `Locked until this route has been driven once; then costs ${getFastTravelEnergyCost(route)} energy.`;
 }
 
+function getTravelResultDeltaText(result) {
+  const deltas = [];
+  if (result.energyDelta) deltas.push(`${formatSignedNumber(result.energyDelta)} energy`);
+  if (result.cashDelta) deltas.push(`${result.cashDelta > 0 ? "+" : "-"}${formatCash(Math.abs(result.cashDelta))}`);
+  if (result.burnoutDelta) deltas.push(`${formatSignedNumber(result.burnoutDelta)} burnout`);
+  return deltas.length ? deltas.join(", ") : "no stat change";
+}
+
+function getTravelResultText(result) {
+  if (!result) return "";
+  const arrival = result.arrivalClock ? ` Arrived ${result.arrivalClock}.` : "";
+  const count = result.travelCount ? ` Route driven ${result.travelCount} time${result.travelCount === 1 ? "" : "s"}.` : "";
+  return `${result.mode || "Drive"}: ${getTravelResultDeltaText(result)}.${arrival}${count}`;
+}
+
+function getLastTravelResult(route) {
+  return state.flags.travelResults?.[route.id] || null;
+}
+
 function getRouteTravelCostRisk(route) {
   const choices = getRouteChoices(route);
   const costs = [];
@@ -2923,6 +2942,7 @@ function getRouteCardMarkup(route) {
   const lastChoice = getLastRouteChoiceLabel(route);
   const fastTravelCount = getFastTravelCount(route.id);
   const lockReason = getRouteLockReason(route);
+  const travelResult = getTravelResultText(getLastTravelResult(route));
   const details = [
     `Destination: ${destination?.label || route.toLabel}${region?.name ? `, ${region.name}` : ""}`,
     `Job/purpose: ${job.title} - ${job.purpose}`,
@@ -2931,6 +2951,7 @@ function getRouteCardMarkup(route) {
     `Driven before: ${getRouteDrivenText(route)}`,
     `Fast travel: ${getRouteFastTravelText(route)}${fastTravelCount ? ` Used ${fastTravelCount} time${fastTravelCount === 1 ? "" : "s"}.` : ""}`,
     lastChoice ? `Last route choice: ${lastChoice}` : "",
+    travelResult ? `Last travel result: ${travelResult}` : "",
     lockReason ? `Locked reason: ${lockReason}` : "",
   ].filter(Boolean);
   return `
@@ -3149,6 +3170,27 @@ function recordRouteTravel(route, routeChoice = null) {
   if (route.toAreaId) state.flags.currentAreaId = route.toAreaId;
 }
 
+function recordTravelResult(route, routeChoice = null, { fastTravel = false, before = {} } = {}) {
+  const result = {
+    routeId: route.id,
+    destination: route.toLabel,
+    mode: fastTravel ? "Fast travel" : routeChoice?.label || "Standard drive",
+    choiceId: routeChoice?.id || "",
+    energyDelta: state.energy - (before.energy ?? state.energy),
+    cashDelta: state.cash - (before.cash ?? state.cash),
+    burnoutDelta: state.burnout - (before.burnout ?? state.burnout),
+    startClock: before.clock || "",
+    arrivalClock: state.clock,
+    travelCount: getRouteTravelCount(route.id),
+  };
+  state.flags.travelResults ||= {};
+  state.flags.travelResults[route.id] = result;
+  state.flags.travelResultLog ||= [];
+  state.flags.travelResultLog.push(result);
+  state.flags.travelResultLog = state.flags.travelResultLog.slice(-8);
+  addLog(`Travel result recorded for ${route.toLabel}: ${getTravelResultDeltaText(result)}.`);
+}
+
 function applyRouteChoice(route, routeChoice) {
   if (!routeChoice) return;
   if (routeChoice.energyDelta) changeEnergy(routeChoice.energyDelta);
@@ -3170,6 +3212,12 @@ function travelRoute(routeId, { beforeTravel, afterTravel, routeChoice, fastTrav
   const route = getWorldRoute(routeId);
   if (!route) return notify(`Route ${routeId} is not mapped yet.`);
   beforeTravel?.(route);
+  const before = {
+    energy: state.energy,
+    cash: state.cash,
+    burnout: state.burnout,
+    clock: state.clock,
+  };
   if (fastTravel) applyFastTravelRoute(route);
   applyRouteChoice(route, routeChoice);
   if (route.packedLunchContext) consumePackedLunch(route.packedLunchContext);
@@ -3177,6 +3225,7 @@ function travelRoute(routeId, { beforeTravel, afterTravel, routeChoice, fastTrav
   if (arrivalClock) setClock(arrivalClock);
   if (route.arrivalLog) addLog(route.arrivalLog);
   recordRouteTravel(route, routeChoice);
+  recordTravelResult(route, routeChoice, { fastTravel, before });
   if (afterTravel) return afterTravel(route);
   if (route.destinationSceneId) return enterScene(route.destinationSceneId);
   return render();

@@ -151,6 +151,36 @@ async function clickButton(page, name) {
       "Fast travel:",
     ], "regional map");
 
+    const travelResult = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.shopBrief = true;
+      state.loaded = [...window.GAME_CONTENT.tutorial.shopLoad];
+      const route = window.getWorldRoute("centerCityTutorial");
+      const choice = route.choices.find((item) => item.id === "loadingZoneGamble");
+      window.travelRoute("centerCityTutorial", { routeChoice: choice });
+      window.showRegionalMap();
+      const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const result = state.flags.travelResults?.centerCityTutorial;
+      return {
+        resultSaved: Boolean(result),
+        choiceId: result?.choiceId || "",
+        energyDelta: result?.energyDelta || 0,
+        arrivalClock: result?.arrivalClock || "",
+        routeCount: state.flags.routeHistory?.centerCityTutorial || 0,
+        cardShowsResult: modalText.includes("Last travel result")
+          && modalText.includes("Try the loading-zone approach")
+          && modalText.includes("-2 energy")
+          && modalText.includes("MON 7:58 AM"),
+      };
+    });
+    assert(travelResult.resultSaved, "Route travel should save latest travel-result data");
+    assert(travelResult.choiceId === "loadingZoneGamble", "Travel result should save the selected route choice");
+    assert(travelResult.energyDelta === -2, "Travel result should save route energy delta");
+    assert(travelResult.arrivalClock === "MON 7:58 AM", "Travel result should save arrival clock");
+    assert(travelResult.routeCount === 1, "Travel result should preserve route history count");
+    assert(travelResult.cardShowsResult, "Regional map route card should show latest travel result");
+
     const transitionGuidance = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;

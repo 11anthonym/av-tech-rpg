@@ -377,7 +377,10 @@ be easy to verify in the browser.
    now save readable risk labels, task outcome text, and tool context, and the
    career clipboard history displays those player-facing consequences while
    retaining fallbacks for older saves.
-51. **Current roadmap complete, remaining hardening lane:** The current
+51. **Done - Travel result readability pass:** Route travel now writes compact
+   latest-result data and a short travel-result log, and route cards show the
+   latest travel mode, stat deltas, arrival clock, and drive count.
+52. **Current roadmap complete, remaining hardening lane:** The current
    incremental roadmap has no remaining `Next` item. The remaining work is
    consolidation: broaden reusable task/check patterns to older bespoke checks
    when they are touched, keep dispatch/route/consequence state visible on

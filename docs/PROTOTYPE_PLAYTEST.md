@@ -110,6 +110,8 @@ The playable slice now has:
    player-facing "not playable yet" phrasing.
 44. Field-task history now stores and shows readable risk labels, tool context,
    and task outcome text instead of relying on internal risk flag names.
+45. Route travel now records compact travel results and route cards show the
+   latest mode, stat deltas, arrival clock, and drive count.
 
 ## Playtest Questions
 
@@ -893,6 +895,24 @@ Changed:
 Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
 saved readable risk/outcome text and career-clipboard display for commissioning
 field-task history.
+
+### Travel Result Readability Pass
+
+Pass date: June 15, 2026.
+
+Goal: make route choices leave a saved, player-readable result on the regional
+map instead of only a rolling log line.
+
+Changed:
+
+- `travelRoute()` now records a compact latest travel result per route plus a
+  short rolling travel-result log.
+- Route cards now show the latest travel mode, energy/cash/burnout deltas,
+  arrival clock, and drive count.
+
+Verified: syntax checks and the smoke script passed. Smoke coverage now drives
+the Center City loading-zone choice, checks the saved travel result, and asserts
+that the regional map route card shows the result.
 
 ## Current RPG Skeleton Experiment
 

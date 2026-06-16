@@ -413,6 +413,12 @@ Route History. If a route appears in the wrong section, check
 `fastTravelEligible`, and whether `routeHistory[route.id]` is being recorded
 when the route is driven.
 
+Route travel also writes `travelResults[route.id]` and a short
+`travelResultLog`. Route cards use the latest result to show the last travel
+mode, stat deltas, arrival clock, and drive count. If a travel choice changes
+energy, cash, burnout, or arrival time, verify that the card makes the result
+visible after the drive.
+
 ## Add a World Area or Route
 
 `content.world` is the lightweight map skeleton for the future larger game. It
