@@ -504,7 +504,31 @@ async function clickButton(page, name) {
       state.flags.currentAreaId = "shop";
       window.showCommissioningDispatchPreview();
     });
-    await assertModalIncludes(page, ["Field Task Checks", "Re-terminate cleanly", "closeout documentation", "Risk: weak strain relief"], "commissioning field task preview");
+    await assertModalIncludes(page, ["Field Task Checks", "Ceiling speaker zone", "audio verification", "Re-terminate cleanly", "Risk: weak strain relief"], "commissioning field task preview");
+
+    const commissioningInspectionTask = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("southPhillyCommissioning");
+      const beforeEnergy = state.energy;
+      window.inspectCommissioningCondition("drawing");
+      const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const result = state.flags.fieldTaskResults?.["commissioning-drawing"];
+      return {
+        checked: state.commissioningChecks.includes("drawing"),
+        resultSaved: Boolean(result),
+        resultType: result?.type || "",
+        resultSkill: result?.skillId || "",
+        energyChanged: state.energy !== beforeEnergy,
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("mirrored drawing note"),
+      };
+    });
+    assert(commissioningInspectionTask.checked, "Commissioning inspection should complete");
+    assert(commissioningInspectionTask.resultSaved, "Commissioning inspection should save field-task result data");
+    assert(commissioningInspectionTask.resultType === "documentation check", "Commissioning inspection should use data-backed task type");
+    assert(commissioningInspectionTask.resultSkill === "documentation", "Commissioning inspection should use data-backed skill");
+    assert(commissioningInspectionTask.energyChanged, "Commissioning inspection should affect energy");
+    assert(commissioningInspectionTask.showsResultRows, "Commissioning inspection should show structured field-task rows");
 
     const commissioningTerminationTask = await page.evaluate(() => {
       window.startGame("prototype-tech");

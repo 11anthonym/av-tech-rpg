@@ -96,6 +96,9 @@ The playable slice now has:
    shared resolver output, and saved field-task result history.
 38. Warehouse search checks now use structured field-task metadata, shared
    resolver output, and saved field-task result history.
+39. South Philadelphia commissioning inspection checks now use structured
+   field-task metadata, shared resolver output, and saved field-task result
+   history.
 
 ## Playtest Questions
 
@@ -767,6 +770,26 @@ Changed:
 Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
 warehouse field-task preview text, data-backed task type/skill, energy change,
 saved field-task result data, and structured result rows.
+
+### Commissioning Inspection Consolidation Pass
+
+Pass date: June 15, 2026.
+
+Goal: finish moving the South Philadelphia commissioning job toward one reusable
+task/check pattern, not just the termination choice.
+
+Changed:
+
+- Commissioning inspection checks now carry structured task metadata for audio
+  verification, termination inspection, and documentation review.
+- The commissioning dispatch preview now shows both inspection checks and the
+  later termination task choices as field tasks.
+- Commissioning inspections now resolve through `resolveFieldTaskCheck()`, show
+  `getFieldTaskResultMarkup()`, and write reusable `fieldTaskResults` entries.
+
+Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
+commissioning inspection preview text, data-backed task type/skill, energy
+change, saved field-task result data, and structured result rows.
 
 ## Current RPG Skeleton Experiment
 

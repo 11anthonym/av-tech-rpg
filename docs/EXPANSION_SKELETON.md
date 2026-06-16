@@ -353,7 +353,12 @@ be easy to verify in the browser.
    now carry structured field-task metadata, show as field-task previews on the
    warehouse dispatch card, resolve through `resolveFieldTaskCheck()`, and
    write reusable `fieldTaskResults` entries.
-45. **Current roadmap complete, remaining hardening lane:** The current
+45. **Done - Commissioning inspection consolidation pass:** South Philadelphia
+   commissioning inspection checks now carry structured field-task metadata,
+   show alongside the termination choices on the commissioning dispatch card,
+   resolve through `resolveFieldTaskCheck()`, and write reusable
+   `fieldTaskResults` entries.
+46. **Current roadmap complete, remaining hardening lane:** The current
    incremental roadmap has no remaining `Next` item. The remaining work is
    consolidation: broaden reusable task/check patterns to older bespoke checks
    when they are touched, keep dispatch/route/consequence state visible on

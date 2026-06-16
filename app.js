@@ -6384,7 +6384,10 @@ function showCommissioningDispatchPreview() {
       note: "The completion sheet has already been signed internally.",
       managementNote: "Room complete except final commissioning. Please avoid creating a punch list unless necessary.",
       taskCards: content.commissioningDispatch.taskCards,
-      fieldTasks: content.commissioningDispatch.terminationTasks,
+      fieldTasks: [
+        ...content.commissioningDispatch.checks,
+        ...content.commissioningDispatch.terminationTasks,
+      ],
     }),
     actions: [
       { label: "Accept Commissioning Visit", onClick: promptCommissioningTravel },
@@ -6636,19 +6639,17 @@ function showCommissioningTerminationChoice() {
 function inspectCommissioningCondition(checkId) {
   const check = content.commissioningDispatch.checks.find((item) => item.id === checkId);
   if (!check || state.commissioningChecks.includes(checkId)) return notify(`${check?.label || "That condition"} is already in your notes.`);
-  state.commissioningChecks.push(checkId);
-  const skillCheck = resolveSkillCheck(`commissioning-${checkId}`, {
-    skillId: checkId === "termination" ? "install" : checkId === "drawing" ? "documentation" : "troubleshooting",
-    difficulty: checkId === "termination" ? 4 : 3,
+  const { skillCheck, energyCost } = resolveFieldTaskCheck({
+    check,
+    checkId,
+    completedChecks: state.commissioningChecks,
+    flagKey: `commissioning-${checkId}`,
     contextBonus: checkId === "termination" && ownsTool("labeler") ? 1 : 0,
-    contextId: checkId === "termination" ? "commissioning-termination" : checkId === "drawing" ? "commissioning-documentation" : "commissioning-troubleshooting",
+    baseEnergyCost: getCommissioningCheckEnergyCost(),
+    strainedFlag: checkId === "termination" ? "terminationSkillStrained" : checkId === "drawing" ? "commissioningNotesStrained" : "",
+    logText: `${check.label} checked: ${check.log}`,
+    strainedLogText: `Commissioning skill check strained on ${check.label}; the closeout will need a stronger choice to stay clean.`,
   });
-  const energyCost = Math.max(0, getCommissioningCheckEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
-  changeEnergy(-energyCost);
-  if (checkId === "termination" && !skillCheck.successful) state.flags.terminationSkillStrained = true;
-  if (checkId === "drawing" && !skillCheck.successful) state.flags.commissioningNotesStrained = true;
-  addLog(`${check.label} checked: ${check.log}`);
-  if (!skillCheck.successful) addLog(`Commissioning skill check strained on ${check.label}; the closeout will need a stronger choice to stay clean.`);
   render();
   const allChecked = state.commissioningChecks.length === content.commissioningDispatch.checks.length;
   const needsTerminationTask = state.commissioningChecks.includes("termination") && !state.flags.commissioningTerminationAction;
@@ -6657,7 +6658,7 @@ function inspectCommissioningCondition(checkId) {
     title: check.label,
     body: `
       <p>${check.detail}</p>
-      ${getSkillCheckMarkup(skillCheck)}
+      ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
       ${ownsTool("labeler") ? `<p class="muted">Josh's rebuilt labeler makes it easier to leave the suspect path readable.</p>` : ""}
       ${checkId === "termination" ? `<p class="muted">The loose line now needs a field-task choice before the closeout can be trusted.</p>` : ""}
       ${allChecked ? `<p class="muted">You found the room issue. Return to the client contact and close out the visit.</p>` : ""}
