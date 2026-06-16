@@ -8139,6 +8139,32 @@ function getWorkdayLoopGuidance(objective = getObjective()) {
   };
 }
 
+function getWorkdayLoopPath(stage) {
+  const steps = [
+    "Shop",
+    "Van / Dispatch Board",
+    "Regional Map / Route",
+    "Travel Choice",
+    "Job Site",
+    "Field Tasks",
+    "Closeout",
+    "Return / End Shift",
+    "Next Job",
+  ];
+  const stageMap = [
+    [/shop/i, "Shop"],
+    [/van|dispatch/i, "Van / Dispatch Board"],
+    [/map|route/i, "Regional Map / Route"],
+    [/travel/i, "Travel Choice"],
+    [/job site/i, "Job Site"],
+    [/field/i, "Field Tasks"],
+    [/closeout/i, "Closeout"],
+    [/return|end shift/i, "Return / End Shift"],
+  ];
+  const current = stageMap.find(([pattern]) => pattern.test(stage))?.[1] || "";
+  return steps.map((step) => step === current ? `[${step}]` : step).join(" -> ");
+}
+
 function getWorkdayLoopGuidanceText() {
   const guidance = getWorkdayLoopGuidance();
   return `${guidance.stage}: ${guidance.objective} ${guidance.interfaceHint}`;
@@ -8149,6 +8175,7 @@ function getWorkdayLoopGuidanceMarkup() {
   return `
     <ul class="modal-list">
       <li><strong>Loop step</strong><span>${escapeHtml(guidance.stage)}</span></li>
+      <li><strong>Loop path</strong><span>${escapeHtml(getWorkdayLoopPath(guidance.stage))}</span></li>
       <li><strong>Next action</strong><span>${escapeHtml(guidance.objective)}</span></li>
       <li><strong>Where to look</strong><span>${escapeHtml(guidance.interfaceHint)}</span></li>
     </ul>

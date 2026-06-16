@@ -114,6 +114,8 @@ The playable slice now has:
    latest mode, stat deltas, arrival clock, and drive count.
 46. Field-task result modals now label consequence rows as tracked risk instead
    of exposing "risk flag" as player-facing terminology.
+47. Current-loop guidance now shows the full workday path and brackets the
+   current step on van/map/dispatch surfaces.
 
 ## Playtest Questions
 
@@ -930,6 +932,23 @@ Changed:
 Verified: syntax checks and the smoke script passed. Smoke coverage now expects
 the updated result-row label across tutorial, service, secure access, survey,
 callback, handoff, warehouse, retrofit, and commissioning tasks.
+
+### Workday Loop Path Pass
+
+Pass date: June 16, 2026.
+
+Goal: help the van/map/board layer read like one coherent RPG workday loop.
+
+Changed:
+
+- Current-loop guidance now includes the full workday path:
+  Shop -> Van / Dispatch Board -> Regional Map / Route -> Travel Choice -> Job
+  Site -> Field Tasks -> Closeout -> Return / End Shift -> Next Job.
+- The current step is bracketed so the player can place the next action inside
+  the larger loop.
+
+Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
+that the van and regional-map surfaces show the loop path.
 
 ## Current RPG Skeleton Experiment
 

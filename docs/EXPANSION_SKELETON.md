@@ -383,7 +383,10 @@ be easy to verify in the browser.
 52. **Done - Field task result wording pass:** Field-task result modals now
    label player-facing consequence rows as `Risk tracked` instead of exposing
    internal risk-flag terminology.
-53. **Current roadmap complete, remaining hardening lane:** The current
+53. **Done - Workday loop path pass:** Current-loop guidance now shows the
+   full Shop-to-next-job path and brackets the current step on shared van/map
+   and dispatch guidance surfaces.
+54. **Current roadmap complete, remaining hardening lane:** The current
    incremental roadmap has no remaining `Next` item. The remaining work is
    consolidation: broaden reusable task/check patterns to older bespoke checks
    when they are touched, keep dispatch/route/consequence state visible on

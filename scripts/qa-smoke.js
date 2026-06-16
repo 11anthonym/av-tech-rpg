@@ -132,6 +132,8 @@ async function clickButton(page, name) {
     await assertModalIncludes(page, [
       "Current Loop",
       "Loop step",
+      "Loop path",
+      "[Shop]",
       "Where to look",
       "Review cargo",
       "Load carried items",
@@ -143,6 +145,7 @@ async function clickButton(page, name) {
     await page.evaluate(() => window.showRegionalMap());
     await assertModalIncludes(page, [
       "Current Loop",
+      "Loop path",
       "Active Job Route",
       "Known Destinations",
       "Locked Future Candidates",
