@@ -4749,7 +4749,10 @@ function showSecureAccessDispatchPreview() {
       managementNote: "Please do not let access delays affect today's schedule.",
       prep: state.flags.secureAccessPreparation ? `Preparation selected: ${getSecureAccessPreparationLabel()}` : "",
       taskCards: content.secureAccessDispatch.taskCards,
-      fieldTasks: content.secureAccessDispatch.taskChecks,
+      fieldTasks: [
+        ...content.secureAccessDispatch.checks,
+        ...content.secureAccessDispatch.taskChecks,
+      ],
     }),
     actions: [
       { label: "Accept Navy Yard Job", onClick: () => state.flags.secureAccessPreparation ? promptSecureAccessTravel() : showSecureAccessPreparation() },
@@ -4836,18 +4839,17 @@ function getSecureAccessReportEnergyCost(baseCost) {
 function inspectSecureAccessCondition(checkId) {
   const check = content.secureAccessDispatch.checks.find((item) => item.id === checkId);
   if (!check || state.secureAccessChecks.includes(checkId)) return notify(`${check?.label || "That access issue"} is already in your notes.`);
-  state.secureAccessChecks.push(checkId);
-  const skillCheck = resolveSkillCheck(`secure-access-${checkId}`, {
-    skillId: checkId === "escort" ? "clientCommunication" : "documentation",
-    difficulty: checkId === "escort" ? 4 : 3,
+  const { skillCheck, energyCost } = resolveFieldTaskCheck({
+    check,
+    checkId,
+    completedChecks: state.secureAccessChecks,
+    flagKey: `secure-access-${checkId}`,
     contextBonus: state.flags.secureAccessPreparation === "review" ? 1 : 0,
-    contextId: checkId === "escort" ? "secure-access-pressure" : "secure-access-documentation",
+    baseEnergyCost: getSecureAccessCheckEnergyCost(),
+    strainedFlag: "secureAccessNotesStrained",
+    logText: `${check.label} checked: ${check.log}.`,
+    strainedLogText: `Access skill check strained on ${check.label}; the note will be easier for management to downplay.`,
   });
-  const energyCost = Math.max(0, getSecureAccessCheckEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
-  changeEnergy(-energyCost);
-  if (!skillCheck.successful) state.flags.secureAccessNotesStrained = true;
-  addLog(`${check.label} checked: ${check.log}`);
-  if (!skillCheck.successful) addLog(`Access skill check strained on ${check.label}; the note will be easier for management to downplay.`);
   render();
   const allChecked = state.secureAccessChecks.length === content.secureAccessDispatch.checks.length;
   showModal({
@@ -4855,7 +4857,7 @@ function inspectSecureAccessCondition(checkId) {
     title: check.label,
     body: `
       <p>${check.detail}</p>
-      ${getSkillCheckMarkup(skillCheck)}
+      ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
       ${allChecked ? `<p class="muted">Access is finally sorted. Now the quick rack update still has to actually happen.</p>` : ""}
     `,
     actions: [{ label: allChecked ? "Enter Telecom Room" : "Keep Sorting Access", onClick: allChecked ? showSecureAccessWorkStart : render }],

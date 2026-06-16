@@ -177,6 +177,47 @@ async function clickButton(page, name) {
     });
     await assertModalIncludes(page, ["Field Task Checks", "Freight elevator opening", "access survey", "Risk: thin access measurement"], "survey field task preview");
 
+    await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.warehouseComplete = true;
+      state.flags.currentAreaId = "shop";
+      window.showSecureAccessDispatchPreview();
+    });
+    await assertModalIncludes(page, [
+      "Field Task Checks",
+      "Security gate",
+      "visitor-list check",
+      "Risk: visitor-list mismatch",
+      "Find the correct rack unit",
+      "rack record",
+    ], "secure access field task preview");
+
+    const secureAccessTask = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.secureAccessPreparation = "review";
+      window.enterScene("navyYardAccess");
+      const beforeEnergy = state.energy;
+      window.inspectSecureAccessCondition("gate");
+      const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const result = state.flags.fieldTaskResults?.["secure-access-gate"];
+      return {
+        inspected: state.secureAccessChecks.includes("gate"),
+        resultSaved: Boolean(result),
+        resultType: result?.type || "",
+        resultSkill: result?.skillId || "",
+        energyChanged: state.energy !== beforeEnergy,
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("visitor-list mismatch"),
+      };
+    });
+    assert(secureAccessTask.inspected, "Secure access check should complete");
+    assert(secureAccessTask.resultSaved, "Secure access check should save field-task result data");
+    assert(secureAccessTask.resultType === "visitor-list check", "Secure access check should use data-backed task type");
+    assert(secureAccessTask.resultSkill === "documentation", "Secure access check should use data-backed skill");
+    assert(secureAccessTask.energyChanged, "Secure access check should affect energy");
+    assert(secureAccessTask.showsResultRows, "Secure access check should show structured result rows");
+
     const surveyTask = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;

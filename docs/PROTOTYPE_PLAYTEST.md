@@ -99,6 +99,9 @@ The playable slice now has:
 39. South Philadelphia commissioning inspection checks now use structured
    field-task metadata, shared resolver output, and saved field-task result
    history.
+40. Navy Yard access checks now use structured field-task metadata, shared
+   resolver output, and saved field-task result history before the rack tasks
+   begin.
 
 ## Playtest Questions
 
@@ -790,6 +793,25 @@ Changed:
 Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
 commissioning inspection preview text, data-backed task type/skill, energy
 change, saved field-task result data, and structured result rows.
+
+### Secure Access Check Consolidation Pass
+
+Pass date: June 15, 2026.
+
+Goal: make the first half of Navy Yard as inspectable as the rack update.
+
+Changed:
+
+- Security gate, building-number, and escort checks now carry structured
+  field-task metadata.
+- The Navy Yard dispatch preview now shows access checks and rack tasks together
+  as field-task cards.
+- Access checks now resolve through `resolveFieldTaskCheck()`, show
+  `getFieldTaskResultMarkup()`, and write reusable `fieldTaskResults` entries.
+
+Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
+secure-access preview text, data-backed task type/skill, energy change, saved
+field-task result data, and structured result rows.
 
 ## Current RPG Skeleton Experiment
 
