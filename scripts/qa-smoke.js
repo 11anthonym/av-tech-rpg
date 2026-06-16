@@ -679,15 +679,22 @@ async function clickButton(page, name) {
         resultSaved: Boolean(result),
         resultType: result?.type || "",
         resultSkill: result?.skillId || "",
+        resultRiskLabel: result?.riskLabel || "",
+        resultOutcomeText: result?.outcomeText || "",
         energyChanged: state.energy !== beforeEnergy,
         showsResultRows: modalText.includes("Task type") && modalText.includes("Skill check") && modalText.includes("Risk flag"),
-        clipboardShowsHistory: clipboardText.includes("Field task history") && clipboardText.includes("Document first"),
+        clipboardShowsHistory: clipboardText.includes("Field task history")
+          && clipboardText.includes("Document first")
+          && clipboardText.includes("thin mismatch explanation")
+          && clipboardText.includes("The mismatch is documented before the room gets another confident status update."),
       };
     });
     assert(commissioningTerminationTask.actionSaved, "Commissioning termination task should save the selected action");
     assert(commissioningTerminationTask.resultSaved, "Commissioning termination task should save field-task result data");
     assert(commissioningTerminationTask.resultType === "closeout documentation", "Commissioning termination task should use data-backed task type");
     assert(commissioningTerminationTask.resultSkill === "clientCommunication", "Commissioning termination task should use data-backed skill");
+    assert(commissioningTerminationTask.resultRiskLabel === "thin mismatch explanation", "Commissioning termination task should save readable risk label");
+    assert(commissioningTerminationTask.resultOutcomeText.includes("mismatch is documented"), "Commissioning termination task should save readable outcome text");
     assert(commissioningTerminationTask.energyChanged, "Commissioning termination task should affect energy");
     assert(commissioningTerminationTask.showsResultRows, "Commissioning termination task should show structured field-task rows");
     assert(commissioningTerminationTask.clipboardShowsHistory, "Career clipboard should show saved commissioning field-task history");

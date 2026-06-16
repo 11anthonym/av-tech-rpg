@@ -135,7 +135,9 @@ When adding a new task check:
 4. Show `getFieldTaskPreviewMarkup()` before the job and
    `getFieldTaskResultMarkup()` in the result modal when useful.
 5. Check the career clipboard after the job; `fieldTaskResults` entries now
-   appear in field-task history, so labels and risk text should read clearly.
+   appear in field-task history with risk labels, tool context, and saved
+   success/strained outcome text, so the entry should read like a field
+   consequence rather than an internal flag.
 6. Record consequences through existing energy, reputation, XP, callback, and
    ledger fields instead of adding a separate hidden system.
 

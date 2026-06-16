@@ -108,6 +108,8 @@ The playable slice now has:
    resolver output while preserving tutorial assembly progress.
 43. Locked planned-work previews now use dispatch-board language instead of
    player-facing "not playable yet" phrasing.
+44. Field-task history now stores and shows readable risk labels, tool context,
+   and task outcome text instead of relying on internal risk flag names.
 
 ## Playtest Questions
 
@@ -873,6 +875,24 @@ Changed:
   not on today's drive list.
 
 Verified: syntax checks and the smoke script passed.
+
+### Field Task History Readability Pass
+
+Pass date: June 15, 2026.
+
+Goal: make the career clipboard field-task history explain what the task result
+means to the player.
+
+Changed:
+
+- `fieldTaskResults` now save readable risk labels, outcome text, and task tool
+  context when a field task resolves.
+- The field-task history ledger now displays readable risk and outcome language
+  while keeping old save entries compatible through fallbacks.
+
+Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
+saved readable risk/outcome text and career-clipboard display for commissioning
+field-task history.
 
 ## Current RPG Skeleton Experiment
 

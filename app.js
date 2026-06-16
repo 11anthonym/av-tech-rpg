@@ -809,6 +809,7 @@ function getFieldTaskResultMarkup({ check, skillCheck = null, energyCost, succes
 function recordFieldTaskResult({ flagKey, check, checkId = check?.id || flagKey, skillCheck = null, energyCost = 0, skillId = "", difficulty = 0, contextId = "", successful } = {}) {
   if (!flagKey || !check) return;
   const resolvedSuccessful = successful ?? skillCheck?.successful ?? true;
+  const riskLabel = getFieldTaskRiskText(check);
   state.flags.fieldTaskResults ||= {};
   state.flags.fieldTaskResults[flagKey] = {
     id: checkId,
@@ -821,6 +822,10 @@ function recordFieldTaskResult({ flagKey, check, checkId = check?.id || flagKey,
     tier: skillCheck?.tier || (resolvedSuccessful ? "resolved" : "risk"),
     successful: resolvedSuccessful,
     riskFlag: check.riskFlag || "",
+    riskLabel,
+    outcomeText: getFieldTaskOutcomeText(check, skillCheck, resolvedSuccessful),
+    requiredTool: check.requiredTool || "",
+    optionalTool: check.optionalTool || "",
   };
 }
 
@@ -836,11 +841,13 @@ function getFieldTaskResultLedgerMarkup({ limit = 6 } = {}) {
     <ul class="modal-list">
       ${entries.map((entry) => {
         const skillName = getSkillDefinition(entry.skillId)?.name || entry.skillId || "No skill roll";
-        const riskText = entry.riskFlag ? ` Risk flag: ${entry.riskFlag}.` : "";
+        const riskText = entry.riskLabel || entry.riskFlag || "No named risk";
+        const toolText = [entry.requiredTool, entry.optionalTool].filter(Boolean).map(getFieldTaskToolText).join(" / ");
+        const outcomeText = entry.outcomeText || (entry.successful ? "Task resolved." : "Task left visible risk.");
         return `
           <li>
             <strong>${escapeHtml(`${entry.successful ? "Resolved" : "Risk"} - ${entry.label}`)}</strong>
-            <span>${escapeHtml(`${entry.type || "field check"} | ${skillName}${entry.difficulty ? ` ${entry.difficulty}` : ""} | energy ${entry.energyCost || 0} | ${entry.tier || "recorded"}.${riskText}`)}</span>
+            <span>${escapeHtml(`${entry.type || "field check"} | ${skillName}${entry.difficulty ? ` ${entry.difficulty}` : ""} | energy ${entry.energyCost || 0} | ${entry.tier || "recorded"} | risk: ${riskText}${toolText ? ` | tools: ${toolText}` : ""}. ${outcomeText}`)}</span>
           </li>
         `;
       }).join("")}
