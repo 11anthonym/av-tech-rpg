@@ -104,6 +104,8 @@ The playable slice now has:
    begin.
 41. The Conshohocken service call now previews signal-path and replacement
    install field tasks, and both rolls save reusable field-task history.
+42. First-day cart assembly now uses structured field-task metadata and shared
+   resolver output while preserving tutorial assembly progress.
 
 ## Playtest Questions
 
@@ -834,6 +836,25 @@ Changed:
 Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
 service preview text, service signal-path results, service install results,
 energy changes, saved field-task result data, and structured result rows.
+
+### Tutorial Assembly Consolidation Pass
+
+Pass date: June 15, 2026.
+
+Goal: make the first field-work install beat use the same task/check structure
+as later dispatches.
+
+Changed:
+
+- Tutorial cart components now carry structured field-task metadata.
+- Cart assembly installs now resolve through `resolveFieldTaskCheck()` while
+  preserving the existing `assembled` progress array.
+- Non-branching assembly steps now show structured result rows so the player can
+  see skill, energy, tool, and risk consequences immediately.
+
+Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
+cart assembly progress, data-backed task type/skill, energy change, saved
+field-task result data, and structured result rows.
 
 ## Current RPG Skeleton Experiment
 

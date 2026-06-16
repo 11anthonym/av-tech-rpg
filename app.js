@@ -8013,22 +8013,32 @@ function installCartPart(destination) {
   if (!hasCarriedItems()) return notify("Pick up the next cart component from the delivered boxes.");
   const part = content.tutorial.assembly.find((item) => item.id === state.carry[0]);
   if (!part || part.destination !== destination) return notify(`${part?.label || "That component"} belongs on the other cart.`);
-  const skillCheck = resolveSkillCheck(`cart-${part.id}`, {
-    skillId: "install",
-    difficulty: part.id.includes("display") ? 4 : 3,
-    contextId: "cart-assembly",
+  const { skillCheck, energyCost } = resolveFieldTaskCheck({
+    check: part,
+    checkId: part.id,
+    completedChecks: state.assembled,
+    flagKey: `cart-${part.id}`,
+    baseEnergyCost: getAssemblyEnergyCost(part.energyCost),
+    failedEnergyPenalty: 1,
+    strainedFlag: "cartAssemblyStrained",
+    logText: `${part.label} installed ${ownsTool("drill") ? "with your drill" : "with your screwdriver"}.`,
+    strainedLogText: "Cart assembly check strained; the first install day is teaching through resistance.",
   });
-  state.assembled.push(part.id);
   state.carry = [];
-  const energyCost = Math.max(0, getAssemblyEnergyCost(7) + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
-  changeEnergy(-energyCost);
-  if (!skillCheck.successful) state.flags.cartAssemblyStrained = true;
-  addLog(`${part.label} installed ${ownsTool("drill") ? "with your drill" : "with your screwdriver"}. ${getSkillCheckLabel(skillCheck)}.`);
   const cart1Done = state.assembled.filter((id) => id.startsWith("cart-1")).length === 2;
   const cart2Done = state.assembled.filter((id) => id.startsWith("cart-2")).length === 2;
   if (cart1Done && !state.flags.supervisorLeft) return showSupervisorDeparture();
   if (cart2Done && !state.flags.finished) return showFinishChoice();
   render();
+  showModal({
+    kicker: "Cart Assembly",
+    title: part.label,
+    body: `
+      <p>${part.detail}</p>
+      ${getFieldTaskResultMarkup({ check: part, skillCheck, energyCost })}
+    `,
+    actions: [{ label: "Keep Building", onClick: render }],
+  });
 }
 
 function notify(message) {

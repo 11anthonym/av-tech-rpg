@@ -366,7 +366,11 @@ be easy to verify in the browser.
    dispatch now previews signal-path verification and replacement-install
    tasks, resolves both through `resolveFieldTaskCheck()`, and writes reusable
    `fieldTaskResults` entries while preserving existing service progress state.
-48. **Current roadmap complete, remaining hardening lane:** The current
+48. **Done - Tutorial assembly consolidation pass:** First-day cart assembly
+   components now carry structured field-task metadata, resolve through
+   `resolveFieldTaskCheck()`, write reusable `fieldTaskResults`, and preserve
+   the existing `assembled` tutorial progress state.
+49. **Current roadmap complete, remaining hardening lane:** The current
    incremental roadmap has no remaining `Next` item. The remaining work is
    consolidation: broaden reusable task/check patterns to older bespoke checks
    when they are touched, keep dispatch/route/consequence state visible on

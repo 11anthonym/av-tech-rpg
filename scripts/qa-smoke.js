@@ -97,6 +97,32 @@ async function clickButton(page, name) {
       assert(start.objective.trim().length > 0, `${start.expectedName} should have a current objective`);
     }
 
+    const cartAssemblyTask = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("client");
+      state.flags.roomBrief = true;
+      state.carry = ["cart-1-frame"];
+      const beforeEnergy = state.energy;
+      window.installCartPart("cart1");
+      const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const result = state.flags.fieldTaskResults?.["cart-cart-1-frame"];
+      return {
+        assembled: state.assembled.includes("cart-1-frame"),
+        resultSaved: Boolean(result),
+        resultType: result?.type || "",
+        resultSkill: result?.skillId || "",
+        energyChanged: state.energy !== beforeEnergy,
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("frame alignment"),
+      };
+    });
+    assert(cartAssemblyTask.assembled, "Tutorial cart assembly should keep assembled progress");
+    assert(cartAssemblyTask.resultSaved, "Tutorial cart assembly should save field-task result data");
+    assert(cartAssemblyTask.resultType === "cart frame assembly", "Tutorial cart assembly should use data-backed task type");
+    assert(cartAssemblyTask.resultSkill === "install", "Tutorial cart assembly should use data-backed skill");
+    assert(cartAssemblyTask.energyChanged, "Tutorial cart assembly should affect energy");
+    assert(cartAssemblyTask.showsResultRows, "Tutorial cart assembly should show structured result rows");
+
     await page.evaluate(() => {
       window.startGame("prototype-tech");
       window.AV_TECH_RPG_DEBUG.state.flags.shopBrief = true;
