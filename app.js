@@ -6841,6 +6841,7 @@ function showSurveyDispatchPreview() {
       note: "The facilities contact asked whether the quoted display will fit through the building.",
       managementNote: "Should be straightforward. Same basic idea as a display we installed somewhere else.",
       prep: state.flags.surveyPreparation ? `Preparation selected: ${getSurveyPreparationLabel()}` : "",
+      fieldTasks: content.surveyDispatch.inspections,
     }),
     actions: [
       { label: "Accept Site Survey", onClick: () => state.flags.surveyPreparation ? promptSurveyTravel() : showSurveyPreparation() },
@@ -6925,18 +6926,17 @@ function getSurveyReportEnergyCost(baseCost) {
 function inspectSurveyConstraint(inspectionId) {
   const inspection = content.surveyDispatch.inspections.find((item) => item.id === inspectionId);
   if (!inspection || state.surveyInspections.includes(inspectionId)) return notify(`${inspection?.label || "That condition"} is already in your notes.`);
-  state.surveyInspections.push(inspectionId);
-  const skillCheck = resolveSkillCheck(`survey-${inspectionId}`, {
-    skillId: inspectionId === "wall" ? "install" : "documentation",
-    difficulty: inspectionId === "wall" ? 3 : 4,
+  const { skillCheck, energyCost } = resolveFieldTaskCheck({
+    check: inspection,
+    checkId: inspectionId,
+    completedChecks: state.surveyInspections,
+    flagKey: `survey-${inspectionId}`,
     contextBonus: state.flags.surveyPreparation === "measure" ? 1 : 0,
-    contextId: inspectionId === "wall" ? "survey-wall" : "survey-documentation",
+    baseEnergyCost: getSurveyInspectionEnergyCost(),
+    strainedFlag: inspectionId === "wall" ? "" : "surveyDocumentationStrained",
+    logText: `${inspection.label} checked: ${inspection.log}`,
+    strainedLogText: `Survey skill check strained on ${inspection.label}; the report will need a clearer closeout choice.`,
   });
-  const energyCost = Math.max(0, getSurveyInspectionEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
-  changeEnergy(-energyCost);
-  if (!skillCheck.successful && inspectionId !== "wall") state.flags.surveyDocumentationStrained = true;
-  addLog(`${inspection.label} checked: ${inspection.log}`);
-  if (!skillCheck.successful) addLog(`Survey skill check strained on ${inspection.label}; the report will need a clearer closeout choice.`);
   render();
   const allChecked = state.surveyInspections.length === content.surveyDispatch.inspections.length;
   showModal({
@@ -6944,7 +6944,7 @@ function inspectSurveyConstraint(inspectionId) {
     title: inspection.label,
     body: `
       <p>${inspection.detail}</p>
-      ${getSkillCheckMarkup(skillCheck)}
+      ${getFieldTaskResultMarkup({ check: inspection, skillCheck, energyCost })}
       ${inspection.id === "wall" && getCharacterLine("surveyWall") ? `<p class="muted">${getCharacterLine("surveyWall")}</p>` : ""}
       ${allChecked ? `<p class="muted">You have enough information. Return to the facilities contact and file the survey report.</p>` : ""}
     `,

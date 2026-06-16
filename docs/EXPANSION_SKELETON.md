@@ -345,7 +345,11 @@ be easy to verify in the browser.
    and executive handoff checks now carry structured field-task metadata, show
    as field-task previews on dispatch cards, resolve through
    `resolveFieldTaskCheck()`, and write reusable `fieldTaskResults` entries.
-43. **Current roadmap complete, remaining hardening lane:** The current
+43. **Done - Survey task consolidation pass:** University City survey
+   inspections now carry structured field-task metadata, show as field-task
+   previews on the survey dispatch card, resolve through
+   `resolveFieldTaskCheck()`, and write reusable `fieldTaskResults` entries.
+44. **Current roadmap complete, remaining hardening lane:** The current
    incremental roadmap has no remaining `Next` item. The remaining work is
    consolidation: broaden reusable task/check patterns to older bespoke checks
    when they are touched, keep dispatch/route/consequence state visible on

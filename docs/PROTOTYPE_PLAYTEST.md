@@ -92,6 +92,8 @@ The playable slice now has:
    outcome in save data and career clipboard history.
 36. Callback cleanup and executive handoff checks now use structured field-task
    metadata, shared resolver output, and saved field-task result history.
+37. University City survey inspections now use structured field-task metadata,
+   shared resolver output, and saved field-task result history.
 
 ## Playtest Questions
 
@@ -725,6 +727,25 @@ Changed:
 Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
 callback and handoff field-task preview text, data-backed task type/skill,
 energy changes, saved field-task results, and structured result rows.
+
+### Survey Task Consolidation Pass
+
+Pass date: June 15, 2026.
+
+Goal: keep consolidating older bespoke checks into reusable field-task patterns
+without changing the playable job sequence.
+
+Changed:
+
+- University City survey inspections now carry structured task metadata for
+  access survey and wall-fit checks.
+- The survey dispatch preview now shows its inspection checks as field tasks.
+- Survey inspections now resolve through `resolveFieldTaskCheck()`, show
+  `getFieldTaskResultMarkup()`, and write reusable `fieldTaskResults` entries.
+
+Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
+survey field-task preview text, data-backed task type/skill, energy change,
+saved field-task result data, and structured result rows.
 
 ## Current RPG Skeleton Experiment
 

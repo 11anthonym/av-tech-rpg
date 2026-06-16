@@ -165,6 +165,43 @@ async function clickButton(page, name) {
       assert(item.job.title !== "Mapped route", `${item.routeId} should not fall back to the generic route title`);
     }
 
+    await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.finished = true;
+      state.flags.serviceComplete = true;
+      state.flags.joshServiceDebriefed = true;
+      state.flags.conshohockenFollowupComplete = true;
+      state.flags.currentAreaId = "shop";
+      window.showSurveyDispatchPreview();
+    });
+    await assertModalIncludes(page, ["Field Task Checks", "Freight elevator opening", "access survey", "Risk: thin access measurement"], "survey field task preview");
+
+    const surveyTask = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.surveyPreparation = "measure";
+      window.enterScene("universitySurvey");
+      const beforeEnergy = state.energy;
+      window.inspectSurveyConstraint("elevator");
+      const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const result = state.flags.fieldTaskResults?.["survey-elevator"];
+      return {
+        inspected: state.surveyInspections.includes("elevator"),
+        resultSaved: Boolean(result),
+        resultType: result?.type || "",
+        resultSkill: result?.skillId || "",
+        energyChanged: state.energy !== beforeEnergy,
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("thin access measurement"),
+      };
+    });
+    assert(surveyTask.inspected, "Survey inspection should complete");
+    assert(surveyTask.resultSaved, "Survey inspection should save field-task result data");
+    assert(surveyTask.resultType === "access survey", "Survey inspection should use data-backed task type");
+    assert(surveyTask.resultSkill === "documentation", "Survey inspection should use data-backed skill");
+    assert(surveyTask.energyChanged, "Survey inspection should affect energy");
+    assert(surveyTask.showsResultRows, "Survey inspection should show structured result rows");
+
     const boardStates = await page.evaluate(() => {
       function snapshot(label, setup) {
         window.startGame("prototype-tech");
