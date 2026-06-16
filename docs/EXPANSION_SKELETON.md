@@ -362,7 +362,11 @@ be easy to verify in the browser.
    now carry structured field-task metadata, show alongside the rack work on
    the secure-access dispatch card, resolve through `resolveFieldTaskCheck()`,
    and write reusable `fieldTaskResults` entries.
-47. **Current roadmap complete, remaining hardening lane:** The current
+47. **Done - Service call task consolidation pass:** The Conshohocken service
+   dispatch now previews signal-path verification and replacement-install
+   tasks, resolves both through `resolveFieldTaskCheck()`, and writes reusable
+   `fieldTaskResults` entries while preserving existing service progress state.
+48. **Current roadmap complete, remaining hardening lane:** The current
    incremental roadmap has no remaining `Next` item. The remaining work is
    consolidation: broaden reusable task/check patterns to older bespoke checks
    when they are touched, keep dispatch/route/consequence state visible on

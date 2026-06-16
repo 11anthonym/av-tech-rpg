@@ -102,6 +102,8 @@ The playable slice now has:
 40. Navy Yard access checks now use structured field-task metadata, shared
    resolver output, and saved field-task result history before the rack tasks
    begin.
+41. The Conshohocken service call now previews signal-path and replacement
+   install field tasks, and both rolls save reusable field-task history.
 
 ## Playtest Questions
 
@@ -812,6 +814,26 @@ Changed:
 Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
 secure-access preview text, data-backed task type/skill, energy change, saved
 field-task result data, and structured result rows.
+
+### Service Call Task Consolidation Pass
+
+Pass date: June 15, 2026.
+
+Goal: make the first post-tutorial service call expose its RPG tasks before the
+player drives to Conshohocken.
+
+Changed:
+
+- The Conshohocken service dispatch now has task cards and field-task previews
+  for signal-path verification and replacement installation.
+- Signal-path verification now resolves through `resolveFieldTaskCheck()`,
+  shows structured result rows, and writes a `service-signal-path` result.
+- Replacement display/hardware installs now resolve through the same helper
+  while preserving existing `serviceDelivered` and `serviceInstalled` progress.
+
+Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
+service preview text, service signal-path results, service install results,
+energy changes, saved field-task result data, and structured result rows.
 
 ## Current RPG Skeleton Experiment
 

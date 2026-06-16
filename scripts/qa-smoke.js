@@ -169,6 +169,73 @@ async function clickButton(page, name) {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;
       state.flags.finished = true;
+      state.flags.currentAreaId = "shop";
+      window.showServiceDispatchPreview();
+    });
+    await assertModalIncludes(page, [
+      "Field Task Checks",
+      "Verify signal path",
+      "signal-path verification",
+      "Risk: unlabeled coupler",
+      "Install replacement display",
+      "display install",
+    ], "service field task preview");
+
+    const serviceSignalTask = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.servicePreparation = "josh";
+      window.enterScene("serviceOffice");
+      const beforeEnergy = state.energy;
+      window.chooseServiceApproach("verify");
+      const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const result = state.flags.fieldTaskResults?.["service-signal-path"];
+      return {
+        resultSaved: Boolean(result),
+        resultType: result?.type || "",
+        resultSkill: result?.skillId || "",
+        approach: state.flags.serviceApproach || "",
+        energyChanged: state.energy !== beforeEnergy,
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("unlabeled coupler"),
+      };
+    });
+    assert(serviceSignalTask.resultSaved, "Service signal-path check should save field-task result data");
+    assert(serviceSignalTask.resultType === "signal-path verification", "Service signal-path check should use data-backed task type");
+    assert(serviceSignalTask.resultSkill === "troubleshooting", "Service signal-path check should use data-backed skill");
+    assert(serviceSignalTask.approach === "verify", "Service signal-path check should set the service approach");
+    assert(serviceSignalTask.energyChanged, "Service signal-path check should affect energy");
+    assert(serviceSignalTask.showsResultRows, "Service signal-path check should show structured result rows");
+
+    const serviceInstallTask = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("serviceOffice");
+      state.flags.serviceApproach = "verify";
+      state.carry = ["replacement-display"];
+      const beforeEnergy = state.energy;
+      window.installServicePart();
+      const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const result = state.flags.fieldTaskResults?.["service-install-replacement-display"];
+      return {
+        installed: state.serviceInstalled.includes("replacement-display"),
+        resultSaved: Boolean(result),
+        resultType: result?.type || "",
+        resultSkill: result?.skillId || "",
+        energyChanged: state.energy !== beforeEnergy,
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("strained display swap"),
+      };
+    });
+    assert(serviceInstallTask.installed, "Service install should keep installed-item progress");
+    assert(serviceInstallTask.resultSaved, "Service install should save field-task result data");
+    assert(serviceInstallTask.resultType === "display install", "Service install should use data-backed task type");
+    assert(serviceInstallTask.resultSkill === "install", "Service install should use data-backed skill");
+    assert(serviceInstallTask.energyChanged, "Service install should affect energy");
+    assert(serviceInstallTask.showsResultRows, "Service install should show structured result rows");
+
+    await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.finished = true;
       state.flags.serviceComplete = true;
       state.flags.joshServiceDebriefed = true;
       state.flags.conshohockenFollowupComplete = true;

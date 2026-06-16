@@ -4019,6 +4019,8 @@ function showServiceDispatchPreview() {
       note: "Use the supply counter, inspect your kit, or use the break area before leaving.",
       managementNote: "Please keep this quick. The client has another meeting, and the quote says replacement.",
       prep: state.flags.servicePreparation ? `Preparation selected: ${getServicePreparationLabel()}` : "",
+      taskCards: content.serviceDispatch.taskCards,
+      fieldTasks: content.serviceDispatch.checks,
     }),
     actions: [
       { label: "Accept Service Call", onClick: () => state.flags.servicePreparation ? promptServiceTravel() : showServicePreparation() },
@@ -7164,6 +7166,38 @@ function promptServiceTravel({ fastTravel = false } = {}) {
   });
 }
 
+function getServiceFieldCheckHistory() {
+  state.flags.serviceFieldChecks ||= [];
+  return state.flags.serviceFieldChecks;
+}
+
+function getServiceCheckById(checkId) {
+  return content.serviceDispatch.checks.find((item) => item.id === checkId);
+}
+
+function getServiceInstallCheck(itemIds) {
+  const itemChecks = itemIds.map((itemId) => getServiceCheckById(itemId)).filter(Boolean);
+  if (itemChecks.length === 1) return itemChecks[0];
+  const labels = getServiceItemLabels(itemIds);
+  return {
+    id: itemIds.join("-"),
+    label: `Install ${labels.join(" and ")}`,
+    type: "display swap install",
+    skillId: "install",
+    difficulty: Math.max(...itemChecks.map((item) => item.difficulty || 3), 3),
+    contextId: "service-install",
+    energyCost: 10,
+    requiredTool: "screwdriver",
+    optionalTool: "drill",
+    riskFlag: "serviceInstallStrained",
+    riskLabel: "strained service install",
+    successText: "Replacement gear is installed cleanly enough to keep closeout focused on diagnosis.",
+    strainedText: "Replacement gear works after extra effort; closeout should not pretend the install was frictionless.",
+    log: `${labels.join(" and ")} installed as a grouped service swap`,
+    detail: "The display and hardware move as one replacement package. That helps the carry, but the install still has to be square.",
+  };
+}
+
 function showServiceResults() {
   const verifiedSignalPath = state.flags.serviceApproach === "verify";
   const checkedSignalPath = verifiedSignalPath && !state.flags.serviceVerificationStrained;
@@ -7902,18 +7936,30 @@ function getInteractions() {
 function chooseServiceApproach(approach) {
   state.flags.serviceApproach = approach;
   if (approach === "verify") {
-    const skillCheck = resolveSkillCheck("service-signal-path", {
-      skillId: "troubleshooting",
-      difficulty: 4,
+    const check = getServiceCheckById("signal-path");
+    const { skillCheck, energyCost } = resolveFieldTaskCheck({
+      check,
+      checkId: check.id,
+      completedChecks: getServiceFieldCheckHistory(),
+      flagKey: "service-signal-path",
       contextBonus: (state.flags.servicePreparation === "review" ? 1 : 0) + (state.flags.servicePreparation === "josh" ? 1 : 0) + (state.flags.servicePreparation === "contact" ? 1 : 0),
-      contextId: "service-diagnosis",
+      baseEnergyCost: getServiceVerificationEnergyCost(check.energyCost),
+      failedEnergyPenalty: 2,
+      strainedFlag: "serviceVerificationStrained",
+      logText: `${check.label}: ${check.log}.`,
+      strainedLogText: "Signal-path verification strained; the coupler note may still leave return-trip risk.",
     });
-    const energyCost = Math.max(0, getServiceVerificationEnergyCost(4) + (skillCheck.successful ? 0 : 2) - (skillCheck.tier === "clean" ? 1 : 0));
-    changeEnergy(-energyCost);
-    if (!skillCheck.successful) state.flags.serviceVerificationStrained = true;
-    addLog(skillCheck.successful
-      ? `Verified the signal path and marked the unlabeled coupler. ${getSkillCheckLabel(skillCheck)}.`
-      : `Tried to verify the signal path, but the diagnosis stayed thin. ${getSkillCheckLabel(skillCheck)}.`);
+    render();
+    return showModal({
+      kicker: "Signal Path",
+      title: check.label,
+      body: `
+        <p>${check.detail}</p>
+        ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
+        <p class="muted">The replacement display and hardware still need to be installed before closeout.</p>
+      `,
+      actions: [{ label: "Start Display Swap", onClick: render }],
+    });
   } else {
     addLog("Trusted the service ticket and started the display swap immediately.");
   }
@@ -7923,18 +7969,21 @@ function chooseServiceApproach(approach) {
 function installServicePart() {
   if (!hasCarriedItems()) return notify("Pick up replacement gear from the boxes.");
   const items = [...state.carry];
-  const skillCheck = resolveSkillCheck(`service-install-${items.join("-")}`, {
-    skillId: "install",
-    difficulty: items.includes("replacement-display") ? 4 : 3,
-    contextId: "service-install",
+  const check = getServiceInstallCheck(items);
+  const { skillCheck, energyCost } = resolveFieldTaskCheck({
+    check,
+    checkId: check.id,
+    completedChecks: getServiceFieldCheckHistory(),
+    flagKey: `service-install-${items.join("-")}`,
+    baseEnergyCost: getAssemblyEnergyCost(check.energyCost),
+    failedEnergyPenalty: 2,
+    strainedFlag: "serviceInstallStrained",
+    logText: `${getServiceItemLabels(items).join(" and ")} installed ${ownsTool("drill") ? "with your drill" : "with your screwdriver"}.`,
+    strainedLogText: "Service install check strained; the closeout should not hide the flaky replacement path.",
   });
   state.serviceDelivered.push(...items);
   state.serviceInstalled.push(...items);
   state.carry = [];
-  const energyCost = Math.max(0, getAssemblyEnergyCost(10) + (skillCheck.successful ? 0 : 2) - (skillCheck.tier === "clean" ? 1 : 0));
-  changeEnergy(-energyCost);
-  if (!skillCheck.successful) state.flags.serviceInstallStrained = true;
-  addLog(`${getServiceItemLabels(items).join(" and ")} installed ${ownsTool("drill") ? "with your drill" : "with your screwdriver"}. ${getSkillCheckLabel(skillCheck)}.`);
   if (state.serviceInstalled.length === content.serviceDispatch.swapItems.length) {
     if (state.flags.serviceApproach !== "verify" || state.flags.serviceInstallStrained) {
       changeEnergy(-6);
@@ -7945,6 +7994,15 @@ function installServicePart() {
     return showServiceResults();
   }
   render();
+  showModal({
+    kicker: "Replacement Install",
+    title: check.label,
+    body: `
+      <p>${check.detail}</p>
+      ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
+    `,
+    actions: [{ label: "Keep Working", onClick: render }],
+  });
 }
 
 function getServiceItemLabels(itemIds) {
