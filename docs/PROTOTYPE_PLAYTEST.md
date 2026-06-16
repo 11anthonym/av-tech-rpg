@@ -106,6 +106,8 @@ The playable slice now has:
    install field tasks, and both rolls save reusable field-task history.
 42. First-day cart assembly now uses structured field-task metadata and shared
    resolver output while preserving tutorial assembly progress.
+43. Locked planned-work previews now use dispatch-board language instead of
+   player-facing "not playable yet" phrasing.
 
 ## Playtest Questions
 
@@ -855,6 +857,22 @@ Changed:
 Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
 cart assembly progress, data-backed task type/skill, energy change, saved
 field-task result data, and structured result rows.
+
+### Player-Facing Language Cleanup Pass
+
+Pass date: June 15, 2026.
+
+Goal: keep save-compatible internal prototype IDs while removing player-facing
+phrasing that sounds like a build limitation.
+
+Changed:
+
+- Planned-work fallback copy now says the job is planned for a future dispatch
+  board slot.
+- Locked planned-work previews now say the work order can be inspected but is
+  not on today's drive list.
+
+Verified: syntax checks and the smoke script passed.
 
 ## Current RPG Skeleton Experiment
 

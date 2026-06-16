@@ -370,7 +370,10 @@ be easy to verify in the browser.
    components now carry structured field-task metadata, resolve through
    `resolveFieldTaskCheck()`, write reusable `fieldTaskResults`, and preserve
    the existing `assembled` tutorial progress state.
-49. **Current roadmap complete, remaining hardening lane:** The current
+49. **Done - Player-facing language cleanup pass:** Locked planned-work
+   previews now use dispatch-board language instead of "not playable yet"
+   phrasing, while save-compatible internal prototype IDs remain unchanged.
+50. **Current roadmap complete, remaining hardening lane:** The current
    incremental roadmap has no remaining `Next` item. The remaining work is
    consolidation: broaden reusable task/check patterns to older bespoke checks
    when they are touched, keep dispatch/route/consequence state visible on

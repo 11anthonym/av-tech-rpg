@@ -4515,7 +4515,7 @@ function showPlannedJobPreview(jobId) {
       ${getDispatchBoardMarkup({
         type: preview.type || "Future Job",
         setup: preview.setup || preview.summary,
-        why: preview.why || "This job is planned but not playable yet.",
+        why: preview.why || "This job is planned for a future dispatch board slot.",
         stakes: preview.stakes || [],
         note: preview.note,
         managementNote: preview.managementNote || "Please keep this quick.",
@@ -4527,7 +4527,7 @@ function showPlannedJobPreview(jobId) {
         showBoardState: false,
       })}
       ${getPlannedJobBranchMarkup(preview)}
-      <p class="muted">Locked preview: this is a data-first work order, not a playable scene yet.</p>
+      <p class="muted">Locked preview: this work order can be inspected, but it is not on today's drive list.</p>
     `,
     actions: [
       { label: "Back To Career Snapshot", onClick: showPrototypeSummary },
