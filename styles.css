@@ -73,6 +73,10 @@ section + section { margin-top: 22px; }
 .meter i.energy-danger { background: #df8a7e; }
 .carry-card, .nearby-card, .vehicle-card { padding: 10px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); background: var(--panel-alt); font-size: 12px; line-height: 1.5; }
 .carry-card { color: var(--accent); }
+.carry-card.pressure-active { border-color: #b8914d; background: #23231b; }
+.carry-card strong, .carry-card small { display: block; }
+.carry-card strong { color: var(--text); }
+.carry-card small { margin-top: 4px; color: var(--muted); line-height: 1.35; }
 .vehicle-card { display: grid; gap: 4px; }
 .vehicle-card strong { color: var(--text); }
 .vehicle-card small { color: var(--accent); line-height: 1.4; }

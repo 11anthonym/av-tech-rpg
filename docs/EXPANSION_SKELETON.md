@@ -415,7 +415,12 @@ be easy to verify in the browser.
    roadmap lane inspired by The Long Dark's readable pressure design: fatigue,
    carry load, route friction, prep, confidence, and unresolved risk should
    change action costs and future friction without becoming a survival sim.
-56. **Current roadmap complete, remaining hardening lane:** The current
+56. **Done - Condition movement pressure pass:** Walking speed now reacts to
+   active carry load, low or zero energy, high burnout, and bad-knees loaded
+   walks. The carry card and loop guidance name the active pressure so a player
+   can connect field condition to how the room feels without adding manual
+   driving or survival meters.
+57. **Current roadmap complete, remaining hardening lane:** The current
    incremental roadmap has no remaining `Next` item. The remaining work is
    consolidation: broaden reusable task/check patterns to older bespoke checks
    when they are touched, keep dispatch/route/consequence state visible on

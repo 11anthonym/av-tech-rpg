@@ -1,6 +1,9 @@
 const content = window.GAME_CONTENT;
 const keys = new Set();
 const PLAYER_SPEED = 8;
+const MIN_PLAYER_SPEED = 4;
+const LOW_ENERGY_SPEED_THRESHOLD = 0.25;
+const HIGH_BURNOUT_SPEED_THRESHOLD = 4;
 const SAVE_KEY = "av-tech-rpg-save-v1";
 const SAVE_VERSION = 23;
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -1443,6 +1446,67 @@ function getCarriedLabels() {
   return state.carry.map((itemId) => (
     getItemLabel(itemId)
   ));
+}
+
+function getMovementPressureDetails() {
+  if (!state.technician) return [];
+  const details = [];
+  const carryCount = state.carry.length;
+  if (carryCount) {
+    details.push({
+      id: "carry",
+      label: "Carrying gear",
+      detail: `${getCarriedLabels().join(" + ")} slows movement until it is loaded or placed.`,
+      speedDelta: -Math.min(2, carryCount),
+    });
+  }
+  if (state.energy <= 0 || state.flags.energyExhaustedThisShift) {
+    details.push({
+      id: "exhausted",
+      label: "Exhausted",
+      detail: "Energy hit zero this shift, so every walk takes more out of the tech.",
+      speedDelta: -2,
+    });
+  } else if (state.energy <= Math.ceil(getMaxEnergy() * LOW_ENERGY_SPEED_THRESHOLD)) {
+    details.push({
+      id: "lowEnergy",
+      label: "Low energy",
+      detail: `${state.energy}/${getMaxEnergy()} energy makes the room feel slower.`,
+      speedDelta: -1,
+    });
+  }
+  if (state.burnout >= HIGH_BURNOUT_SPEED_THRESHOLD) {
+    details.push({
+      id: "burnout",
+      label: "High burnout",
+      detail: `Burnout ${state.burnout} makes repeated movement drag.`,
+      speedDelta: -1,
+    });
+  }
+  if (carryCount && hasCharacterTrait("badKnees")) {
+    details.push({
+      id: "badKneesCarry",
+      label: "Bad knees carry",
+      detail: "This build plans access well, but loaded walks hit harder.",
+      speedDelta: -1,
+    });
+  }
+  return details;
+}
+
+function getMovementPressureDelta(details = getMovementPressureDetails()) {
+  return details.reduce((total, detail) => total + detail.speedDelta, 0);
+}
+
+function getMovementSpeed() {
+  return Math.max(MIN_PLAYER_SPEED, PLAYER_SPEED + getMovementPressureDelta());
+}
+
+function getConditionPressureSummary() {
+  const details = getMovementPressureDetails();
+  if (!details.length) return "";
+  const reasonText = details.map((detail) => detail.label).join(", ");
+  return `${reasonText}. Walk speed ${getMovementSpeed()}/${PLAYER_SPEED} (${formatSignedNumber(getMovementPressureDelta(details))}).`;
 }
 
 function getItemLabel(itemId) {
@@ -8184,17 +8248,20 @@ function getWorkdayLoopPath(stage) {
 
 function getWorkdayLoopGuidanceText() {
   const guidance = getWorkdayLoopGuidance();
-  return `${guidance.stage}: ${guidance.objective} ${guidance.interfaceHint}`;
+  const pressure = getConditionPressureSummary();
+  return `${guidance.stage}: ${guidance.objective} ${guidance.interfaceHint}${pressure ? ` Condition pressure: ${pressure}` : ""}`;
 }
 
 function getWorkdayLoopGuidanceMarkup() {
   const guidance = getWorkdayLoopGuidance();
+  const pressure = getConditionPressureSummary();
   return `
     <ul class="modal-list">
       <li><strong>Loop step</strong><span>${escapeHtml(guidance.stage)}</span></li>
       <li><strong>Loop path</strong><span>${escapeHtml(getWorkdayLoopPath(guidance.stage))}</span></li>
       <li><strong>Next action</strong><span>${escapeHtml(guidance.objective)}</span></li>
       <li><strong>Where to look</strong><span>${escapeHtml(guidance.interfaceHint)}</span></li>
+      ${pressure ? `<li><strong>Condition pressure</strong><span>${escapeHtml(pressure)}</span></li>` : ""}
     </ul>
   `;
 }
@@ -8365,8 +8432,9 @@ function movePlayer() {
   if (keys.has("arrowdown") || keys.has("s")) dy += 1;
   if (!dx && !dy) return;
   const length = Math.hypot(dx, dy);
-  moveOnAxis("x", (dx / length) * PLAYER_SPEED);
-  moveOnAxis("y", (dy / length) * PLAYER_SPEED);
+  const speed = getMovementSpeed();
+  moveOnAxis("x", (dx / length) * speed);
+  moveOnAxis("y", (dy / length) * speed);
   renderPlayer();
   renderNearby();
 }
@@ -8878,9 +8946,14 @@ function renderHud() {
     li.innerHTML = `<strong>${skill.name} ${getSkillValue(skill.id)}</strong><small>${skill.branch}</small>`;
     return li;
   }));
-  elements.carryCard.textContent = hasCarriedItems()
-    ? `${getCarriedLabels().join(" + ")} (${state.carry.length}/${getCarryCapacity()})`
-    : `Nothing (0/${getCarryCapacity()})`;
+  const conditionPressure = getConditionPressureSummary();
+  elements.carryCard.classList.toggle("pressure-active", Boolean(conditionPressure));
+  elements.carryCard.innerHTML = `
+    <strong>${escapeHtml(hasCarriedItems()
+      ? `${getCarriedLabels().join(" + ")} (${state.carry.length}/${getCarryCapacity()})`
+      : `Nothing (0/${getCarryCapacity()})`)}</strong>
+    <small>${escapeHtml(conditionPressure ? `Condition pressure: ${conditionPressure}` : "No active condition pressure.")}</small>
+  `;
   elements.toolList.replaceChildren(...state.tools.map((toolId) => {
     const li = document.createElement("li");
     li.innerHTML = `<strong>${content.tools[toolId].name}</strong><small>${getToolEffectText(content.tools[toolId])}</small>`;

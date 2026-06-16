@@ -121,6 +121,9 @@ The playable slice now has:
 49. The roadmap now includes a condition-pressure lane inspired by The Long
    Dark: fatigue, loadout, carry burden, route friction, and unresolved risk
    should change what actions cost without adding a survival sim.
+50. Walking speed now reacts to carry load, low or zero energy, high burnout,
+   and bad-knees loaded walks, with the carry card and loop guidance naming the
+   active condition pressure.
 
 ## Playtest Questions
 
@@ -991,6 +994,27 @@ Roadmap direction:
 - Borrow The Long Dark's feeling of readable pressure and costly tradeoffs, but
   keep the fantasy grounded in AV workdays instead of survival meters.
 - Prefer one visible pressure hook in an existing loop over another dispatch.
+
+### Condition Movement Pressure Pass
+
+Pass date: June 16, 2026.
+
+Goal: make condition affect the walk-around layer without adding a new system,
+route simulator, or survival meter.
+
+What changed:
+
+- Carrying gear, low energy, zero-energy exhaustion, high burnout, and
+  bad-knees loaded carries can reduce walk speed.
+- The speed penalty is clamped so the player is slowed, not trapped.
+- The carry card and workday-loop guidance show the active condition pressure
+  and walk-speed readout.
+- Smoke QA checks base speed, carrying pressure, exhaustion pressure,
+  bad-knees loaded-walk pressure, and visible HUD guidance.
+
+Question for the next playtest: does the slowdown make field condition feel
+consequential, or does it need to be limited to larger rooms and carry-heavy
+beats?
 
 ## Current RPG Skeleton Experiment
 

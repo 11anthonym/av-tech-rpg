@@ -183,6 +183,13 @@ readable and visible on the career clipboard. The current examples are:
 - consecutive late nights cap next-morning energy until the player clocks out
   normally or takes a recovery day
 
+Movement condition is handled by `getMovementPressureDetails()` and
+`getMovementSpeed()`. Carry load, low or zero energy, high burnout, and
+bad-knees loaded walks can slow the player, and the carry card plus loop
+guidance show the active pressure. When adding a new carry-heavy scene, prefer
+feeding existing carry/energy/burnout state into those helpers instead of
+creating scene-specific movement penalties.
+
 Coworker relationship milestones can grant a tool without stocking it at the
 supply counter. Keep the tool's `price` at `0`, give the relationship a readable
 reputation requirement in `data.js`, and award the stable tool ID from the

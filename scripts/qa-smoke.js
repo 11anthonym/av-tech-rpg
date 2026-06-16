@@ -123,6 +123,51 @@ async function clickButton(page, name) {
     assert(cartAssemblyTask.energyChanged, "Tutorial cart assembly should affect energy");
     assert(cartAssemblyTask.showsResultRows, "Tutorial cart assembly should show structured result rows");
 
+    const movementPressure = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      const baseSpeed = window.getMovementSpeed();
+      state.carry = ["cart-1-frame"];
+      window.render();
+      const carrySpeed = window.getMovementSpeed();
+      const carryCard = document.querySelector("#carry-card")?.innerText || "";
+      const carryTaskCopy = document.querySelector("#task-copy")?.textContent || "";
+      state.energy = 0;
+      state.flags.energyExhaustedThisShift = true;
+      window.render();
+      const exhaustedSpeed = window.getMovementSpeed();
+      const exhaustedTaskCopy = document.querySelector("#task-copy")?.textContent || "";
+      window.startGame({
+        id: "smoke-bad-knees",
+        name: "Smoke Bad Knees",
+        custom: true,
+        stats: { energy: 100, burnout: 0, craftsmanship: 2, confidence: 1 },
+        characterStats: {},
+        traits: ["badKnees"],
+        startingTools: ["screwdriver"],
+      });
+      const kneeState = window.AV_TECH_RPG_DEBUG.state;
+      kneeState.carry = ["cart-1-frame"];
+      window.render();
+      const badKneesCarrySpeed = window.getMovementSpeed();
+      return {
+        baseSpeed,
+        carrySpeed,
+        exhaustedSpeed,
+        badKneesCarrySpeed,
+        carryCard,
+        carryTaskCopy,
+        exhaustedTaskCopy,
+      };
+    });
+    assert(movementPressure.baseSpeed === 8, "Base movement speed should remain stable");
+    assert(movementPressure.carrySpeed < movementPressure.baseSpeed, "Carrying gear should slow movement");
+    assert(movementPressure.exhaustedSpeed < movementPressure.carrySpeed, "Exhaustion should add movement pressure");
+    assert(movementPressure.badKneesCarrySpeed < movementPressure.carrySpeed, "Bad knees should make loaded walks slower");
+    assert(movementPressure.carryCard.includes("Condition pressure") && movementPressure.carryCard.includes("Carrying gear"), "Carry card should explain movement pressure");
+    assert(movementPressure.carryTaskCopy.includes("Condition pressure") && movementPressure.carryTaskCopy.includes("Walk speed"), "Loop guidance should show carry pressure");
+    assert(movementPressure.exhaustedTaskCopy.includes("Exhausted"), "Loop guidance should show exhaustion pressure");
+
     await page.evaluate(() => {
       window.startGame("prototype-tech");
       window.AV_TECH_RPG_DEBUG.state.flags.shopBrief = true;
