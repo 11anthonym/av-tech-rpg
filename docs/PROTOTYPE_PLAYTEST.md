@@ -94,6 +94,8 @@ The playable slice now has:
    metadata, shared resolver output, and saved field-task result history.
 37. University City survey inspections now use structured field-task metadata,
    shared resolver output, and saved field-task result history.
+38. Warehouse search checks now use structured field-task metadata, shared
+   resolver output, and saved field-task result history.
 
 ## Playtest Questions
 
@@ -745,6 +747,25 @@ Changed:
 
 Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
 survey field-task preview text, data-backed task type/skill, energy change,
+saved field-task result data, and structured result rows.
+
+### Warehouse Task Consolidation Pass
+
+Pass date: June 15, 2026.
+
+Goal: keep shop-based work on the same task/check path as field sites.
+
+Changed:
+
+- Warehouse search locations now carry structured task metadata for stockroom,
+  van-inventory, and returns-pile searches.
+- The warehouse dispatch preview now shows its search checks as field tasks.
+- Warehouse search interactions now resolve through `resolveFieldTaskCheck()`,
+  show `getFieldTaskResultMarkup()`, and write reusable `fieldTaskResults`
+  entries.
+
+Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
+warehouse field-task preview text, data-backed task type/skill, energy change,
 saved field-task result data, and structured result rows.
 
 ## Current RPG Skeleton Experiment

@@ -4593,6 +4593,7 @@ function showWarehouseDispatchPreview() {
       ],
       note: "Van #2 is already offsite, and the key board says its key is with SALES.",
       managementNote: "This should only take a minute. Please check the obvious places before escalating.",
+      fieldTasks: content.warehouseDispatch.checks,
     }),
     actions: [
       { label: "Start Looking", onClick: startWarehouseRun },
@@ -4630,17 +4631,17 @@ function getWarehouseLabelEnergyCost() {
 function inspectWarehouseLocation(checkId) {
   const check = content.warehouseDispatch.checks.find((item) => item.id === checkId);
   if (!check || state.warehouseChecks.includes(checkId)) return notify(`${check?.label || "That location"} is already checked.`);
-  state.warehouseChecks.push(checkId);
-  const skillCheck = resolveSkillCheck(`warehouse-${checkId}`, {
-    skillId: "fieldcraft",
-    difficulty: checkId === "returns" ? 4 : 3,
+  const { skillCheck, energyCost } = resolveFieldTaskCheck({
+    check,
+    checkId,
+    completedChecks: state.warehouseChecks,
+    flagKey: `warehouse-${checkId}`,
     contextBonus: state.flags.warehouseStarted ? 0 : -1,
-    contextId: "warehouse-search",
+    baseEnergyCost: getWarehouseSearchEnergyCost(),
+    strainedFlag: "warehouseSearchStrained",
+    logText: `${check.label} checked: ${check.log}`,
+    strainedLogText: `Fieldcraft check strained on ${check.label}; the search took extra energy.`,
   });
-  const energyCost = Math.max(0, getWarehouseSearchEnergyCost() + (skillCheck.successful ? 0 : 1) - (skillCheck.tier === "clean" ? 1 : 0));
-  changeEnergy(-energyCost);
-  addLog(`${check.label} checked: ${check.log}`);
-  if (!skillCheck.successful) addLog(`Fieldcraft check strained on ${check.label}; the search took extra energy.`);
   render();
   const allChecked = state.warehouseChecks.length === content.warehouseDispatch.checks.length;
   showModal({
@@ -4648,7 +4649,7 @@ function inspectWarehouseLocation(checkId) {
     title: check.label,
     body: `
       <p>${check.detail}</p>
-      ${getSkillCheckMarkup(skillCheck)}
+      ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
       ${allChecked ? `<p class="muted">The matching power supply is in the mystery-return pile beneath a handwritten question mark. Decide how much stockroom cleanup the schedule is willing to survive.</p>` : ""}
     `,
     actions: [{ label: allChecked ? "Review Found Power Supply" : "Keep Looking", onClick: allChecked ? showWarehouseChoice : render }],

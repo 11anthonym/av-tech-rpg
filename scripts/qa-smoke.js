@@ -437,6 +437,41 @@ async function clickButton(page, name) {
     assert(handoffTask.energyChanged, "Handoff check should affect energy");
     assert(handoffTask.showsResultRows, "Handoff check should show structured result rows");
 
+    await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.finished = true;
+      state.flags.commissioningComplete = true;
+      state.flags.currentAreaId = "shop";
+      window.showWarehouseDispatchPreview();
+    });
+    await assertModalIncludes(page, ["Field Task Checks", "Mystery-return pile", "returns search", "Risk: mystery-return pile"], "warehouse field task preview");
+
+    const warehouseTask = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.warehouseStarted = true;
+      window.enterScene("shop");
+      const beforeEnergy = state.energy;
+      window.inspectWarehouseLocation("returns");
+      const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const result = state.flags.fieldTaskResults?.["warehouse-returns"];
+      return {
+        checked: state.warehouseChecks.includes("returns"),
+        resultSaved: Boolean(result),
+        resultType: result?.type || "",
+        resultSkill: result?.skillId || "",
+        energyChanged: state.energy !== beforeEnergy,
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk flag") && modalText.includes("mystery-return pile"),
+      };
+    });
+    assert(warehouseTask.checked, "Warehouse search should complete");
+    assert(warehouseTask.resultSaved, "Warehouse search should save field-task result data");
+    assert(warehouseTask.resultType === "returns search", "Warehouse search should use data-backed task type");
+    assert(warehouseTask.resultSkill === "fieldcraft", "Warehouse search should use data-backed skill");
+    assert(warehouseTask.energyChanged, "Warehouse search should affect energy");
+    assert(warehouseTask.showsResultRows, "Warehouse search should show structured result rows");
+
     const walkdownTask = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;

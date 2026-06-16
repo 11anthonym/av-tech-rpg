@@ -349,7 +349,11 @@ be easy to verify in the browser.
    inspections now carry structured field-task metadata, show as field-task
    previews on the survey dispatch card, resolve through
    `resolveFieldTaskCheck()`, and write reusable `fieldTaskResults` entries.
-44. **Current roadmap complete, remaining hardening lane:** The current
+44. **Done - Warehouse task consolidation pass:** Warehouse search locations
+   now carry structured field-task metadata, show as field-task previews on the
+   warehouse dispatch card, resolve through `resolveFieldTaskCheck()`, and
+   write reusable `fieldTaskResults` entries.
+45. **Current roadmap complete, remaining hardening lane:** The current
    incremental roadmap has no remaining `Next` item. The remaining work is
    consolidation: broaden reusable task/check patterns to older bespoke checks
    when they are touched, keep dispatch/route/consequence state visible on
