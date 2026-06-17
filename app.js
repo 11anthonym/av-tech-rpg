@@ -3320,6 +3320,7 @@ function getScenePortalInteractions(sceneId = state.sceneId) {
       detail: getPortalDetailText(portal),
       portalId: portal.id,
       portalKind: portal.kind,
+      markerKind: portal.kind === "returnRoute" ? "return" : "door",
       markerText: portal.kind === "returnRoute" ? "RETURN" : "DOOR",
       action: () => usePortal(portal.id),
     }));
@@ -8665,6 +8666,44 @@ function getNearestInteraction() {
     .sort((a, b) => a.distance - b.distance)[0] || null;
 }
 
+function getInteractionMarkerKind(interaction) {
+  if (!interaction) return "task";
+  if (interaction.markerKind) return interaction.markerKind;
+  if (interaction.portalKind === "returnRoute") return "return";
+  if (interaction.portalId) return "door";
+  if (interaction.npc) return "contact";
+  const label = interaction.label || "";
+  if (/van|vehicle/i.test(label)) return "van";
+  if (/carry|unload|pick up|install|search|inspect|file|review|close out|browse|read dispatch|choose|meet escort/i.test(label)) return "task";
+  if (/return|exit/i.test(label)) return "return";
+  if (/door|entrance|elevator|lobby|room/i.test(label)) return "door";
+  if (/talk|client|security|facilities|supervisor|josh|escort|contact/i.test(label)) return "contact";
+  return "task";
+}
+
+function getInteractionMarkerText(interaction) {
+  if (interaction?.markerText) return interaction.markerText;
+  const labels = {
+    contact: "CONTACT",
+    task: "TASK",
+    van: "VAN",
+    door: "DOOR",
+    return: "RETURN",
+  };
+  return labels[getInteractionMarkerKind(interaction)] || "TASK";
+}
+
+function getInteractionMarkerClass(interaction) {
+  const kind = getInteractionMarkerKind(interaction);
+  return [
+    "interaction-marker",
+    `${kind}-marker`,
+    interaction?.npc ? "npc-marker" : "",
+    interaction?.portalId ? "portal-marker" : "",
+    kind === "return" ? "return-portal-marker" : "",
+  ].filter(Boolean).join(" ");
+}
+
 function getInteractionPressureText(interaction) {
   if (!interaction) return "";
   if (typeof interaction.pressure === "function") return interaction.pressure();
@@ -9174,15 +9213,14 @@ function renderDecor() {
   });
   const interactions = getInteractions().map((item) => {
     const marker = document.createElement("div");
-    marker.className = item.npc
-      ? "interaction-marker npc-marker"
-      : item.portalId
-        ? `interaction-marker portal-marker${item.portalKind === "returnRoute" ? " return-portal-marker" : ""}`
-        : "interaction-marker";
-    marker.style.left = item.portalId ? `${item.x}px` : `${item.x - 11}px`;
-    marker.style.top = item.portalId ? `${item.y}px` : `${item.y - 11}px`;
-    marker.title = item.label;
-    marker.textContent = item.npc || item.markerText || "";
+    const kind = getInteractionMarkerKind(item);
+    const markerText = getInteractionMarkerText(item);
+    marker.className = getInteractionMarkerClass(item);
+    marker.dataset.markerKind = kind;
+    marker.style.left = `${item.x}px`;
+    marker.style.top = `${item.y}px`;
+    marker.title = `${markerText}: ${item.label}`;
+    marker.textContent = markerText;
     return marker;
   });
   elements.sceneLayer.replaceChildren(...decor, ...interactions);
@@ -9199,12 +9237,14 @@ function renderPlayer() {
 function renderNearby() {
   const nearest = getNearestInteraction();
   const pressureText = nearest ? getInteractionPressureText(nearest) : "";
-  elements.nearbyCard.classList.toggle("pressure-active", Boolean(pressureText));
-  elements.nearbyCard.textContent = nearest
-    ? `${nearest.detail ? `${nearest.label}: ${nearest.detail}` : nearest.label}${pressureText ? ` Pressure on this action: ${pressureText}` : ""}`
+  const markerText = nearest ? getInteractionMarkerText(nearest) : "";
+  const nearbyText = nearest
+    ? `${markerText} - ${nearest.detail ? `${nearest.label}: ${nearest.detail}` : nearest.label}${pressureText ? ` Pressure on this action: ${pressureText}` : ""}`
     : "Walk toward an object or person.";
+  elements.nearbyCard.classList.toggle("pressure-active", Boolean(pressureText));
+  elements.nearbyCard.textContent = nearbyText;
   elements.interactButton.disabled = !nearest;
-  elements.interactButton.textContent = nearest ? `Interact: ${nearest.label}` : "Interact";
+  elements.interactButton.textContent = nearest ? `Interact: ${markerText} - ${nearest.label}` : "Interact";
 }
 
 function renderHud() {

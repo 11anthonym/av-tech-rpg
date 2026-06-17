@@ -130,6 +130,8 @@ The playable slice now has:
 52. Action-pressure previews now show expected energy, condition, movement/carry
    pressure, tool fit, skill fit, callback debt, or return-trip risk on choice
    panels, field-task cards, and key nearby task objects before the click.
+53. Walk-around interaction markers now use readable CONTACT, TASK, VAN, DOOR,
+   and RETURN tags, and the nearby card/interact button repeat that marker type.
 
 ## Playtest Questions
 
@@ -1065,6 +1067,25 @@ What changed:
 
 Question for the next playtest: does pre-click pressure make actions feel like
 RPG commitments, or does any surface feel too wordy during ordinary walking?
+
+### Spatial Marker Affordance Pass
+
+Pass date: June 16, 2026.
+
+Goal: make the top-down interaction layer more readable without rebuilding maps
+or adding manual movement systems.
+
+What changed:
+
+- Generic interaction dots now render as rectangular marker tags.
+- Contacts, work objects, vehicle access, building transitions, and return exits
+  show as `CONTACT`, `TASK`, `VAN`, `DOOR`, and `RETURN`.
+- The nearby card and interact button repeat the same marker label, so the
+  screen tells the player what kind of thing they are approaching.
+- Smoke QA checks contact, task, van, door, and return marker labels.
+
+Question for the next playtest: do the marker tags make walking and exits more
+obvious, or should task markers become more specific in a later pass?
 
 ## Current RPG Skeleton Experiment
 

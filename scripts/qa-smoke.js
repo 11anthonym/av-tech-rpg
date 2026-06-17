@@ -249,6 +249,50 @@ async function clickButton(page, name) {
     assert(actionPressurePreview.nearby.includes("Pressure on this action") && actionPressurePreview.nearby.includes("Condition") && actionPressurePreview.nearby.includes("Install 2 vs difficulty 4"), "Nearby card should preview pressure before interacting with a task object");
     assert(actionPressurePreview.nearbyHighlighted, "Nearby card should highlight active action pressure");
 
+    const markerAffordances = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.shopBrief = true;
+      state.player = { x: 830, y: 380 };
+      window.render();
+      const shopMarkers = [...document.querySelectorAll(".interaction-marker")].map((marker) => ({
+        text: marker.textContent,
+        kind: marker.dataset.markerKind,
+        title: marker.title,
+      }));
+      const vanNearby = document.querySelector("#nearby-card")?.textContent || "";
+      const vanInteract = document.querySelector("#interact-button")?.textContent || "";
+      window.enterScene("garage");
+      state.flags.garageBrief = true;
+      state.flags.centerCityEquipmentDelivered = true;
+      state.player = { x: 116, y: 185 };
+      window.render();
+      const doorMarker = document.querySelector(".door-marker");
+      const doorNearby = document.querySelector("#nearby-card")?.textContent || "";
+      window.enterScene("serviceOffice");
+      state.flags.serviceComplete = true;
+      window.render();
+      const returnMarker = document.querySelector(".return-portal-marker");
+      return {
+        shopMarkers,
+        vanNearby,
+        vanInteract,
+        doorText: doorMarker?.textContent || "",
+        doorKind: doorMarker?.dataset.markerKind || "",
+        doorNearby,
+        returnText: returnMarker?.textContent || "",
+        returnKind: returnMarker?.dataset.markerKind || "",
+      };
+    });
+    assert(markerAffordances.shopMarkers.some((marker) => marker.text === "CONTACT" && marker.kind === "contact"), "Contact interactions should render as CONTACT markers");
+    assert(markerAffordances.shopMarkers.some((marker) => marker.text === "TASK" && marker.kind === "task"), "Task interactions should render as TASK markers");
+    assert(markerAffordances.shopMarkers.some((marker) => marker.text === "VAN" && marker.kind === "van"), "Vehicle interaction should render as a VAN marker");
+    assert(markerAffordances.vanNearby.startsWith("VAN - "), "Nearby card should use the VAN marker label");
+    assert(markerAffordances.vanInteract.startsWith("Interact: VAN - "), "Interact button should use the marker label");
+    assert(markerAffordances.doorText === "DOOR" && markerAffordances.doorKind === "door", "Ready portals should render as DOOR markers");
+    assert(markerAffordances.doorNearby.startsWith("DOOR - ") && markerAffordances.doorNearby.includes("Client Lobby"), "Nearby card should use the DOOR marker label and destination");
+    assert(markerAffordances.returnText === "RETURN" && markerAffordances.returnKind === "return", "Return portals should render as RETURN markers");
+
     await page.evaluate(() => {
       window.startGame("prototype-tech");
       window.AV_TECH_RPG_DEBUG.state.flags.shopBrief = true;

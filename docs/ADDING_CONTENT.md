@@ -555,6 +555,18 @@ Scene-specific interactions still belong in `getInteractions()` inside
 should render as a visible person. Keep new maps small and test whether every
 walking trip creates a decision, a joke, or a useful sense of place.
 
+The marker renderer turns interactions into readable map tags:
+
+- `CONTACT` for NPC/person interactions.
+- `TASK` for inspect, search, carry, install, closeout, and other work objects.
+- `VAN` for vehicle/world-interface interactions.
+- `DOOR` for building, elevator, and ordinary portal transitions.
+- `RETURN` for closeout exits back to the shop.
+
+Set `markerKind` or `markerText` only when inference is wrong. The nearby card
+and interact button use the same marker label, so keep labels short and
+player-facing.
+
 ## Add a Job
 
 The tutorial is intentionally scripted while the core loop is being tested.

@@ -430,7 +430,11 @@ be easy to verify in the browser.
    fit, skill fit, callback debt, and return-trip risk. Choice panels,
    field-task preview cards, and key nearby task objects can now show why a
    click is risky before the result modal lands.
-59. **Current roadmap complete, remaining hardening lane:** The current
+59. **Done - Spatial marker affordance pass:** Interaction markers now render
+   as readable CONTACT, TASK, VAN, DOOR, or RETURN tags. The nearby card and
+   interact button use the same marker label, and smoke QA checks contact, task,
+   van, door, and return marker behavior.
+60. **Current roadmap complete, remaining hardening lane:** The current
    incremental roadmap has no remaining `Next` item. The remaining work is
    consolidation: broaden reusable task/check patterns to older bespoke checks
    when they are touched, keep dispatch/route/consequence state visible on
