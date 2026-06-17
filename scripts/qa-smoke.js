@@ -383,6 +383,29 @@ async function clickButton(page, name) {
       "Drive active route",
     ], "van menu");
 
+    await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.shopBrief = true;
+      state.carry = [window.GAME_CONTENT.tutorial.shopLoad[0]];
+      window.showVehicleMenu();
+    });
+    await page.getByRole("button", { name: /Load Carried Items/ }).click();
+    const vanLoadResult = await page.evaluate(() => {
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      return {
+        modalOpen: state.modalOpen,
+        modalHidden: document.querySelector("#modal-backdrop")?.classList.contains("hidden") || false,
+        loadedCount: state.loaded.length,
+        carriedCount: state.carry.length,
+        logText: state.log.join(" "),
+      };
+    });
+    assert(vanLoadResult.loadedCount === 1, "Loading carried items should add cargo to the van");
+    assert(vanLoadResult.carriedCount === 0, "Loading carried items should clear carried cargo");
+    assert(!vanLoadResult.modalOpen && vanLoadResult.modalHidden, "Loading carried items should return to the map instead of reopening the van modal");
+    assert(vanLoadResult.logText.includes("loaded into"), "Loading carried items should still log what happened");
+
     await page.evaluate(() => window.showRegionalMap());
     await assertModalIncludes(page, [
       "Current Loop",

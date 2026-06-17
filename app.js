@@ -1810,7 +1810,6 @@ function loadCarriedItemsIntoVehicle() {
     addLog(`${getVehicleName()} loaded. Supervisor is ready to leave for Center City East.`);
   }
   render();
-  showVehicleMenu();
 }
 
 function showVehicleCargo() {
