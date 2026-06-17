@@ -159,7 +159,7 @@ grant the same progression twice.
 Completed jobs should return through `returnToShopAfterDispatch()` or,
 for shop-based jobs, `finishWarehouseShift()`. Those helpers set up the
 end-of-shift closeout so the next job does not unlock until the player
-clocks out, stays late to prep, helps Josh after meeting him, or takes a
+clocks out, stays late to prep, helps Josh after the intro shift, or takes a
 recovery day. Ordinary overnight rest restores energy with a burnout penalty;
 recovery days restore more but cost management reputation. Staying late should
 feel useful but heavy: it can improve the next shift or coworker trust, while
@@ -391,10 +391,11 @@ The prototype stores the current vehicle ID in the save data and defaults to
 from this data without changing the vehicle shape.
 
 Vehicle interactions should go through the reusable van surface instead of
-adding one-off scene logic. `showVehicleMenu()` currently handles:
+adding one-off scene logic. When the player is carrying cargo, the shop van
+interaction becomes a direct `LOAD` action and returns to the map after loading.
+When the player's hands are free, `showVehicleMenu()` handles:
 
 - inspecting the current vehicle stats
-- loading carried cargo into the vehicle
 - reviewing loaded cargo
 - starting the currently available mapped route
 - opening the regional map

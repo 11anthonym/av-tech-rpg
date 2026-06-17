@@ -415,6 +415,32 @@ async function clickButton(page, name) {
     assert(!vanLoadResult.modalOpen && vanLoadResult.modalHidden, "Loading carried items should return to the map instead of reopening the van modal");
     assert(vanLoadResult.logText.includes("loaded into"), "Loading carried items should still log what happened");
 
+    const directVanLoad = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.shopBrief = true;
+      state.carry = [window.GAME_CONTENT.tutorial.shopLoad[0]];
+      state.player = { x: 830, y: 380 };
+      window.render();
+      const nearbyBefore = document.querySelector("#nearby-card")?.textContent || "";
+      const interactBefore = document.querySelector("#interact-button")?.textContent || "";
+      const markerText = [...document.querySelectorAll(".interaction-marker")]
+        .find((marker) => marker.title.includes("Load carried items"))?.textContent || "";
+      document.querySelector("#interact-button")?.click();
+      return {
+        nearbyBefore,
+        interactBefore,
+        markerText,
+        loadedCount: state.loaded.length,
+        carriedCount: state.carry.length,
+        modalOpen: state.modalOpen,
+      };
+    });
+    assert(directVanLoad.markerText === "LOAD", "Carrying gear should turn the van marker into a LOAD action");
+    assert(directVanLoad.nearbyBefore.startsWith("LOAD - Load carried items") && directVanLoad.interactBefore.startsWith("Interact: LOAD - "), "Nearby and interact copy should show the direct load action");
+    assert(directVanLoad.loadedCount === 1 && directVanLoad.carriedCount === 0, "Direct van interaction should load carried cargo");
+    assert(!directVanLoad.modalOpen, "Direct van loading should not open the van modal");
+
     const endShiftJoshGate = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;
@@ -429,17 +455,33 @@ async function clickButton(page, name) {
       window.showEndShiftModal();
       const afterIntroText = document.querySelector("#modal-backdrop")?.innerText || "";
       const afterIntroButtons = [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent || "");
+      state.flags.metJosh = false;
+      delete state.flags.joshIntroEndShiftSource;
+      window.showJoshConversation();
+      window.showEndShiftModal();
+      const sameShiftIntroText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const sameShiftIntroButtons = [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent || "");
+      state.flags.endShiftSource = "One Quick Display Swap";
+      window.showEndShiftModal();
+      const laterShiftText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const laterShiftButtons = [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent || "");
       return {
         beforeIntroText,
         beforeIntroButtons,
         afterIntroText,
         afterIntroButtons,
+        sameShiftIntroText,
+        sameShiftIntroButtons,
+        laterShiftText,
+        laterShiftButtons,
       };
     });
     assert(!endShiftJoshGate.beforeIntroText.includes("Help Josh"), "First end-shift modal should not offer Josh help before the player has met him");
     assert(!endShiftJoshGate.beforeIntroText.includes("lead tech"), "First end-shift modal should not introduce Josh through a generic lead-tech option");
     assert(endShiftJoshGate.beforeIntroButtons.every((label) => !/Josh|lead tech/i.test(label)), "First end-shift actions should hide Josh help before the intro");
     assert(endShiftJoshGate.afterIntroText.includes("Help Josh") && endShiftJoshGate.afterIntroButtons.some((label) => label.includes("Help Josh")), "End-shift modal should offer Josh help after the player has met him");
+    assert(!endShiftJoshGate.sameShiftIntroText.includes("Help Josh") && endShiftJoshGate.sameShiftIntroButtons.every((label) => !/Josh|lead tech/i.test(label)), "Same-shift Josh intro should not immediately unlock Help Josh");
+    assert(endShiftJoshGate.laterShiftText.includes("Help Josh") && endShiftJoshGate.laterShiftButtons.some((label) => label.includes("Help Josh")), "Later shifts should offer Josh help after the intro shift has passed");
 
     await page.evaluate(() => window.showRegionalMap());
     await assertModalIncludes(page, [

@@ -53,7 +53,8 @@ The playable slice now has:
    DSP / Audio, and Control Systems, including a first Systems Fundamentals
    training choice.
 21. A heavier end-of-shift fatigue tradeoff where staying late or, after the
-   intro, helping Josh is useful but meaningfully borrows from tomorrow.
+   Josh intro shift, helping Josh is useful but meaningfully borrows from
+   tomorrow.
 22. A King of Prussia systems service job that tests Networking,
    Control Systems, Documentation, prep choices, and bad-company reboot
    pressure without adding a technical minigame.

@@ -2336,7 +2336,9 @@ function previewShiftChoice(choice) {
 }
 
 function canHelpJoshAfterShift() {
-  return Boolean(state.flags.metJosh);
+  if (!state.flags.metJosh) return false;
+  return !state.flags.joshIntroEndShiftSource
+    || state.flags.joshIntroEndShiftSource !== state.flags.endShiftSource;
 }
 
 function getHelpJoshShiftCopy() {
@@ -2370,6 +2372,7 @@ function clearEndShiftState() {
   state.flags.endShiftPending = false;
   state.flags.endShiftSource = null;
   state.flags.endShiftSummaryShown = false;
+  delete state.flags.joshIntroEndShiftSource;
   state.flags.energyExhaustedThisShift = false;
   state.flags.exhaustionDebt = 0;
   state.flags.exhaustionPressureDebt = 0;
@@ -3763,6 +3766,18 @@ function getShopStagingTaskState(warehouseActive = state.flags.warehouseStarted 
   return getTaskState({ stateId: "ready", detail: "Pick up the next staged equipment group." });
 }
 
+function getVehicleInteractionTaskState() {
+  if (hasCarriedItems()) {
+    if (!canLoadVehicleCargo()) return getTaskState({ lockedReason: `${getVehicleName()} does not have room for that load.` });
+    return getTaskState({ stateId: "ready", detail: `Load ${getCarriedLabels().join(" and ")} into ${getVehicleName()}.` });
+  }
+  return getTaskState({ stateId: "ready", detail: "Open cargo review, dispatch routes, regional map, and drive options." });
+}
+
+function getVehicleInteractionLabel() {
+  return hasCarriedItems() ? `Load carried items into ${getVehicleName()}` : `Use ${getVehicleName()}`;
+}
+
 function getGarageUnloadTaskState() {
   if (!state.flags.garageBrief) return getTaskState({ lockedReason: "Talk to the supervisor beside the van first." });
   if (hasCarriedItems()) return getTaskState({ stateId: "inProgress", detail: "Hands are full; deliver the carried gear before unloading more." });
@@ -4278,6 +4293,9 @@ function showJoshConversation() {
   const josh = content.coworkers.josh;
   if (!state.flags.metJosh) {
     state.flags.metJosh = true;
+    if (state.flags.endShiftPending) {
+      state.flags.joshIntroEndShiftSource = state.flags.endShiftSource || "current shift";
+    }
     addLog("Met Josh, the lead technician. Management interrupted to blame him for an inventory problem.");
     return showModal({
       kicker: `${josh.name} / ${josh.role}`,
@@ -7873,7 +7891,8 @@ function getInteractions() {
         action: showBreakArea,
       }] : []),
       {
-        x: 830, y: 380, label: warehouseActive ? "Search Van #3" : `Use ${getVehicleName()}`,
+        x: 830, y: 380, label: warehouseActive ? "Search Van #3" : getVehicleInteractionLabel(),
+        markerText: !warehouseActive && hasCarriedItems() ? "LOAD" : undefined,
         pressure: () => warehouseActive
           ? getActionPressureBrief({
             check: content.warehouseDispatch.checks.find((item) => item.id === "van3"),
@@ -7884,9 +7903,10 @@ function getInteractions() {
           : "",
         taskState: () => warehouseActive
           ? getWarehouseLocationTaskState("van3")
-          : getTaskState({ stateId: "ready", detail: "Open cargo review, dispatch routes, regional map, and drive options." }),
+          : getVehicleInteractionTaskState(),
         action: () => {
           if (warehouseActive) return inspectWarehouseLocation("van3");
+          if (hasCarriedItems()) return loadCarriedItemsIntoVehicle();
           showVehicleMenu();
         },
       },
