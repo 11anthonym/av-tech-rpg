@@ -431,7 +431,7 @@ be easy to verify in the browser.
    field-task preview cards, and key nearby task objects can now show why a
    click is risky before the result modal lands.
 59. **Done - Spatial marker affordance pass:** Interaction markers now render
-   as readable CONTACT, TASK, VAN, DOOR, or RETURN tags. The nearby card and
+   as readable named NPC, TASK, VAN, DOOR, or RETURN tags. The nearby card and
    interact button use the same marker label, and smoke QA checks contact, task,
    van, door, and return marker behavior.
 60. **Done - Task state presentation pass:** Reusable task-state helpers now

@@ -262,6 +262,13 @@ async function clickButton(page, name) {
         taskState: marker.dataset.taskState,
         title: marker.title,
       }));
+      state.flags.finished = true;
+      window.render();
+      const finishedShopMarkers = [...document.querySelectorAll(".interaction-marker")].map((marker) => ({
+        text: marker.textContent,
+        kind: marker.dataset.markerKind,
+        title: marker.title,
+      }));
       const vanNearby = document.querySelector("#nearby-card")?.textContent || "";
       const vanInteract = document.querySelector("#interact-button")?.textContent || "";
       const vanMarker = shopMarkers.find((marker) => marker.text === "VAN");
@@ -278,6 +285,7 @@ async function clickButton(page, name) {
       const returnMarker = document.querySelector(".return-portal-marker");
       return {
         shopMarkers,
+        finishedShopMarkers,
         vanNearby,
         vanInteract,
         vanTaskState: vanMarker?.taskState || "",
@@ -290,7 +298,8 @@ async function clickButton(page, name) {
         returnTaskState: returnMarker?.dataset.taskState || "",
       };
     });
-    assert(markerAffordances.shopMarkers.some((marker) => marker.text === "CONTACT" && marker.kind === "contact"), "Contact interactions should render as CONTACT markers");
+    assert(markerAffordances.shopMarkers.some((marker) => marker.text === "SUP" && marker.kind === "contact"), "Supervisor contact should render as a SUP marker");
+    assert(markerAffordances.finishedShopMarkers.some((marker) => marker.text === "JOSH" && marker.kind === "contact"), "Josh contact should render as a JOSH marker");
     assert(markerAffordances.shopMarkers.some((marker) => marker.text === "TASK" && marker.kind === "task"), "Task interactions should render as TASK markers");
     assert(markerAffordances.shopMarkers.some((marker) => marker.text === "VAN" && marker.kind === "van"), "Vehicle interaction should render as a VAN marker");
     assert(markerAffordances.vanNearby.startsWith("VAN - "), "Nearby card should use the VAN marker label");

@@ -8980,6 +8980,7 @@ function getInteractionMarkerKind(interaction) {
 
 function getInteractionMarkerText(interaction) {
   if (interaction?.markerText) return interaction.markerText;
+  if (interaction?.npc) return String(interaction.npc).toUpperCase();
   const labels = {
     contact: "CONTACT",
     task: "TASK",

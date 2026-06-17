@@ -130,8 +130,9 @@ The playable slice now has:
 52. Action-pressure previews now show expected energy, condition, movement/carry
    pressure, tool fit, skill fit, callback debt, or return-trip risk on choice
    panels, field-task cards, and key nearby task objects before the click.
-53. Walk-around interaction markers now use readable CONTACT, TASK, VAN, DOOR,
-   and RETURN tags, and the nearby card/interact button repeat that marker type.
+53. Walk-around interaction markers now use readable named NPC, TASK, VAN,
+   DOOR, and RETURN tags, and the nearby card/interact button repeat that marker
+   type.
 54. Nearby interactions and dispatch task cards now show task state such as
    READY, LOCKED, IN PROGRESS, COMPLETED, STRAINED, or RISK INHERITED from
    shared helpers tied to field-task results, completion arrays, and portal
@@ -1083,7 +1084,8 @@ What changed:
 
 - Generic interaction dots now render as rectangular marker tags.
 - Contacts, work objects, vehicle access, building transitions, and return exits
-  show as `CONTACT`, `TASK`, `VAN`, `DOOR`, and `RETURN`.
+  show as named NPC labels such as `SUP` or `JOSH`, plus `TASK`, `VAN`, `DOOR`,
+  and `RETURN`.
 - The nearby card and interact button repeat the same marker label, so the
   screen tells the player what kind of thing they are approaching.
 - Smoke QA checks contact, task, van, door, and return marker labels.

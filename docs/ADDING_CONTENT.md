@@ -560,7 +560,9 @@ walking trip creates a decision, a joke, or a useful sense of place.
 
 The marker renderer turns interactions into readable map tags:
 
-- `CONTACT` for NPC/person interactions.
+- the interaction's `npc` label, such as `SUP`, `JOSH`, `CLIENT`, or `SEC`, for
+  named NPC/person interactions. Unlabeled contact-like interactions fall back
+  to `CONTACT`.
 - `TASK` for inspect, search, carry, install, closeout, and other work objects.
 - `VAN` for vehicle/world-interface interactions.
 - `DOOR` for building, elevator, and ordinary portal transitions.
