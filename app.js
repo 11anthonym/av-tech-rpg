@@ -2319,12 +2319,6 @@ function previewShiftChoice(choice) {
     : !stayedLate && nextEnergy >= Math.ceil(maxEnergy * 0.75)
       ? Math.max(0, burnoutAfterChoice - 1)
       : burnoutAfterChoice;
-  const helpJoshPressure = state.flags.metJosh
-    ? "Josh and the crew remember the help."
-    : "The lead tech and crew remember the help.";
-  const helpJoshBenefit = state.flags.metJosh
-    ? "Josh relationship progress"
-    : "Lead tech introduction";
   return {
     nextEnergy,
     nextBurnout,
@@ -2332,27 +2326,26 @@ function previewShiftChoice(choice) {
     pressure: choice === "prep"
       ? "Management may notice the extra time."
       : choice === "help-josh"
-        ? helpJoshPressure
+        ? "Josh and the crew remember the help."
         : choice === "recovery-day"
           ? "Management may notice the schedule gap."
           : "No obvious reputation pressure.",
-    benefit: choice === "prep" ? "+1 Fieldcraft/Documentation next job" : choice === "help-josh" ? helpJoshBenefit : choice === "recovery-day" ? "Skips next workday pressure" : "Clean rest",
+    benefit: choice === "prep" ? "+1 Fieldcraft/Documentation next job" : choice === "help-josh" ? "Josh relationship progress" : choice === "recovery-day" ? "Skips next workday pressure" : "Clean rest",
     capNote: `${lateCapNote}${exhaustionCapNote}${exhaustionIncidentNote}` || (cappedRecovery ? ` ${cappedRecovery} recovery would be capped at max energy.` : ""),
   };
 }
 
+function canHelpJoshAfterShift() {
+  return Boolean(state.flags.metJosh);
+}
+
 function getHelpJoshShiftCopy() {
-  return state.flags.metJosh
-    ? {
-      previewLabel: "Help Josh",
-      actionLabel: `Help Josh clean up notes (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, crew remembers)`,
-      log: "Helped Josh clean up notes and labels before clocking out. Coworker reputation improved, and the longer day still took something out of you.",
-    }
-    : {
-      previewLabel: "Help the lead tech",
-      actionLabel: `Help the lead tech clean up notes (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, crew remembers)`,
-      log: "Met Josh, the lead technician, while helping clean up notes and labels before clocking out. Coworker reputation improved, and the longer day still took something out of you.",
-    };
+  if (!canHelpJoshAfterShift()) return null;
+  return {
+    previewLabel: "Help Josh",
+    actionLabel: `Help Josh clean up notes (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, crew remembers)`,
+    log: "Helped Josh clean up notes and labels before clocking out. Coworker reputation improved, and the longer day still took something out of you.",
+  };
 }
 
 function getEndShiftChoicePreviewMarkup() {
@@ -2360,7 +2353,7 @@ function getEndShiftChoicePreviewMarkup() {
   const choices = [
     { id: "clock-out", label: "Clock out" },
     { id: "prep", label: "Stay late prep" },
-    { id: "help-josh", label: helpJoshCopy.previewLabel },
+    ...(helpJoshCopy ? [{ id: "help-josh", label: helpJoshCopy.previewLabel }] : []),
     { id: "recovery-day", label: "Recovery day" },
   ];
   return `
@@ -2452,7 +2445,7 @@ function showEndShiftModal() {
     actions: [
       { label: `Clock out and go home (+${ordinaryRecovery} energy overnight)`, onClick: () => completeShift("clock-out") },
       { label: `Stay late to prep tomorrow (-${STAY_LATE_PREP_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, prep advantage)`, className: "secondary-button", onClick: () => completeShift("prep") },
-      { label: helpJoshCopy.actionLabel, className: "secondary-button", onClick: () => completeShift("help-josh") },
+      ...(helpJoshCopy ? [{ label: helpJoshCopy.actionLabel, className: "secondary-button", onClick: () => completeShift("help-josh") }] : []),
       { label: "Take a recovery day (full energy, management may notice)", className: "secondary-button", onClick: () => completeShift("recovery-day") },
       { label: "Not Yet", className: "text-button", onClick: render },
     ],
@@ -2474,6 +2467,7 @@ function completeShift(choice) {
     addLog("Stayed late to prep tomorrow's first job. Fieldcraft and documentation get a next-shift boost, but the extra unpaid time landed hard.");
   } else if (choice === "help-josh") {
     const helpJoshCopy = getHelpJoshShiftCopy();
+    if (!helpJoshCopy) return notify("Meet Josh before making him part of end-shift plans.");
     changeEnergy(-HELP_JOSH_ENERGY_COST);
     state.burnout += STAY_LATE_BURNOUT_GAIN;
     stayedLate = true;

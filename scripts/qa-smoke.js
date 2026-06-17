@@ -415,6 +415,32 @@ async function clickButton(page, name) {
     assert(!vanLoadResult.modalOpen && vanLoadResult.modalHidden, "Loading carried items should return to the map instead of reopening the van modal");
     assert(vanLoadResult.logText.includes("loaded into"), "Loading carried items should still log what happened");
 
+    const endShiftJoshGate = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.finished = true;
+      state.flags.endShiftPending = true;
+      state.flags.endShiftSource = "Two Quick Carts";
+      state.flags.metJosh = false;
+      window.showEndShiftModal();
+      const beforeIntroText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const beforeIntroButtons = [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent || "");
+      state.flags.metJosh = true;
+      window.showEndShiftModal();
+      const afterIntroText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const afterIntroButtons = [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent || "");
+      return {
+        beforeIntroText,
+        beforeIntroButtons,
+        afterIntroText,
+        afterIntroButtons,
+      };
+    });
+    assert(!endShiftJoshGate.beforeIntroText.includes("Help Josh"), "First end-shift modal should not offer Josh help before the player has met him");
+    assert(!endShiftJoshGate.beforeIntroText.includes("lead tech"), "First end-shift modal should not introduce Josh through a generic lead-tech option");
+    assert(endShiftJoshGate.beforeIntroButtons.every((label) => !/Josh|lead tech/i.test(label)), "First end-shift actions should hide Josh help before the intro");
+    assert(endShiftJoshGate.afterIntroText.includes("Help Josh") && endShiftJoshGate.afterIntroButtons.some((label) => label.includes("Help Josh")), "End-shift modal should offer Josh help after the player has met him");
+
     await page.evaluate(() => window.showRegionalMap());
     await assertModalIncludes(page, [
       "Current Loop",
