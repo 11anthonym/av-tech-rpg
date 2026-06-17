@@ -420,7 +420,12 @@ be easy to verify in the browser.
    walks. The carry card and loop guidance name the active pressure so a player
    can connect field condition to how the room feels without adding manual
    driving or survival meters.
-57. **Current roadmap complete, remaining hardening lane:** The current
+57. **Done - Condition skill-check pressure pass:** Low-but-not-zero energy and
+   high burnout now feed the shared skill-check result as visible condition
+   penalties. Field-task result rows, saved field-task history, active effects,
+   and the career clipboard show the pressure so stats affect outcomes without
+   adding bespoke room scripts.
+58. **Current roadmap complete, remaining hardening lane:** The current
    incremental roadmap has no remaining `Next` item. The remaining work is
    consolidation: broaden reusable task/check patterns to older bespoke checks
    when they are touched, keep dispatch/route/consequence state visible on

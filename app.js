@@ -740,9 +740,41 @@ function getExhaustionSkillPenalty() {
   return Math.min(MAX_EXHAUSTION_SKILL_PENALTY, zeroPenalty + incidentPenalty);
 }
 
+function getConditionSkillPressureDetails() {
+  if (!state.technician) return [];
+  const details = [];
+  if (state.energy > 0 && state.energy <= Math.ceil(getMaxEnergy() * LOW_ENERGY_SPEED_THRESHOLD)) {
+    details.push({
+      label: "Low energy",
+      detail: `${state.energy}/${getMaxEnergy()} energy makes field checks less steady.`,
+      skillPenalty: 1,
+    });
+  }
+  if (state.burnout >= HIGH_BURNOUT_SPEED_THRESHOLD) {
+    details.push({
+      label: "High burnout",
+      detail: `Burnout ${state.burnout} makes task focus less reliable.`,
+      skillPenalty: 1,
+    });
+  }
+  return details;
+}
+
+function getConditionSkillPenalty(details = getConditionSkillPressureDetails()) {
+  return Math.min(2, details.reduce((total, detail) => total + detail.skillPenalty, 0));
+}
+
+function getConditionSkillPressureSummary(details = getConditionSkillPressureDetails()) {
+  const penalty = getConditionSkillPenalty(details);
+  if (!penalty) return "";
+  return `${details.map((detail) => detail.label).join(", ")}: -${penalty} to skill checks.`;
+}
+
 function getSkillCheckResult({ skillId, difficulty, contextBonus = 0, contextId = "" }) {
   const exhaustionPenalty = getExhaustionSkillPenalty();
-  const score = getSkillValue(skillId) + contextBonus + getTraitContextBonus(skillId, contextId) - exhaustionPenalty;
+  const conditionPressure = getConditionSkillPressureDetails();
+  const conditionPenalty = getConditionSkillPenalty(conditionPressure);
+  const score = getSkillValue(skillId) + contextBonus + getTraitContextBonus(skillId, contextId) - exhaustionPenalty - conditionPenalty;
   const margin = score - difficulty;
   const tier = margin >= 2 ? "clean" : margin >= 0 ? "solid" : margin === -1 ? "strained" : "miss";
   return {
@@ -752,6 +784,9 @@ function getSkillCheckResult({ skillId, difficulty, contextBonus = 0, contextId 
     margin,
     tier,
     exhaustionPenalty,
+    conditionPenalty,
+    conditionPressure: conditionPressure.map((detail) => detail.label),
+    conditionPressureText: getConditionSkillPressureSummary(conditionPressure),
     successful: margin >= 0,
   };
 }
@@ -769,7 +804,7 @@ function resolveSkillCheck(flagKey, options) {
 function getSkillCheckLabel(result) {
   const skill = getSkillDefinition(result.skillId);
   const status = result.tier === "clean" ? "clean" : result.tier === "solid" ? "solid" : result.tier === "strained" ? "strained" : "messy";
-  return `${skill?.name || result.skillId} ${result.score}/${result.difficulty} (${status}${result.exhaustionPenalty ? `, exhaustion -${result.exhaustionPenalty}` : ""})`;
+  return `${skill?.name || result.skillId} ${result.score}/${result.difficulty} (${status}${result.exhaustionPenalty ? `, exhaustion -${result.exhaustionPenalty}` : ""}${result.conditionPenalty ? `, condition -${result.conditionPenalty}` : ""})`;
 }
 
 function getSkillCheckMarkup(result) {
@@ -796,6 +831,7 @@ function getFieldTaskResultMarkup({ check, skillCheck = null, energyCost, succes
   const rows = [
     ["Task type", check.type || "field check"],
     ["Skill check", skillCheck ? getSkillCheckLabel(skillCheck) : "No skill roll"],
+    ...(skillCheck?.conditionPenalty ? [["Condition pressure", skillCheck.conditionPressureText || `-${skillCheck.conditionPenalty} to skill checks`]] : []),
     ["Energy spent", energyCost ? `-${energyCost} energy` : "0 energy"],
     ...(check.requiredTool ? [["Required tool", getFieldTaskToolText(check.requiredTool)]] : []),
     ...(check.optionalTool ? [["Helpful tool", getFieldTaskToolText(check.optionalTool)]] : []),
@@ -824,6 +860,9 @@ function recordFieldTaskResult({ flagKey, check, checkId = check?.id || flagKey,
     energyCost,
     tier: skillCheck?.tier || (resolvedSuccessful ? "resolved" : "risk"),
     successful: resolvedSuccessful,
+    conditionPenalty: skillCheck?.conditionPenalty || 0,
+    conditionPressure: skillCheck?.conditionPressure || [],
+    conditionPressureText: skillCheck?.conditionPressureText || "",
     riskFlag: check.riskFlag || "",
     riskLabel,
     outcomeText: getFieldTaskOutcomeText(check, skillCheck, resolvedSuccessful),
@@ -847,10 +886,11 @@ function getFieldTaskResultLedgerMarkup({ limit = 6 } = {}) {
         const riskText = entry.riskLabel || entry.riskFlag || "No named risk";
         const toolText = [entry.requiredTool, entry.optionalTool].filter(Boolean).map(getFieldTaskToolText).join(" / ");
         const outcomeText = entry.outcomeText || (entry.successful ? "Task resolved." : "Task left visible risk.");
+        const conditionText = entry.conditionPressureText ? ` | condition: ${entry.conditionPressureText}` : "";
         return `
           <li>
             <strong>${escapeHtml(`${entry.successful ? "Resolved" : "Risk"} - ${entry.label}`)}</strong>
-            <span>${escapeHtml(`${entry.type || "field check"} | ${skillName}${entry.difficulty ? ` ${entry.difficulty}` : ""} | energy ${entry.energyCost || 0} | ${entry.tier || "recorded"} | risk: ${riskText}${toolText ? ` | tools: ${toolText}` : ""}. ${outcomeText}`)}</span>
+            <span>${escapeHtml(`${entry.type || "field check"} | ${skillName}${entry.difficulty ? ` ${entry.difficulty}` : ""} | energy ${entry.energyCost || 0} | ${entry.tier || "recorded"}${conditionText} | risk: ${riskText}${toolText ? ` | tools: ${toolText}` : ""}. ${outcomeText}`)}</span>
           </li>
         `;
       }).join("")}
@@ -1264,6 +1304,13 @@ function getActiveCareerSummaryMarkup() {
     items.push({
       label: "Exhaustion debt",
       detail: `Energy hit zero this shift. Further unpaid effort can create incidents, burnout, and a ${exhaustionCap}-energy ordinary recovery cap.${exhaustionPenalty ? ` Skill checks are currently at -${exhaustionPenalty}.` : ""}`,
+    });
+  }
+  const conditionSkillPressure = getConditionSkillPressureSummary();
+  if (conditionSkillPressure) {
+    items.push({
+      label: "Field condition pressure",
+      detail: conditionSkillPressure,
     });
   }
   if (state.reputation.coworkers < 0) {
@@ -3822,6 +3869,11 @@ function getCareerEffectsMarkup() {
       active: Boolean(state.flags.energyExhaustedThisShift || state.flags.exhaustionIncidentsThisShift),
       name: "Zero-energy pressure",
       description: "Hitting zero energy can cap ordinary recovery, lower skill checks, and turn unpaid effort into incidents.",
+    },
+    {
+      active: Boolean(getConditionSkillPressureSummary()),
+      name: "Field condition pressure",
+      description: "Low energy and high burnout can lower skill checks before a full exhaustion crash.",
     },
   ];
   return `

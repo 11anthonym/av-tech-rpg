@@ -326,6 +326,12 @@ When adding a new check with `resolveSkillCheck()`, give it a `contextId` if
 traits should matter. Prefer specific contexts such as `service-diagnosis` or
 `commissioning-termination` over broad permanent bonuses.
 
+Skill checks also read shared field condition. Low-but-not-zero energy and high
+burnout can lower checks before a full exhaustion crash; zero-energy crashes
+continue to use the separate exhaustion penalty. Keep new checks on
+`resolveSkillCheck()` or `resolveFieldTaskCheck()` so this pressure appears in
+the skill-check label, result rows, and saved field-task history automatically.
+
 ## Add Character-Specific Lines
 
 `data.js` has a `characterLines` object keyed by technician ID. Scene logic can

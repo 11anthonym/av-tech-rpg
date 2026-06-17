@@ -124,6 +124,9 @@ The playable slice now has:
 50. Walking speed now reacts to carry load, low or zero energy, high burnout,
    and bad-knees loaded walks, with the carry card and loop guidance naming the
    active condition pressure.
+51. Low-but-not-zero energy and high burnout now apply visible condition
+   penalties to shared skill checks, and field-task result/history surfaces
+   show the penalty that affected the roll.
 
 ## Playtest Questions
 
@@ -1015,6 +1018,27 @@ What changed:
 Question for the next playtest: does the slowdown make field condition feel
 consequential, or does it need to be limited to larger rooms and carry-heavy
 beats?
+
+### Condition Skill-Check Pressure Pass
+
+Pass date: June 16, 2026.
+
+Goal: make stats affect field outcomes through shared RPG math instead of
+through more scripted one-off branches.
+
+What changed:
+
+- Low-but-not-zero energy can apply `condition -1` to skill checks.
+- High burnout can apply another `condition -1`, capped at `condition -2`.
+- Zero-energy crashes still use the separate exhaustion penalty.
+- Skill-check labels, field-task result rows, saved field-task history, active
+  effects, and the career clipboard show the condition pressure.
+- Smoke QA checks the score drop, label, result markup, saved history, ledger,
+  and clipboard readout.
+
+Question for the next playtest: do players notice that low energy and burnout
+now make checks worse, and does the label give enough warning before they make
+a risky choice?
 
 ## Current RPG Skeleton Experiment
 

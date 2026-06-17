@@ -168,6 +168,49 @@ async function clickButton(page, name) {
     assert(movementPressure.carryTaskCopy.includes("Condition pressure") && movementPressure.carryTaskCopy.includes("Walk speed"), "Loop guidance should show carry pressure");
     assert(movementPressure.exhaustedTaskCopy.includes("Exhausted"), "Loop guidance should show exhaustion pressure");
 
+    const conditionSkillPressure = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      const check = {
+        id: "smoke-condition-pressure",
+        label: "Smoke condition pressure",
+        type: "diagnostic check",
+        skillId: "install",
+        difficulty: 2,
+        energyCost: 1,
+        riskLabel: "condition drift",
+        successText: "The task stays steady.",
+        strainedText: "The task inherits pressure from the shift.",
+      };
+      const base = window.getSkillCheckResult({ skillId: "install", difficulty: 2, contextId: "smoke-condition" });
+      state.energy = 12;
+      state.burnout = 4;
+      const pressured = window.getSkillCheckResult({ skillId: "install", difficulty: 2, contextId: "smoke-condition" });
+      const resultMarkup = window.getFieldTaskResultMarkup({ check, skillCheck: pressured, energyCost: 1 });
+      window.recordFieldTaskResult({ flagKey: "smoke-condition-pressure", check, skillCheck: pressured, energyCost: 1 });
+      const saved = state.flags.fieldTaskResults?.["smoke-condition-pressure"];
+      const ledger = window.getFieldTaskResultLedgerMarkup();
+      window.showCareerClipboard();
+      const clipboardText = document.querySelector("#modal-backdrop")?.innerText || "";
+      return {
+        baseScore: base.score,
+        pressuredScore: pressured.score,
+        conditionPenalty: pressured.conditionPenalty,
+        label: window.getSkillCheckLabel(pressured),
+        resultMarkup,
+        savedConditionText: saved?.conditionPressureText || "",
+        ledger,
+        clipboardText,
+      };
+    });
+    assert(conditionSkillPressure.conditionPenalty === 2, "Low energy and high burnout should combine into a condition skill penalty");
+    assert(conditionSkillPressure.pressuredScore === conditionSkillPressure.baseScore - 2, "Condition pressure should lower the skill score");
+    assert(conditionSkillPressure.label.includes("condition -2"), "Skill-check label should name condition pressure");
+    assert(conditionSkillPressure.resultMarkup.includes("Condition pressure") && conditionSkillPressure.resultMarkup.includes("-2 to skill checks"), "Field-task result rows should show condition pressure");
+    assert(conditionSkillPressure.savedConditionText.includes("Low energy") && conditionSkillPressure.savedConditionText.includes("High burnout"), "Field-task result history should save condition pressure text");
+    assert(conditionSkillPressure.ledger.includes("condition: Low energy, High burnout"), "Career field-task history should show condition pressure");
+    assert(conditionSkillPressure.clipboardText.includes("Field condition pressure") && conditionSkillPressure.clipboardText.includes("-2 to skill checks"), "Career clipboard should show active field condition pressure");
+
     await page.evaluate(() => {
       window.startGame("prototype-tech");
       window.AV_TECH_RPG_DEBUG.state.flags.shopBrief = true;
