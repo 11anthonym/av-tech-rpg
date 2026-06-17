@@ -211,6 +211,44 @@ async function clickButton(page, name) {
     assert(conditionSkillPressure.ledger.includes("condition: Low energy, High burnout"), "Career field-task history should show condition pressure");
     assert(conditionSkillPressure.clipboardText.includes("Field condition pressure") && conditionSkillPressure.clipboardText.includes("-2 to skill checks"), "Career clipboard should show active field condition pressure");
 
+    const actionPressurePreview = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.energy = 12;
+      state.burnout = 4;
+      const check = window.GAME_CONTENT.warehouseDispatch.checks.find((item) => item.id === "returns");
+      const summary = window.getActionPressureSummary({
+        check,
+        baseEnergyCost: 2,
+        includeSkill: true,
+        includeLedger: true,
+      });
+      const previewMarkup = window.getFieldTaskPreviewMarkup([check]);
+      const choiceMarkup = window.getChoicePressureMarkup([{ label: "Careful path", detail: "Spend effort now to reduce later risk." }]);
+      window.enterScene("serviceOffice");
+      state.energy = 12;
+      state.burnout = 4;
+      state.flags.serviceBrief = true;
+      state.flags.serviceInspected = true;
+      state.carry = ["replacement-display"];
+      state.player = { x: 760, y: 305 };
+      window.render();
+      const nearby = document.querySelector("#nearby-card")?.textContent || "";
+      const nearbyHighlighted = document.querySelector("#nearby-card")?.classList.contains("pressure-active") || false;
+      return {
+        summary,
+        previewMarkup,
+        choiceMarkup,
+        nearby,
+        nearbyHighlighted,
+      };
+    });
+    assert(actionPressurePreview.summary.includes("Energy cost") && actionPressurePreview.summary.includes("Field condition") && actionPressurePreview.summary.includes("Skill fit"), "Action pressure summary should combine energy, condition, and skill fit");
+    assert(actionPressurePreview.previewMarkup.includes("Pressure on this action") && actionPressurePreview.previewMarkup.includes("Condition"), "Field-task preview cards should show action pressure before the task");
+    assert(actionPressurePreview.choiceMarkup.includes("Pressure on this action") && actionPressurePreview.choiceMarkup.includes("Choice pressure"), "Choice pressure panels should include current action pressure");
+    assert(actionPressurePreview.nearby.includes("Pressure on this action") && actionPressurePreview.nearby.includes("Condition") && actionPressurePreview.nearby.includes("Install 2 vs difficulty 4"), "Nearby card should preview pressure before interacting with a task object");
+    assert(actionPressurePreview.nearbyHighlighted, "Nearby card should highlight active action pressure");
+
     await page.evaluate(() => {
       window.startGame("prototype-tech");
       window.AV_TECH_RPG_DEBUG.state.flags.shopBrief = true;

@@ -127,6 +127,9 @@ The playable slice now has:
 51. Low-but-not-zero energy and high burnout now apply visible condition
    penalties to shared skill checks, and field-task result/history surfaces
    show the penalty that affected the roll.
+52. Action-pressure previews now show expected energy, condition, movement/carry
+   pressure, tool fit, skill fit, callback debt, or return-trip risk on choice
+   panels, field-task cards, and key nearby task objects before the click.
 
 ## Playtest Questions
 
@@ -1039,6 +1042,29 @@ What changed:
 Question for the next playtest: do players notice that low energy and burnout
 now make checks worse, and does the label give enough warning before they make
 a risky choice?
+
+### Action Pressure Preview Pass
+
+Pass date: June 16, 2026.
+
+Goal: make the RPG consequence layer visible before a player commits to an
+action, not only after the result modal explains what happened.
+
+What changed:
+
+- Added shared action-pressure helpers for energy cost, field condition,
+  movement/carry pressure, tool fit, skill fit, callback debt, and return-trip
+  risk.
+- Choice panels now include active "Pressure on this action" when current state
+  matters.
+- Field-task preview cards can show pressure before accepting or starting work.
+- Key nearby task objects in the shop, garage, service call, warehouse searches,
+  and cart assembly now preview pressure in the nearby card.
+- Smoke QA checks the helper, choice markup, field-task preview markup, nearby
+  card copy, and nearby-card highlight state.
+
+Question for the next playtest: does pre-click pressure make actions feel like
+RPG commitments, or does any surface feel too wordy during ordinary walking?
 
 ## Current RPG Skeleton Experiment
 

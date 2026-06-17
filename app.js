@@ -947,9 +947,130 @@ function resolveFieldTaskCheck({
   return { skillCheck, energyCost };
 }
 
-function getChoicePressureMarkup(hints = []) {
+function getActionPressureDetails({
+  check = null,
+  baseEnergyCost = null,
+  includeSkill = true,
+  includeMovement = false,
+  includeLedger = false,
+  includeTools = true,
+} = {}) {
+  const details = [];
+  if (typeof baseEnergyCost === "number" && baseEnergyCost > 0) {
+    details.push({
+      label: "Energy cost",
+      detail: `Expected to spend about ${baseEnergyCost} energy before any strained-task penalty.`,
+    });
+  }
+  if (includeSkill) {
+    const conditionPressure = getConditionSkillPressureSummary();
+    if (conditionPressure) {
+      details.push({
+        label: "Field condition",
+        detail: conditionPressure,
+      });
+    }
+    const exhaustionPenalty = getExhaustionSkillPenalty();
+    if (exhaustionPenalty) {
+      details.push({
+        label: "Exhaustion",
+        detail: `Zero-energy pressure is applying -${exhaustionPenalty} to skill checks.`,
+      });
+    }
+    if (check?.skillId || check?.difficulty != null) {
+      const skillName = getSkillDefinition(check.skillId)?.name || check.skill || check.skillId || "Field skill";
+      const skillValue = check.skillId ? getSkillValue(check.skillId) : null;
+      const difficulty = check.difficulty != null ? `difficulty ${check.difficulty}` : check.difficultyHint || "variable difficulty";
+      details.push({
+        label: "Skill fit",
+        detail: `${skillName}${skillValue != null ? ` ${skillValue}` : ""} against ${difficulty}.`,
+      });
+    }
+  }
+  if (includeMovement) {
+    const movementPressure = getConditionPressureSummary();
+    if (movementPressure) {
+      details.push({
+        label: "Movement condition",
+        detail: movementPressure,
+      });
+    }
+  }
+  if (includeTools && check) {
+    if (check.requiredTool && !ownsTool(check.requiredTool)) {
+      details.push({
+        label: "Missing required tool",
+        detail: `${getFieldTaskToolText(check.requiredTool)} is expected for this task.`,
+      });
+    }
+    if (check.optionalTool) {
+      details.push({
+        label: ownsTool(check.optionalTool) ? "Helpful tool ready" : "Helpful tool missing",
+        detail: `${getFieldTaskToolText(check.optionalTool)} ${ownsTool(check.optionalTool) ? "can reduce friction here." : "would make this less brittle."}`,
+      });
+    }
+  }
+  if (includeLedger) {
+    const callbackCount = getUnresolvedCallbackCount();
+    if (callbackCount) {
+      details.push({
+        label: "Callback debt",
+        detail: `${callbackCount} unresolved callback${callbackCount === 1 ? "" : "s"} can make closeout and access work more fragile.`,
+      });
+    }
+    const returnRiskCount = getReturnTripRiskEntries().length;
+    if (returnRiskCount) {
+      details.push({
+        label: "Return-trip risk",
+        detail: `${returnRiskCount} open return-trip risk${returnRiskCount === 1 ? "" : "s"} can echo into future jobs.`,
+      });
+    }
+  }
+  return details;
+}
+
+function getActionPressureSummary(options = {}) {
+  const details = getActionPressureDetails(options);
+  if (!details.length) return "";
+  return details.map((detail) => `${detail.label}: ${detail.detail}`).join(" ");
+}
+
+function getActionPressureBrief(options = {}) {
+  const details = getActionPressureDetails(options);
+  if (!details.length) return "";
+  return details.map((detail) => {
+    if (detail.label === "Energy cost") {
+      const match = detail.detail.match(/about (\d+) energy/);
+      return `Energy: ~${match?.[1] || "?"}`;
+    }
+    if (detail.label === "Field condition") return `Condition: ${detail.detail.replace(" to skill checks.", " checks")}`;
+    if (detail.label === "Exhaustion") return detail.detail.replace("Zero-energy pressure is applying ", "Exhaustion: ");
+    if (detail.label === "Skill fit") return detail.detail.replace(" against ", " vs ").replace(/\.$/, "");
+    if (detail.label === "Movement condition") return `Movement: ${detail.detail}`;
+    if (detail.label === "Helpful tool missing") return `Missing tool: ${detail.detail.split(" would ")[0]}`;
+    if (detail.label === "Helpful tool ready") return `Tool ready: ${detail.detail.split(" can ")[0]}`;
+    if (detail.label === "Missing required tool") return `Missing required: ${detail.detail.split(" is ")[0]}`;
+    if (detail.label === "Callback debt") return `Callback debt: ${detail.detail.split(" can ")[0]}`;
+    if (detail.label === "Return-trip risk") return `Return risk: ${detail.detail.split(" can ")[0]}`;
+    return `${detail.label}: ${detail.detail}`;
+  }).join(" ");
+}
+
+function getActionPressureMarkup(options = {}) {
+  const details = getActionPressureDetails(options);
+  if (!details.length) return "";
+  return `
+    <p><strong>Pressure on this action:</strong></p>
+    <ul class="modal-list">
+      ${details.map((detail) => `<li><strong>${escapeHtml(detail.label)}</strong><span>${escapeHtml(detail.detail)}</span></li>`).join("")}
+    </ul>
+  `;
+}
+
+function getChoicePressureMarkup(hints = [], actionPressureOptions = { includeSkill: true, includeLedger: true }) {
   if (!hints.length) return "";
   return `
+    ${getActionPressureMarkup(actionPressureOptions)}
     <p><strong>Choice pressure:</strong></p>
     <ul class="modal-list">
       ${hints.map((hint) => `<li><strong>${escapeHtml(hint.label)}</strong><span>${escapeHtml(hint.detail)}</span></li>`).join("")}
@@ -4381,11 +4502,19 @@ function getFieldTaskPreviewMarkup(fieldTasks = []) {
           check.optionalTool ? `Helpful: ${getFieldTaskToolText(check.optionalTool)}` : "",
           check.riskLabel ? `Risk: ${check.riskLabel}` : "",
         ].filter(Boolean).join(" | ");
+        const pressureText = getActionPressureBrief({
+          check,
+          baseEnergyCost: check.energyCost ?? null,
+          includeSkill: true,
+          includeLedger: true,
+          includeTools: true,
+        });
         return `
           <div class="dispatch-task-card">
             <strong>${escapeHtml(check.label)}</strong>
             <span>${escapeHtml(`${check.type || "field check"} | ${getFieldTaskPreviewSkillText(check)} | ${getFieldTaskPreviewEnergyText(check)}`)}</span>
             <small>${escapeHtml(toolText || check.successText || check.detail || "Complete this task before closeout.")}</small>
+            ${pressureText ? `<small class="pressure-note">${escapeHtml(`Pressure on this action: ${pressureText}`)}</small>` : ""}
           </div>
         `;
       }).join("")}
@@ -7512,6 +7641,18 @@ function getInteractions() {
       },
       {
         x: 590, y: 180, label: warehouseActive ? "Search staging shelf" : "Pick up staged equipment",
+        pressure: () => warehouseActive
+          ? getActionPressureBrief({
+            check: content.warehouseDispatch.checks.find((item) => item.id === "staging"),
+            baseEnergyCost: getWarehouseSearchEnergyCost(),
+            includeSkill: true,
+            includeLedger: true,
+          })
+          : getActionPressureBrief({
+            baseEnergyCost: getEquipmentEnergyCost(2),
+            includeSkill: false,
+            includeMovement: true,
+          }),
         action: () => {
           if (warehouseActive) return inspectWarehouseLocation("staging");
           if (!state.flags.shopBrief) return notify("You should ask the supervisor what is happening.");
@@ -7530,6 +7671,14 @@ function getInteractions() {
       },
       {
         x: 580, y: 400, label: warehouseActive ? "Search mystery-return pile" : "Inspect shop loaner drill",
+        pressure: () => warehouseActive
+          ? getActionPressureBrief({
+            check: content.warehouseDispatch.checks.find((item) => item.id === "returns"),
+            baseEnergyCost: getWarehouseSearchEnergyCost(),
+            includeSkill: true,
+            includeLedger: true,
+          })
+          : "",
         action: () => {
           if (warehouseActive) return inspectWarehouseLocation("returns");
           showModal({
@@ -7555,6 +7704,14 @@ function getInteractions() {
       }] : []),
       {
         x: 830, y: 380, label: warehouseActive ? "Search Van #3" : `Use ${getVehicleName()}`,
+        pressure: () => warehouseActive
+          ? getActionPressureBrief({
+            check: content.warehouseDispatch.checks.find((item) => item.id === "van3"),
+            baseEnergyCost: getWarehouseSearchEnergyCost(),
+            includeSkill: true,
+            includeLedger: true,
+          })
+          : "",
         action: () => {
           if (warehouseActive) return inspectWarehouseLocation("van3");
           showVehicleMenu();
@@ -7580,6 +7737,11 @@ function getInteractions() {
       }] : []),
       {
         x: 800, y: 375, label: "Unload next box group",
+        pressure: () => getActionPressureBrief({
+          baseEnergyCost: getEquipmentEnergyCost(3),
+          includeSkill: false,
+          includeMovement: true,
+        }),
         action: () => {
           if (!state.flags.garageBrief) return notify("Your supervisor is waiting beside the van.");
           if (hasCarriedItems()) return notify("Your hands are already full.");
@@ -7598,6 +7760,11 @@ function getInteractions() {
         detail: hasCarriedItems()
           ? `Ready: deliver ${getCarriedLabels().join(" and ")} to the client entrance.`
           : "Locked: The equipment still needs to be carried from the van.",
+        pressure: () => getActionPressureBrief({
+          baseEnergyCost: hasCarriedItems() ? getEquipmentEnergyCost(4) : null,
+          includeSkill: false,
+          includeMovement: true,
+        }),
         action: () => {
           if (hasCarriedItems()) {
             const carriedLabels = getCarriedLabels();
@@ -7667,6 +7834,25 @@ function getInteractions() {
       },
       {
         x: 760, y: 305, label: state.flags.serviceInspected ? "Install replacement parts" : "Inspect failed display",
+        pressure: () => {
+          if (!state.flags.serviceBrief) return "";
+          if (!state.flags.serviceInspected) {
+            return getActionPressureBrief({
+              baseEnergyCost: getServiceDiagnosisEnergyCost(3),
+              includeSkill: true,
+              includeLedger: true,
+            });
+          }
+          if (!hasCarriedItems()) return "";
+          const check = getServiceInstallCheck(state.carry);
+          return getActionPressureBrief({
+            check,
+            baseEnergyCost: getAssemblyEnergyCost(check.energyCost),
+            includeSkill: true,
+            includeMovement: true,
+            includeLedger: true,
+          });
+        },
         action: () => {
           if (!state.flags.serviceBrief) return notify("Check in with the client contact first.");
           if (!state.flags.serviceInspected) {
@@ -7704,6 +7890,11 @@ function getInteractions() {
       },
       {
         x: 178, y: 350, label: "Pick up replacement gear",
+        pressure: () => getActionPressureBrief({
+          baseEnergyCost: getEquipmentEnergyCost(3),
+          includeSkill: false,
+          includeMovement: true,
+        }),
         action: () => {
           if (!state.flags.serviceInspected) return notify("Inspect the failed display before opening replacement gear.");
           if (hasCarriedItems()) return notify("Your hands are already full.");
@@ -8116,8 +8307,34 @@ function getInteractions() {
         render();
       },
     },
-    { x: 530, y: 220, label: "Install component on Cart 1", action: () => installCartPart("cart1") },
-    { x: 755, y: 390, label: "Install component on Cart 2", action: () => installCartPart("cart2") },
+    {
+      x: 530, y: 220, label: "Install component on Cart 1",
+      pressure: () => {
+        const part = content.tutorial.assembly.find((item) => item.id === state.carry[0]);
+        return getActionPressureBrief({
+          check: part,
+          baseEnergyCost: part ? getAssemblyEnergyCost(part.energyCost) : null,
+          includeSkill: true,
+          includeMovement: hasCarriedItems(),
+          includeLedger: true,
+        });
+      },
+      action: () => installCartPart("cart1"),
+    },
+    {
+      x: 755, y: 390, label: "Install component on Cart 2",
+      pressure: () => {
+        const part = content.tutorial.assembly.find((item) => item.id === state.carry[0]);
+        return getActionPressureBrief({
+          check: part,
+          baseEnergyCost: part ? getAssemblyEnergyCost(part.energyCost) : null,
+          includeSkill: true,
+          includeMovement: hasCarriedItems(),
+          includeLedger: true,
+        });
+      },
+      action: () => installCartPart("cart2"),
+    },
     ...getScenePortalInteractions("client"),
   ];
 }
@@ -8446,6 +8663,22 @@ function getNearestInteraction() {
     .map((interaction) => ({ ...interaction, distance: distanceTo(interaction) }))
     .filter((interaction) => interaction.distance < 105)
     .sort((a, b) => a.distance - b.distance)[0] || null;
+}
+
+function getInteractionPressureText(interaction) {
+  if (!interaction) return "";
+  if (typeof interaction.pressure === "function") return interaction.pressure();
+  if (interaction.pressure) return interaction.pressure;
+  const label = interaction.label || "";
+  const includeMovement = Boolean(interaction.portalId || /carry|unload|pick up|load|return|exit|entrance/i.test(label));
+  const includeSkill = /install|inspect|search|check|file|review|close|patch|verify|document|report|handoff|warranty|diagnos/i.test(label);
+  const includeLedger = /close|file|report|document|return|callback|handoff|warranty/i.test(label);
+  if (!includeMovement && !includeSkill && !includeLedger) return "";
+  return getActionPressureBrief({
+    includeMovement,
+    includeSkill,
+    includeLedger,
+  });
 }
 
 function interact() {
@@ -8965,10 +9198,10 @@ function renderPlayer() {
 
 function renderNearby() {
   const nearest = getNearestInteraction();
+  const pressureText = nearest ? getInteractionPressureText(nearest) : "";
+  elements.nearbyCard.classList.toggle("pressure-active", Boolean(pressureText));
   elements.nearbyCard.textContent = nearest
-    ? nearest.detail
-      ? `${nearest.label}: ${nearest.detail}`
-      : nearest.label
+    ? `${nearest.detail ? `${nearest.label}: ${nearest.detail}` : nearest.label}${pressureText ? ` Pressure on this action: ${pressureText}` : ""}`
     : "Walk toward an object or person.";
   elements.interactButton.disabled = !nearest;
   elements.interactButton.textContent = nearest ? `Interact: ${nearest.label}` : "Interact";

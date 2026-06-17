@@ -332,6 +332,13 @@ continue to use the separate exhaustion penalty. Keep new checks on
 `resolveSkillCheck()` or `resolveFieldTaskCheck()` so this pressure appears in
 the skill-check label, result rows, and saved field-task history automatically.
 
+Use `getActionPressureSummary()` or `getActionPressureMarkup()` when a player is
+about to commit to a task, route, or consequence choice. The helper can combine
+expected energy, current condition, movement/carry pressure, tool fit, skill
+fit, callback debt, and return-trip risk into a player-facing "Pressure on this
+action" preview. Prefer that shared preview over burying important logic inside
+flavor text or revealing every cost only after the click.
+
 ## Add Character-Specific Lines
 
 `data.js` has a `characterLines` object keyed by technician ID. Scene logic can

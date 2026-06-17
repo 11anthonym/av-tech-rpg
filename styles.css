@@ -74,9 +74,11 @@ section + section { margin-top: 22px; }
 .carry-card, .nearby-card, .vehicle-card { padding: 10px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); background: var(--panel-alt); font-size: 12px; line-height: 1.5; }
 .carry-card { color: var(--accent); }
 .carry-card.pressure-active { border-color: #b8914d; background: #23231b; }
+.nearby-card.pressure-active { border-color: #b8914d; background: #23231b; color: var(--text); }
 .carry-card strong, .carry-card small { display: block; }
 .carry-card strong { color: var(--text); }
 .carry-card small { margin-top: 4px; color: var(--muted); line-height: 1.35; }
+.pressure-note { color: var(--accent); }
 .vehicle-card { display: grid; gap: 4px; }
 .vehicle-card strong { color: var(--text); }
 .vehicle-card small { color: var(--accent); line-height: 1.4; }

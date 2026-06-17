@@ -425,7 +425,12 @@ be easy to verify in the browser.
    penalties. Field-task result rows, saved field-task history, active effects,
    and the career clipboard show the pressure so stats affect outcomes without
    adding bespoke room scripts.
-58. **Current roadmap complete, remaining hardening lane:** The current
+58. **Done - Action pressure preview pass:** Added shared action-pressure
+   previews for expected energy, field condition, movement/carry pressure, tool
+   fit, skill fit, callback debt, and return-trip risk. Choice panels,
+   field-task preview cards, and key nearby task objects can now show why a
+   click is risky before the result modal lands.
+59. **Current roadmap complete, remaining hardening lane:** The current
    incremental roadmap has no remaining `Next` item. The remaining work is
    consolidation: broaden reusable task/check patterns to older bespoke checks
    when they are touched, keep dispatch/route/consequence state visible on
