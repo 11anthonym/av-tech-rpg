@@ -132,6 +132,10 @@ The playable slice now has:
    panels, field-task cards, and key nearby task objects before the click.
 53. Walk-around interaction markers now use readable CONTACT, TASK, VAN, DOOR,
    and RETURN tags, and the nearby card/interact button repeat that marker type.
+54. Nearby interactions and dispatch task cards now show task state such as
+   READY, LOCKED, IN PROGRESS, COMPLETED, STRAINED, or RISK INHERITED from
+   shared helpers tied to field-task results, completion arrays, and portal
+   readiness.
 
 ## Playtest Questions
 
@@ -1086,6 +1090,32 @@ What changed:
 
 Question for the next playtest: do the marker tags make walking and exits more
 obvious, or should task markers become more specific in a later pass?
+
+### Task State Presentation Pass
+
+Pass date: June 17, 2026.
+
+Goal: make task objects feel less scripted by showing whether an interaction is
+available, blocked, already resolved, or carrying risk before the player presses
+the button.
+
+What changed:
+
+- Added reusable task-state helpers that resolve READY, LOCKED, IN PROGRESS,
+  COMPLETED, STRAINED, and RISK INHERITED from existing field-task results,
+  completion arrays, and portal readiness.
+- Nearby cards now include task state for mapped objects and exits.
+- Interaction markers expose task state in their dataset and use subtle locked,
+  completed, strained, and in-progress styling.
+- Dispatch field-task cards show task state alongside tool, skill, energy, and
+  pressure preview text.
+- Smoke QA checks ready shop work, locked and ready systems checks, strained
+  task-card history, vehicle/door/return marker state, and existing pressure
+  copy.
+
+Question for the next playtest: does visible task state make walking up to work
+objects feel more like choosing an RPG action, and are any state labels too
+noisy during ordinary movement?
 
 ## Current RPG Skeleton Experiment
 

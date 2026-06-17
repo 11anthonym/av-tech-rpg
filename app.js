@@ -876,6 +876,107 @@ function getFieldTaskResultEntries() {
     .map(([id, result]) => ({ id, ...result }));
 }
 
+function getFieldTaskResultForCheck(check) {
+  if (!check) return null;
+  return getFieldTaskResultEntries().find((entry) => (
+    entry.id === check.id
+    || entry.label === check.label
+    || (check.riskFlag && entry.riskFlag === check.riskFlag)
+  )) || null;
+}
+
+function getTaskState({
+  stateId = "",
+  lockedReason = "",
+  completed = false,
+  result = null,
+  detail = "",
+} = {}) {
+  if (lockedReason) {
+    return { id: "locked", label: "LOCKED", detail: lockedReason };
+  }
+  if (result) {
+    if (!result.successful) {
+      return {
+        id: "strained",
+        label: "STRAINED",
+        detail: result.riskLabel
+          ? `Resolved under strain; risk tracked: ${result.riskLabel}.`
+          : "Resolved under strain; closeout may inherit risk.",
+      };
+    }
+    return {
+      id: "completed",
+      label: "COMPLETED",
+      detail: result.outcomeText || "Task resolved and recorded.",
+    };
+  }
+  if (completed || stateId === "completed") {
+    return { id: "completed", label: "COMPLETED", detail: detail || "Task is already complete." };
+  }
+  if (stateId === "strained") {
+    return { id: "strained", label: "STRAINED", detail: detail || "Task is complete, but the result left visible risk." };
+  }
+  if (stateId === "riskInherited") {
+    return { id: "risk-inherited", label: "RISK INHERITED", detail: detail || "A previous choice is making this task riskier." };
+  }
+  if (stateId === "inProgress") {
+    return { id: "in-progress", label: "IN PROGRESS", detail: detail || "Task is already underway." };
+  }
+  return { id: "ready", label: "READY", detail: detail || "Task can be attempted now." };
+}
+
+function getFieldTaskState(check) {
+  return getTaskState({ result: getFieldTaskResultForCheck(check) });
+}
+
+function getFieldCheckTaskState({
+  check = null,
+  completedChecks = [],
+  lockedReason = "",
+  readyDetail = "",
+  completedDetail = "",
+} = {}) {
+  if (lockedReason) return getTaskState({ lockedReason });
+  if (!check) return getTaskState({ lockedReason: "Task is not mapped." });
+  const resultState = getFieldTaskState(check);
+  if (resultState.id !== "ready") return resultState;
+  if (completedChecks.includes(check.id)) {
+    return getTaskState({
+      completed: true,
+      detail: completedDetail || `${check.label} is already complete.`,
+    });
+  }
+  return getTaskState({
+    stateId: "ready",
+    detail: readyDetail || check.detail || "Task can be attempted now.",
+  });
+}
+
+function getDispatchFieldCheckTaskState({
+  checks = [],
+  checkId = "",
+  completedChecks = [],
+  requiredFlag = "",
+  lockedReason = "",
+  readyDetail = "",
+  completedDetail = "",
+} = {}) {
+  const isLocked = Boolean(lockedReason) && (!requiredFlag || !state.flags[requiredFlag]);
+  return getFieldCheckTaskState({
+    check: checks.find((item) => item.id === checkId),
+    completedChecks,
+    lockedReason: isLocked ? lockedReason : "",
+    readyDetail,
+    completedDetail,
+  });
+}
+
+function getTaskStateText(taskState) {
+  if (!taskState) return "";
+  return `${taskState.label}: ${taskState.detail}`;
+}
+
 function getFieldTaskResultLedgerMarkup({ limit = 6 } = {}) {
   const entries = getFieldTaskResultEntries().slice(-limit).reverse();
   if (!entries.length) return `<p class="muted">No field-task results have been recorded yet.</p>`;
@@ -3651,6 +3752,77 @@ function getNextAssemblyItem() {
   return content.tutorial.assembly.find((item) => !state.assembled.includes(item.id));
 }
 
+function getWarehouseLocationTaskState(checkId) {
+  const check = content.warehouseDispatch.checks.find((item) => item.id === checkId);
+  return getFieldCheckTaskState({
+    check,
+    completedChecks: state.warehouseChecks,
+    readyDetail: "Search this shop location for the replacement power supply.",
+    completedDetail: `${check?.label || "That location"} is already searched.`,
+  });
+}
+
+function getShopStagingTaskState(warehouseActive = state.flags.warehouseStarted && !state.flags.warehouseComplete) {
+  if (warehouseActive) return getWarehouseLocationTaskState("staging");
+  if (!state.flags.shopBrief) return getTaskState({ lockedReason: "Ask the supervisor what needs loading." });
+  if (hasCarriedItems()) return getTaskState({ stateId: "inProgress", detail: "Hands are full; load carried gear into the van first." });
+  if (!getNextShopLoad()) return getTaskState({ completed: true, detail: "Staged equipment is loaded into the van." });
+  return getTaskState({ stateId: "ready", detail: "Pick up the next staged equipment group." });
+}
+
+function getGarageUnloadTaskState() {
+  if (!state.flags.garageBrief) return getTaskState({ lockedReason: "Talk to the supervisor beside the van first." });
+  if (hasCarriedItems()) return getTaskState({ stateId: "inProgress", detail: "Hands are full; deliver the carried gear before unloading more." });
+  const nextItems = content.tutorial.garageUnload.filter((item) => !state.delivered.includes(item));
+  if (!nextItems.length) return getTaskState({ completed: true, detail: "Everything has been carried to the client entrance." });
+  return getTaskState({ stateId: "ready", detail: "Unload the next box group from the van." });
+}
+
+function getGarageEntranceTaskState() {
+  if (hasCarriedItems()) return getTaskState({ stateId: "ready", detail: `Deliver ${getCarriedLabels().join(" and ")} to the client entrance.` });
+  if (state.flags.centerCityEquipmentDelivered) return getTaskState({ completed: true, detail: "The client entrance is ready to use." });
+  return getTaskState({ lockedReason: "Carry equipment from the van before walking to the client entrance." });
+}
+
+function getServiceSwapTaskState() {
+  if (!state.flags.serviceBrief) return getTaskState({ lockedReason: "Check in with the client contact first." });
+  if (state.flags.serviceComplete) return getTaskState({ completed: true, detail: "The service swap is complete." });
+  if (!state.flags.serviceInspected) return getTaskState({ stateId: "ready", detail: "Diagnose the failed display before opening replacement gear." });
+  if (!hasCarriedItems()) return getTaskState({ lockedReason: "Pick up replacement gear before installing." });
+  const check = getServiceInstallCheck(state.carry);
+  const resultState = getFieldTaskState(check);
+  if (resultState.id !== "ready") return resultState;
+  return getTaskState({ stateId: "ready", detail: `Install ${getServiceItemLabels(state.carry).join(" and ")}.` });
+}
+
+function getServicePickupTaskState() {
+  if (!state.flags.serviceInspected) return getTaskState({ lockedReason: "Inspect the failed display before opening replacement gear." });
+  if (hasCarriedItems()) return getTaskState({ stateId: "inProgress", detail: "Hands are full; install the carried replacement gear first." });
+  const nextItems = content.serviceDispatch.swapItems
+    .filter((item) => !state.serviceDelivered.includes(item.id) && !state.serviceInstalled.includes(item.id));
+  if (!nextItems.length) return getTaskState({ completed: true, detail: "All replacement gear has been installed." });
+  return getTaskState({ stateId: "ready", detail: "Pick up the next replacement gear group." });
+}
+
+function getCartPickupTaskState() {
+  if (!state.flags.roomBrief) return getTaskState({ lockedReason: "Ask the supervisor how to start the cart build." });
+  if (hasCarriedItems()) return getTaskState({ stateId: "inProgress", detail: "Hands are full; install the carried cart component first." });
+  const next = getNextAssemblyItem();
+  if (!next) return getTaskState({ completed: true, detail: "Both carts are assembled." });
+  return getTaskState({ stateId: "ready", detail: `Pick up ${next.label}.` });
+}
+
+function getCartInstallTaskState(destination) {
+  if (!state.flags.roomBrief) return getTaskState({ lockedReason: "Ask the supervisor how to start the cart build." });
+  if (!hasCarriedItems()) return getTaskState({ lockedReason: "Pick up the next cart component first." });
+  const part = content.tutorial.assembly.find((item) => item.id === state.carry[0]);
+  if (!part) return getTaskState({ lockedReason: "The carried item is not a cart component." });
+  if (part.destination !== destination) return getTaskState({ lockedReason: `${part.label} belongs on the other cart.` });
+  const resultState = getFieldTaskState(part);
+  if (resultState.id !== "ready") return resultState;
+  return getTaskState({ stateId: "ready", detail: `Install ${part.label} on ${destination === "cart1" ? "Cart 1" : "Cart 2"}.` });
+}
+
 function promptTravel() {
   showRouteChoiceModal({
     routeId: "centerCityTutorial",
@@ -4498,6 +4670,7 @@ function getFieldTaskPreviewMarkup(fieldTasks = []) {
     <h3>Field Task Checks</h3>
     <div class="dispatch-task-grid">
       ${fieldTasks.map((check) => {
+        const taskState = getFieldTaskState(check);
         const toolText = [
           check.requiredTool ? `Required: ${getFieldTaskToolText(check.requiredTool)}` : "",
           check.optionalTool ? `Helpful: ${getFieldTaskToolText(check.optionalTool)}` : "",
@@ -4511,9 +4684,10 @@ function getFieldTaskPreviewMarkup(fieldTasks = []) {
           includeTools: true,
         });
         return `
-          <div class="dispatch-task-card">
+          <div class="dispatch-task-card task-state-${taskState.id}">
             <strong>${escapeHtml(check.label)}</strong>
             <span>${escapeHtml(`${check.type || "field check"} | ${getFieldTaskPreviewSkillText(check)} | ${getFieldTaskPreviewEnergyText(check)}`)}</span>
+            <small class="task-state-note task-state-${taskState.id}">${escapeHtml(`Task state: ${getTaskStateText(taskState)}`)}</small>
             <small>${escapeHtml(toolText || check.successText || check.detail || "Complete this task before closeout.")}</small>
             ${pressureText ? `<small class="pressure-note">${escapeHtml(`Pressure on this action: ${pressureText}`)}</small>` : ""}
           </div>
@@ -7654,6 +7828,7 @@ function getInteractions() {
             includeSkill: false,
             includeMovement: true,
           }),
+        taskState: () => getShopStagingTaskState(warehouseActive),
         action: () => {
           if (warehouseActive) return inspectWarehouseLocation("staging");
           if (!state.flags.shopBrief) return notify("You should ask the supervisor what is happening.");
@@ -7680,6 +7855,7 @@ function getInteractions() {
             includeLedger: true,
           })
           : "",
+        taskState: () => warehouseActive ? getWarehouseLocationTaskState("returns") : null,
         action: () => {
           if (warehouseActive) return inspectWarehouseLocation("returns");
           showModal({
@@ -7713,6 +7889,9 @@ function getInteractions() {
             includeLedger: true,
           })
           : "",
+        taskState: () => warehouseActive
+          ? getWarehouseLocationTaskState("van3")
+          : getTaskState({ stateId: "ready", detail: "Open cargo review, dispatch routes, regional map, and drive options." }),
         action: () => {
           if (warehouseActive) return inspectWarehouseLocation("van3");
           showVehicleMenu();
@@ -7743,6 +7922,7 @@ function getInteractions() {
           includeSkill: false,
           includeMovement: true,
         }),
+        taskState: getGarageUnloadTaskState,
         action: () => {
           if (!state.flags.garageBrief) return notify("Your supervisor is waiting beside the van.");
           if (hasCarriedItems()) return notify("Your hands are already full.");
@@ -7766,6 +7946,7 @@ function getInteractions() {
           includeSkill: false,
           includeMovement: true,
         }),
+        taskState: getGarageEntranceTaskState,
         action: () => {
           if (hasCarriedItems()) {
             const carriedLabels = getCarriedLabels();
@@ -7854,6 +8035,7 @@ function getInteractions() {
             includeLedger: true,
           });
         },
+        taskState: getServiceSwapTaskState,
         action: () => {
           if (!state.flags.serviceBrief) return notify("Check in with the client contact first.");
           if (!state.flags.serviceInspected) {
@@ -7896,6 +8078,7 @@ function getInteractions() {
           includeSkill: false,
           includeMovement: true,
         }),
+        taskState: getServicePickupTaskState,
         action: () => {
           if (!state.flags.serviceInspected) return notify("Inspect the failed display before opening replacement gear.");
           if (hasCarriedItems()) return notify("Your hands are already full.");
@@ -7983,6 +8166,14 @@ function getInteractions() {
         },
         {
           x: 690, y: 385, label: "Install display pathway",
+          taskState: () => getDispatchFieldCheckTaskState({
+            checks: getRetrofitInstallChecks(),
+            checkId: "pathway-install",
+            completedChecks: state.retrofitInstallChecks,
+            requiredFlag: "retrofitInstallBrief",
+            lockedReason: "Review the walkdown package onsite first.",
+            readyDetail: "Install the display pathway using the inherited walkdown result.",
+          }),
           action: () => {
             if (!state.flags.retrofitInstallBrief) return notify("Review the walkdown package onsite first.");
             inspectRetrofitInstallCondition("pathway-install");
@@ -8014,6 +8205,14 @@ function getInteractions() {
       },
       {
         x: 790, y: 220, label: "Check ceiling access",
+        taskState: () => getDispatchFieldCheckTaskState({
+          checks: content.retrofitWalkdownDispatch.checks,
+          checkId: "ceiling-access",
+          completedChecks: state.retrofitWalkdownChecks,
+          requiredFlag: "retrofitWalkdownBrief",
+          lockedReason: "Check in with the facilities contact first.",
+          readyDetail: "Inspect ceiling access before closeout.",
+        }),
         action: () => {
           if (!state.flags.retrofitWalkdownBrief) return notify("Check in with the facilities contact first.");
           inspectRetrofitWalkdownCondition("ceiling-access");
@@ -8021,6 +8220,14 @@ function getInteractions() {
       },
       {
         x: 480, y: 275, label: "Trace existing pathway",
+        taskState: () => getDispatchFieldCheckTaskState({
+          checks: content.retrofitWalkdownDispatch.checks,
+          checkId: "pathway",
+          completedChecks: state.retrofitWalkdownChecks,
+          requiredFlag: "retrofitWalkdownBrief",
+          lockedReason: "Check in with the facilities contact first.",
+          readyDetail: "Trace the existing pathway against the quoted route.",
+        }),
         action: () => {
           if (!state.flags.retrofitWalkdownBrief) return notify("Check in with the facilities contact first.");
           inspectRetrofitWalkdownCondition("pathway");
@@ -8028,6 +8235,14 @@ function getInteractions() {
       },
       {
         x: 745, y: 385, label: "Document above-ceiling conflict",
+        taskState: () => getDispatchFieldCheckTaskState({
+          checks: content.retrofitWalkdownDispatch.checks,
+          checkId: "trade-conflict",
+          completedChecks: state.retrofitWalkdownChecks,
+          requiredFlag: "retrofitWalkdownBrief",
+          lockedReason: "Check in with the facilities contact first.",
+          readyDetail: "Document the above-ceiling conflict before closeout.",
+        }),
         action: () => {
           if (!state.flags.retrofitWalkdownBrief) return notify("Check in with the facilities contact first.");
           inspectRetrofitWalkdownCondition("trade-conflict");
@@ -8204,6 +8419,14 @@ function getInteractions() {
       },
       {
         x: 500, y: 260, label: "Check touch panel status",
+        taskState: () => getDispatchFieldCheckTaskState({
+          checks: content.systemsDispatch.checks,
+          checkId: "panel-status",
+          completedChecks: state.systemsChecks,
+          requiredFlag: "systemsBrief",
+          lockedReason: "Check in with the client contact first.",
+          readyDetail: "Check the touch panel status.",
+        }),
         action: () => {
           if (!state.flags.systemsBrief) return notify("Check in with the client contact first.");
           inspectSystemsCondition("panel-status");
@@ -8211,6 +8434,14 @@ function getInteractions() {
       },
       {
         x: 760, y: 180, label: "Verify device network path",
+        taskState: () => getDispatchFieldCheckTaskState({
+          checks: content.systemsDispatch.checks,
+          checkId: "network-path",
+          completedChecks: state.systemsChecks,
+          requiredFlag: "systemsBrief",
+          lockedReason: "Check in with the client contact first.",
+          readyDetail: "Verify the device network path.",
+        }),
         action: () => {
           if (!state.flags.systemsBrief) return notify("Check in with the client contact first.");
           inspectSystemsCondition("network-path");
@@ -8218,6 +8449,14 @@ function getInteractions() {
       },
       {
         x: 760, y: 380, label: "Compare rack note",
+        taskState: () => getDispatchFieldCheckTaskState({
+          checks: content.systemsDispatch.checks,
+          checkId: "rack-note",
+          completedChecks: state.systemsChecks,
+          requiredFlag: "systemsBrief",
+          lockedReason: "Check in with the client contact first.",
+          readyDetail: "Compare the rack note against the room behavior.",
+        }),
         action: () => {
           if (!state.flags.systemsBrief) return notify("Check in with the client contact first.");
           inspectSystemsCondition("rack-note");
@@ -8251,6 +8490,16 @@ function getInteractions() {
       },
       {
         x: 430, y: 255, label: roomReached ? "Review access notes" : "Check building number",
+        taskState: () => accessChecked
+          ? getTaskState({ completed: true, detail: "The building mismatch is already in your access notes." })
+          : getDispatchFieldCheckTaskState({
+            checks: content.secureAccessDispatch.checks,
+            checkId: "building",
+            completedChecks: state.secureAccessChecks,
+            requiredFlag: "secureAccessBrief",
+            lockedReason: "Check in with security first.",
+            readyDetail: "Confirm the building-number mismatch.",
+          }),
         action: () => {
           if (accessChecked) return notify("The building mismatch is already in your access notes.");
           if (!state.flags.secureAccessBrief) return notify("Check in with security first.");
@@ -8259,6 +8508,25 @@ function getInteractions() {
       },
       {
         x: 785, y: 205, label: roomReached ? "Patch encoder feed" : "Check loading dock",
+        taskState: () => accessChecked
+          ? roomReached
+            ? getDispatchFieldCheckTaskState({
+              checks: content.secureAccessDispatch.taskChecks,
+              checkId: "patch-update",
+              completedChecks: state.secureAccessTaskChecks,
+              requiredFlag: "secureAccessRoomReached",
+              lockedReason: "Meet the escort and enter the telecom room first.",
+              readyDetail: "Patch the encoder feed.",
+            })
+            : getTaskState({ completed: true, detail: "The loading dock issue is already in your access notes." })
+          : getDispatchFieldCheckTaskState({
+            checks: content.secureAccessDispatch.checks,
+            checkId: "gate",
+            completedChecks: state.secureAccessChecks,
+            requiredFlag: "secureAccessBrief",
+            lockedReason: "Check in with security first.",
+            readyDetail: "Check how the loading dock affects access.",
+          }),
         action: () => {
           if (accessChecked) return roomReached ? inspectSecureAccessTask("patch-update") : notify("The loading dock issue is already in your access notes.");
           if (!state.flags.secureAccessBrief) return notify("Check in with security first.");
@@ -8267,6 +8535,25 @@ function getInteractions() {
       },
       {
         x: 745, y: 385, label: roomReached ? "Verify room signal" : "Check telecom room escort",
+        taskState: () => accessChecked
+          ? roomReached
+            ? getDispatchFieldCheckTaskState({
+              checks: content.secureAccessDispatch.taskChecks,
+              checkId: "verify-signal",
+              completedChecks: state.secureAccessTaskChecks,
+              requiredFlag: "secureAccessRoomReached",
+              lockedReason: "Meet the escort and enter the telecom room first.",
+              readyDetail: "Verify the room signal after the patch.",
+            })
+            : getTaskState({ stateId: "ready", detail: "Meet the escort and enter the telecom room." })
+          : getDispatchFieldCheckTaskState({
+            checks: content.secureAccessDispatch.checks,
+            checkId: "escort",
+            completedChecks: state.secureAccessChecks,
+            requiredFlag: "secureAccessBrief",
+            lockedReason: "Check in with security first.",
+            readyDetail: "Confirm how the escort requirement affects the rack update.",
+          }),
         action: () => {
           if (accessChecked) return roomReached ? inspectSecureAccessTask("verify-signal") : showSecureAccessWorkStart();
           if (!state.flags.secureAccessBrief) return notify("Check in with security first.");
@@ -8275,6 +8562,14 @@ function getInteractions() {
       },
       ...(roomReached && !taskDone ? [{
         x: 635, y: 350, label: "Find correct rack unit",
+        taskState: () => getDispatchFieldCheckTaskState({
+          checks: content.secureAccessDispatch.taskChecks,
+          checkId: "rack-location",
+          completedChecks: state.secureAccessTaskChecks,
+          requiredFlag: "secureAccessRoomReached",
+          lockedReason: "Meet the escort and enter the telecom room first.",
+          readyDetail: "Find the correct rack unit before patching around it.",
+        }),
         action: () => inspectSecureAccessTask("rack-location"),
       }] : []),
       ...getScenePortalInteractions("navyYardAccess"),
@@ -8297,6 +8592,7 @@ function getInteractions() {
     }] : []),
     {
       x: 178, y: 345, label: "Pick up next cart component",
+      taskState: getCartPickupTaskState,
       action: () => {
         if (!state.flags.roomBrief) return notify("Your supervisor is ready to explain the first cart.");
         if (hasCarriedItems()) return notify("Your hands are already full.");
@@ -8320,6 +8616,7 @@ function getInteractions() {
           includeLedger: true,
         });
       },
+      taskState: () => getCartInstallTaskState("cart1"),
       action: () => installCartPart("cart1"),
     },
     {
@@ -8334,6 +8631,7 @@ function getInteractions() {
           includeLedger: true,
         });
       },
+      taskState: () => getCartInstallTaskState("cart2"),
       action: () => installCartPart("cart2"),
     },
     ...getScenePortalInteractions("client"),
@@ -8718,6 +9016,26 @@ function getInteractionPressureText(interaction) {
     includeSkill,
     includeLedger,
   });
+}
+
+function getInteractionTaskState(interaction) {
+  if (!interaction) return null;
+  if (typeof interaction.taskState === "function") return interaction.taskState();
+  if (interaction.taskState) return interaction.taskState;
+  if (interaction.portalId) {
+    const portal = getWorldPortal(interaction.portalId);
+    if (!portal) return getTaskState({ lockedReason: "Transition is not mapped." });
+    if (!isPortalReady(portal)) {
+      return getTaskState({
+        lockedReason: portal.requiredMessage || `${portal.label} is not available yet.`,
+      });
+    }
+    return getTaskState({
+      stateId: "ready",
+      detail: `Destination: ${getPortalDestinationLabel(portal)}.`,
+    });
+  }
+  return null;
 }
 
 function interact() {
@@ -9215,11 +9533,16 @@ function renderDecor() {
     const marker = document.createElement("div");
     const kind = getInteractionMarkerKind(item);
     const markerText = getInteractionMarkerText(item);
-    marker.className = getInteractionMarkerClass(item);
+    const taskState = getInteractionTaskState(item);
+    marker.className = [
+      getInteractionMarkerClass(item),
+      taskState ? `task-state-${taskState.id}` : "",
+    ].filter(Boolean).join(" ");
     marker.dataset.markerKind = kind;
+    marker.dataset.taskState = taskState?.id || "";
     marker.style.left = `${item.x}px`;
     marker.style.top = `${item.y}px`;
-    marker.title = `${markerText}: ${item.label}`;
+    marker.title = `${markerText}: ${item.label}${taskState ? ` (${getTaskStateText(taskState)})` : ""}`;
     marker.textContent = markerText;
     return marker;
   });
@@ -9238,10 +9561,17 @@ function renderNearby() {
   const nearest = getNearestInteraction();
   const pressureText = nearest ? getInteractionPressureText(nearest) : "";
   const markerText = nearest ? getInteractionMarkerText(nearest) : "";
+  const taskState = nearest ? getInteractionTaskState(nearest) : null;
+  const stateText = taskState ? ` State: ${getTaskStateText(taskState)}` : "";
+  const interactionText = nearest?.detail && !taskState
+    ? `${nearest.label}: ${nearest.detail}`
+    : nearest?.label;
   const nearbyText = nearest
-    ? `${markerText} - ${nearest.detail ? `${nearest.label}: ${nearest.detail}` : nearest.label}${pressureText ? ` Pressure on this action: ${pressureText}` : ""}`
+    ? `${markerText} - ${interactionText}${stateText}${pressureText ? ` Pressure on this action: ${pressureText}` : ""}`
     : "Walk toward an object or person.";
   elements.nearbyCard.classList.toggle("pressure-active", Boolean(pressureText));
+  elements.nearbyCard.classList.toggle("task-state-active", Boolean(taskState));
+  elements.nearbyCard.dataset.taskState = taskState?.id || "";
   elements.nearbyCard.textContent = nearbyText;
   elements.interactButton.disabled = !nearest;
   elements.interactButton.textContent = nearest ? `Interact: ${markerText} - ${nearest.label}` : "Interact";

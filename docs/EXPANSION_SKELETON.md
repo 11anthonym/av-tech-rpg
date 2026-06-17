@@ -434,7 +434,13 @@ be easy to verify in the browser.
    as readable CONTACT, TASK, VAN, DOOR, or RETURN tags. The nearby card and
    interact button use the same marker label, and smoke QA checks contact, task,
    van, door, and return marker behavior.
-60. **Current roadmap complete, remaining hardening lane:** The current
+60. **Done - Task state presentation pass:** Reusable task-state helpers now
+   turn field-task results, completion arrays, locked flags, and portal readiness
+   into READY, LOCKED, IN PROGRESS, COMPLETED, STRAINED, or RISK INHERITED copy.
+   Nearby cards, marker datasets, marker styling, and dispatch task cards use
+   that same state so players can see why an interaction is available before
+   pressing it.
+61. **Current roadmap complete, remaining hardening lane:** The current
    incremental roadmap has no remaining `Next` item. The remaining work is
    consolidation: broaden reusable task/check patterns to older bespoke checks
    when they are touched, keep dispatch/route/consequence state visible on

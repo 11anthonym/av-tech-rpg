@@ -75,6 +75,13 @@ section + section { margin-top: 22px; }
 .carry-card { color: var(--accent); }
 .carry-card.pressure-active { border-color: #b8914d; background: #23231b; }
 .nearby-card.pressure-active { border-color: #b8914d; background: #23231b; color: var(--text); }
+.nearby-card.task-state-active { color: var(--text); }
+.nearby-card[data-task-state="ready"] { border-color: #6f8e82; }
+.nearby-card[data-task-state="locked"] { border-color: #8f6b62; background: #2a211f; }
+.nearby-card[data-task-state="completed"] { border-color: #4f8e68; background: #1d2a22; }
+.nearby-card[data-task-state="strained"],
+.nearby-card[data-task-state="risk-inherited"] { border-color: #b76d64; background: #2d211f; }
+.nearby-card[data-task-state="in-progress"] { border-color: #6f91a4; background: #202832; }
 .carry-card strong, .carry-card small { display: block; }
 .carry-card strong { color: var(--text); }
 .carry-card small { margin-top: 4px; color: var(--muted); line-height: 1.35; }
@@ -120,6 +127,11 @@ kbd { padding: 2px 5px; border: 1px solid #53615e; border-radius: 3px; color: va
 .van-marker { width: 56px; border-color: #2d4f4c; color: #e8f4ee; background: #4d7770; box-shadow: 0 0 0 4px rgba(77, 119, 112, .18); }
 .door-marker, .portal-marker { width: 58px; border-color: #7bb6d8; color: #dff4ff; background: rgba(72, 128, 160, .76); box-shadow: 0 0 0 4px rgba(123, 182, 216, .16); }
 .return-marker, .return-portal-marker { width: 76px; border-color: #d7e68a; color: #243022; background: rgba(215, 230, 138, .9); box-shadow: 0 0 0 4px rgba(215, 230, 138, .18); }
+.interaction-marker.task-state-locked { opacity: .74; border-style: dashed; border-color: #776d60; color: #eee8d8; background: rgba(99, 91, 77, .88); box-shadow: 0 0 0 4px rgba(99, 91, 77, .16); }
+.interaction-marker.task-state-completed { border-color: #4f8e68; color: #102418; background: rgba(105, 201, 139, .88); box-shadow: 0 0 0 4px rgba(105, 201, 139, .18); }
+.interaction-marker.task-state-strained,
+.interaction-marker.task-state-risk-inherited { border-color: #df8a7e; color: #2b1412; background: rgba(223, 138, 126, .9); box-shadow: 0 0 0 4px rgba(223, 138, 126, .18); }
+.interaction-marker.task-state-in-progress { border-color: #7bb6d8; color: #102332; background: rgba(123, 182, 216, .9); box-shadow: 0 0 0 4px rgba(123, 182, 216, .18); }
 .player { position: absolute; z-index: 6; width: 30px; height: 40px; transition: left 45ms linear, top 45ms linear; }
 .player i { display: block; width: 25px; height: 27px; margin: 0 auto; border: 3px solid #17211f; border-radius: 11px 11px 4px 4px; background: var(--accent); box-shadow: 0 3px 0 rgba(0, 0, 0, .18); }
 .player b { display: block; margin-top: 2px; color: #31423d; font-size: 8px; letter-spacing: .06em; text-align: center; }
@@ -162,10 +174,20 @@ kbd { padding: 2px 5px; border: 1px solid #53615e; border-radius: 3px; color: va
 .modal-list span { color: var(--muted); }
 .dispatch-task-grid { display: grid; gap: 9px; margin: 14px 0; }
 .dispatch-task-card { padding: 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel-alt); }
+.dispatch-task-card.task-state-completed { border-color: rgba(105, 201, 139, .55); }
+.dispatch-task-card.task-state-strained,
+.dispatch-task-card.task-state-risk-inherited { border-color: rgba(223, 138, 126, .55); }
 .dispatch-task-card strong, .dispatch-task-card span, .dispatch-task-card small { display: block; }
 .dispatch-task-card strong { color: var(--text); }
 .dispatch-task-card span { margin-top: 4px; color: var(--accent); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
 .dispatch-task-card small { margin-top: 6px; color: var(--muted); line-height: 1.45; }
+.task-state-note { color: var(--muted); font-weight: 800; }
+.task-state-note.task-state-ready { color: #9fc9b6; }
+.task-state-note.task-state-locked { color: #d3aaa2; }
+.task-state-note.task-state-completed { color: var(--success); }
+.task-state-note.task-state-strained,
+.task-state-note.task-state-risk-inherited { color: #df8a7e; }
+.task-state-note.task-state-in-progress { color: #9fc3d8; }
 blockquote { margin: 14px 0; padding: 10px 12px; border-left: 3px solid var(--accent); color: #d9c395; background: rgba(239, 182, 78, .06); }
 
 @media (max-width: 900px) {

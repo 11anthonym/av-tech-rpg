@@ -134,11 +134,14 @@ When adding a new task check:
    reusable result shape.
 4. Show `getFieldTaskPreviewMarkup()` before the job and
    `getFieldTaskResultMarkup()` in the result modal when useful.
-5. Check the career clipboard after the job; `fieldTaskResults` entries now
+5. Use `getFieldCheckTaskState()` or `getDispatchFieldCheckTaskState()` when an
+   interaction should show READY, LOCKED, COMPLETED, or STRAINED state before
+   the player clicks it.
+6. Check the career clipboard after the job; `fieldTaskResults` entries now
    appear in field-task history with risk labels, tool context, and saved
    success/strained outcome text, so the entry should read like a field
    consequence rather than an internal flag.
-6. Record consequences through existing energy, reputation, XP, callback, and
+7. Record consequences through existing energy, reputation, XP, callback, and
    ledger fields instead of adding a separate hidden system.
 
 For richer jobs, separate the inspection from the field-task choice. The South
@@ -565,7 +568,11 @@ The marker renderer turns interactions into readable map tags:
 
 Set `markerKind` or `markerText` only when inference is wrong. The nearby card
 and interact button use the same marker label, so keep labels short and
-player-facing.
+player-facing. Add `taskState` only when the generic portal state or field-task
+state inference is not enough. Prefer returning `getTaskState()`,
+`getFieldCheckTaskState()`, or `getDispatchFieldCheckTaskState()` from that
+callback so READY, LOCKED, IN PROGRESS, COMPLETED, STRAINED, and RISK INHERITED
+copy stays consistent across markers, nearby cards, and dispatch task cards.
 
 ## Add a Job
 

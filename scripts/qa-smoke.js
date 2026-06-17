@@ -245,8 +245,9 @@ async function clickButton(page, name) {
     });
     assert(actionPressurePreview.summary.includes("Energy cost") && actionPressurePreview.summary.includes("Field condition") && actionPressurePreview.summary.includes("Skill fit"), "Action pressure summary should combine energy, condition, and skill fit");
     assert(actionPressurePreview.previewMarkup.includes("Pressure on this action") && actionPressurePreview.previewMarkup.includes("Condition"), "Field-task preview cards should show action pressure before the task");
+    assert(actionPressurePreview.previewMarkup.includes("Task state: READY"), "Field-task preview cards should show task state before the task");
     assert(actionPressurePreview.choiceMarkup.includes("Pressure on this action") && actionPressurePreview.choiceMarkup.includes("Choice pressure"), "Choice pressure panels should include current action pressure");
-    assert(actionPressurePreview.nearby.includes("Pressure on this action") && actionPressurePreview.nearby.includes("Condition") && actionPressurePreview.nearby.includes("Install 2 vs difficulty 4"), "Nearby card should preview pressure before interacting with a task object");
+    assert(actionPressurePreview.nearby.includes("State: READY") && actionPressurePreview.nearby.includes("Pressure on this action") && actionPressurePreview.nearby.includes("Condition") && actionPressurePreview.nearby.includes("Install 2 vs difficulty 4"), "Nearby card should preview state and pressure before interacting with a task object");
     assert(actionPressurePreview.nearbyHighlighted, "Nearby card should highlight active action pressure");
 
     const markerAffordances = await page.evaluate(() => {
@@ -258,10 +259,12 @@ async function clickButton(page, name) {
       const shopMarkers = [...document.querySelectorAll(".interaction-marker")].map((marker) => ({
         text: marker.textContent,
         kind: marker.dataset.markerKind,
+        taskState: marker.dataset.taskState,
         title: marker.title,
       }));
       const vanNearby = document.querySelector("#nearby-card")?.textContent || "";
       const vanInteract = document.querySelector("#interact-button")?.textContent || "";
+      const vanMarker = shopMarkers.find((marker) => marker.text === "VAN");
       window.enterScene("garage");
       state.flags.garageBrief = true;
       state.flags.centerCityEquipmentDelivered = true;
@@ -277,11 +280,14 @@ async function clickButton(page, name) {
         shopMarkers,
         vanNearby,
         vanInteract,
+        vanTaskState: vanMarker?.taskState || "",
         doorText: doorMarker?.textContent || "",
         doorKind: doorMarker?.dataset.markerKind || "",
+        doorTaskState: doorMarker?.dataset.taskState || "",
         doorNearby,
         returnText: returnMarker?.textContent || "",
         returnKind: returnMarker?.dataset.markerKind || "",
+        returnTaskState: returnMarker?.dataset.taskState || "",
       };
     });
     assert(markerAffordances.shopMarkers.some((marker) => marker.text === "CONTACT" && marker.kind === "contact"), "Contact interactions should render as CONTACT markers");
@@ -290,8 +296,73 @@ async function clickButton(page, name) {
     assert(markerAffordances.vanNearby.startsWith("VAN - "), "Nearby card should use the VAN marker label");
     assert(markerAffordances.vanInteract.startsWith("Interact: VAN - "), "Interact button should use the marker label");
     assert(markerAffordances.doorText === "DOOR" && markerAffordances.doorKind === "door", "Ready portals should render as DOOR markers");
+    assert(markerAffordances.vanTaskState === "ready" && markerAffordances.doorTaskState === "ready", "Vehicle and ready portal markers should expose ready task state");
     assert(markerAffordances.doorNearby.startsWith("DOOR - ") && markerAffordances.doorNearby.includes("Client Lobby"), "Nearby card should use the DOOR marker label and destination");
     assert(markerAffordances.returnText === "RETURN" && markerAffordances.returnKind === "return", "Return portals should render as RETURN markers");
+    assert(markerAffordances.returnTaskState === "ready", "Return portal marker should expose ready task state");
+
+    const taskStatePresentation = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.shopBrief = true;
+      state.player = { x: 590, y: 180 };
+      window.render();
+      const stagedMarker = [...document.querySelectorAll(".interaction-marker")].find((marker) => marker.title.includes("Pick up staged equipment"));
+      const stagedNearby = document.querySelector("#nearby-card")?.textContent || "";
+      const readyPreview = window.getFieldTaskPreviewMarkup([window.GAME_CONTENT.warehouseDispatch.checks.find((item) => item.id === "returns")]);
+      const strainedCheck = {
+        id: "smoke-task-state",
+        label: "Smoke task state",
+        type: "diagnostic check",
+        skillId: "install",
+        difficulty: 99,
+        energyCost: 1,
+        riskFlag: "smokeTaskRisk",
+        riskLabel: "smoke task risk",
+        successText: "The task resolves cleanly.",
+        strainedText: "The task leaves visible risk.",
+      };
+      window.recordFieldTaskResult({
+        flagKey: "smoke-task-state",
+        check: strainedCheck,
+        skillCheck: {
+          skillId: "install",
+          score: 0,
+          difficulty: 99,
+          successful: false,
+          tier: "strained",
+          conditionPenalty: 0,
+          conditionPressure: [],
+          conditionPressureText: "",
+        },
+        energyCost: 1,
+      });
+      const strainedPreview = window.getFieldTaskPreviewMarkup([strainedCheck]);
+      window.enterScene("systemsService");
+      state.player = { x: 500, y: 260 };
+      window.render();
+      const lockedSystemsNearby = document.querySelector("#nearby-card")?.textContent || "";
+      const lockedSystemsMarker = [...document.querySelectorAll(".interaction-marker")].find((marker) => marker.title.includes("Check touch panel status"));
+      state.flags.systemsBrief = true;
+      window.render();
+      const readySystemsNearby = document.querySelector("#nearby-card")?.textContent || "";
+      const readySystemsMarker = [...document.querySelectorAll(".interaction-marker")].find((marker) => marker.title.includes("Check touch panel status"));
+      return {
+        stagedNearby,
+        stagedTaskState: stagedMarker?.dataset.taskState || "",
+        readyPreview,
+        strainedPreview,
+        lockedSystemsNearby,
+        lockedSystemsTaskState: lockedSystemsMarker?.dataset.taskState || "",
+        readySystemsNearby,
+        readySystemsTaskState: readySystemsMarker?.dataset.taskState || "",
+      };
+    });
+    assert(taskStatePresentation.stagedTaskState === "ready" && taskStatePresentation.stagedNearby.includes("State: READY"), "Shop staged equipment should show ready task state");
+    assert(taskStatePresentation.readyPreview.includes("Task state: READY"), "Fresh field-task preview should show READY state");
+    assert(taskStatePresentation.strainedPreview.includes("Task state: STRAINED") && taskStatePresentation.strainedPreview.includes("smoke task risk"), "Strained field-task preview should show tracked risk state");
+    assert(taskStatePresentation.lockedSystemsTaskState === "locked" && taskStatePresentation.lockedSystemsNearby.includes("State: LOCKED"), "Locked systems task should explain blocker in nearby card");
+    assert(taskStatePresentation.readySystemsTaskState === "ready" && taskStatePresentation.readySystemsNearby.includes("State: READY"), "Briefed systems task should change to ready state");
 
     await page.evaluate(() => {
       window.startGame("prototype-tech");
@@ -379,8 +450,8 @@ async function clickButton(page, name) {
     });
     assert(transitionGuidance.lockedText.includes("Locked") && transitionGuidance.lockedText.includes("equipment still needs"), "Locked portal should explain blocker");
     assert(transitionGuidance.readyText.includes("Status") && transitionGuidance.readyText.includes("Ready") && transitionGuidance.readyText.includes("Client Lobby"), "Ready portal should show transition destination");
-    assert(transitionGuidance.lockedNearby.includes("Locked") && transitionGuidance.lockedNearby.includes("equipment still needs"), "Nearby card should explain locked entrance");
-    assert(transitionGuidance.readyNearby.includes("Ready") && transitionGuidance.readyNearby.includes("Client Lobby"), "Nearby card should explain ready transition destination");
+    assert(transitionGuidance.lockedNearby.includes("State: LOCKED") && transitionGuidance.lockedNearby.includes("Carry equipment from the van"), "Nearby card should explain locked entrance");
+    assert(transitionGuidance.readyNearby.includes("State: READY") && transitionGuidance.readyNearby.includes("Client Lobby"), "Nearby card should explain ready transition destination");
     assert(transitionGuidance.taskCopy.includes("Route / Building Transition") && transitionGuidance.taskCopy.includes("Interface:"), "Current step should include loop-stage guidance");
 
     const returnMarkerFlow = await page.evaluate(() => {
