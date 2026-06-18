@@ -448,6 +448,11 @@ be easy to verify in the browser.
    player-facing cards, keep smoke coverage close to the full RPG loop, and
    avoid new content, manual driving, or engine migration until the menu/card
    loop is stable enough to be uneventful.
+62. **Done - Commissioning hotspot review pass:** The South Philadelphia loose
+   termination choice now exposes READY/COMPLETED state on the credenza
+   interaction and reopens a saved field-task review instead of collapsing to a
+   one-line notify. Loop guidance also avoids confusing "training room" with
+   career-training UI.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

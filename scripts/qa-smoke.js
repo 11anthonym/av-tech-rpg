@@ -1162,10 +1162,24 @@ async function clickButton(page, name) {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;
       window.enterScene("southPhillyCommissioning");
+      state.flags.commissioningBrief = true;
+      state.commissioningChecks = ["termination"];
+      state.player = { x: 760, y: 300 };
+      window.render();
+      const beforeChoiceNearby = document.querySelector("#nearby-card")?.textContent || "";
+      const beforeChoiceInteract = document.querySelector("#interact-button")?.textContent || "";
       const beforeEnergy = state.energy;
       window.resolveCommissioningTerminationTask("document");
       const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
       const result = state.flags.fieldTaskResults?.["commissioning-termination-document"];
+      window.closeModal();
+      state.player = { x: 760, y: 300 };
+      window.render();
+      const afterChoiceNearby = document.querySelector("#nearby-card")?.textContent || "";
+      const afterChoiceInteract = document.querySelector("#interact-button")?.textContent || "";
+      const afterChoiceTaskCopy = document.querySelector("#task-copy")?.textContent || "";
+      window.showCommissioningTerminationTaskReview();
+      const reviewText = document.querySelector("#modal-backdrop")?.innerText || "";
       window.showCareerClipboard();
       const clipboardText = document.querySelector("#modal-backdrop")?.innerText || "";
       return {
@@ -1177,6 +1191,15 @@ async function clickButton(page, name) {
         resultOutcomeText: result?.outcomeText || "",
         energyChanged: state.energy !== beforeEnergy,
         showsResultRows: modalText.includes("Task type") && modalText.includes("Skill check") && modalText.includes("Risk tracked"),
+        beforeChoiceNearby,
+        beforeChoiceInteract,
+        afterChoiceNearby,
+        afterChoiceInteract,
+        afterChoiceTaskCopy,
+        reviewShowsSavedResult: reviewText.includes("Saved task result")
+          && reviewText.includes("Document first")
+          && reviewText.includes("Return-trip risk")
+          && reviewText.includes("Controlled"),
         clipboardShowsHistory: clipboardText.includes("Field task history")
           && clipboardText.includes("Document first")
           && clipboardText.includes("thin mismatch explanation")
@@ -1191,6 +1214,10 @@ async function clickButton(page, name) {
     assert(commissioningTerminationTask.resultOutcomeText.includes("mismatch is documented"), "Commissioning termination task should save readable outcome text");
     assert(commissioningTerminationTask.energyChanged, "Commissioning termination task should affect energy");
     assert(commissioningTerminationTask.showsResultRows, "Commissioning termination task should show structured field-task rows");
+    assert(commissioningTerminationTask.beforeChoiceNearby.includes("READY") && commissioningTerminationTask.beforeChoiceInteract.includes("Choose termination task"), "Commissioning termination hotspot should show ready choice state");
+    assert(commissioningTerminationTask.afterChoiceNearby.includes("COMPLETED") && commissioningTerminationTask.afterChoiceInteract.includes("Review termination task"), "Commissioning termination hotspot should show completed review state");
+    assert(commissioningTerminationTask.afterChoiceTaskCopy.includes("Interface: use the nearest highlighted interaction") && !commissioningTerminationTask.afterChoiceTaskCopy.includes("career clipboard"), "Training room objective should not point to career-training UI");
+    assert(commissioningTerminationTask.reviewShowsSavedResult, "Commissioning termination hotspot should reopen saved task result review");
     assert(commissioningTerminationTask.clipboardShowsHistory, "Career clipboard should show saved commissioning field-task history");
 
     const saveRoundTrip = await page.evaluate(() => {

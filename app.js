@@ -977,24 +977,26 @@ function getTaskStateText(taskState) {
   return `${taskState.label}: ${taskState.detail}`;
 }
 
+function getFieldTaskResultEntryMarkup(entry) {
+  const skillName = getSkillDefinition(entry.skillId)?.name || entry.skillId || "No skill roll";
+  const riskText = entry.riskLabel || entry.riskFlag || "No named risk";
+  const toolText = [entry.requiredTool, entry.optionalTool].filter(Boolean).map(getFieldTaskToolText).join(" / ");
+  const outcomeText = entry.outcomeText || (entry.successful ? "Task resolved." : "Task left visible risk.");
+  const conditionText = entry.conditionPressureText ? ` | condition: ${entry.conditionPressureText}` : "";
+  return `
+    <li>
+      <strong>${escapeHtml(`${entry.successful ? "Resolved" : "Risk"} - ${entry.label}`)}</strong>
+      <span>${escapeHtml(`${entry.type || "field check"} | ${skillName}${entry.difficulty ? ` ${entry.difficulty}` : ""} | energy ${entry.energyCost || 0} | ${entry.tier || "recorded"}${conditionText} | risk: ${riskText}${toolText ? ` | tools: ${toolText}` : ""}. ${outcomeText}`)}</span>
+    </li>
+  `;
+}
+
 function getFieldTaskResultLedgerMarkup({ limit = 6 } = {}) {
   const entries = getFieldTaskResultEntries().slice(-limit).reverse();
   if (!entries.length) return `<p class="muted">No field-task results have been recorded yet.</p>`;
   return `
     <ul class="modal-list">
-      ${entries.map((entry) => {
-        const skillName = getSkillDefinition(entry.skillId)?.name || entry.skillId || "No skill roll";
-        const riskText = entry.riskLabel || entry.riskFlag || "No named risk";
-        const toolText = [entry.requiredTool, entry.optionalTool].filter(Boolean).map(getFieldTaskToolText).join(" / ");
-        const outcomeText = entry.outcomeText || (entry.successful ? "Task resolved." : "Task left visible risk.");
-        const conditionText = entry.conditionPressureText ? ` | condition: ${entry.conditionPressureText}` : "";
-        return `
-          <li>
-            <strong>${escapeHtml(`${entry.successful ? "Resolved" : "Risk"} - ${entry.label}`)}</strong>
-            <span>${escapeHtml(`${entry.type || "field check"} | ${skillName}${entry.difficulty ? ` ${entry.difficulty}` : ""} | energy ${entry.energyCost || 0} | ${entry.tier || "recorded"}${conditionText} | risk: ${riskText}${toolText ? ` | tools: ${toolText}` : ""}. ${outcomeText}`)}</span>
-          </li>
-        `;
-      }).join("")}
+      ${entries.map(getFieldTaskResultEntryMarkup).join("")}
     </ul>
   `;
 }
@@ -7021,6 +7023,55 @@ function getCommissioningTerminationTaskSummaryMarkup() {
   `;
 }
 
+function getCommissioningTerminationTaskResult(action = state.flags.commissioningTerminationAction) {
+  const task = getCommissioningTerminationTask(action);
+  if (!task) return null;
+  return state.flags.fieldTaskResults?.[`commissioning-termination-${action}`]
+    || getFieldTaskResultForCheck(task);
+}
+
+function getCommissioningTerminationTaskState() {
+  if (!state.flags.commissioningBrief) return getTaskState({ lockedReason: "Check in with the client contact first." });
+  if (!state.commissioningChecks.includes("termination")) {
+    return getDispatchFieldCheckTaskState({
+      checks: content.commissioningDispatch.checks,
+      checkId: "termination",
+      completedChecks: state.commissioningChecks,
+      readyDetail: "Inspect the credenza termination before deciding how to close out the room.",
+    });
+  }
+  if (!state.flags.commissioningTerminationAction) {
+    return getTaskState({
+      stateId: "ready",
+      detail: "Choose how to handle the loose speaker line before closeout.",
+    });
+  }
+  const result = getCommissioningTerminationTaskResult();
+  return result
+    ? getTaskState({ result })
+    : getTaskState({
+      completed: true,
+      detail: `${getCommissioningTerminationTaskLabel()}: ${getCommissioningTerminationQualityLabel()}.`,
+    });
+}
+
+function showCommissioningTerminationTaskReview() {
+  if (!state.flags.commissioningTerminationAction) return showCommissioningTerminationChoice();
+  const result = getCommissioningTerminationTaskResult();
+  showModal({
+    kicker: "Field Task Review",
+    title: getCommissioningTerminationTaskLabel(),
+    body: `
+      <p>${escapeHtml(state.flags.commissioningTerminationTaskOutcome || "The termination task is in your closeout notes.")}</p>
+      ${getCommissioningTerminationTaskSummaryMarkup()}
+      <p><strong>Saved task result:</strong></p>
+      ${result ? `<ul class="modal-list">${getFieldTaskResultEntryMarkup(result)}</ul>` : `<p class="muted">No saved task result is attached to this action yet.</p>`}
+      <p class="muted">This is the part of the room the closeout choice will inherit.</p>
+    `,
+    actions: [{ label: "Back To Commissioning", onClick: render }],
+  });
+}
+
 function getCommissioningTerminationSkillCheck(action) {
   const task = getCommissioningTerminationTask(action);
   if (!task?.skillId) return null;
@@ -8299,10 +8350,11 @@ function getInteractions() {
       },
       {
         x: 760, y: 300, label: terminationChecked ? state.flags.commissioningTerminationAction ? "Review termination task" : "Choose termination task" : "Inspect credenza termination",
+        taskState: getCommissioningTerminationTaskState,
         action: () => {
           if (!state.flags.commissioningBrief) return notify("Check in with the client contact first.");
           if (terminationChecked && !state.flags.commissioningTerminationAction) return showCommissioningTerminationChoice();
-          if (state.flags.commissioningTerminationAction) return notify(`${getCommissioningTerminationTaskLabel()}: ${getCommissioningTerminationQualityLabel()}.`);
+          if (state.flags.commissioningTerminationAction) return showCommissioningTerminationTaskReview();
           inspectCommissioningCondition("termination");
         },
       },
@@ -8788,7 +8840,7 @@ function getWorkdayLoopInterfaceHint(objective = "") {
   if (/dispatch board/i.test(objective)) return "Interface: dispatch board or van route review.";
   if (/van|load staged equipment|center city east/i.test(objective)) return "Interface: Van #3 connects cargo, map, and routes.";
   if (/exit|return to radnor/i.test(objective)) return "Interface: use the marked exit/return transition.";
-  if (/career clipboard|training|career snapshot/i.test(objective)) return "Interface: career clipboard or dispatch board.";
+  if (/career clipboard|field-training focus|training focus|career snapshot/i.test(objective)) return "Interface: career clipboard or dispatch board.";
   if (/josh|supervisor|client|facilities|security|escort/i.test(objective)) return "Interface: talk to the nearby contact.";
   return "Interface: use the nearest highlighted interaction.";
 }

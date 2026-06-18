@@ -1123,6 +1123,27 @@ Question for the next playtest: does visible task state make walking up to work
 objects feel more like choosing an RPG action, and are any state labels too
 noisy during ordinary movement?
 
+### Commissioning Hotspot Review Pass
+
+Pass date: June 18, 2026.
+
+Goal: keep reducing one-off modal-chain feeling by letting a resolved field
+task remain inspectable at the object that caused it.
+
+What changed:
+
+- The South Philadelphia credenza termination hotspot now shows READY before
+  the loose-line choice and COMPLETED after the selected task resolves.
+- Re-interacting with the completed termination hotspot opens a field-task
+  review with the saved task result, outcome, and return-trip risk status.
+- The workday-loop interface hint no longer treats "training room" as a career
+  training prompt.
+- Smoke QA now checks the ready/completed hotspot state, the saved-result review
+  modal, and the corrected loop guidance.
+
+Question for the next playtest: does being able to walk back to a resolved task
+make the room feel more like a place with state instead of a modal sequence?
+
 ## Current RPG Skeleton Experiment
 
 The career clipboard now exposes three pieces of RPG structure that future
