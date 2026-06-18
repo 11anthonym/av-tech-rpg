@@ -565,10 +565,16 @@ The marker renderer turns interactions into readable map tags:
 - the interaction's `npc` label, such as `SUP`, `JOSH`, `CLIENT`, or `SEC`, for
   named NPC/person interactions. Unlabeled contact-like interactions fall back
   to `CONTACT`.
-- `TASK` for inspect, search, carry, install, closeout, and other work objects.
+- short task verbs such as `BOARD`, `PICKUP`, `CHECK`, `INSTALL`, `CLOSE`, or
+  `TOOLS` for inspect, search, carry, install, closeout, and other work objects.
+  Unmapped work objects fall back to `TASK`.
 - `VAN` for vehicle/world-interface interactions.
 - `DOOR` for building, elevator, and ordinary portal transitions.
 - `RETURN` for closeout exits back to the shop.
+
+If a hotspot sits inside a labeled prop, the renderer offsets the tag away from
+the prop text. Put interaction coordinates where the player should stand, not
+where the badge looks best.
 
 Set `markerKind` or `markerText` only when inference is wrong. The nearby card
 and interact button use the same marker label, so keep labels short and

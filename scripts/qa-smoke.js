@@ -259,9 +259,18 @@ async function clickButton(page, name) {
       const shopMarkers = [...document.querySelectorAll(".interaction-marker")].map((marker) => ({
         text: marker.textContent,
         kind: marker.dataset.markerKind,
+        placement: marker.dataset.markerPlacement,
         taskState: marker.dataset.taskState,
         title: marker.title,
       }));
+      const checkMarker = [...document.querySelectorAll(".interaction-marker")].find((marker) => marker.textContent === "CHECK");
+      const mysteryReturns = [...document.querySelectorAll(".decor")].find((item) => item.textContent.includes("MYSTERY RETURNS"));
+      const markerRect = checkMarker?.getBoundingClientRect();
+      const decorRect = mysteryReturns?.getBoundingClientRect();
+      const checkMarkerOverlapsDecor = Boolean(markerRect && decorRect && markerRect.right > decorRect.left
+        && markerRect.left < decorRect.right
+        && markerRect.bottom > decorRect.top
+        && markerRect.top < decorRect.bottom);
       state.flags.finished = true;
       window.render();
       const finishedShopMarkers = [...document.querySelectorAll(".interaction-marker")].map((marker) => ({
@@ -285,6 +294,7 @@ async function clickButton(page, name) {
       const returnMarker = document.querySelector(".return-portal-marker");
       return {
         shopMarkers,
+        checkMarkerOverlapsDecor,
         finishedShopMarkers,
         vanNearby,
         vanInteract,
@@ -300,7 +310,11 @@ async function clickButton(page, name) {
     });
     assert(markerAffordances.shopMarkers.some((marker) => marker.text === "SUP" && marker.kind === "contact"), "Supervisor contact should render as a SUP marker");
     assert(markerAffordances.finishedShopMarkers.some((marker) => marker.text === "JOSH" && marker.kind === "contact"), "Josh contact should render as a JOSH marker");
-    assert(markerAffordances.shopMarkers.some((marker) => marker.text === "TASK" && marker.kind === "task"), "Task interactions should render as TASK markers");
+    assert(markerAffordances.shopMarkers.some((marker) => marker.text === "BOARD" && marker.kind === "task"), "Dispatch board should render as a BOARD marker");
+    assert(markerAffordances.shopMarkers.some((marker) => marker.text === "PICKUP" && marker.kind === "task"), "Pickup work should render as a PICKUP marker");
+    assert(markerAffordances.shopMarkers.some((marker) => marker.text === "CHECK" && marker.kind === "task"), "Inspection work should render as a CHECK marker");
+    assert(markerAffordances.shopMarkers.some((marker) => marker.text === "CHECK" && marker.placement !== "center"), "Inspection marker should move off the object label");
+    assert(!markerAffordances.checkMarkerOverlapsDecor, "Inspection marker should not cover the Mystery Returns label");
     assert(markerAffordances.shopMarkers.some((marker) => marker.text === "VAN" && marker.kind === "van"), "Vehicle interaction should render as a VAN marker");
     assert(markerAffordances.vanNearby.startsWith("VAN - "), "Nearby card should use the VAN marker label");
     assert(markerAffordances.vanInteract.startsWith("Interact: VAN - "), "Interact button should use the marker label");

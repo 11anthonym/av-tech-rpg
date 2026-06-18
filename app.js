@@ -8995,6 +8995,7 @@ function getInteractionMarkerKind(interaction) {
 function getInteractionMarkerText(interaction) {
   if (interaction?.markerText) return interaction.markerText;
   if (interaction?.npc) return String(interaction.npc).toUpperCase();
+  if (getInteractionMarkerKind(interaction) === "task") return getTaskInteractionMarkerText(interaction);
   const labels = {
     contact: "CONTACT",
     task: "TASK",
@@ -9003,6 +9004,112 @@ function getInteractionMarkerText(interaction) {
     return: "RETURN",
   };
   return labels[getInteractionMarkerKind(interaction)] || "TASK";
+}
+
+function getTaskInteractionMarkerText(interaction) {
+  const label = interaction?.label || "";
+  const patterns = [
+    [/dispatch board/i, "BOARD"],
+    [/career clipboard|field-training|training focus/i, "CAREER"],
+    [/personal kit/i, "KIT"],
+    [/personal tools|supply counter|browse/i, "TOOLS"],
+    [/break area/i, "BREAK"],
+    [/pick up/i, "PICKUP"],
+    [/load carried|load .*van/i, "LOAD"],
+    [/unload/i, "UNLOAD"],
+    [/carry/i, "CARRY"],
+    [/install/i, "INSTALL"],
+    [/patch/i, "PATCH"],
+    [/verify/i, "VERIFY"],
+    [/test/i, "TEST"],
+    [/search/i, "SEARCH"],
+    [/inspect|check/i, "CHECK"],
+    [/trace/i, "TRACE"],
+    [/document/i, "DOCS"],
+    [/review|compare/i, "REVIEW"],
+    [/close out|file .*report/i, "CLOSE"],
+    [/choose/i, "CHOOSE"],
+    [/ask/i, "ASK"],
+    [/find/i, "FIND"],
+    [/read/i, "READ"],
+  ];
+  return patterns.find(([pattern]) => pattern.test(label))?.[1] || "TASK";
+}
+
+function getInteractionMarkerDimensions(kind) {
+  const dimensions = {
+    contact: { width: 76, height: 26 },
+    task: { width: 70, height: 26 },
+    van: { width: 56, height: 26 },
+    door: { width: 58, height: 26 },
+    return: { width: 76, height: 26 },
+  };
+  return dimensions[kind] || dimensions.task;
+}
+
+function getMarkerRect(position, dimensions) {
+  return {
+    left: position.x - (dimensions.width / 2),
+    right: position.x + (dimensions.width / 2),
+    top: position.y - (dimensions.height / 2),
+    bottom: position.y + (dimensions.height / 2),
+  };
+}
+
+function doRectsOverlap(first, second) {
+  return first.right > second.left
+    && first.left < second.right
+    && first.bottom > second.top
+    && first.top < second.bottom;
+}
+
+function clampNumber(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function isPointInsideDecor(point, item) {
+  return point.x >= item.x
+    && point.x <= item.x + item.w
+    && point.y >= item.y
+    && point.y <= item.y + item.h;
+}
+
+function getInteractionMarkerPosition(interaction, kind) {
+  const base = { x: interaction.x, y: interaction.y, placement: "center" };
+  const scene = content.scenes[state.sceneId];
+  const targetDecor = scene?.decor
+    ?.filter((item) => item.text && isPointInsideDecor(base, item))
+    .sort((a, b) => (a.w * a.h) - (b.w * b.h))[0];
+  if (!targetDecor) return base;
+
+  const dimensions = getInteractionMarkerDimensions(kind);
+  const padding = 8;
+  const world = { width: 960, height: 540 };
+  const minX = dimensions.width / 2 + padding;
+  const maxX = world.width - dimensions.width / 2 - padding;
+  const minY = dimensions.height / 2 + padding;
+  const maxY = world.height - dimensions.height / 2 - padding;
+  const candidates = [
+    { x: base.x, y: targetDecor.y - dimensions.height / 2 - padding, edge: "top" },
+    { x: base.x, y: targetDecor.y + targetDecor.h + dimensions.height / 2 + padding, edge: "bottom" },
+    { x: targetDecor.x - dimensions.width / 2 - padding, y: base.y, edge: "left" },
+    { x: targetDecor.x + targetDecor.w + dimensions.width / 2 + padding, y: base.y, edge: "right" },
+  ].map((candidate) => ({
+    x: clampNumber(candidate.x, minX, maxX),
+    y: clampNumber(candidate.y, minY, maxY),
+    placement: candidate.edge,
+  }));
+  const decorRects = (scene.decor || [])
+    .filter((item) => item.text)
+    .map((item) => ({ left: item.x, right: item.x + item.w, top: item.y, bottom: item.y + item.h }));
+  return candidates
+    .map((candidate) => {
+      const rect = getMarkerRect(candidate, dimensions);
+      const overlapCount = decorRects.filter((decorRect) => doRectsOverlap(rect, decorRect)).length;
+      const distance = Math.hypot(candidate.x - base.x, candidate.y - base.y);
+      return { ...candidate, overlapCount, distance };
+    })
+    .sort((a, b) => a.overlapCount - b.overlapCount || a.distance - b.distance)[0] || base;
 }
 
 function getInteractionMarkerClass(interaction) {
@@ -9548,14 +9655,16 @@ function renderDecor() {
     const kind = getInteractionMarkerKind(item);
     const markerText = getInteractionMarkerText(item);
     const taskState = getInteractionTaskState(item);
+    const markerPosition = getInteractionMarkerPosition(item, kind);
     marker.className = [
       getInteractionMarkerClass(item),
       taskState ? `task-state-${taskState.id}` : "",
     ].filter(Boolean).join(" ");
     marker.dataset.markerKind = kind;
+    marker.dataset.markerPlacement = markerPosition.placement;
     marker.dataset.taskState = taskState?.id || "";
-    marker.style.left = `${item.x}px`;
-    marker.style.top = `${item.y}px`;
+    marker.style.left = `${markerPosition.x}px`;
+    marker.style.top = `${markerPosition.y}px`;
     marker.title = `${markerText}: ${item.label}${taskState ? ` (${getTaskStateText(taskState)})` : ""}`;
     marker.textContent = markerText;
     return marker;
