@@ -141,6 +141,9 @@ The playable slice now has:
 55. The University City survey closeout is now single-use: after the report is
    filed, the facilities contact becomes a review-only completed interaction
    that points the player to the site exit.
+56. Completed later job rooms now collapse to the return-route layer instead of
+   leaving closeout/client/task hotspots active after the objective says to
+   return to the shop.
 
 ## Playtest Questions
 
@@ -1463,11 +1466,14 @@ the player commits.
 
 ## QA Cleanup Notes
 
-Latest cleanup pass: hardened the University City site-survey closeout so the
-client contact cannot reopen the document/pushback/trust choice after the job
-is complete. The filed report now has a review-only modal, the contact shows a
-COMPLETED state with site-exit guidance, and smoke QA verifies repeated
-closeout attempts do not spend energy, re-award wages/XP, or rewrite stats.
+Latest cleanup pass: audited completed job sites for out-of-order hotspots.
+Commissioning, warranty return, executive handoff, and systems service now
+expose only the ready RETURN marker after closeout, while stale closeout calls
+open an already-complete review instead of spending resources again. University
+City also drops completed inspection hotspots after the filed-survey review.
+Smoke QA now covers those completed-room guards and verifies the current
+dispatch key advances to systems, travel, and Burlington work instead of being
+held by older completed flags.
 
 ## Prototype Guardrail
 

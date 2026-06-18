@@ -1583,14 +1583,34 @@ function getActiveCareerSummaryMarkup() {
 }
 
 function getCurrentDispatchKey() {
-  if (state.sceneId === "executiveHandoff" || state.flags.handoffStarted || state.flags.handoffComplete) return "handoff";
-  if (state.sceneId === "warrantyReturn" || state.flags.callbackCleanupStarted || state.flags.callbackCleanupComplete) return "warranty";
-  if (state.sceneId === "navyYardAccess" || state.flags.secureAccessStarted || state.flags.secureAccessComplete || (state.flags.warehouseComplete && !state.flags.secureAccessComplete)) return "secureAccess";
-  if (state.flags.warehouseStarted || state.flags.warehouseComplete) return "warehouse";
-  if (state.sceneId === "southPhillyCommissioning" || state.flags.commissioningStarted || state.flags.commissioningComplete) return "commissioning";
-  if (state.sceneId === "universitySurvey" || state.flags.surveyStarted || state.flags.surveyComplete) return "survey";
-  if (state.sceneId === "serviceOffice" || state.flags.serviceStarted || state.flags.serviceComplete || state.flags.finished) return "service";
+  if (state.sceneId === "executiveHandoff") return "handoff";
+  if (state.sceneId === "warrantyReturn") return "warranty";
+  if (state.sceneId === "navyYardAccess") return "secureAccess";
+  if (state.sceneId === "southPhillyCommissioning") return "commissioning";
+  if (state.sceneId === "universitySurvey") return "survey";
+  if (state.sceneId === "systemsService") return "systems";
+  if (state.sceneId === "burlingtonRetrofitWalkdown") {
+    return state.flags.retrofitInstallStarted ? "retrofitInstall" : "retrofitWalkdown";
+  }
+  if (state.sceneId === "serviceOffice") {
+    return state.flags.conshohockenFollowupStarted ? "followup" : "service";
+  }
+  const entries = getDispatchBoardEntries();
+  const boardEntry = getInProgressDispatchBoardEntry(entries)
+    || getCurrentDispatchBoardEntry(entries)
+    || getBlockedDispatchBoardEntry(entries)
+    || getLastCompletedDispatchBoardEntry(entries);
+  if (boardEntry) return getDispatchKeyForBoardEntry(boardEntry);
+  if (state.flags.finished) return "service";
   return "tutorial";
+}
+
+function getDispatchKeyForBoardEntry(entry) {
+  return {
+    callbackCleanup: "warranty",
+    travelCost: "travel",
+    careerSnapshot: "retrofitInstall",
+  }[entry?.id] || entry?.id || "tutorial";
 }
 
 function getUsedPartsBrainDispatches() {
@@ -3610,6 +3630,23 @@ function returnToShopViaCurrentExit(fallbackSource, fallbackMessage) {
   const portal = getCurrentReturnPortal();
   if (portal) return showReturnMarkerReady(portal);
   returnToShopAfterDispatch(fallbackSource, fallbackMessage);
+}
+
+function showCompletedDispatchReturnReview({ title = "Job Already Complete", source = "This job", result = "" } = {}) {
+  const portal = getCurrentReturnPortal();
+  showModal({
+    kicker: "Job Review",
+    title,
+    body: `
+      <p>${escapeHtml(source)} is already closed out. The consequence choice is locked in.</p>
+      <div class="results-grid">
+        ${result ? `<span>Result</span><strong>${escapeHtml(result)}</strong>` : ""}
+        <span>Return route</span><strong>${portal ? `${escapeHtml(portal.label)} marker is ready` : "Use the mapped site exit when available"}</strong>
+      </div>
+      <p class="muted">Walk to the RETURN marker to leave the area. No more energy, wages, XP, or reputation changes can be taken from this closeout.</p>
+    `,
+    actions: [{ label: "Back To Area", onClick: render }],
+  });
 }
 
 function usePortal(portalId) {
@@ -5632,6 +5669,13 @@ function inspectCallbackCleanupCondition(checkId) {
 }
 
 function showCallbackCleanupChoice() {
+  if (state.flags.callbackCleanupComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Warranty Return Already Complete",
+      source: content.callbackCleanupDispatch.title,
+      result: state.flags.callbackCleanupApproach ? `Closeout path: ${state.flags.callbackCleanupApproach}` : "",
+    });
+  }
   showModal({
     kicker: "Warranty Decision",
     title: "The Callback Has A Cause",
@@ -5666,6 +5710,13 @@ function showCallbackCleanupChoice() {
 }
 
 function finishCallbackCleanup(approach) {
+  if (state.flags.callbackCleanupComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Warranty Return Already Complete",
+      source: content.callbackCleanupDispatch.title,
+      result: state.flags.callbackCleanupApproach ? `Closeout path: ${state.flags.callbackCleanupApproach}` : "",
+    });
+  }
   const resolved = approach !== "bandage";
   const strainedFix = Boolean(state.flags.callbackTroubleshootingStrained) && approach === "root";
   const xp = (approach === "craft" ? 65 : approach === "root" ? 55 : 35) - (strainedFix ? 5 : 0);
@@ -5823,6 +5874,13 @@ function inspectHandoffCondition(checkId) {
 }
 
 function showHandoffChoice() {
+  if (state.flags.handoffComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Client Handoff Already Complete",
+      source: content.handoffDispatch.title,
+      result: state.flags.handoffApproach ? `Closeout path: ${state.flags.handoffApproach}` : "",
+    });
+  }
   showModal({
     kicker: "Client Handoff",
     title: "The Room Works If Someone Explains It",
@@ -5857,6 +5915,13 @@ function showHandoffChoice() {
 }
 
 function finishHandoff(approach) {
+  if (state.flags.handoffComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Client Handoff Already Complete",
+      source: content.handoffDispatch.title,
+      result: state.flags.handoffApproach ? `Closeout path: ${state.flags.handoffApproach}` : "",
+    });
+  }
   const helpful = approach !== "quick";
   const strainedPrep = Boolean(state.flags.handoffPrepStrained) && approach === "patient";
   const xp = (approach === "cheat" ? 60 : approach === "patient" ? 50 : 30) - (strainedPrep ? 5 : 0);
@@ -6036,6 +6101,13 @@ function inspectSystemsCondition(checkId) {
 }
 
 function showSystemsChoice() {
+  if (state.flags.systemsComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Systems Service Already Complete",
+      source: content.systemsDispatch.title,
+      result: state.flags.systemsApproach ? `Closeout path: ${state.flags.systemsApproach}` : "",
+    });
+  }
   showModal({
     kicker: "Systems Closeout",
     title: "The Room Is Not Just Offline",
@@ -6075,6 +6147,13 @@ function getSystemsDiagnosticSummary(strained) {
 }
 
 function finishSystemsService(approach) {
+  if (state.flags.systemsComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Systems Service Already Complete",
+      source: content.systemsDispatch.title,
+      result: state.flags.systemsApproach ? `Closeout path: ${state.flags.systemsApproach}` : "",
+    });
+  }
   const documented = approach !== "reboot";
   const strained = Boolean(state.flags.systemsChecksStrained) && documented;
   const xp = (approach === "scope" ? 65 : approach === "document" ? 55 : 35) - (strained ? 5 : 0);
@@ -7230,6 +7309,13 @@ function inspectCommissioningCondition(checkId) {
 }
 
 function showCommissioningChoice() {
+  if (state.flags.commissioningComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Commissioning Visit Already Complete",
+      source: content.commissioningDispatch.title,
+      result: state.flags.commissioningApproach ? `Closeout path: ${state.flags.commissioningApproach}` : "",
+    });
+  }
   if (!state.flags.commissioningTerminationAction && state.commissioningChecks.includes("termination")) return showCommissioningTerminationChoice();
   const canCleanTerminate = isCommissioningTerminationClean()
     || ["label", "document"].includes(state.flags.commissioningTerminationAction)
@@ -7272,6 +7358,13 @@ function showCommissioningChoice() {
 }
 
 function finishCommissioning(approach) {
+  if (state.flags.commissioningComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Commissioning Visit Already Complete",
+      source: content.commissioningDispatch.title,
+      result: state.flags.commissioningApproach ? `Closeout path: ${state.flags.commissioningApproach}` : "",
+    });
+  }
   if (!state.flags.commissioningTerminationAction && state.commissioningChecks.includes("termination")) return showCommissioningTerminationChoice();
   const careful = approach !== "pass";
   const cleanTask = isCommissioningTerminationClean();
@@ -8241,7 +8334,7 @@ function getInteractions() {
           });
         },
       },
-      {
+      ...(!surveyComplete ? [{
         x: 700, y: 235, label: "Inspect freight elevator opening",
         action: () => {
           if (!state.flags.surveyBrief) return notify("Check in with the facilities contact first.");
@@ -8261,7 +8354,7 @@ function getInteractions() {
           if (!state.flags.surveyBrief) return notify("Check in with the facilities contact first.");
           inspectSurveyConstraint("wall");
         },
-      },
+      }] : []),
       ...getScenePortalInteractions("universitySurvey"),
     ];
   }
@@ -8377,6 +8470,7 @@ function getInteractions() {
   }
 
   if (state.sceneId === "southPhillyCommissioning") {
+    if (state.flags.commissioningComplete) return getScenePortalInteractions("southPhillyCommissioning");
     const allChecked = state.commissioningChecks.length === content.commissioningDispatch.checks.length;
     const terminationChecked = state.commissioningChecks.includes("termination");
     const needsTerminationTask = terminationChecked && !state.flags.commissioningTerminationAction;
@@ -8430,6 +8524,7 @@ function getInteractions() {
   }
 
   if (state.sceneId === "warrantyReturn") {
+    if (state.flags.callbackCleanupComplete) return getScenePortalInteractions("warrantyReturn");
     const allChecked = state.callbackCleanupChecks.length === content.callbackCleanupDispatch.checks.length;
     return [
       {
@@ -8476,6 +8571,7 @@ function getInteractions() {
   }
 
   if (state.sceneId === "executiveHandoff") {
+    if (state.flags.handoffComplete) return getScenePortalInteractions("executiveHandoff");
     const allChecked = state.handoffChecks.length === content.handoffDispatch.checks.length;
     return [
       {
@@ -8522,6 +8618,7 @@ function getInteractions() {
   }
 
   if (state.sceneId === "systemsService") {
+    if (state.flags.systemsComplete) return getScenePortalInteractions("systemsService");
     const allChecked = state.systemsChecks.length === content.systemsDispatch.checks.length;
     return [
       {

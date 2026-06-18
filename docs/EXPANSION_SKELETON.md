@@ -457,6 +457,12 @@ be easy to verify in the browser.
    report is now idempotent. The facilities contact becomes a completed
    review-only interaction after closeout, repeated closeout calls cannot spend
    energy or rewrite rewards/stats, and smoke QA covers the regression.
+64. **Done - Completed-room audit pass:** Commissioning, warranty return,
+   executive handoff, and systems service now collapse to the return-route
+   layer after closeout instead of leaving active job hotspots behind. Stale
+   closeout calls show an already-complete review, completed survey inspections
+   disappear after filing, and the current-dispatch key now follows the active
+   board item instead of older completed flags.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

@@ -854,6 +854,7 @@ async function clickButton(page, name) {
       window.render();
       const nearbyAfterComplete = document.querySelector("#nearby-card")?.textContent || "";
       const interactAfterComplete = document.querySelector("#interact-button")?.textContent || "";
+      const interactionsAfterComplete = window.getInteractions().map((item) => item.label);
       window.interact();
       const contactModalText = document.querySelector("#modal-backdrop")?.innerText || "";
       window.closeModal();
@@ -872,6 +873,7 @@ async function clickButton(page, name) {
         },
         nearbyAfterComplete,
         interactAfterComplete,
+        interactionsAfterComplete,
         contactModalText,
         repeatModalText,
       };
@@ -886,10 +888,115 @@ async function clickButton(page, name) {
     assert(surveyCloseoutGuard.afterRepeat.quotesTrustedAnyway === surveyCloseoutGuard.firstSnapshot.quotesTrustedAnyway, "Survey repeat attempts should not increment shortcut stats");
     assert(surveyCloseoutGuard.nearbyAfterComplete.includes("COMPLETED") && surveyCloseoutGuard.nearbyAfterComplete.includes("Use the site exit"), "Completed survey contact should show review-only task state");
     assert(surveyCloseoutGuard.interactAfterComplete.includes("Review filed survey"), "Completed survey contact should no longer offer fresh report filing");
+    assert(!surveyCloseoutGuard.interactionsAfterComplete.some((label) => label.startsWith("Inspect ")), "Completed survey should not keep inspection hotspots active");
     assert(surveyCloseoutGuard.contactModalText.includes("already filed"), "Completed survey contact should open the filed-report review");
     assert(!surveyCloseoutGuard.contactModalText.includes("Call sales and push back"), "Completed survey contact should not show consequence choices again");
     assert(surveyCloseoutGuard.repeatModalText.includes("already filed"), "Repeated survey closeout should open the filed-report review");
     assert(!surveyCloseoutGuard.repeatModalText.includes("Call sales and push back"), "Repeated survey closeout should not show consequence choices again");
+
+    const completedSceneReturnGuards = await page.evaluate(() => {
+      const scenarios = [
+        {
+          id: "commissioning-complete",
+          scene: "southPhillyCommissioning",
+          approachFlag: "commissioningApproach",
+          firstApproach: "repair",
+          repeatLabel: "Mark room passed",
+          setup: (state) => {
+            state.flags.commissioningBrief = true;
+            state.flags.commissioningComplete = true;
+            state.flags.commissioningApproach = "repair";
+            state.flags.commissioningTerminationAction = "repair";
+            state.commissioningChecks = window.GAME_CONTENT.commissioningDispatch.checks.map((item) => item.id);
+          },
+          repeat: () => window.finishCommissioning("pass"),
+        },
+        {
+          id: "warranty-complete",
+          scene: "warrantyReturn",
+          approachFlag: "callbackCleanupApproach",
+          firstApproach: "root",
+          repeatLabel: "Bandage it",
+          setup: (state) => {
+            state.flags.callbackCleanupBrief = true;
+            state.flags.callbackCleanupComplete = true;
+            state.flags.callbackCleanupApproach = "root";
+            state.callbackCleanupChecks = window.GAME_CONTENT.callbackCleanupDispatch.checks.map((item) => item.id);
+          },
+          repeat: () => window.finishCallbackCleanup("bandage"),
+        },
+        {
+          id: "handoff-complete",
+          scene: "executiveHandoff",
+          approachFlag: "handoffApproach",
+          firstApproach: "patient",
+          repeatLabel: "Quick demo",
+          setup: (state) => {
+            state.flags.handoffBrief = true;
+            state.flags.handoffComplete = true;
+            state.flags.handoffApproach = "patient";
+            state.handoffChecks = window.GAME_CONTENT.handoffDispatch.checks.map((item) => item.id);
+          },
+          repeat: () => window.finishHandoff("quick"),
+        },
+        {
+          id: "systems-complete",
+          scene: "systemsService",
+          approachFlag: "systemsApproach",
+          firstApproach: "document",
+          repeatLabel: "Quick reboot",
+          setup: (state) => {
+            state.flags.systemsBrief = true;
+            state.flags.systemsComplete = true;
+            state.flags.systemsApproach = "document";
+            state.systemsChecks = window.GAME_CONTENT.systemsDispatch.checks.map((item) => item.id);
+          },
+          repeat: () => window.finishSystemsService("reboot"),
+        },
+      ];
+      return scenarios.map((scenario) => {
+        window.startGame("prototype-tech");
+        const state = window.AV_TECH_RPG_DEBUG.state;
+        scenario.setup(state);
+        window.enterScene(scenario.scene);
+        window.render();
+        const interactions = window.getInteractions().map((item) => ({
+          label: item.label,
+          marker: window.getInteractionMarkerText(item),
+          task: window.getInteractionTaskState(item)?.label || "",
+        }));
+        const before = {
+          energy: state.energy,
+          cash: state.cash,
+          xp: state.xp,
+          approach: state.flags[scenario.approachFlag],
+          stats: JSON.stringify(state.stats),
+        };
+        scenario.repeat();
+        const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
+        return {
+          id: scenario.id,
+          interactions,
+          objective: window.getObjective(),
+          modalText,
+          repeatLabel: scenario.repeatLabel,
+          stateUnchanged: state.energy === before.energy
+            && state.cash === before.cash
+            && state.xp === before.xp
+            && state.flags[scenario.approachFlag] === before.approach
+            && JSON.stringify(state.stats) === before.stats,
+        };
+      });
+    });
+    for (const guard of completedSceneReturnGuards) {
+      assert(guard.objective.includes("return to Radnor Rack & Wire"), `${guard.id} should point players to the return route`);
+      assert(guard.interactions.length === 1, `${guard.id} should only expose the return route after closeout`);
+      assert(guard.interactions[0].marker === "RETURN" && guard.interactions[0].task === "READY", `${guard.id} should expose a ready RETURN marker`);
+      assert(!guard.interactions.some((item) => /Close out|Talk to|Test|Review|Practice|Ask|Check|Verify|Compare|Read/.test(item.label)), `${guard.id} should not expose active job hotspots after closeout`);
+      assert(guard.stateUnchanged, `${guard.id} stale closeout calls should not change player state`);
+      assert(guard.modalText.includes("already closed out"), `${guard.id} stale closeout should show an already-complete review`);
+      assert(!guard.modalText.includes(guard.repeatLabel), `${guard.id} stale closeout should not show the old consequence choice`);
+    }
 
     const boardStates = await page.evaluate(() => {
       function snapshot(label, setup) {
@@ -1002,6 +1109,78 @@ async function clickButton(page, name) {
     assert(retrofitInstallBoard.current.id === "retrofitInstall", "Retrofit install should be the active board item after the walkdown");
     assert(retrofitInstallBoard.current.routeId === "burlingtonRetrofitWalkdown", "Retrofit install should reuse the Burlington route");
     assert(retrofitInstallBoard.hud.title.includes("Retrofit Install"), "HUD should show the install variant instead of the walkdown title");
+
+    const dispatchKeys = await page.evaluate(() => {
+      function snapshot(label, setup, scene = "shop") {
+        window.startGame("prototype-tech");
+        const state = window.AV_TECH_RPG_DEBUG.state;
+        setup(state);
+        window.enterScene(scene);
+        window.render();
+        return {
+          label,
+          key: window.getCurrentDispatchKey(),
+          current: window.getCurrentDispatchBoardEntry?.()?.id || "",
+          inProgress: window.getInProgressDispatchBoardEntry?.()?.id || "",
+          blocked: window.getBlockedDispatchBoardEntry?.()?.id || "",
+        };
+      }
+      const throughHandoff = (state) => {
+        state.flags.finished = true;
+        state.flags.metJosh = true;
+        state.flags.serviceComplete = true;
+        state.flags.joshServiceDebriefed = true;
+        state.flags.conshohockenFollowupComplete = true;
+        state.flags.surveyComplete = true;
+        state.flags.commissioningComplete = true;
+        state.flags.warehouseComplete = true;
+        state.flags.secureAccessComplete = true;
+        state.flags.handoffComplete = true;
+      };
+      return [
+        snapshot("systems-active-after-handoff", throughHandoff),
+        snapshot("systems-scene", (state) => {
+          throughHandoff(state);
+          state.flags.systemsStarted = true;
+        }, "systemsService"),
+        snapshot("travel-active-after-systems", (state) => {
+          throughHandoff(state);
+          state.flags.systemsComplete = true;
+        }),
+        snapshot("retrofit-walkdown-active-after-travel", (state) => {
+          throughHandoff(state);
+          state.flags.systemsComplete = true;
+          state.flags.travelComplete = true;
+        }),
+        snapshot("retrofit-install-active-after-walkdown", (state) => {
+          throughHandoff(state);
+          state.flags.systemsComplete = true;
+          state.flags.travelComplete = true;
+          state.flags.retrofitWalkdownComplete = true;
+          state.flags.retrofitInstallProtected = true;
+          state.flags.retrofitInstallBranch = "protected";
+        }),
+        snapshot("warranty-active-before-handoff", (state) => {
+          state.flags.finished = true;
+          state.flags.metJosh = true;
+          state.flags.serviceComplete = true;
+          state.flags.joshServiceDebriefed = true;
+          state.flags.conshohockenFollowupComplete = true;
+          state.flags.surveyComplete = true;
+          state.flags.commissioningComplete = true;
+          state.flags.warehouseComplete = true;
+          state.flags.secureAccessComplete = true;
+          state.stats.callbacks = 1;
+        }),
+      ];
+    });
+    const keyByLabel = Object.fromEntries(dispatchKeys.map((item) => [item.label, item]));
+    assert(keyByLabel["systems-active-after-handoff"].key === "systems" && keyByLabel["systems-active-after-handoff"].current === "systems", "Dispatch key should advance to systems after handoff");
+    assert(keyByLabel["systems-scene"].key === "systems" && keyByLabel["systems-scene"].inProgress === "systems", "Dispatch key should use the current systems scene");
+    assert(keyByLabel["travel-active-after-systems"].key === "travel" && keyByLabel["travel-active-after-systems"].current === "travelCost", "Dispatch key should advance to travel after systems");
+    assert(keyByLabel["retrofit-walkdown-active-after-travel"].key === "retrofitWalkdown" && keyByLabel["retrofit-walkdown-active-after-travel"].current === "retrofitWalkdown", "Dispatch key should advance to retrofit walkdown after travel");
+    assert(keyByLabel["retrofit-install-active-after-walkdown"].key === "retrofitInstall" && keyByLabel["retrofit-install-active-after-walkdown"].current === "retrofitInstall", "Dispatch key should advance to retrofit install after walkdown");
+    assert(keyByLabel["warranty-active-before-handoff"].key === "warranty" && keyByLabel["warranty-active-before-handoff"].current === "callbackCleanup", "Dispatch key should map warranty cleanup board state to the warranty key");
 
     await page.evaluate(() => {
       window.startGame("prototype-tech");
