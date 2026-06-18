@@ -1437,6 +1437,14 @@ friction," "lowers return-trip risk," "protects the next tech," or "keeps the
 bad process invisible." Avoid showing exact reputation or callback math before
 the player commits.
 
+## QA Cleanup Notes
+
+Latest cleanup pass: broadened marker placement so labels avoid nearby prop
+text across later job sites, removed generic `TASK`/`CONTACT` marker leaks from
+task-like interactions, and fixed a stale energy-meter danger class that could
+survive into a fresh full-energy start. Smoke QA now audits representative
+scenes for generic markers, marker overlap, off-map tags, and meter reset.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

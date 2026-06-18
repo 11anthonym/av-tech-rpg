@@ -97,6 +97,23 @@ async function clickButton(page, name) {
       assert(start.objective.trim().length > 0, `${start.expectedName} should have a current objective`);
     }
 
+    const energyMeterReset = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.energy = 0;
+      state.flags.energyExhaustedThisShift = true;
+      window.render();
+      const dangerBefore = document.querySelector("#energy-meter")?.classList.contains("energy-danger") || false;
+      window.startGame("prototype-tech");
+      return {
+        dangerBefore,
+        dangerAfter: document.querySelector("#energy-meter")?.classList.contains("energy-danger") || false,
+        energy: state.energy,
+      };
+    });
+    assert(energyMeterReset.dangerBefore, "Energy meter should show danger at zero energy");
+    assert(!energyMeterReset.dangerAfter && energyMeterReset.energy > 0, "Fresh start should clear stale energy-danger meter state");
+
     const cartAssemblyTask = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;
@@ -323,6 +340,71 @@ async function clickButton(page, name) {
     assert(markerAffordances.doorNearby.startsWith("DOOR - ") && markerAffordances.doorNearby.includes("Client Lobby"), "Nearby card should use the DOOR marker label and destination");
     assert(markerAffordances.returnText === "RETURN" && markerAffordances.returnKind === "return", "Return portals should render as RETURN markers");
     assert(markerAffordances.returnTaskState === "ready", "Return portal marker should expose ready task state");
+
+    const sceneMarkerAudit = await page.evaluate(() => {
+      const rectsOverlap = (first, second) => first.right > second.left
+        && first.left < second.right
+        && first.bottom > second.top
+        && first.top < second.bottom;
+      const scenarios = [
+        { id: "shop-first-day", scene: "shop", flags: { shopBrief: true } },
+        { id: "shop-post-first-job", scene: "shop", flags: { shopBrief: true, finished: true, metJosh: true } },
+        { id: "garage-loaded", scene: "garage", flags: { garageBrief: true, centerCityEquipmentDelivered: true } },
+        { id: "lobby-ready", scene: "lobby", flags: { lobbyBrief: true, lobbyCleared: true } },
+        { id: "client-ready", scene: "client", flags: { roomBrief: true, finished: false } },
+        { id: "service-ready", scene: "serviceOffice", flags: { serviceStarted: true, serviceBrief: true } },
+        { id: "survey-ready", scene: "universitySurvey", flags: { surveyStarted: true, surveyBrief: true } },
+        { id: "commissioning-ready", scene: "southPhillyCommissioning", flags: { commissioningStarted: true, commissioningBrief: true } },
+        { id: "secure-ready", scene: "navyYardAccess", flags: { secureAccessStarted: true, secureAccessBrief: true, secureAccessRoomReached: true } },
+        { id: "warranty-ready", scene: "warrantyReturn", flags: { callbackCleanupStarted: true, callbackCleanupBrief: true } },
+        { id: "handoff-ready", scene: "executiveHandoff", flags: { handoffStarted: true, handoffBrief: true } },
+        { id: "systems-ready", scene: "systemsService", flags: { systemsStarted: true, systemsBrief: true } },
+        { id: "retrofit-ready", scene: "burlingtonRetrofitWalkdown", flags: { retrofitWalkdownStarted: true, retrofitWalkdownBrief: true } },
+        { id: "retrofit-install-ready", scene: "burlingtonRetrofitWalkdown", flags: { retrofitWalkdownComplete: true, retrofitInstallStarted: true, retrofitInstallBrief: true } },
+      ];
+      return scenarios.map((scenario) => {
+        window.startGame("prototype-tech");
+        const state = window.AV_TECH_RPG_DEBUG.state;
+        Object.assign(state.flags, scenario.flags);
+        state.modalOpen = false;
+        document.querySelector("#modal-backdrop")?.classList.add("hidden");
+        window.enterScene(scenario.scene);
+        window.render();
+        const worldRect = document.querySelector(".scene-world")?.getBoundingClientRect();
+        const decor = [...document.querySelectorAll(".decor")].map((item) => ({
+          text: item.textContent.trim(),
+          rect: item.getBoundingClientRect(),
+        }));
+        const markers = [...document.querySelectorAll(".interaction-marker")].map((marker) => ({
+          text: marker.textContent.trim(),
+          title: marker.title,
+          rect: marker.getBoundingClientRect(),
+        }));
+        const issues = [];
+        markers.forEach((marker) => {
+          if (["TASK", "CONTACT"].includes(marker.text)) issues.push(`generic ${marker.text}: ${marker.title}`);
+          if (worldRect && (
+            marker.rect.left < worldRect.left
+            || marker.rect.right > worldRect.right
+            || marker.rect.top < worldRect.top
+            || marker.rect.bottom > worldRect.bottom
+          )) {
+            issues.push(`off scene: ${marker.text} ${marker.title}`);
+          }
+          decor.forEach((item) => {
+            if (item.text && rectsOverlap(marker.rect, item.rect)) issues.push(`${marker.text} overlaps ${item.text}: ${marker.title}`);
+          });
+        });
+        markers.forEach((marker, index) => {
+          markers.slice(index + 1).forEach((other) => {
+            if (rectsOverlap(marker.rect, other.rect)) issues.push(`marker overlap: ${marker.text}/${other.text}`);
+          });
+        });
+        return { id: scenario.id, issues };
+      });
+    });
+    const sceneMarkerIssues = sceneMarkerAudit.flatMap((item) => item.issues.map((issue) => `${item.id}: ${issue}`));
+    assert(sceneMarkerIssues.length === 0, `Scene marker audit found issues: ${sceneMarkerIssues.slice(0, 5).join(" | ")}`);
 
     const taskStatePresentation = await page.evaluate(() => {
       window.startGame("prototype-tech");

@@ -433,7 +433,8 @@ be easy to verify in the browser.
 59. **Done - Spatial marker affordance pass:** Interaction markers now render
    as readable named NPC, task-specific, VAN, DOOR, or RETURN tags. The nearby
    card and interact button use the same marker label, and smoke QA checks
-   contact, task, van, door, return, and prop-label overlap behavior.
+   contact, task, van, door, return, generic-label leaks, and prop-label
+   overlap behavior.
 60. **Done - Task state presentation pass:** Reusable task-state helpers now
    turn field-task results, completion arrays, locked flags, and portal readiness
    into READY, LOCKED, IN PROGRESS, COMPLETED, STRAINED, or RISK INHERITED copy.

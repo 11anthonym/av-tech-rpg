@@ -8985,7 +8985,7 @@ function getInteractionMarkerKind(interaction) {
   if (interaction.npc) return "contact";
   const label = interaction.label || "";
   if (/van|vehicle/i.test(label)) return "van";
-  if (/carry|unload|pick up|install|search|inspect|file|review|close out|browse|read dispatch|choose|meet escort/i.test(label)) return "task";
+  if (/carry|unload|pick up|install|search|inspect|file|review|close out|browse|read|choose|meet escort|ask what|practice/i.test(label)) return "task";
   if (/return|exit/i.test(label)) return "return";
   if (/door|entrance|elevator|lobby|room/i.test(label)) return "door";
   if (/talk|client|security|facilities|supervisor|josh|escort|contact/i.test(label)) return "contact";
@@ -8995,7 +8995,9 @@ function getInteractionMarkerKind(interaction) {
 function getInteractionMarkerText(interaction) {
   if (interaction?.markerText) return interaction.markerText;
   if (interaction?.npc) return String(interaction.npc).toUpperCase();
-  if (getInteractionMarkerKind(interaction) === "task") return getTaskInteractionMarkerText(interaction);
+  const kind = getInteractionMarkerKind(interaction);
+  if (kind === "task") return getTaskInteractionMarkerText(interaction);
+  if (kind === "contact") return getContactInteractionMarkerText(interaction);
   const labels = {
     contact: "CONTACT",
     task: "TASK",
@@ -9003,7 +9005,20 @@ function getInteractionMarkerText(interaction) {
     door: "DOOR",
     return: "RETURN",
   };
-  return labels[getInteractionMarkerKind(interaction)] || "TASK";
+  return labels[kind] || "TASK";
+}
+
+function getContactInteractionMarkerText(interaction) {
+  const label = interaction?.label || "";
+  const patterns = [
+    [/security|booth/i, "SEC"],
+    [/facilities/i, "FAC"],
+    [/escort/i, "ESCORT"],
+    [/supervisor/i, "SUP"],
+    [/josh/i, "JOSH"],
+    [/client|contact/i, "CLIENT"],
+  ];
+  return patterns.find(([pattern]) => pattern.test(label))?.[1] || "TALK";
 }
 
 function getTaskInteractionMarkerText(interaction) {
@@ -9030,6 +9045,7 @@ function getTaskInteractionMarkerText(interaction) {
     [/close out|file .*report/i, "CLOSE"],
     [/choose/i, "CHOOSE"],
     [/ask/i, "ASK"],
+    [/practice|user path/i, "PATH"],
     [/find/i, "FIND"],
     [/read/i, "READ"],
   ];
@@ -9056,6 +9072,15 @@ function getMarkerRect(position, dimensions) {
   };
 }
 
+function getDecorRect(item) {
+  return {
+    left: item.x,
+    right: item.x + item.w,
+    top: item.y,
+    bottom: item.y + item.h,
+  };
+}
+
 function doRectsOverlap(first, second) {
   return first.right > second.left
     && first.left < second.right
@@ -9077,12 +9102,16 @@ function isPointInsideDecor(point, item) {
 function getInteractionMarkerPosition(interaction, kind) {
   const base = { x: interaction.x, y: interaction.y, placement: "center" };
   const scene = content.scenes[state.sceneId];
+  const dimensions = getInteractionMarkerDimensions(kind);
+  const baseRect = getMarkerRect(base, dimensions);
   const targetDecor = scene?.decor
-    ?.filter((item) => item.text && isPointInsideDecor(base, item))
-    .sort((a, b) => (a.w * a.h) - (b.w * b.h))[0];
+    ?.filter((item) => item.text && (isPointInsideDecor(base, item) || doRectsOverlap(baseRect, getDecorRect(item))))
+    .sort((a, b) => (
+      Number(isPointInsideDecor(base, b)) - Number(isPointInsideDecor(base, a))
+      || (a.w * a.h) - (b.w * b.h)
+    ))[0];
   if (!targetDecor) return base;
 
-  const dimensions = getInteractionMarkerDimensions(kind);
   const padding = 8;
   const world = { width: 960, height: 540 };
   const minX = dimensions.width / 2 + padding;
@@ -9101,7 +9130,7 @@ function getInteractionMarkerPosition(interaction, kind) {
   }));
   const decorRects = (scene.decor || [])
     .filter((item) => item.text)
-    .map((item) => ({ left: item.x, right: item.x + item.w, top: item.y, bottom: item.y + item.h }));
+    .map(getDecorRect);
   return candidates
     .map((candidate) => {
       const rect = getMarkerRect(candidate, dimensions);
@@ -9708,7 +9737,7 @@ function renderHud() {
   const energyRatio = state.energy / getMaxEnergy();
   elements.energyMeter.style.width = `${energyRatio * 100}%`;
   elements.energyMeter.classList.toggle("energy-low", energyRatio > 0 && energyRatio <= 0.25);
-  elements.energyMeter.classList.toggle("energy-danger", state.energy <= 0 || state.flags.energyExhaustedThisShift);
+  elements.energyMeter.classList.toggle("energy-danger", Boolean(state.energy <= 0 || state.flags.energyExhaustedThisShift));
   elements.burnoutValue.textContent = state.burnout;
   elements.cashValue.textContent = formatCash(state.cash);
   elements.craftValue.textContent = getCraftsmanship();

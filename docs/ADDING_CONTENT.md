@@ -572,9 +572,9 @@ The marker renderer turns interactions into readable map tags:
 - `DOOR` for building, elevator, and ordinary portal transitions.
 - `RETURN` for closeout exits back to the shop.
 
-If a hotspot sits inside a labeled prop, the renderer offsets the tag away from
-the prop text. Put interaction coordinates where the player should stand, not
-where the badge looks best.
+If a hotspot sits on or near a labeled prop, the renderer offsets the tag away
+from the prop text. Put interaction coordinates where the player should stand,
+not where the badge looks best.
 
 Set `markerKind` or `markerText` only when inference is wrong. The nearby card
 and interact button use the same marker label, so keep labels short and
