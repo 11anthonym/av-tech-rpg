@@ -138,6 +138,9 @@ The playable slice now has:
    READY, LOCKED, IN PROGRESS, COMPLETED, STRAINED, or RISK INHERITED from
    shared helpers tied to field-task results, completion arrays, and portal
    readiness.
+55. The University City survey closeout is now single-use: after the report is
+   filed, the facilities contact becomes a review-only completed interaction
+   that points the player to the site exit.
 
 ## Playtest Questions
 
@@ -1460,11 +1463,11 @@ the player commits.
 
 ## QA Cleanup Notes
 
-Latest cleanup pass: broadened marker placement so labels avoid nearby prop
-text across later job sites, removed generic `TASK`/`CONTACT` marker leaks from
-task-like interactions, and fixed a stale energy-meter danger class that could
-survive into a fresh full-energy start. Smoke QA now audits representative
-scenes for generic markers, marker overlap, off-map tags, and meter reset.
+Latest cleanup pass: hardened the University City site-survey closeout so the
+client contact cannot reopen the document/pushback/trust choice after the job
+is complete. The filed report now has a review-only modal, the contact shows a
+COMPLETED state with site-exit guidance, and smoke QA verifies repeated
+closeout attempts do not spend energy, re-award wages/XP, or rewrite stats.
 
 ## Prototype Guardrail
 

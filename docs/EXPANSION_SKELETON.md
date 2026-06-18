@@ -453,6 +453,10 @@ be easy to verify in the browser.
    interaction and reopens a saved field-task review instead of collapsing to a
    one-line notify. Loop guidance also avoids confusing "training room" with
    career-training UI.
+63. **Done - University City survey closeout guard pass:** The filed survey
+   report is now idempotent. The facilities contact becomes a completed
+   review-only interaction after closeout, repeated closeout calls cannot spend
+   energy or rewrite rewards/stats, and smoke QA covers the regression.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

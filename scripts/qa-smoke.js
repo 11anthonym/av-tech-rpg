@@ -830,6 +830,67 @@ async function clickButton(page, name) {
     assert(surveyTask.energyChanged, "Survey inspection should affect energy");
     assert(surveyTask.showsResultRows, "Survey inspection should show structured result rows");
 
+    const surveyCloseoutGuard = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("universitySurvey");
+      state.flags.surveyBrief = true;
+      state.flags.surveyPreparation = "sketch";
+      state.surveyInspections = window.GAME_CONTENT.surveyDispatch.inspections.map((item) => item.id);
+      state.player = { x: 310, y: 185 };
+      window.render();
+      window.finishSurvey("document");
+      const firstSnapshot = {
+        energy: state.energy,
+        cash: state.cash,
+        xp: state.xp,
+        approach: state.flags.surveyApproach,
+        surveysCompleted: state.stats.surveysCompleted,
+        accessRisksDocumented: state.stats.accessRisksDocumented,
+        quotesTrustedAnyway: state.stats.quotesTrustedAnyway,
+      };
+      window.closeModal();
+      state.player = { x: 310, y: 185 };
+      window.render();
+      const nearbyAfterComplete = document.querySelector("#nearby-card")?.textContent || "";
+      const interactAfterComplete = document.querySelector("#interact-button")?.textContent || "";
+      window.interact();
+      const contactModalText = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.closeModal();
+      window.finishSurvey("pushback");
+      const repeatModalText = document.querySelector("#modal-backdrop")?.innerText || "";
+      return {
+        firstSnapshot,
+        afterRepeat: {
+          energy: state.energy,
+          cash: state.cash,
+          xp: state.xp,
+          approach: state.flags.surveyApproach,
+          surveysCompleted: state.stats.surveysCompleted,
+          accessRisksDocumented: state.stats.accessRisksDocumented,
+          quotesTrustedAnyway: state.stats.quotesTrustedAnyway,
+        },
+        nearbyAfterComplete,
+        interactAfterComplete,
+        contactModalText,
+        repeatModalText,
+      };
+    });
+    assert(surveyCloseoutGuard.firstSnapshot.approach === "document", "Survey should record the first closeout approach");
+    assert(surveyCloseoutGuard.afterRepeat.approach === "document", "Survey repeat attempts should not overwrite the closeout approach");
+    assert(surveyCloseoutGuard.afterRepeat.energy === surveyCloseoutGuard.firstSnapshot.energy, "Survey repeat attempts should not spend energy");
+    assert(surveyCloseoutGuard.afterRepeat.cash === surveyCloseoutGuard.firstSnapshot.cash, "Survey repeat attempts should not pay wages again");
+    assert(surveyCloseoutGuard.afterRepeat.xp === surveyCloseoutGuard.firstSnapshot.xp, "Survey repeat attempts should not award XP again");
+    assert(surveyCloseoutGuard.afterRepeat.surveysCompleted === surveyCloseoutGuard.firstSnapshot.surveysCompleted, "Survey repeat attempts should not increment survey stats again");
+    assert(surveyCloseoutGuard.afterRepeat.accessRisksDocumented === surveyCloseoutGuard.firstSnapshot.accessRisksDocumented, "Survey repeat attempts should not increment access-risk stats again");
+    assert(surveyCloseoutGuard.afterRepeat.quotesTrustedAnyway === surveyCloseoutGuard.firstSnapshot.quotesTrustedAnyway, "Survey repeat attempts should not increment shortcut stats");
+    assert(surveyCloseoutGuard.nearbyAfterComplete.includes("COMPLETED") && surveyCloseoutGuard.nearbyAfterComplete.includes("Use the site exit"), "Completed survey contact should show review-only task state");
+    assert(surveyCloseoutGuard.interactAfterComplete.includes("Review filed survey"), "Completed survey contact should no longer offer fresh report filing");
+    assert(surveyCloseoutGuard.contactModalText.includes("already filed"), "Completed survey contact should open the filed-report review");
+    assert(!surveyCloseoutGuard.contactModalText.includes("Call sales and push back"), "Completed survey contact should not show consequence choices again");
+    assert(surveyCloseoutGuard.repeatModalText.includes("already filed"), "Repeated survey closeout should open the filed-report review");
+    assert(!surveyCloseoutGuard.repeatModalText.includes("Call sales and push back"), "Repeated survey closeout should not show consequence choices again");
+
     const boardStates = await page.evaluate(() => {
       function snapshot(label, setup) {
         window.startGame("prototype-tech");

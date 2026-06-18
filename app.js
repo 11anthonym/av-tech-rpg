@@ -2060,7 +2060,7 @@ function resumeRequiredPrompt() {
   if (state.flags.conshohockenFollowupStarted && !state.flags.conshohockenFollowupComplete) {
     return showConshohockenFollowupChoice();
   }
-  if (state.sceneId === "universitySurvey" && state.surveyInspections.length === content.surveyDispatch.inspections.length && !state.flags.surveyComplete) {
+  if (state.sceneId === "universitySurvey" && isSurveyInspectionComplete() && !state.flags.surveyComplete) {
     return showSurveyReportChoice();
   }
   if (state.sceneId === "southPhillyCommissioning" && state.commissioningChecks.length === content.commissioningDispatch.checks.length && !state.flags.commissioningComplete) {
@@ -7484,7 +7484,28 @@ function getSurveyReportEnergyCost(baseCost) {
   return Math.max(2, baseCost - (state.flags.surveyPreparation === "sketch" ? 1 : 0) - getDocumentationSupportReduction());
 }
 
+function isSurveyInspectionComplete() {
+  return content.surveyDispatch.inspections.every((item) => state.surveyInspections.includes(item.id));
+}
+
+function getSurveyReportTitle(approach = state.flags.surveyApproach) {
+  return {
+    pushback: "The Quote Is Paused Before The Damage",
+    document: "The Constraint Is Now Somebody's Email",
+    trust: "The Quote Remains Basically Approved",
+  }[approach] || "The Survey Report Is Filed";
+}
+
+function getSurveyReportLabel(approach = state.flags.surveyApproach) {
+  return {
+    pushback: "Sales called directly",
+    document: "Access risk documented",
+    trust: "Quoted plan accepted",
+  }[approach] || "Report filed";
+}
+
 function inspectSurveyConstraint(inspectionId) {
+  if (state.flags.surveyComplete) return showSurveyCompleteReview();
   const inspection = content.surveyDispatch.inspections.find((item) => item.id === inspectionId);
   if (!inspection || state.surveyInspections.includes(inspectionId)) return notify(`${inspection?.label || "That condition"} is already in your notes.`);
   const { skillCheck, energyCost } = resolveFieldTaskCheck({
@@ -7499,7 +7520,7 @@ function inspectSurveyConstraint(inspectionId) {
     strainedLogText: `Survey skill check strained on ${inspection.label}; the report will need a clearer closeout choice.`,
   });
   render();
-  const allChecked = state.surveyInspections.length === content.surveyDispatch.inspections.length;
+  const allChecked = isSurveyInspectionComplete();
   showModal({
     kicker: "Survey Note",
     title: inspection.label,
@@ -7513,7 +7534,27 @@ function inspectSurveyConstraint(inspectionId) {
   });
 }
 
+function showSurveyCompleteReview() {
+  const returnPortal = getCurrentReturnPortal();
+  showModal({
+    kicker: "Site Survey Review",
+    title: getSurveyReportTitle(),
+    body: `
+      <p>The University City site survey is already filed. The closeout choice is locked in.</p>
+      <div class="results-grid">
+        <span>Preparation</span><strong>${getSurveyPreparationLabel()}</strong>
+        <span>Report</span><strong>${getSurveyReportLabel()}</strong>
+        <span>Return route</span><strong>${returnPortal ? `${escapeHtml(returnPortal.label)} marker is ready` : "Use the site exit when available"}</strong>
+      </div>
+      <p class="muted">No more survey energy, XP, wages, or reputation changes can be taken from this contact. Walk to the marked return point to leave the site.</p>
+    `,
+    actions: [{ label: "Back To Survey Site", onClick: render }],
+  });
+}
+
 function showSurveyReportChoice() {
+  if (state.flags.surveyComplete) return showSurveyCompleteReview();
+  if (!isSurveyInspectionComplete()) return notify("Finish the elevator, hallway, and wall observations before filing the survey report.");
   showModal({
     kicker: "Survey Report",
     title: "The Wall Is Not The Only Dimension",
@@ -7550,6 +7591,7 @@ function showSurveyReportChoice() {
 }
 
 function finishSurvey(approach) {
+  if (state.flags.surveyComplete) return showSurveyCompleteReview();
   const careful = approach !== "trust";
   const strainedDocument = Boolean(state.flags.surveyDocumentationStrained) && approach === "document";
   const xp = (approach === "pushback" ? 60 : approach === "document" ? 55 : 35) - (strainedDocument ? 5 : 0);
@@ -7584,14 +7626,14 @@ function finishSurvey(approach) {
   render();
   showModal({
     kicker: "Site Survey Complete",
-    title: approach === "pushback" ? "The Quote Is Paused Before The Damage" : approach === "document" ? "The Constraint Is Now Somebody's Email" : "The Quote Remains Basically Approved",
+    title: getSurveyReportTitle(approach),
     body: `
       <div class="results-grid">
         <span>Survey wages</span><strong>+$72</strong>
         <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Preparation</span><strong>${getSurveyPreparationLabel()}</strong>
-        <span>Report</span><strong>${approach === "pushback" ? "Sales called directly" : approach === "document" ? "Access risk documented" : "Quoted plan accepted"}</strong>
+        <span>Report</span><strong>${getSurveyReportLabel(approach)}</strong>
         ${strainedDocument ? `<span>Skill consequence</span><strong>Thin notes softened the coworker/client gain</strong>` : ""}
       </div>
       ${approach === "trust"
@@ -8161,11 +8203,29 @@ function getInteractions() {
   }
 
   if (state.sceneId === "universitySurvey") {
-    const allChecked = state.surveyInspections.length === content.surveyDispatch.inspections.length;
+    const surveyComplete = Boolean(state.flags.surveyComplete);
+    const allChecked = isSurveyInspectionComplete();
     return [
       {
-        x: 310, y: 185, label: allChecked ? "File survey report" : "Talk to facilities contact", npc: "CLIENT",
+        x: 310, y: 185, label: surveyComplete ? "Review filed survey" : allChecked ? "File survey report" : "Talk to facilities contact", npc: "CLIENT",
+        taskState: () => {
+          if (surveyComplete) {
+            return getTaskState({
+              completed: true,
+              detail: `${getSurveyReportLabel()} filed. Use the site exit to return to Radnor Rack & Wire.`,
+            });
+          }
+          if (allChecked) return getTaskState({ stateId: "ready", detail: "File the survey report before returning to the shop." });
+          if (state.flags.surveyBrief) {
+            return getTaskState({
+              stateId: "inProgress",
+              detail: `Inspect the campus access path (${state.surveyInspections.length}/${content.surveyDispatch.inspections.length}).`,
+            });
+          }
+          return getTaskState({ stateId: "ready", detail: "Check in with the facilities contact." });
+        },
         action: () => {
+          if (surveyComplete) return showSurveyCompleteReview();
           if (allChecked) return showSurveyReportChoice();
           if (state.flags.surveyBrief) return notify('Facilities contact: "The wall is upstairs. The elevator is the reason I called twice."');
           state.flags.surveyBrief = true;
