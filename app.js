@@ -3641,12 +3641,17 @@ function showCompletedDispatchReturnReview({ title = "Job Already Complete", sou
       <p>${escapeHtml(source)} is already closed out. The consequence choice is locked in.</p>
       <div class="results-grid">
         ${result ? `<span>Result</span><strong>${escapeHtml(result)}</strong>` : ""}
-        <span>Return route</span><strong>${portal ? `${escapeHtml(portal.label)} marker is ready` : "Use the mapped site exit when available"}</strong>
+        <span>Return route</span><strong>${portal ? `${escapeHtml(portal.label)} marker is ready` : "Already back at shop or no site exit is active"}</strong>
       </div>
       <p class="muted">Walk to the RETURN marker to leave the area. No more energy, wages, XP, or reputation changes can be taken from this closeout.</p>
     `,
     actions: [{ label: "Back To Area", onClick: render }],
   });
+}
+
+function getCompletedCloseoutPathResult(flagKey) {
+  const approach = state.flags[flagKey];
+  return approach ? `Closeout path: ${approach}` : "";
 }
 
 function usePortal(portalId) {
@@ -3920,6 +3925,15 @@ function getCableDressEnergyCost() {
 }
 
 function showFinishChoice() {
+  if (state.flags.finished) {
+    return state.flags.reward
+      ? showCompletedDispatchReturnReview({
+        title: "First Install Already Complete",
+        source: "Two Quick Carts",
+        result: getCompletedCloseoutPathResult("finishChoice"),
+      })
+      : showResults();
+  }
   setClock("MON 5:46 PM");
   showModal({
     kicker: "Last Decision",
@@ -3957,6 +3971,15 @@ function showFinishChoice() {
 }
 
 function finishJob(choice) {
+  if (state.flags.finished) {
+    return state.flags.reward
+      ? showCompletedDispatchReturnReview({
+        title: "First Install Already Complete",
+        source: "Two Quick Carts",
+        result: getCompletedCloseoutPathResult("finishChoice"),
+      })
+      : showResults();
+  }
   state.flags.finished = true;
   state.flags.finishChoice = choice;
   if (choice === "tidy") {
@@ -4616,6 +4639,13 @@ function promptConshohockenFollowupTravel({ fastTravel = false } = {}) {
 }
 
 function showConshohockenFollowupChoice() {
+  if (state.flags.conshohockenFollowupComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Follow-up Already Complete",
+      source: content.followupDispatch.title,
+      result: getCompletedCloseoutPathResult("conshohockenFollowupApproach"),
+    });
+  }
   showModal({
     kicker: "Repeat Route",
     title: "The Coupler Gets A Name",
@@ -4634,6 +4664,13 @@ function showConshohockenFollowupChoice() {
 }
 
 function finishConshohockenFollowup(approach) {
+  if (state.flags.conshohockenFollowupComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Follow-up Already Complete",
+      source: content.followupDispatch.title,
+      result: getCompletedCloseoutPathResult("conshohockenFollowupApproach"),
+    });
+  }
   const documented = approach === "label";
   const xp = documented ? 30 : 20;
   if (documented) changeEnergy(-2);
@@ -5202,6 +5239,13 @@ function inspectWarehouseLocation(checkId) {
 }
 
 function showWarehouseChoice() {
+  if (state.flags.warehouseComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Warehouse Run Already Complete",
+      source: content.warehouseDispatch.title,
+      result: getCompletedCloseoutPathResult("warehouseApproach"),
+    });
+  }
   showModal({
     kicker: "Warehouse Run",
     title: "Power Supply Located Technically",
@@ -5227,6 +5271,13 @@ function showWarehouseChoice() {
 }
 
 function finishWarehouseRun(approach) {
+  if (state.flags.warehouseComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Warehouse Run Already Complete",
+      source: content.warehouseDispatch.title,
+      result: getCompletedCloseoutPathResult("warehouseApproach"),
+    });
+  }
   const correctedLabel = approach === "label";
   if (correctedLabel) changeEnergy(-getWarehouseLabelEnergyCost());
   state.flags.warehouseComplete = true;
@@ -5463,6 +5514,13 @@ function getSecureAccessTaskQualityLabel() {
 }
 
 function showSecureAccessChoice() {
+  if (state.flags.secureAccessComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Secure Access Already Complete",
+      source: content.secureAccessDispatch.title,
+      result: getCompletedCloseoutPathResult("secureAccessApproach"),
+    });
+  }
   showModal({
     kicker: "Navy Yard Closeout",
     title: "The Work Is Done, The Story Is Not",
@@ -5500,6 +5558,13 @@ function showSecureAccessChoice() {
 }
 
 function finishSecureAccess(approach) {
+  if (state.flags.secureAccessComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Secure Access Already Complete",
+      source: content.secureAccessDispatch.title,
+      result: getCompletedCloseoutPathResult("secureAccessApproach"),
+    });
+  }
   const honest = approach !== "absorb";
   const strainedNotes = Boolean(state.flags.secureAccessNotesStrained) && approach === "document";
   const strainedTask = Boolean(state.flags.secureAccessTaskStrained);
@@ -6264,6 +6329,13 @@ function showTravelDispatchPreview() {
 }
 
 function showTravelChoice() {
+  if (state.flags.travelComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Travel Cost Already Complete",
+      source: content.travelDispatch.title,
+      result: getCompletedCloseoutPathResult("travelApproach"),
+    });
+  }
   const tollCost = content.travelDispatch.tollCost || CHERRY_HILL_TOLL_COST;
   showModal({
     kicker: "Cherry Hill Return",
@@ -6295,6 +6367,13 @@ function getTravelReputationSummary(approach) {
 }
 
 function finishTravelDispatch(approach) {
+  if (state.flags.travelComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Travel Cost Already Complete",
+      source: content.travelDispatch.title,
+      result: getCompletedCloseoutPathResult("travelApproach"),
+    });
+  }
   const tollCost = content.travelDispatch.tollCost || CHERRY_HILL_TOLL_COST;
   const documented = approach !== "absorb";
   const xp = approach === "pushback" ? 45 : approach === "receipt" ? 35 : 25;
@@ -6503,6 +6582,13 @@ function inspectRetrofitWalkdownCondition(checkId) {
 }
 
 function showRetrofitWalkdownChoice() {
+  if (state.flags.retrofitWalkdownComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Retrofit Walkdown Already Complete",
+      source: content.retrofitWalkdownDispatch.title,
+      result: getCompletedCloseoutPathResult("retrofitWalkdownApproach"),
+    });
+  }
   showModal({
     kicker: "Retrofit Walkdown Closeout",
     title: "Existing Pathway, In The Theoretical Sense",
@@ -6552,6 +6638,13 @@ function getRetrofitInstallHookSummary(approach, strained = false) {
 }
 
 function finishRetrofitWalkdown(approach) {
+  if (state.flags.retrofitWalkdownComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Retrofit Walkdown Already Complete",
+      source: content.retrofitWalkdownDispatch.title,
+      result: getCompletedCloseoutPathResult("retrofitWalkdownApproach"),
+    });
+  }
   const documented = approach !== "accept";
   const strained = Boolean(state.flags.retrofitWalkdownChecksStrained) && approach === "document";
   const xp = (approach === "scope" ? 65 : approach === "document" ? 55 : 35) - (strained ? 5 : 0);
@@ -6810,6 +6903,13 @@ function inspectRetrofitInstallCondition(checkId) {
 }
 
 function showRetrofitInstallChoice() {
+  if (state.flags.retrofitInstallComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Retrofit Install Already Complete",
+      source: getRetrofitInstallPreview()?.title || "Burlington County Retrofit Install",
+      result: getCompletedCloseoutPathResult("retrofitInstallApproach"),
+    });
+  }
   const preview = getRetrofitInstallPreview();
   const branchId = preview?.branchId || "pending";
   const riskBranch = branchId === "partial" || branchId === "risk";
@@ -6853,6 +6953,13 @@ function getRetrofitInstallResultSummary(approach, branchId, strained) {
 }
 
 function finishRetrofitInstall(approach) {
+  if (state.flags.retrofitInstallComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Retrofit Install Already Complete",
+      source: getRetrofitInstallPreview()?.title || "Burlington County Retrofit Install",
+      result: getCompletedCloseoutPathResult("retrofitInstallApproach"),
+    });
+  }
   const preview = getRetrofitInstallPreview();
   const branchId = preview?.branchId || "pending";
   const documented = approach === "record";
@@ -7889,6 +7996,13 @@ function getServiceInstallCheck(itemIds) {
 }
 
 function showServiceResults() {
+  if (state.flags.serviceComplete) {
+    return showCompletedDispatchReturnReview({
+      title: "Service Call Already Complete",
+      source: content.serviceDispatch.title,
+      result: getCompletedCloseoutPathResult("serviceApproach"),
+    });
+  }
   const verifiedSignalPath = state.flags.serviceApproach === "verify";
   const checkedSignalPath = verifiedSignalPath && !state.flags.serviceVerificationStrained;
   const strainedVerification = verifiedSignalPath && state.flags.serviceVerificationStrained;

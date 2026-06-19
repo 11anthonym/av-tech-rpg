@@ -463,6 +463,11 @@ be easy to verify in the browser.
    closeout calls show an already-complete review, completed survey inspections
    disappear after filing, and the current-dispatch key now follows the active
    board item instead of older completed flags.
+65. **Done - Single-use closeout guard pass:** First-day finish, service,
+   Conshohocken follow-up, warehouse, secure access, travel cost, Burlington
+   walkdown, and Burlington install closeout functions now guard completed
+   state before applying costs, rewards, callbacks, branch flags, or stats.
+   Smoke QA verifies stale closeout calls leave player state unchanged.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

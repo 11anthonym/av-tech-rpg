@@ -144,6 +144,9 @@ The playable slice now has:
 56. Completed later job rooms now collapse to the return-route layer instead of
    leaving closeout/client/task hotspots active after the objective says to
    return to the shop.
+57. Closeout functions across the current board are now single-use, so stale
+   modals or resume prompts cannot re-spend energy, re-award rewards, or
+   rewrite branch consequences after completion.
 
 ## Playtest Questions
 
@@ -1474,6 +1477,12 @@ City also drops completed inspection hotspots after the filed-survey review.
 Smoke QA now covers those completed-room guards and verifies the current
 dispatch key advances to systems, travel, and Burlington work instead of being
 held by older completed flags.
+
+Follow-up hardening: the same single-use guard now covers first-day finish,
+service result, Conshohocken follow-up, warehouse, secure access, travel cost,
+Burlington walkdown, and Burlington install closeouts. Smoke QA snapshots flags,
+stats, energy, burnout, cash, and XP before stale closeout calls and verifies
+the calls only open an already-complete review.
 
 ## Prototype Guardrail
 

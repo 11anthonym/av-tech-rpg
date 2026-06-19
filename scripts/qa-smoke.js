@@ -998,6 +998,145 @@ async function clickButton(page, name) {
       assert(!guard.modalText.includes(guard.repeatLabel), `${guard.id} stale closeout should not show the old consequence choice`);
     }
 
+    const singleUseCloseoutGuards = await page.evaluate(() => {
+      const scenarios = [
+        {
+          id: "tutorial-finish",
+          scene: "client",
+          staleLabel: "Dress the cables",
+          setup: (state) => {
+            state.flags.finished = true;
+            state.flags.finishChoice = "tidy";
+            state.flags.reward = "toolBag";
+          },
+          repeat: () => window.finishJob("rush"),
+        },
+        {
+          id: "service-result",
+          scene: "serviceOffice",
+          staleLabel: "Service Call Complete",
+          setup: (state) => {
+            state.flags.serviceComplete = true;
+            state.flags.serviceApproach = "verify";
+            state.serviceInstalled = window.GAME_CONTENT.serviceDispatch.swapItems.map((item) => item.id);
+          },
+          repeat: () => window.showServiceResults(),
+        },
+        {
+          id: "followup-closeout",
+          scene: "serviceOffice",
+          staleLabel: "Drop labels",
+          setup: (state) => {
+            state.flags.serviceComplete = true;
+            state.flags.conshohockenFollowupStarted = true;
+            state.flags.conshohockenFollowupComplete = true;
+            state.flags.conshohockenFollowupApproach = "label";
+          },
+          repeat: () => window.finishConshohockenFollowup("drop"),
+        },
+        {
+          id: "warehouse-closeout",
+          scene: "shop",
+          staleLabel: "leave the pile",
+          setup: (state) => {
+            state.flags.finished = true;
+            state.flags.metJosh = true;
+            state.flags.warehouseStarted = true;
+            state.flags.warehouseComplete = true;
+            state.flags.warehouseApproach = "label";
+            state.warehouseChecks = window.GAME_CONTENT.warehouseDispatch.checks.map((item) => item.id);
+          },
+          repeat: () => window.finishWarehouseRun("handoff"),
+        },
+        {
+          id: "secure-access-closeout",
+          scene: "navyYardAccess",
+          staleLabel: "eat the delay",
+          setup: (state) => {
+            state.flags.secureAccessComplete = true;
+            state.flags.secureAccessApproach = "document";
+            state.secureAccessChecks = window.GAME_CONTENT.secureAccessDispatch.checks.map((item) => item.id);
+            state.secureAccessTaskChecks = window.GAME_CONTENT.secureAccessDispatch.taskChecks.map((item) => item.id);
+          },
+          repeat: () => window.finishSecureAccess("absorb"),
+        },
+        {
+          id: "travel-closeout",
+          scene: "shop",
+          staleLabel: "Eat the toll",
+          setup: (state) => {
+            state.flags.finished = true;
+            state.flags.metJosh = true;
+            state.flags.travelComplete = true;
+            state.flags.travelApproach = "receipt";
+          },
+          repeat: () => window.finishTravelDispatch("absorb"),
+        },
+        {
+          id: "retrofit-walkdown-closeout",
+          scene: "burlingtonRetrofitWalkdown",
+          staleLabel: "Accept pathway",
+          setup: (state) => {
+            state.flags.retrofitWalkdownComplete = true;
+            state.flags.retrofitWalkdownApproach = "document";
+            state.retrofitWalkdownChecks = window.GAME_CONTENT.retrofitWalkdownDispatch.checks.map((item) => item.id);
+          },
+          repeat: () => window.finishRetrofitWalkdown("accept"),
+        },
+        {
+          id: "retrofit-install-closeout",
+          scene: "burlingtonRetrofitWalkdown",
+          staleLabel: "quick install note",
+          setup: (state) => {
+            state.flags.retrofitWalkdownComplete = true;
+            state.flags.retrofitInstallStarted = true;
+            state.flags.retrofitInstallComplete = true;
+            state.flags.retrofitInstallApproach = "record";
+            state.flags.retrofitInstallBranch = "protected";
+            state.retrofitInstallChecks = window.getRetrofitInstallChecks().map((item) => item.id);
+          },
+          repeat: () => window.finishRetrofitInstall("quick"),
+        },
+      ];
+      return scenarios.map((scenario) => {
+        window.startGame("prototype-tech");
+        const state = window.AV_TECH_RPG_DEBUG.state;
+        scenario.setup(state);
+        window.enterScene(scenario.scene);
+        window.render();
+        const before = {
+          energy: state.energy,
+          cash: state.cash,
+          xp: state.xp,
+          burnout: state.burnout,
+          jobsCompleted: state.jobsCompleted,
+          stats: JSON.stringify(state.stats),
+          flags: JSON.stringify(state.flags),
+        };
+        scenario.repeat();
+        const after = {
+          energy: state.energy,
+          cash: state.cash,
+          xp: state.xp,
+          burnout: state.burnout,
+          jobsCompleted: state.jobsCompleted,
+          stats: JSON.stringify(state.stats),
+          flags: JSON.stringify(state.flags),
+        };
+        return {
+          id: scenario.id,
+          staleLabel: scenario.staleLabel,
+          unchanged: JSON.stringify(before) === JSON.stringify(after),
+          modalText: document.querySelector("#modal-backdrop")?.innerText || "",
+        };
+      });
+    });
+    for (const guard of singleUseCloseoutGuards) {
+      assert(guard.unchanged, `${guard.id} stale closeout should not mutate state`);
+      assert(guard.modalText.includes("already closed out"), `${guard.id} stale closeout should show an already-complete review`);
+      assert(!guard.modalText.toLowerCase().includes(guard.staleLabel.toLowerCase()), `${guard.id} stale closeout should not show the old choice copy`);
+    }
+
     const boardStates = await page.evaluate(() => {
       function snapshot(label, setup) {
         window.startGame("prototype-tech");
