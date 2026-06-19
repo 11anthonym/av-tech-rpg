@@ -478,6 +478,12 @@ be easy to verify in the browser.
    cable closeout choice. The Wiley workaround path proves the risky case by
    showing cash, XP, reputation, callback debt, and return-trip risk changes
    without rewriting later dispatches.
+68. **Done - Route/job card tool-plan pass:** Regional-map route cards now use
+   `routeJobs`, `jobFamilies`, routes, route history, consequence ledger state,
+   and `dispatchToolPlans` to show family, purpose, summary, required tools,
+   recommended tools, owned/missing prep, risk tags, unlocks, rewards, status,
+   fast-travel state, and callback/return-trip context. Burlington retrofit
+   install cards now expose the saved walkdown branch as the proof case.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

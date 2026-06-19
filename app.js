@@ -3323,14 +3323,13 @@ function getRouteJobData(routeId) {
 
 function getRouteStatus(route) {
   const travelCount = getRouteTravelCount(route.id);
-  if (route.planned) return "Planned route";
-  if (getCurrentDispatchRouteId() === route.id) return "Active board route";
-  if (canFastTravelRoute(route)) return "Fast travel ready";
-  if (isFastTravelUnlocked(route)) return "Fast travel unlocked";
-  if (travelCount > 0) return `Traveled ${travelCount} time${travelCount === 1 ? "" : "s"}`;
-  if (canLaunchRouteFromRegionalMap(route.id)) return "Available now";
-  if (route.id === "centerCityTutorial" && state.flags.shopBrief && !state.flags.finished) return "Needs van cargo";
-  if (route.fastTravelEligible) return "Board route";
+  if (route.planned) return "Future candidate";
+  if (canFastTravelRoute(route)) return "Fast travel available";
+  if (getCurrentDispatchRouteId() === route.id) return "Active";
+  if (canLaunchRouteFromRegionalMap(route.id)) return "Available";
+  if (isFastTravelUnlocked(route)) return "Driven before / fast travel unlocked";
+  if (travelCount > 0) return `Completed / driven before (${travelCount})`;
+  if (getRouteLockReason(route)) return "Locked";
   return "Story route";
 }
 
@@ -3406,26 +3405,11 @@ function getRouteLockReason(route) {
 
 function getRouteCardMarkup(route) {
   const job = getRouteJobData(route.id);
-  const destination = getWorldArea(route.toAreaId);
-  const region = getWorldRegion(destination?.regionId);
-  const lastChoice = getLastRouteChoiceLabel(route);
-  const fastTravelCount = getFastTravelCount(route.id);
-  const lockReason = getRouteLockReason(route);
-  const travelResult = getTravelResultText(getLastTravelResult(route));
-  const details = [
-    `Destination: ${destination?.label || route.toLabel}${region?.name ? `, ${region.name}` : ""}`,
-    `Job/purpose: ${job.title} - ${job.purpose}`,
-    `Route status: ${getRouteStatus(route)}`,
-    `Travel cost/risk: ${getRouteTravelCostRisk(route)}`,
-    `Driven before: ${getRouteDrivenText(route)}`,
-    `Fast travel: ${getRouteFastTravelText(route)}${fastTravelCount ? ` Used ${fastTravelCount} time${fastTravelCount === 1 ? "" : "s"}.` : ""}`,
-    lastChoice ? `Last route choice: ${lastChoice}` : "",
-    travelResult ? `Last travel result: ${travelResult}` : "",
-    lockReason ? `Locked reason: ${lockReason}` : "",
-  ].filter(Boolean);
+  const details = getRouteJobCardRows(route)
+    .map((row) => `${row.label}: ${row.detail}`);
   return `
     <li>
-      <strong>${escapeHtml(route.toLabel)} - ${escapeHtml(job.title)}</strong>
+      <strong>${escapeHtml(`[${getRouteStatus(route)}] ${route.toLabel} - ${job.title}`)}</strong>
       <span>${escapeHtml(details.join(" "))}</span>
     </li>
   `;
@@ -4989,6 +4973,10 @@ function getBoardConsequenceHooksMarkup(consequenceHooks = []) {
   return `<li><strong>Consequence hooks</strong><span>${escapeHtml(consequenceHooks.join(" "))}</span></li>`;
 }
 
+function getJobFamilyName(familyId) {
+  return content.jobFamilies?.[familyId]?.name || familyId || "Uncategorized work";
+}
+
 function getToolDisplayName(toolId) {
   const tool = content.tools?.[toolId];
   if (!tool) return toolId;
@@ -5005,10 +4993,70 @@ function getDispatchToolPlan(familyId, routeId = "") {
   };
 }
 
-function getToolPlanText(items = []) {
-  return [...new Set(items)]
-    .map((item) => content.tools?.[item] ? getToolDisplayName(item) : item)
+function getToolPlanItemText(item, { required = false } = {}) {
+  const tool = content.tools?.[item];
+  if (!tool) return `${item} (${required ? "expected" : "recommended prep"})`;
+  const status = ownsTool(item) ? "owned" : required ? "missing" : "not owned";
+  const effect = getToolEffectText(tool);
+  return `${tool.name} (${status})${effect ? ` - ${effect}` : ""}`;
+}
+
+function getToolPlanText(items = [], options = {}) {
+  const uniqueItems = [...new Set(items)];
+  if (!uniqueItems.length) return "None listed.";
+  return uniqueItems
+    .map((item) => getToolPlanItemText(item, options))
     .join(", ");
+}
+
+function getRouteConsequenceText(route) {
+  const notes = [];
+  if (route?.id === "burlingtonRetrofitWalkdown") {
+    if (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete) {
+      const preview = getRetrofitInstallPreview();
+      notes.push(`${preview?.branch?.stateHint || "Walkdown result saved; install branch is selected."} Install branch: ${preview?.branch?.label || preview?.branchId || "walkdown result"}.`);
+    } else if (!state.flags.retrofitWalkdownComplete) {
+      notes.push("Walkdown closeout will choose the future Burlington install branch.");
+    } else if (state.flags.retrofitInstallRiskInherited) {
+      notes.push("Install closeout inherited Burlington pathway risk into future service.");
+    } else if (state.flags.retrofitInstallRiskResolved) {
+      notes.push("Install closeout resolved the Burlington pathway risk into history.");
+    }
+  }
+  const ledgerText = getDispatchCallbackEffectsText([]);
+  if (ledgerText && !ledgerText.startsWith("No open")) notes.push(ledgerText);
+  if (!notes.length) notes.push(ledgerText || "No open callback or return-trip effect is currently attached to this route.");
+  return notes.join(" ");
+}
+
+function getRouteJobCardRows(route) {
+  const job = getRouteJobData(route.id);
+  const destination = getWorldArea(route.toAreaId);
+  const region = getWorldRegion(destination?.regionId);
+  const lastChoice = getLastRouteChoiceLabel(route);
+  const fastTravelCount = getFastTravelCount(route.id);
+  const lockReason = getRouteLockReason(route);
+  const travelResult = getTravelResultText(getLastTravelResult(route));
+  const toolPlan = getDispatchToolPlan(job.familyId, route.id);
+  return [
+    { label: "Destination", detail: `${destination?.label || route.toLabel}${region?.name ? `, ${region.name}` : ""}` },
+    { label: "Job family", detail: getJobFamilyName(job.familyId) },
+    { label: "Purpose", detail: job.purpose },
+    { label: "Summary", detail: job.summary || "No summary listed." },
+    { label: "Required tools", detail: getToolPlanText(toolPlan.required, { required: true }) },
+    { label: "Recommended tools", detail: getToolPlanText(toolPlan.recommended) },
+    { label: "Risk tags", detail: (job.riskTags || []).join(", ") || "ordinary field pressure" },
+    { label: "Unlock condition", detail: job.unlockCondition },
+    { label: "Route status", detail: getRouteStatus(route) },
+    { label: "Travel cost/risk", detail: getRouteTravelCostRisk(route) },
+    { label: "Driven before", detail: getRouteDrivenText(route) },
+    { label: "Fast travel", detail: `${getRouteFastTravelText(route)}${fastTravelCount ? ` Used ${fastTravelCount} time${fastTravelCount === 1 ? "" : "s"}.` : ""}` },
+    { label: "Rewards", detail: job.rewards },
+    { label: "Callback / return-trip risk", detail: getRouteConsequenceText(route) },
+    lastChoice ? { label: "Last route choice", detail: lastChoice } : null,
+    travelResult ? { label: "Last travel result", detail: travelResult } : null,
+    lockReason ? { label: "Locked reason", detail: lockReason } : null,
+  ].filter(Boolean);
 }
 
 function getDispatchLocationSummary(route) {
@@ -5055,7 +5103,7 @@ function getDispatchJobOverviewRowsMarkup({ type, setup, familyId = "", routeId 
     <li><strong>Title</strong><span>${escapeHtml(routeJob?.title || type)}</span></li>
     <li><strong>Location / region</strong><span>${escapeHtml(getDispatchLocationSummary(route))}</span></li>
     <li><strong>Summary</strong><span>${escapeHtml(routeJob?.summary || setup)}</span></li>
-    <li><strong>Required / expected tools</strong><span>${escapeHtml(getToolPlanText(toolPlan.required))}</span></li>
+    <li><strong>Required / expected tools</strong><span>${escapeHtml(getToolPlanText(toolPlan.required, { required: true }))}</span></li>
     <li><strong>Recommended tools</strong><span>${escapeHtml(getToolPlanText(toolPlan.recommended))}</span></li>
     <li><strong>Risk tags</strong><span>${escapeHtml(getDispatchRiskTags({ routeId: route?.id || "", familyId: resolvedFamilyId, consequenceHooks }))}</span></li>
     <li><strong>Route</strong><span>${escapeHtml(routeDetail)}</span></li>
@@ -9239,7 +9287,7 @@ function getWorkdayLoopInterfaceHint(objective = "") {
   return "Interface: use the nearest highlighted interaction.";
 }
 
-function getWorkdayLoopGuidance(objective = getObjective()) {
+function getWorkdayLoopGuidance(objective = resolveCurrentObjective().text) {
   return {
     stage: getWorkdayLoopStage(objective),
     objective,
@@ -9279,6 +9327,39 @@ function getCurrentLoopRoute() {
   const tutorialRoute = getWorldRoute("centerCityTutorial");
   if (tutorialRoute && (!state.flags.finished || isTutorialRouteReady())) return tutorialRoute;
   return getInProgressDispatchBoardEntry()?.route || getCurrentDispatchBoardEntry()?.route || null;
+}
+
+function getCurrentObjectiveContext() {
+  const area = getCurrentWorldArea();
+  const route = getCurrentLoopRoute();
+  const returnPortal = getCurrentReturnPortal();
+  return {
+    sceneId: state.sceneId,
+    areaId: area?.id || "",
+    areaLabel: area?.label || content.scenes[state.sceneId]?.name || "Current area",
+    activeRouteId: route?.id || "",
+    activeRouteStatus: route ? getRouteStatus(route) : "",
+    carriedItems: getCarriedLabels(),
+    loadedCargo: getLoadedVehicleLabels(),
+    vehicleId: getCurrentVehicleId(),
+    returnPortalLabel: returnPortal?.label || "",
+    returnPortalReady: Boolean(returnPortal && isPortalReady(returnPortal)),
+    openCallbacks: getUnresolvedCallbackCount(),
+    openReturnTripRisks: getReturnTripRiskEntries().length,
+    retrofitBranch: state.flags.retrofitInstallBranch || getRetrofitInstallBranchIdFromFlags(state.flags),
+  };
+}
+
+function resolveCurrentObjective() {
+  const context = getCurrentObjectiveContext();
+  const baseObjective = getObjective();
+  if (context.returnPortalReady && /return to Radnor Rack & Wire/i.test(baseObjective)) {
+    return {
+      text: `Use the ${context.returnPortalLabel} return marker to return to Radnor Rack & Wire.`,
+      context,
+    };
+  }
+  return { text: baseObjective, context };
 }
 
 function getCurrentRouteBriefText() {
@@ -9327,7 +9408,7 @@ function getCurrentConsequenceBriefText() {
   return "No open callback debt or return-trip risk.";
 }
 
-function getCurrentStepBrief(objective = getObjective()) {
+function getCurrentStepBrief(objective = resolveCurrentObjective().text) {
   const guidance = getWorkdayLoopGuidance(objective);
   return {
     ...guidance,
@@ -10319,7 +10400,7 @@ function render() {
   elements.jobStatus.textContent = activeDispatch.statusLabel;
   elements.dispatchTitle.textContent = activeDispatch.title;
   elements.dispatchSummary.textContent = activeDispatch.summary;
-  elements.objective.textContent = getObjective();
+  elements.objective.textContent = resolveCurrentObjective().text;
   elements.taskCopy.innerHTML = getCurrentStepPanelMarkup();
   renderDecor();
   renderPlayer();

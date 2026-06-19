@@ -668,8 +668,14 @@ async function clickButton(page, name) {
       "Known Destinations",
       "Locked Future Candidates",
       "Destination:",
+      "Job family:",
+      "Required tools:",
+      "Recommended tools:",
+      "Unlock condition:",
       "Travel cost/risk:",
       "Fast travel:",
+      "Rewards:",
+      "Callback / return-trip risk:",
     ], "regional map");
 
     const travelResult = await page.evaluate(() => {
@@ -765,6 +771,34 @@ async function clickButton(page, name) {
       assert(item.job.title && item.job.purpose && item.job.rewards, `${item.routeId} should resolve route job data`);
       assert(item.job.title !== "Mapped route", `${item.routeId} should not fall back to the generic route title`);
     }
+
+    const retrofitRouteCard = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      Object.assign(state.flags, {
+        finished: true,
+        metJosh: true,
+        serviceComplete: true,
+        joshServiceDebriefed: true,
+        conshohockenFollowupComplete: true,
+        surveyComplete: true,
+        commissioningComplete: true,
+        warehouseComplete: true,
+        secureAccessComplete: true,
+        handoffComplete: true,
+        systemsComplete: true,
+        travelComplete: true,
+        retrofitWalkdownComplete: true,
+        retrofitWalkdownApproach: "accept",
+        retrofitInstallRisk: true,
+      });
+      state.flags.currentAreaId = "shop";
+      window.showRegionalMap();
+      return document.querySelector("#modal-backdrop")?.innerText || "";
+    });
+    assert(retrofitRouteCard.includes("Burlington County Retrofit Install"), "Retrofit route card should use the install variant after walkdown closeout");
+    assert(retrofitRouteCard.includes("Walkdown result: pathway accepted") && retrofitRouteCard.includes("Install branch: Inherited pathway risk"), "Retrofit route card should explain the walkdown-to-install branch");
+    assert(retrofitRouteCard.includes("Required tools:") && retrofitRouteCard.includes("Recommended tools:"), "Retrofit route card should show route tool prep");
 
     await page.evaluate(() => {
       window.startGame("prototype-tech");

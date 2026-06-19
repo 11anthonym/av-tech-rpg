@@ -1504,6 +1504,13 @@ path is the smoke-tested risky case: cash, XP, reputation, callback debt, and
 return-trip risk all appear in the player-facing result without expanding the
 job or changing the reward math.
 
+Route/job card tool-plan pass: regional-map route cards now draw from the same
+job metadata and tool-plan data as dispatch cards. Players can inspect route
+status, destination/region, family, purpose, required and recommended tools with
+owned/missing prep status, risk tags, unlocks, rewards, fast-travel state, and
+open callback/return-trip context. Burlington's install card now names the saved
+walkdown branch so the two-step consequence chain is visible before travel.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.
