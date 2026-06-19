@@ -1915,7 +1915,7 @@ function showVehicleMenu() {
         <span>Comfort</span><strong>${escapeHtml(vehicle.comfort)}</strong>
       </div>
       <p class="muted">The van is the route, cargo, and world interface for the workday.</p>
-      <h3>Current Loop</h3>
+      <h3>Current Work</h3>
       ${getWorkdayLoopGuidanceMarkup()}
       ${getVehicleMenuFlowMarkup()}
     `,
@@ -3499,7 +3499,7 @@ function showRegionalMap() {
         <span>Last route</span><strong>${escapeHtml(state.flags.lastRouteId || "None")}</strong>
       </div>
       <p class="muted">Fast travel unlocks after you have driven an eligible route once. It still respects active board prep and costs route energy.</p>
-      <h3>Current Loop</h3>
+      <h3>Current Work</h3>
       ${getWorkdayLoopGuidanceMarkup()}
       <h3>Known Destinations</h3>
       ${getKnownDestinationMarkup()}
@@ -3593,7 +3593,7 @@ function getPortalTransitionMarkup(portal) {
       <span>From</span><strong>${escapeHtml(getCurrentWorldArea()?.label || "Current area")}</strong>
       <span>To</span><strong>${escapeHtml(getPortalDestinationLabel(portal))}</strong>
       <span>Status</span><strong>${escapeHtml(getPortalStatusText(portal))}</strong>
-      <span>Loop step</span><strong>${escapeHtml(getWorkdayLoopStage(getObjective()))}</strong>
+      <span>Work step</span><strong>${escapeHtml(getWorkdayLoopStage(getObjective()))}</strong>
     </div>
   `;
 }
@@ -6626,7 +6626,7 @@ function showRetrofitWalkdownDispatchPreview() {
         "Thin notes can create a field change or return-trip risk.",
         "Scope pushback may help coworkers while annoying management.",
       ],
-      note: "This is a compact site-survey loop: prep, walk the pathway, then decide how honest the closeout gets.",
+      note: "This is a compact site survey: prep, walk the pathway, then decide how honest the closeout gets.",
       managementNote: "Please keep this quick. The quote already assumes the pathway is usable.",
       prep: state.flags.retrofitWalkdownPreparation ? `Preparation selected: ${getRetrofitWalkdownPreparationLabel()}` : "",
       taskCards: content.retrofitWalkdownDispatch.taskCards,
@@ -9384,7 +9384,7 @@ function getCurrentRouteBriefText() {
   }
   if (state.sceneId !== "shop") {
     const area = getCurrentWorldArea();
-    return `On site at ${area?.label || content.scenes[state.sceneId]?.name || "the current area"}. Finish the local task loop, then use the marked return when it is ready.`;
+    return `On site at ${area?.label || content.scenes[state.sceneId]?.name || "the current area"}. Finish the local work here, then use the marked return when it is ready.`;
   }
   return "No active route is launchable right now. Use the dispatch board or van map when the next route unlocks.";
 }
@@ -9422,8 +9422,8 @@ function getCurrentStepBrief(objective = resolveCurrentObjective().text) {
 function getCurrentStepRows({ includeLoopPath = true } = {}) {
   const brief = getCurrentStepBrief();
   return [
-    { label: "Loop step", detail: brief.stage },
-    includeLoopPath ? { label: "Loop path", detail: brief.loopPath } : null,
+    { label: "Work step", detail: brief.stage },
+    includeLoopPath ? { label: "Workday path", detail: brief.loopPath } : null,
     { label: "Next action", detail: brief.objective },
     { label: "Where to look", detail: brief.interfaceHint },
     { label: "Route", detail: brief.route },

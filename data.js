@@ -10,7 +10,7 @@ window.GAME_CONTENT = {
       description: "Alex is starting out as a commercial AV helper at a badly managed shop. They do not have Wiley's residential install instincts, a programmer's systems knowledge, or a senior tech's judgment yet. What they do have is a willingness to learn, follow direction, and build good habits before the industry teaches them bad ones.",
       strengths: ["Balanced growth", "No major starting penalty", "Good first-play learning character", "Can develop into any role"],
       weaknesses: ["No strong specialty", "Limited starting tools", "Fewer unique shortcuts", "Needs training and gear to become distinct"],
-      playstyle: "Balanced starter for new players who want to learn the commercial AV loop from the ground up.",
+      playstyle: "Balanced starter for new players who want to learn the commercial AV workday from the ground up.",
       difficulty: "Easy",
       trait: "Clean Slate",
       tendency: "Ask, learn, then do it twice because the first instruction was incomplete",

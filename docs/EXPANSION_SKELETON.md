@@ -281,7 +281,7 @@ be easy to verify in the browser.
    family, current build edge, route memory, task cards, and consequence hooks,
    before any bespoke scene exists.
 28. **Done - Playable walkdown pass:** Turned Burlington County Retrofit
-   Walkdown into the smallest playable site-survey loop: one prep choice, three
+   Walkdown into the smallest playable site-survey job: one prep choice, three
    pathway/existing-conditions checks, one scope/closeout decision, and saved
    consequences that can protect or risk the later retrofit install preview.
 29. **Done - Future install consequence pass:** Kept the retrofit install
@@ -343,8 +343,8 @@ be easy to verify in the browser.
    secure access, commissioning, systems, Burlington walkdown, and Burlington
    install closeout cards explain cause, future effect, and open/resolved/
    inherited status.
-39. **Done - Loop guidance and transition clarity pass:** Added reusable
-   workday-loop guidance for the current step, van menu, regional map, and
+39. **Done - Workday guidance and transition clarity pass:** Added reusable
+   workday guidance for the current step, van menu, regional map, and
    dispatch-board previews. Portal transitions now show from/to/status details,
    locked transitions explain their blocker, and the early garage entrance
    interaction exposes why the client entrance is blocked before cargo is
@@ -405,7 +405,7 @@ be easy to verify in the browser.
 52. **Done - Field task result wording pass:** Field-task result modals now
    label player-facing consequence rows as `Risk tracked` instead of exposing
    internal risk-flag terminology.
-53. **Done - Workday loop path pass:** Current-loop guidance now shows the
+53. **Done - Workday path pass:** Current-work guidance now shows the
    full Shop-to-next-job path and brackets the current step on shared van/map
    and dispatch guidance surfaces.
 54. **Done - Return marker flow pass:** Ready return-route portals now keep the
@@ -417,7 +417,7 @@ be easy to verify in the browser.
    change action costs and future friction without becoming a survival sim.
 56. **Done - Condition movement pressure pass:** Walking speed now reacts to
    active carry load, low or zero energy, high burnout, and bad-knees loaded
-   walks. The carry card and loop guidance name the active pressure so a player
+   walks. The carry card and workday guidance name the active pressure so a player
    can connect field condition to how the room feels without adding manual
    driving or survival meters.
 57. **Done - Condition skill-check pressure pass:** Low-but-not-zero energy and
@@ -471,7 +471,7 @@ be easy to verify in the browser.
 66. **Done - Shift result delta pass:** End-shift choices now use a reusable
    tracked-state delta helper to show what changed after the player commits:
    energy, burnout, cash, XP, reputation, callbacks, return-trip risk, recovery
-   days, late-night streak, next-shift prep, and the next loop step. This proves
+   days, late-night streak, next-shift prep, and the next step. This proves
    a small post-choice consequence pattern before applying it to more closeouts.
 67. **Done - First job closeout delta pass:** The Two Quick Carts result screen
    now reuses the tracked-state delta helper after the player commits to the

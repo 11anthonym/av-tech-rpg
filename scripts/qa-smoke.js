@@ -207,8 +207,8 @@ async function clickButton(page, name) {
     assert(movementPressure.exhaustedSpeed < movementPressure.carrySpeed, "Exhaustion should add movement pressure");
     assert(movementPressure.badKneesCarrySpeed < movementPressure.carrySpeed, "Bad knees should make loaded walks slower");
     assert(movementPressure.carryCard.includes("Condition pressure") && movementPressure.carryCard.includes("Carrying gear"), "Carry card should explain movement pressure");
-    assert(movementPressure.carryTaskCopy.includes("Condition pressure") && movementPressure.carryTaskCopy.includes("Walk speed"), "Loop guidance should show carry pressure");
-    assert(movementPressure.exhaustedTaskCopy.includes("Exhausted"), "Loop guidance should show exhaustion pressure");
+    assert(movementPressure.carryTaskCopy.includes("Condition pressure") && movementPressure.carryTaskCopy.includes("Walk speed"), "Current-step guidance should show carry pressure");
+    assert(movementPressure.exhaustedTaskCopy.includes("Exhausted"), "Current-step guidance should show exhaustion pressure");
 
     const currentStepBriefing = await page.evaluate(() => {
       window.startGame("prototype-tech");
@@ -526,9 +526,9 @@ async function clickButton(page, name) {
       window.showVehicleMenu();
     });
     await assertModalIncludes(page, [
-      "Current Loop",
-      "Loop step",
-      "Loop path",
+      "Current Work",
+      "Work step",
+      "Workday path",
       "[Shop]",
       "Where to look",
       "Review cargo",
@@ -662,8 +662,8 @@ async function clickButton(page, name) {
 
     await page.evaluate(() => window.showRegionalMap());
     await assertModalIncludes(page, [
-      "Current Loop",
-      "Loop path",
+      "Current Work",
+      "Workday path",
       "Active Job Route",
       "Known Destinations",
       "Locked Future Candidates",

@@ -82,7 +82,7 @@ The playable slice now has:
    helpful tools, and risk state before and during field work.
 32. A reusable consequence ledger that shows open callback debt, named
    return-trip risks, resolved risk history, and closeout cause/effect language.
-33. Workday-loop guidance on the current-step panel, van menu, regional map,
+33. Workday guidance on the current-step panel, van menu, regional map,
    and dispatch-board previews, plus clearer locked/ready transition text for
    portals and early building-entry blockers.
 34. A centralized dispatch-board state helper that keeps the active board item,
@@ -115,7 +115,7 @@ The playable slice now has:
    latest mode, stat deltas, arrival clock, and drive count.
 46. Field-task result modals now label consequence rows as tracked risk instead
    of exposing "risk flag" as player-facing terminology.
-47. Current-loop guidance now shows the full workday path and brackets the
+47. Current-work guidance now shows the full workday path and brackets the
    current step on van/map/dispatch surfaces.
 48. Completed job closeouts now keep the player onsite and point them to a
    readable RETURN marker instead of teleporting directly back to the shop.
@@ -123,7 +123,7 @@ The playable slice now has:
    Dark: fatigue, loadout, carry burden, route friction, and unresolved risk
    should change what actions cost without adding a survival sim.
 50. Walking speed now reacts to carry load, low or zero energy, high burnout,
-   and bad-knees loaded walks, with the carry card and loop guidance naming the
+   and bad-knees loaded walks, with the carry card and workday guidance naming the
    active condition pressure.
 51. Low-but-not-zero energy and high burnout now apply visible condition
    penalties to shared skill checks, and field-task result/history surfaces
@@ -461,7 +461,7 @@ or does it feel like too much roadmap text inside the game?
 
 ### Playable Walkdown Pass
 
-The **Burlington County Retrofit Walkdown** is now a playable site-survey loop
+The **Burlington County Retrofit Walkdown** is now a playable site-survey job
 after the Cherry Hill coordination-cost travel beat. The job asks the player to
 choose a prep step, travel to the retrofit site, check ceiling access, trace the
 existing pathway, document the above-ceiling conflict, and decide whether the
@@ -678,20 +678,20 @@ loop and what action advances the workday.
 
 Changed:
 
-- Added reusable workday-loop guidance that labels the current loop step, next
+- Added reusable workday guidance that labels the current work step, next
   action, and interface to check.
-- The Current Step panel now includes loop-stage guidance while the scene header
+- The Current Step panel now includes work-step guidance while the scene header
   keeps the shorter objective.
 - The van menu, regional map, and dispatch-board previews now show the current
-  loop guidance block.
+  workday guidance block.
 - Portal transitions now show from/to/status details, and locked transitions
   open a readable blocker modal instead of only logging a message.
 - The early garage/client-entrance interaction now explains when it is locked by
   undelivered equipment and when it is ready to enter the client lobby.
 
 Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
-loop guidance in van/map surfaces, locked/ready transition cards, nearby-card
-transition status, and the current-step loop label.
+workday guidance in van/map surfaces, locked/ready transition cards, nearby-card
+transition status, and the current-step work label.
 
 ### Dispatch Board State Consolidation Pass
 
@@ -972,14 +972,14 @@ Goal: help the van/map/board layer read like one coherent RPG workday loop.
 
 Changed:
 
-- Current-loop guidance now includes the full workday path:
+- Current-work guidance now includes the full workday path:
   Shop -> Van / Dispatch Board -> Regional Map / Route -> Travel Choice -> Job
   Site -> Field Tasks -> Closeout -> Return / End Shift -> Next Job.
 - The current step is bracketed so the player can place the next action inside
   the larger loop.
 
 Verified: syntax checks and the smoke script passed. Smoke coverage now asserts
-that the van and regional-map surfaces show the loop path.
+that the van and regional-map surfaces show the workday path.
 
 ### Return Marker Flow Pass
 
@@ -1030,7 +1030,7 @@ What changed:
 - Carrying gear, low energy, zero-energy exhaustion, high burnout, and
   bad-knees loaded carries can reduce walk speed.
 - The speed penalty is clamped so the player is slowed, not trapped.
-- The carry card and workday-loop guidance show the active condition pressure
+- The carry card and workday guidance show the active condition pressure
   and walk-speed readout.
 - Smoke QA checks base speed, carrying pressure, exhaustion pressure,
   bad-knees loaded-walk pressure, and visible HUD guidance.
@@ -1145,10 +1145,10 @@ What changed:
   the loose-line choice and COMPLETED after the selected task resolves.
 - Re-interacting with the completed termination hotspot opens a field-task
   review with the saved task result, outcome, and return-trip risk status.
-- The workday-loop interface hint no longer treats "training room" as a career
+- The workday guidance interface hint no longer treats "training room" as a career
   training prompt.
 - Smoke QA now checks the ready/completed hotspot state, the saved-result review
-  modal, and the corrected loop guidance.
+  modal, and the corrected workday guidance.
 
 Question for the next playtest: does being able to walk back to a resolved task
 make the room feel more like a place with state instead of a modal sequence?
@@ -1485,14 +1485,14 @@ stats, energy, burnout, cash, and XP before stale closeout calls and verifies
 the calls only open an already-complete review.
 
 Current-step briefing pass: the persistent Current Step panel now uses the same
-state-derived briefing as the van and regional map. It shows loop step, next
+state-derived briefing as the van and regional map. It shows work step, next
 action, where to look, active/locked route state, fast-travel/history status,
 open callback or return-trip debt, and condition pressure when active. Smoke QA
 now checks that clean, locked, fast-travel, callback, and return-risk states stay
 visible from the player HUD.
 
 Shift-result delta pass: end-shift choices now land in a result modal that shows
-only the tracked career values that changed, plus the next loop step. This makes
+only the tracked career values that changed, plus the next step. This makes
 clock out, stay-late prep, help-Josh, and recovery-day choices feel like RPG
 consequences instead of silent stat edits, while leaving the underlying balance
 math unchanged. Reuse the delta helper on job closeouts only when touching those
