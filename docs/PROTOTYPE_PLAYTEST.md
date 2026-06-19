@@ -1498,6 +1498,12 @@ consequences instead of silent stat edits, while leaving the underlying balance
 math unchanged. Reuse the delta helper on job closeouts only when touching those
 flows for other fixes.
 
+First-job closeout delta pass: the Two Quick Carts result screen now shows the
+same changed-state summary after the cable closeout choice. Wiley's workaround
+path is the smoke-tested risky case: cash, XP, reputation, callback debt, and
+return-trip risk all appear in the player-facing result without expanding the
+job or changing the reward math.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

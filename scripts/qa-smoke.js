@@ -140,6 +140,31 @@ async function clickButton(page, name) {
     assert(cartAssemblyTask.energyChanged, "Tutorial cart assembly should affect energy");
     assert(cartAssemblyTask.showsResultRows, "Tutorial cart assembly should show structured result rows");
 
+    const tutorialCloseoutDelta = await page.evaluate(() => {
+      window.startGame("wiley");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("client");
+      state.flags.roomBrief = true;
+      state.assembled = window.GAME_CONTENT.tutorial.assembly.map((item) => item.id);
+      state.energy = 80;
+      state.cash = 0;
+      window.finishJob("wiley-workaround");
+      const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
+      return {
+        modalText,
+        callbackCount: state.stats.callbacks,
+        returnRiskCount: Object.keys(state.flags.returnTripRisks || {}).length,
+        cash: state.cash,
+        xp: state.xp,
+      };
+    });
+    const tutorialCloseoutText = tutorialCloseoutDelta.modalText.toLowerCase();
+    assert(tutorialCloseoutText.includes("what changed"), "First-day closeout should show a changed-state summary");
+    assert(tutorialCloseoutDelta.modalText.includes("Cash") && tutorialCloseoutDelta.modalText.includes("XP"), "First-day closeout delta should show reward changes");
+    assert(tutorialCloseoutDelta.modalText.includes("Client reputation") && tutorialCloseoutDelta.modalText.includes("Management reputation"), "First-day closeout delta should show reputation changes");
+    assert(tutorialCloseoutDelta.modalText.includes("Open callbacks") && tutorialCloseoutDelta.modalText.includes("Open return-trip risks"), "Risky first-day closeout delta should show callback and return-trip risk");
+    assert(tutorialCloseoutDelta.callbackCount === 1 && tutorialCloseoutDelta.returnRiskCount === 1 && tutorialCloseoutDelta.cash === 141 && tutorialCloseoutDelta.xp === 40, "Wiley workaround closeout should preserve callback, risk, cash, and XP state");
+
     const movementPressure = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;

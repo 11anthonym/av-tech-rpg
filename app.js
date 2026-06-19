@@ -4098,6 +4098,7 @@ function finishJob(choice) {
       })
       : showResults();
   }
+  const before = getTrackedStateSnapshot();
   state.flags.finished = true;
   state.flags.finishChoice = choice;
   if (choice === "tidy") {
@@ -4145,10 +4146,10 @@ function finishJob(choice) {
     if (choice === "tidy") state.stats.carefulFinishes += 1;
     state.flags.tutorialStatsRecorded = true;
   }
-  showResults();
+  showResults({ before });
 }
 
-function showResults() {
+function showResults({ before = null } = {}) {
   const tidy = state.flags.finishChoice === "tidy";
   const netPay = tidy ? 152 : 141;
   const rewardTools = content.tutorial.rewardTools.filter((toolId) => !ownsTool(toolId));
@@ -4167,6 +4168,10 @@ function showResults() {
         <span>Burnout</span><strong>${state.burnout}</strong>
         <span>Experience</span><strong>+40 XP</strong>
       </div>
+      ${before ? `
+        <h3>What Changed</h3>
+        ${getTrackedStateDeltaMarkup(before)}
+      ` : ""}
       <blockquote>Management note: "Please improve time management and plan parking more efficiently."</blockquote>
       <p>You survived your first week early. ${rewardTools.length ? "Choose one starter upgrade." : "Your starter kit already covers the current upgrade choices."}</p>
     `,

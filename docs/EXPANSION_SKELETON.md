@@ -473,6 +473,11 @@ be easy to verify in the browser.
    energy, burnout, cash, XP, reputation, callbacks, return-trip risk, recovery
    days, late-night streak, next-shift prep, and the next loop step. This proves
    a small post-choice consequence pattern before applying it to more closeouts.
+67. **Done - First job closeout delta pass:** The Two Quick Carts result screen
+   now reuses the tracked-state delta helper after the player commits to the
+   cable closeout choice. The Wiley workaround path proves the risky case by
+   showing cash, XP, reputation, callback debt, and return-trip risk changes
+   without rewriting later dispatches.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
