@@ -9150,24 +9150,104 @@ function getWorkdayLoopPath(stage) {
   return steps.map((step) => step === current ? `[${step}]` : step).join(" -> ");
 }
 
+function getCurrentLoopRoute() {
+  const currentRoute = getWorldRoute(getCurrentDispatchRouteId());
+  if (currentRoute) return currentRoute;
+  const tutorialRoute = getWorldRoute("centerCityTutorial");
+  if (tutorialRoute && (!state.flags.finished || isTutorialRouteReady())) return tutorialRoute;
+  return getInProgressDispatchBoardEntry()?.route || getCurrentDispatchBoardEntry()?.route || null;
+}
+
+function getCurrentRouteBriefText() {
+  if (state.flags.endShiftPending) return "Route launch is paused until the shift closeout is complete.";
+  const route = getCurrentLoopRoute();
+  if (route) {
+    const job = getRouteJobData(route.id);
+    const lockReason = getRouteLockReason(route);
+    return [
+      `${route.fromLabel} -> ${route.toLabel}`,
+      `${job.title}`,
+      lockReason ? `Locked: ${lockReason}` : getRouteStatus(route),
+      `Driven before: ${getRouteDrivenText(route)}`,
+      `Fast travel: ${getRouteFastTravelText(route)}`,
+    ].join(". ");
+  }
+  const boardEntry = getCurrentDispatchBoardEntry() || getBlockedDispatchBoardEntry();
+  if (boardEntry) {
+    return boardEntry.route
+      ? `${boardEntry.routeLabel}. ${boardEntry.boardStatus}: ${boardEntry.title}.`
+      : `${boardEntry.title}: ${boardEntry.boardStatus}. No drive route; resolve this from the dispatch board or shop.`;
+  }
+  if (state.sceneId !== "shop") {
+    const area = getCurrentWorldArea();
+    return `On site at ${area?.label || content.scenes[state.sceneId]?.name || "the current area"}. Finish the local task loop, then use the marked return when it is ready.`;
+  }
+  return "No active route is launchable right now. Use the dispatch board or van map when the next route unlocks.";
+}
+
+function getCurrentConsequenceBriefText() {
+  const openEntries = getConsequenceLedgerEntries();
+  if (openEntries.length) {
+    const callbackCount = openEntries.some((entry) => entry.id === "callback-debt") ? getUnresolvedCallbackCount() : 0;
+    const riskCount = openEntries.filter((entry) => entry.id !== "callback-debt").length;
+    const countText = [
+      callbackCount ? `${callbackCount} callback${callbackCount === 1 ? "" : "s"}` : "",
+      riskCount ? `${riskCount} return-trip risk${riskCount === 1 ? "" : "s"}` : "",
+    ].filter(Boolean).join(", ");
+    const first = openEntries[0];
+    return `Open: ${countText}. Cause: ${first.cause} Future effect: ${first.affects}.`;
+  }
+  const resolvedEntries = getConsequenceLedgerEntries({ includeResolved: true })
+    .filter((entry) => entry.status !== "open");
+  const lastResolved = resolvedEntries[resolvedEntries.length - 1];
+  if (lastResolved) return `No open callback debt. Last saved consequence: ${getConsequenceStatusLabel(lastResolved.status)} - ${lastResolved.source}. ${lastResolved.detail}`;
+  return "No open callback debt or return-trip risk.";
+}
+
+function getCurrentStepBrief(objective = getObjective()) {
+  const guidance = getWorkdayLoopGuidance(objective);
+  return {
+    ...guidance,
+    loopPath: getWorkdayLoopPath(guidance.stage),
+    route: getCurrentRouteBriefText(),
+    consequences: getCurrentConsequenceBriefText(),
+    conditionPressure: getConditionPressureSummary(),
+  };
+}
+
+function getCurrentStepRows({ includeLoopPath = true } = {}) {
+  const brief = getCurrentStepBrief();
+  return [
+    { label: "Loop step", detail: brief.stage },
+    includeLoopPath ? { label: "Loop path", detail: brief.loopPath } : null,
+    { label: "Next action", detail: brief.objective },
+    { label: "Where to look", detail: brief.interfaceHint },
+    { label: "Route", detail: brief.route },
+    { label: "Consequences", detail: brief.consequences },
+    brief.conditionPressure ? { label: "Condition pressure", detail: brief.conditionPressure } : null,
+  ].filter(Boolean);
+}
+
+function getCurrentStepListMarkup({ className = "modal-list", includeLoopPath = true } = {}) {
+  return `
+    <ul class="${className}">
+      ${getCurrentStepRows({ includeLoopPath }).map((row) => `<li><strong>${escapeHtml(row.label)}</strong><span>${escapeHtml(row.detail)}</span></li>`).join("")}
+    </ul>
+  `;
+}
+
+function getCurrentStepPanelMarkup() {
+  return getCurrentStepListMarkup({ className: "current-step-list", includeLoopPath: false });
+}
+
 function getWorkdayLoopGuidanceText() {
-  const guidance = getWorkdayLoopGuidance();
-  const pressure = getConditionPressureSummary();
-  return `${guidance.stage}: ${guidance.objective} ${guidance.interfaceHint}${pressure ? ` Condition pressure: ${pressure}` : ""}`;
+  return getCurrentStepRows({ includeLoopPath: false })
+    .map((row) => `${row.label}: ${row.detail}`)
+    .join(" ");
 }
 
 function getWorkdayLoopGuidanceMarkup() {
-  const guidance = getWorkdayLoopGuidance();
-  const pressure = getConditionPressureSummary();
-  return `
-    <ul class="modal-list">
-      <li><strong>Loop step</strong><span>${escapeHtml(guidance.stage)}</span></li>
-      <li><strong>Loop path</strong><span>${escapeHtml(getWorkdayLoopPath(guidance.stage))}</span></li>
-      <li><strong>Next action</strong><span>${escapeHtml(guidance.objective)}</span></li>
-      <li><strong>Where to look</strong><span>${escapeHtml(guidance.interfaceHint)}</span></li>
-      ${pressure ? `<li><strong>Condition pressure</strong><span>${escapeHtml(pressure)}</span></li>` : ""}
-    </ul>
-  `;
+  return getCurrentStepListMarkup();
 }
 
 function getObjective() {
@@ -10117,7 +10197,7 @@ function render() {
   elements.dispatchTitle.textContent = activeDispatch.title;
   elements.dispatchSummary.textContent = activeDispatch.summary;
   elements.objective.textContent = getObjective();
-  elements.taskCopy.textContent = getWorkdayLoopGuidanceText();
+  elements.taskCopy.innerHTML = getCurrentStepPanelMarkup();
   renderDecor();
   renderPlayer();
   renderNearby();

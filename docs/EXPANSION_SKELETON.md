@@ -586,3 +586,10 @@ Do not extract these until multiple jobs need the same pattern:
 Right now, repeat a small pattern two or three times before abstracting it. The
 prototype should stay easy to read by someone who is more interested in making a
 funny AV job than designing middleware.
+
+## Stabilization Notes
+
+Current-step briefing is now a reusable state-derived helper shared by the HUD,
+van menu, and regional map. Keep future objective, route, fast-travel, callback,
+return-risk, and condition-pressure copy flowing through that helper instead of
+adding separate one-off "what now?" text in each scene.

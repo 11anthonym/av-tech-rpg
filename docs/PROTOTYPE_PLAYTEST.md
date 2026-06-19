@@ -1484,6 +1484,13 @@ Burlington walkdown, and Burlington install closeouts. Smoke QA snapshots flags,
 stats, energy, burnout, cash, and XP before stale closeout calls and verifies
 the calls only open an already-complete review.
 
+Current-step briefing pass: the persistent Current Step panel now uses the same
+state-derived briefing as the van and regional map. It shows loop step, next
+action, where to look, active/locked route state, fast-travel/history status,
+open callback or return-trip debt, and condition pressure when active. Smoke QA
+now checks that clean, locked, fast-travel, callback, and return-risk states stay
+visible from the player HUD.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

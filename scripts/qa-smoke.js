@@ -185,6 +185,31 @@ async function clickButton(page, name) {
     assert(movementPressure.carryTaskCopy.includes("Condition pressure") && movementPressure.carryTaskCopy.includes("Walk speed"), "Loop guidance should show carry pressure");
     assert(movementPressure.exhaustedTaskCopy.includes("Exhausted"), "Loop guidance should show exhaustion pressure");
 
+    const currentStepBriefing = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      const initialText = document.querySelector("#task-copy")?.textContent || "";
+      state.flags.finished = true;
+      state.flags.serviceStarted = true;
+      state.flags.routeHistory = { conshohockenService: 1 };
+      state.stats.callbacks = 1;
+      state.flags.returnTripRisks = {};
+      state.flags.returnTripRisks.systemsQuickReboot = {
+        status: "open",
+        source: "Smoke systems shortcut",
+        cause: "Quick reboot skipped the mismatch note.",
+        detail: "Future service inherits a thin diagnosis.",
+      };
+      window.render();
+      const consequenceText = document.querySelector("#task-copy")?.textContent || "";
+      return { initialText, consequenceText };
+    });
+    assert(currentStepBriefing.initialText.includes("Next action") && currentStepBriefing.initialText.includes("Where to look"), "Current step panel should label the next action and interface");
+    assert(currentStepBriefing.initialText.includes("Route") && currentStepBriefing.initialText.includes("Locked: Talk to the supervisor"), "Current step panel should explain the initial locked route");
+    assert(currentStepBriefing.initialText.includes("Consequences") && currentStepBriefing.initialText.includes("No open callback debt"), "Current step panel should show clean consequence state");
+    assert(currentStepBriefing.consequenceText.includes("Fast travel: Available now") && currentStepBriefing.consequenceText.includes("Driven before: Yes"), "Current step panel should expose route history and fast travel state");
+    assert(currentStepBriefing.consequenceText.includes("Open: 1 callback") && currentStepBriefing.consequenceText.includes("return-trip risk"), "Current step panel should expose callback and return-trip debt");
+
     const conditionSkillPressure = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;
