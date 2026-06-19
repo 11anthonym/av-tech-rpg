@@ -1511,6 +1511,13 @@ owned/missing prep status, risk tags, unlocks, rewards, fast-travel state, and
 open callback/return-trip context. Burlington's install card now names the saved
 walkdown branch so the two-step consequence chain is visible before travel.
 
+Map transition card pass: the regional map now separates active job routes,
+launchable routes, unlocked fast-travel routes, completed history, and locked
+future candidates. It also shows current-area transition cards from the portal
+data, including origin, destination, status, requirement, travel or return
+effect, and work step, so locked entrances and return exits are readable before
+the player clicks them.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

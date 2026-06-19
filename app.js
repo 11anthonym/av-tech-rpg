@@ -3324,8 +3324,9 @@ function getRouteJobData(routeId) {
 function getRouteStatus(route) {
   const travelCount = getRouteTravelCount(route.id);
   if (route.planned) return "Future candidate";
-  if (canFastTravelRoute(route)) return "Fast travel available";
-  if (getCurrentDispatchRouteId() === route.id) return "Active";
+  if (getCurrentDispatchRouteId() === route.id) {
+    return canFastTravelRoute(route) ? "Active / fast travel available" : "Active";
+  }
   if (canLaunchRouteFromRegionalMap(route.id)) return "Available";
   if (isFastTravelUnlocked(route)) return "Driven before / fast travel unlocked";
   if (travelCount > 0) return `Completed / driven before (${travelCount})`;
@@ -3424,8 +3425,12 @@ function getFastTravelRoutes() {
   return getWorldRoutes().filter(canFastTravelRoute);
 }
 
-function isRouteActiveOnMap(route) {
-  return getCurrentDispatchRouteId() === route.id || canLaunchRouteFromRegionalMap(route.id);
+function isCurrentBoardRoute(route) {
+  return getCurrentDispatchRouteId() === route.id;
+}
+
+function isRouteAvailableOnMap(route) {
+  return !isCurrentBoardRoute(route) && canLaunchRouteFromRegionalMap(route.id);
 }
 
 function getRouteListMarkup(routes, emptyMessage) {
@@ -3440,15 +3445,26 @@ function getRouteListMarkup(routes, emptyMessage) {
 function getRegionalRouteMarkup() {
   const routes = getWorldRoutes();
   if (!routes.length) return "<p class=\"muted\">No routes mapped yet.</p>";
-  const activeRoutes = routes.filter(isRouteActiveOnMap);
-  const repeatRoutes = routes.filter((route) => !isRouteActiveOnMap(route) && isFastTravelUnlocked(route));
-  const completedRoutes = routes.filter((route) => !isRouteActiveOnMap(route) && !isFastTravelUnlocked(route) && getRouteTravelCount(route.id) > 0);
-  const lockedRoutes = routes.filter((route) => !isRouteActiveOnMap(route) && !isFastTravelUnlocked(route) && getRouteTravelCount(route.id) === 0);
+  const activeRoutes = routes.filter(isCurrentBoardRoute);
+  const availableRoutes = routes.filter(isRouteAvailableOnMap);
+  const fastTravelRoutes = routes.filter((route) => !isCurrentBoardRoute(route)
+    && !isRouteAvailableOnMap(route)
+    && isFastTravelUnlocked(route));
+  const completedRoutes = routes.filter((route) => !isCurrentBoardRoute(route)
+    && !isRouteAvailableOnMap(route)
+    && !isFastTravelUnlocked(route)
+    && getRouteTravelCount(route.id) > 0);
+  const lockedRoutes = routes.filter((route) => !isCurrentBoardRoute(route)
+    && !isRouteAvailableOnMap(route)
+    && !isFastTravelUnlocked(route)
+    && getRouteTravelCount(route.id) === 0);
   return `
     <h3>Active Job Route</h3>
     ${getRouteListMarkup(activeRoutes, "No active route is ready from the map. Check the dispatch board.")}
-    <h3>Available Repeat / Fast-Travel Routes</h3>
-    ${getRouteListMarkup(repeatRoutes, "No repeat routes have unlocked fast travel yet.")}
+    <h3>Available Routes</h3>
+    ${getRouteListMarkup(availableRoutes, "No additional route is launchable from the current area.")}
+    <h3>Unlocked Fast-Travel Routes</h3>
+    ${getRouteListMarkup(fastTravelRoutes, "No repeat routes have unlocked fast travel yet.")}
     <h3>Completed Route History</h3>
     ${getRouteListMarkup(completedRoutes, "No completed non-repeat routes are on the history ledger yet.")}
     <h3>Locked Future Candidates</h3>
@@ -3468,11 +3484,13 @@ function getKnownDestinationMarkup() {
         const region = getWorldRegion(area.regionId);
         const inboundRoutes = routes.filter((route) => route.toAreaId === area.id);
         const driven = inboundRoutes.some((route) => getRouteTravelCount(route.id) > 0);
-        const active = inboundRoutes.some(isRouteActiveOnMap);
+        const active = inboundRoutes.some(isCurrentBoardRoute);
+        const available = inboundRoutes.some((route) => canLaunchRouteFromRegionalMap(route.id));
+        const destinationState = active ? "active route" : available ? "available route" : driven ? "visited" : "mapped candidate";
         return `
           <li>
             <strong>${escapeHtml(area.label)}${currentArea?.id === area.id ? " (current)" : ""}</strong>
-            <span>${escapeHtml(`${region?.name || "Unmapped region"} | ${active ? "active route" : driven ? "visited" : "mapped candidate"}`)}</span>
+            <span>${escapeHtml(`${region?.name || "Unmapped region"} | ${destinationState}`)}</span>
           </li>
         `;
       }).join("")}
@@ -3503,6 +3521,8 @@ function showRegionalMap() {
       ${getWorkdayLoopGuidanceMarkup()}
       <h3>Known Destinations</h3>
       ${getKnownDestinationMarkup()}
+      <h3>Area Transitions</h3>
+      ${getCurrentAreaPortalMarkup()}
       ${getRegionalRouteMarkup()}
     `,
     actions: [
@@ -3575,10 +3595,36 @@ function getPortalDestinationLabel(portal) {
   return `${destination.label}${region?.name ? `, ${region.name}` : ""}`;
 }
 
+function getPortalOriginLabel(portal) {
+  const origin = getWorldArea(portal?.fromAreaId);
+  const region = getWorldRegion(origin?.regionId);
+  if (!origin) return "Unmapped origin";
+  return `${origin.label}${region?.name ? `, ${region.name}` : ""}`;
+}
+
 function getPortalStatusText(portal) {
   if (!portal) return "Unmapped";
   if (isPortalReady(portal)) return "Ready";
   return `Locked: ${portal.requiredMessage || `${portal.label} is not available yet.`}`;
+}
+
+function getPortalRequirementText(portal) {
+  if (!portal) return "No transition data.";
+  if (!portal.requiredFlag) return "No local blocker.";
+  if (isPortalReady(portal)) return "Requirement met.";
+  return portal.requiredMessage || `${portal.label} is not available yet.`;
+}
+
+function getPortalTravelEffectText(portal) {
+  if (!portal) return "No travel effect mapped.";
+  if (portal.kind === "returnRoute") {
+    return `${portal.returnSource || portal.label || "Current job"} return. ${portal.returnLog || "Returns to Radnor Rack & Wire."}`;
+  }
+  const effects = [];
+  if (portal.arrivalClock) effects.push(`Arrive ${portal.arrivalClock}.`);
+  if (portal.arrivalLog) effects.push(portal.arrivalLog);
+  if (portal.transition?.body) effects.push(portal.transition.body);
+  return effects.join(" ") || "Moves to the destination area.";
 }
 
 function getPortalDetailText(portal) {
@@ -3587,13 +3633,49 @@ function getPortalDetailText(portal) {
   return `${getPortalStatusText(portal)} Destination: ${destination}.`;
 }
 
+function getPortalCardRows(portal) {
+  return [
+    { label: "Label", detail: portal?.label || "Unmapped transition" },
+    { label: "Origin", detail: getPortalOriginLabel(portal) },
+    { label: "Destination", detail: getPortalDestinationLabel(portal) },
+    { label: "Status", detail: getPortalStatusText(portal) },
+    { label: "Requirement", detail: getPortalRequirementText(portal) },
+    { label: portal?.kind === "returnRoute" ? "Return effect" : "Travel effect", detail: getPortalTravelEffectText(portal) },
+    { label: "Work step", detail: getWorkdayLoopStage(getObjective()) },
+  ];
+}
+
+function getPortalCardMarkup(portal) {
+  const details = getPortalCardRows(portal)
+    .map((row) => `${row.label}: ${row.detail}`)
+    .join(" ");
+  return `
+    <li>
+      <strong>${escapeHtml(`[${getPortalStatusText(portal)}] ${portal?.label || "Area transition"}`)}</strong>
+      <span>${escapeHtml(details)}</span>
+    </li>
+  `;
+}
+
+function getCurrentAreaPortals() {
+  const area = getCurrentWorldArea();
+  if (!area) return [];
+  return Object.values(content.world?.portals || {})
+    .filter((portal) => portal.fromAreaId === area.id && isPortalVisibleForState(portal));
+}
+
+function getCurrentAreaPortalMarkup() {
+  const portals = getCurrentAreaPortals();
+  if (!portals.length) return "<p class=\"muted\">No mapped area transitions are visible from here yet.</p>";
+  return `<ul class="modal-list">${portals.map((portal) => getPortalCardMarkup(portal)).join("")}</ul>`;
+}
+
 function getPortalTransitionMarkup(portal) {
   return `
     <div class="results-grid">
-      <span>From</span><strong>${escapeHtml(getCurrentWorldArea()?.label || "Current area")}</strong>
-      <span>To</span><strong>${escapeHtml(getPortalDestinationLabel(portal))}</strong>
-      <span>Status</span><strong>${escapeHtml(getPortalStatusText(portal))}</strong>
-      <span>Work step</span><strong>${escapeHtml(getWorkdayLoopStage(getObjective()))}</strong>
+      ${getPortalCardRows(portal).map((row) => `
+        <span>${escapeHtml(row.label)}</span><strong>${escapeHtml(row.detail)}</strong>
+      `).join("")}
     </div>
   `;
 }

@@ -665,7 +665,10 @@ async function clickButton(page, name) {
       "Current Work",
       "Workday path",
       "Active Job Route",
+      "Available Routes",
+      "Unlocked Fast-Travel Routes",
       "Known Destinations",
+      "Area Transitions",
       "Locked Future Candidates",
       "Destination:",
       "Job family:",
@@ -731,8 +734,8 @@ async function clickButton(page, name) {
         taskCopy: document.querySelector("#task-copy")?.textContent || "",
       };
     });
-    assert(transitionGuidance.lockedText.includes("Locked") && transitionGuidance.lockedText.includes("equipment still needs"), "Locked portal should explain blocker");
-    assert(transitionGuidance.readyText.includes("Status") && transitionGuidance.readyText.includes("Ready") && transitionGuidance.readyText.includes("Client Lobby"), "Ready portal should show transition destination");
+    assert(transitionGuidance.lockedText.includes("Requirement") && transitionGuidance.lockedText.includes("Origin") && transitionGuidance.lockedText.includes("Destination") && transitionGuidance.lockedText.includes("equipment still needs"), "Locked portal should explain blocker with transition details");
+    assert(transitionGuidance.readyText.includes("Status") && transitionGuidance.readyText.includes("Ready") && transitionGuidance.readyText.includes("Requirement") && transitionGuidance.readyText.includes("Travel effect") && transitionGuidance.readyText.includes("Client Lobby"), "Ready portal should show transition destination and effects");
     assert(transitionGuidance.lockedNearby.includes("State: LOCKED") && transitionGuidance.lockedNearby.includes("Carry equipment from the van"), "Nearby card should explain locked entrance");
     assert(transitionGuidance.readyNearby.includes("State: READY") && transitionGuidance.readyNearby.includes("Client Lobby"), "Nearby card should explain ready transition destination");
     assert(transitionGuidance.taskCopy.includes("Route / Building Transition") && transitionGuidance.taskCopy.includes("Interface:"), "Current step should include loop-stage guidance");

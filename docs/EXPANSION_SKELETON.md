@@ -484,6 +484,12 @@ be easy to verify in the browser.
    recommended tools, owned/missing prep, risk tags, unlocks, rewards, status,
    fast-travel state, and callback/return-trip context. Burlington retrofit
    install cards now expose the saved walkdown branch as the proof case.
+69. **Done - Map transition card pass:** Regional-map routes now split active
+   job routes, launchable routes, unlocked fast-travel routes, completed
+   history, and locked future candidates into separate sections. The same map
+   also surfaces current-area portal cards with origin, destination, status,
+   requirement, travel/return effect, and current work step, so spatial movement
+   reads more like an RPG route/entrance system.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
