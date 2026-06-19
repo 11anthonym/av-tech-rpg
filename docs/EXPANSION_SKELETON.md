@@ -468,6 +468,11 @@ be easy to verify in the browser.
    walkdown, and Burlington install closeout functions now guard completed
    state before applying costs, rewards, callbacks, branch flags, or stats.
    Smoke QA verifies stale closeout calls leave player state unchanged.
+66. **Done - Shift result delta pass:** End-shift choices now use a reusable
+   tracked-state delta helper to show what changed after the player commits:
+   energy, burnout, cash, XP, reputation, callbacks, return-trip risk, recovery
+   days, late-night streak, next-shift prep, and the next loop step. This proves
+   a small post-choice consequence pattern before applying it to more closeouts.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

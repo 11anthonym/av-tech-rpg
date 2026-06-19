@@ -1491,6 +1491,13 @@ open callback or return-trip debt, and condition pressure when active. Smoke QA
 now checks that clean, locked, fast-travel, callback, and return-risk states stay
 visible from the player HUD.
 
+Shift-result delta pass: end-shift choices now land in a result modal that shows
+only the tracked career values that changed, plus the next loop step. This makes
+clock out, stay-late prep, help-Josh, and recovery-day choices feel like RPG
+consequences instead of silent stat edits, while leaving the underlying balance
+math unchanged. Reuse the delta helper on job closeouts only when touching those
+flows for other fixes.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

@@ -604,6 +604,37 @@ async function clickButton(page, name) {
     assert(!endShiftJoshGate.sameShiftIntroText.includes("Help Josh") && endShiftJoshGate.sameShiftIntroButtons.every((label) => !/Josh|lead tech/i.test(label)), "Same-shift Josh intro should not immediately unlock Help Josh");
     assert(endShiftJoshGate.laterShiftText.includes("Help Josh") && endShiftJoshGate.laterShiftButtons.some((label) => label.includes("Help Josh")), "Later shifts should offer Josh help after the intro shift has passed");
 
+    const shiftResultDelta = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.finished = true;
+      state.flags.metJosh = true;
+      state.flags.endShiftPending = true;
+      state.flags.endShiftSource = "Smoke Shift";
+      state.energy = 70;
+      state.burnout = 2;
+      state.reputation.management = 0;
+      window.completeShift("prep");
+      const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const buttons = [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent || "");
+      return {
+        modalText,
+        buttons,
+        endShiftPending: Boolean(state.flags.endShiftPending),
+        shiftPrepActive: Boolean(state.flags.shiftPrepActive),
+        clock: state.clock,
+        management: state.reputation.management,
+        shiftsCompleted: state.stats.shiftsCompleted,
+      };
+    });
+    const shiftResultText = shiftResultDelta.modalText.toLowerCase();
+    assert(shiftResultText.includes("shift result") && shiftResultText.includes("what changed"), "Shift completion should show a result summary");
+    assert(shiftResultDelta.modalText.includes("Energy") && shiftResultDelta.modalText.includes("Burnout") && shiftResultDelta.modalText.includes("Management reputation"), "Shift result should show changed condition and reputation");
+    assert(shiftResultDelta.modalText.includes("Next-shift prep") && shiftResultText.includes("next step"), "Shift result should show prep consequence and next step");
+    assert(shiftResultDelta.buttons.some((label) => label.includes("Review Dispatch Board Routes")), "Shift result should offer the dispatch board when available");
+    assert(!shiftResultDelta.endShiftPending && shiftResultDelta.shiftPrepActive, "Prep shift result should clear end-shift state and keep next-shift prep active");
+    assert(shiftResultDelta.clock.startsWith("TUE") && shiftResultDelta.management === -1 && shiftResultDelta.shiftsCompleted === 1, "Prep shift result should preserve clock, reputation, and shift stats");
+
     await page.evaluate(() => window.showRegionalMap());
     await assertModalIncludes(page, [
       "Current Loop",

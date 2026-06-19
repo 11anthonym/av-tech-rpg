@@ -2390,6 +2390,122 @@ function getEndShiftChoicePreviewMarkup() {
   `;
 }
 
+function getTrackedStateSnapshot() {
+  return {
+    clock: state.clock,
+    energy: state.energy,
+    burnout: state.burnout,
+    cash: state.cash,
+    xp: state.xp,
+    jobsCompleted: state.jobsCompleted,
+    clientReputation: state.reputation.clients,
+    coworkerReputation: state.reputation.coworkers,
+    managementReputation: state.reputation.management,
+    openCallbacks: getUnresolvedCallbackCount(),
+    openReturnTripRisks: getReturnTripRiskEntries().length,
+    shiftsCompleted: state.stats.shiftsCompleted || 0,
+    overnightRests: state.stats.overnightRests || 0,
+    recoveryDays: state.stats.recoveryDays || 0,
+    stayLatePrepDays: state.stats.stayLatePrepDays || 0,
+    shopHelpDays: state.stats.shopHelpDays || 0,
+    lateNightStreak: state.flags.consecutiveLateNights || 0,
+    nextShiftPrep: Boolean(state.flags.shiftPrepActive),
+  };
+}
+
+function getTrackedStateLabel(key) {
+  return {
+    clock: "Clock",
+    energy: "Energy",
+    burnout: "Burnout",
+    cash: "Cash",
+    xp: "XP",
+    jobsCompleted: "Jobs completed",
+    clientReputation: "Client reputation",
+    coworkerReputation: "Coworker reputation",
+    managementReputation: "Management reputation",
+    openCallbacks: "Open callbacks",
+    openReturnTripRisks: "Open return-trip risks",
+    shiftsCompleted: "Shifts completed",
+    overnightRests: "Overnight rests",
+    recoveryDays: "Recovery days",
+    stayLatePrepDays: "Stay-late prep days",
+    shopHelpDays: "Shop-help days",
+    lateNightStreak: "Late-night streak",
+    nextShiftPrep: "Next-shift prep",
+  }[key] || key;
+}
+
+function formatTrackedStateValue(key, value) {
+  if (key === "cash") return formatCash(value);
+  if (key.includes("Reputation")) return formatReputation(value);
+  if (key === "nextShiftPrep") return value ? "Active" : "Inactive";
+  return `${value}`;
+}
+
+function formatTrackedStateChange(key, before, after) {
+  if (before === after) return "";
+  const beforeText = formatTrackedStateValue(key, before);
+  const afterText = formatTrackedStateValue(key, after);
+  if (typeof before === "number" && typeof after === "number") {
+    const delta = after - before;
+    const deltaText = key === "cash" ? formatCash(delta) : formatSignedNumber(delta);
+    return `${beforeText} -> ${afterText} (${deltaText})`;
+  }
+  return `${beforeText} -> ${afterText}`;
+}
+
+function getTrackedStateDeltaRows(before, after = getTrackedStateSnapshot()) {
+  return Object.keys(after)
+    .map((key) => ({
+      label: getTrackedStateLabel(key),
+      detail: formatTrackedStateChange(key, before?.[key], after[key]),
+    }))
+    .filter((row) => row.detail);
+}
+
+function getTrackedStateDeltaMarkup(before, after = getTrackedStateSnapshot()) {
+  const rows = getTrackedStateDeltaRows(before, after);
+  if (!rows.length) return `<p class="muted">No tracked career state changed.</p>`;
+  return `
+    <ul class="modal-list">
+      ${rows.map((row) => `<li><strong>${escapeHtml(row.label)}</strong><span>${escapeHtml(row.detail)}</span></li>`).join("")}
+    </ul>
+  `;
+}
+
+function getShiftChoiceResultText(choice, recovery) {
+  if (choice === "prep") {
+    return `Stayed late to prep the next job. The next shift starts with Fieldcraft and Documentation support, but the longer day still changed energy, burnout, and management pressure. Recovery restored ${recovery.energyRecovered} energy.`;
+  }
+  if (choice === "help-josh") {
+    return `Helped Josh clean up notes. Crew trust improved, but the favor still cost energy and added late-night fatigue. Recovery restored ${recovery.energyRecovered} energy.`;
+  }
+  if (choice === "recovery-day") {
+    return `Took a recovery day. Condition gets repaired more aggressively, but management sees the schedule gap. Recovery restored ${recovery.energyRecovered} energy.`;
+  }
+  return `Clocked out clean. You protected tomorrow's workday instead of borrowing more from the same shift. Recovery restored ${recovery.energyRecovered} energy.`;
+}
+
+function showShiftResultModal({ choice, source, before, recovery }) {
+  const canReviewBoard = state.flags.finished && !state.flags.endShiftPending && !shouldIntroduceJoshBeforeNextDispatch();
+  showModal({
+    kicker: "Shift Result",
+    title: `${source} Closed Out`,
+    body: `
+      <p>${escapeHtml(getShiftChoiceResultText(choice, recovery))}</p>
+      <h3>What Changed</h3>
+      ${getTrackedStateDeltaMarkup(before)}
+      <h3>Next Step</h3>
+      ${getCurrentStepListMarkup({ includeLoopPath: false })}
+    `,
+    actions: [
+      ...(canReviewBoard ? [{ label: "Review Dispatch Board Routes", onClick: showDispatchPreview }] : []),
+      { label: "Back To Shop", className: "secondary-button", onClick: render },
+    ],
+  });
+}
+
 function clearEndShiftState() {
   state.flags.endShiftPending = false;
   state.flags.endShiftSource = null;
@@ -2479,6 +2595,7 @@ function showEndShiftModal() {
 
 function completeShift(choice) {
   const source = state.flags.endShiftSource || "Shift";
+  const before = getTrackedStateSnapshot();
   let stayedLate = false;
   let days = 1;
   if (choice === "prep") {
@@ -2519,6 +2636,7 @@ function completeShift(choice) {
   advanceToNextMorning(days);
   addLog(`${source} closed out. Recovered ${recovery.energyRecovered} energy${recovery.burnoutRecovered ? ` and reduced burnout by ${recovery.burnoutRecovered}` : ""}.`);
   render();
+  showShiftResultModal({ choice, source, before, recovery });
 }
 
 function getShiftPrepSkillBonus(skillId) {
