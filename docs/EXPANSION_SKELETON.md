@@ -526,6 +526,10 @@ be easy to verify in the browser.
    helper functions. Future cleanup should favor small intent-revealing helpers
    over broad module churn while the static browser prototype is still proving
    the workday rhythm.
+77. **Done - Static asset bootstrap cleanup pass:** Replaced `document.write()`
+   cache-busting with small DOM-created stylesheet and script loaders. The page
+   still stays no-build and GitHub Pages friendly, but avoids parser-writing
+   behavior and keeps `data.js` loading before `app.js`.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

@@ -1557,6 +1557,11 @@ for existing careers, but new writes now go through career snapshot helper
 functions. This keeps compatibility while making future code read in player/game
 terms instead of old prototype scaffolding terms.
 
+Static asset bootstrap cleanup pass: `index.html` no longer uses
+`document.write()` for cache-busting CSS or script loading. A small DOM-created
+loader keeps the static GitHub Pages setup, preserves `data.js` before `app.js`
+ordering, and avoids deprecated parser-writing behavior.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.
