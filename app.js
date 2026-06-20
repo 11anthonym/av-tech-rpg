@@ -4187,6 +4187,14 @@ function showDispatchRoutePrep(routeId, backAction = showDispatchPreview) {
   });
 }
 
+function getDispatchRoutePrepAction(routeId, backAction, options = {}) {
+  return {
+    label: options.label || "Review Route & Prep",
+    className: options.className,
+    onClick: () => showDispatchRoutePrep(routeId, backAction),
+  };
+}
+
 function launchRouteFromBoard(routeId, { fastTravel = false } = {}) {
   if (routeId === "conshohockenService") {
     if (isConshohockenFollowupAvailable()) return promptConshohockenFollowupTravel({ fastTravel });
@@ -5012,7 +5020,7 @@ function showServiceDispatchPreview() {
       fieldTasks: content.serviceDispatch.checks,
     }),
     actions: [
-      { label: "Review Service Route Prep", onClick: () => showDispatchRoutePrep("conshohockenService", showServiceDispatchPreview) },
+      getDispatchRoutePrepAction("conshohockenService", showServiceDispatchPreview),
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -5048,7 +5056,7 @@ function showConshohockenFollowupPreview() {
     }),
     actions: [
       ...(fastTravelReady ? [{ label: "Open Regional Map", onClick: showRegionalMap }] : []),
-      { label: "Review Follow-up Route Prep", className: fastTravelReady ? "secondary-button" : undefined, onClick: () => showDispatchRoutePrep("conshohockenService", showConshohockenFollowupPreview) },
+      getDispatchRoutePrepAction("conshohockenService", showConshohockenFollowupPreview, { className: fastTravelReady ? "secondary-button" : undefined }),
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -5792,7 +5800,7 @@ function showSecureAccessDispatchPreview() {
       ],
     }),
     actions: [
-      { label: "Review Navy Yard Route Prep", onClick: () => showDispatchRoutePrep("navyYardAccess", showSecureAccessDispatchPreview) },
+      getDispatchRoutePrepAction("navyYardAccess", showSecureAccessDispatchPreview),
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -6118,7 +6126,7 @@ function showCallbackCleanupDispatchPreview() {
       }] : [],
     }),
     actions: [
-      { label: "Review Warranty Route Prep", onClick: () => showDispatchRoutePrep("warrantyReturn", showCallbackCleanupDispatchPreview) },
+      getDispatchRoutePrepAction("warrantyReturn", showCallbackCleanupDispatchPreview),
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -6320,7 +6328,7 @@ function showHandoffDispatchPreview() {
       fieldTasks: content.handoffDispatch.checks,
     }),
     actions: [
-      { label: "Review Handoff Route Prep", onClick: () => showDispatchRoutePrep("executiveHandoff", showHandoffDispatchPreview) },
+      getDispatchRoutePrepAction("executiveHandoff", showHandoffDispatchPreview),
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -6496,7 +6504,7 @@ function showSystemsDispatchPreview() {
       fieldTasks: content.systemsDispatch.checks,
     }),
     actions: [
-      { label: "Review Systems Route Prep", onClick: () => showDispatchRoutePrep("systemsService", showSystemsDispatchPreview) },
+      getDispatchRoutePrepAction("systemsService", showSystemsDispatchPreview),
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -6893,7 +6901,7 @@ function showRetrofitWalkdownDispatchPreview() {
       fieldTasks: content.retrofitWalkdownDispatch.checks,
     }),
     actions: [
-      { label: "Review Retrofit Route Prep", onClick: () => showDispatchRoutePrep("burlingtonRetrofitWalkdown", showRetrofitWalkdownDispatchPreview) },
+      getDispatchRoutePrepAction("burlingtonRetrofitWalkdown", showRetrofitWalkdownDispatchPreview),
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -7223,7 +7231,7 @@ function showRetrofitInstallDispatchPreview() {
       ${getPlannedJobBranchMarkup(preview)}
     `,
     actions: [
-      { label: "Review Install Route Prep", onClick: () => showDispatchRoutePrep("burlingtonRetrofitWalkdown", showRetrofitInstallDispatchPreview) },
+      getDispatchRoutePrepAction("burlingtonRetrofitWalkdown", showRetrofitInstallDispatchPreview),
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -7512,7 +7520,7 @@ function showCommissioningDispatchPreview() {
       ],
     }),
     actions: [
-      { label: "Review Commissioning Route Prep", onClick: () => showDispatchRoutePrep("southPhillyCommissioning", showCommissioningDispatchPreview) },
+      getDispatchRoutePrepAction("southPhillyCommissioning", showCommissioningDispatchPreview),
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -8029,7 +8037,7 @@ function showSurveyDispatchPreview() {
       fieldTasks: content.surveyDispatch.inspections,
     }),
     actions: [
-      { label: "Review Survey Route Prep", onClick: () => showDispatchRoutePrep("universitySurvey", showSurveyDispatchPreview) },
+      getDispatchRoutePrepAction("universitySurvey", showSurveyDispatchPreview),
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });

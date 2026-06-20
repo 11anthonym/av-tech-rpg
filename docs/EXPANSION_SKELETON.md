@@ -530,6 +530,10 @@ be easy to verify in the browser.
    cache-busting with small DOM-created stylesheet and script loaders. The page
    still stays no-build and GitHub Pages friendly, but avoids parser-writing
    behavior and keeps `data.js` loading before `app.js`.
+78. **Done - Dispatch action cleanup pass:** Route-backed dispatch previews now
+   share one `getDispatchRoutePrepAction()` helper and one player-facing
+   "Review Route & Prep" button. This removes bespoke route-prep action labels
+   without changing the board-to-route-prep flow.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

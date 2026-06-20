@@ -1562,6 +1562,10 @@ Static asset bootstrap cleanup pass: `index.html` no longer uses
 loader keeps the static GitHub Pages setup, preserves `data.js` before `app.js`
 ordering, and avoids deprecated parser-writing behavior.
 
+Dispatch action cleanup pass: route-backed dispatch previews now use one shared
+route/prep action helper and the same "Review Route & Prep" button. The player
+still lands on the same prep card, but the board surface is less bespoke.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

@@ -569,7 +569,7 @@ async function clickButton(page, name) {
       state.flags.currentAreaId = "shop";
       window.showServiceDispatchPreview();
     });
-    await page.getByRole("button", { name: /Review Service Route Prep/ }).click();
+    await page.getByRole("button", { name: /Review Route & Prep/ }).click();
     await assertModalIncludes(page, [
       "Route Prep",
       "One Quick Display Swap",
