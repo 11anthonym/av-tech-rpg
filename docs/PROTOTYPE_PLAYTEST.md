@@ -1531,6 +1531,11 @@ destinations. Burlington route cards and route prep also show saved walkdown
 result and install branch rows so the retrofit chain reads as one consequence,
 not two unrelated jobs.
 
+Consequence route pressure pass: callback debt and open return-trip risks now
+map back onto affected routes. The regional map groups pressured routes, route
+cards and route prep show mapped consequence pressure, and the van can open a
+small consequence review listing affected routes.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

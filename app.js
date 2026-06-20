@@ -1514,6 +1514,81 @@ function getReturnTripRiskRowsMarkup() {
     `).join("");
 }
 
+function getConsequenceRouteIds(entry) {
+  if (!entry) return [];
+  const routeMap = {
+    "callback-debt": ["warrantyReturn", "conshohockenService"],
+    usedTemporaryAdapterPermanently: ["centerCityTutorial"],
+    navyYardRackUpdate: ["navyYardAccess"],
+    southPhillySpeakerTermination: ["southPhillyCommissioning", "warrantyReturn"],
+    systemsQuickReboot: ["systemsService", "warrantyReturn"],
+    "burlington-retrofit-install": ["burlingtonRetrofitWalkdown"],
+    "retrofit-install-risk-inherited": ["burlingtonRetrofitWalkdown"],
+    "retrofit-install-risk-resolved": ["burlingtonRetrofitWalkdown"],
+  };
+  if (routeMap[entry.id]) return routeMap[entry.id];
+  if (entry.id?.startsWith("exhaustion-")) return [state.flags.lastRouteId || getCurrentDispatchRouteId()].filter(Boolean);
+  return [];
+}
+
+function getConsequenceRouteImpactEntries({ includeResolved = false } = {}) {
+  return getConsequenceLedgerEntries({ includeResolved })
+    .flatMap((entry) => getConsequenceRouteIds(entry).map((routeId) => ({ ...entry, routeId })))
+    .filter((entry) => getWorldRoute(entry.routeId));
+}
+
+function getRouteConsequenceImpactEntries(routeId, options = {}) {
+  return getConsequenceRouteImpactEntries(options)
+    .filter((entry) => entry.routeId === routeId);
+}
+
+function routeHasConsequencePressure(route) {
+  return Boolean(route && getRouteConsequenceImpactEntries(route.id).length);
+}
+
+function getRouteConsequencePressureText(route) {
+  const entries = route ? getRouteConsequenceImpactEntries(route.id) : [];
+  if (!entries.length) return "";
+  return entries.map((entry) => `${getConsequenceStatusLabel(entry.status)} ${entry.source}: ${entry.detail} Affects: ${entry.affects}.`).join(" ");
+}
+
+function getConsequenceRouteImpactMarkup() {
+  const impacts = getConsequenceRouteImpactEntries();
+  if (!impacts.length) return `<p class="muted">No open callback or return-trip pressure is attached to a mapped route right now.</p>`;
+  return `
+    <ul class="modal-list">
+      ${impacts.map((entry) => {
+        const route = getWorldRoute(entry.routeId);
+        return `
+          <li>
+            <strong>${escapeHtml(`${route.toLabel} - ${entry.source}`)}</strong>
+            <span>${escapeHtml(`${getConsequenceStatusLabel(entry.status)}. Cause: ${entry.cause} Affects: ${entry.affects}. Result: ${entry.detail}`)}</span>
+          </li>
+        `;
+      }).join("")}
+    </ul>
+  `;
+}
+
+function showConsequenceReview() {
+  showModal({
+    kicker: "Consequence Ledger",
+    title: "Callback And Return-Trip Pressure",
+    body: `
+      <h3>Active Consequences</h3>
+      ${getConsequenceLedgerMarkup()}
+      <h3>Affected Routes</h3>
+      ${getConsequenceRouteImpactMarkup()}
+      <p class="muted">These entries come from closeout choices, callback debt, exhaustion, and saved return-trip risks. They do not create new jobs by themselves, but they can change board routing, prep pressure, and future field work.</p>
+    `,
+    actions: [
+      { label: "Open Regional Map", onClick: showRegionalMap },
+      { label: "Back To Van", className: "secondary-button", onClick: showVehicleMenu },
+      { label: "Close", className: "text-button", onClick: render },
+    ],
+  });
+}
+
 function getActiveCareerSummaryMarkup() {
   const items = [];
   getConsequenceLedgerEntries().forEach((entry) => {
@@ -1859,6 +1934,7 @@ function getVehicleMenuFlowMarkup() {
   const tutorialRoute = getWorldRoute("centerCityTutorial");
   const activeRoute = getWorldRoute(getCurrentDispatchRouteId()) || (isTutorialRouteReady() ? tutorialRoute : null);
   const canReviewBoard = state.flags.finished && !state.flags.endShiftPending;
+  const consequenceCount = getConsequenceLedgerEntries().length;
   const rows = [
     {
       label: "Review cargo",
@@ -1881,6 +1957,12 @@ function getVehicleMenuFlowMarkup() {
     {
       label: "Open regional map",
       detail: "Shows active route, known destinations, fast-travel candidates, locks, and route history.",
+    },
+    {
+      label: "Review consequence ledger",
+      detail: consequenceCount
+        ? `${consequenceCount} open callback or return-trip consequence${consequenceCount === 1 ? "" : "s"} affecting routes or prep.`
+        : "No open callback or return-trip pressure is attached to the workday.",
     },
     {
       label: "Drive active route",
@@ -1944,6 +2026,11 @@ function showVehicleMenu() {
         label: "Review Dispatch Board Routes",
         className: "secondary-button",
         onClick: showDispatchPreview,
+      }] : []),
+      ...(getConsequenceLedgerEntries().length ? [{
+        label: "Review Consequence Ledger",
+        className: "secondary-button",
+        onClick: showConsequenceReview,
       }] : []),
       { label: "Open Regional Map", className: "secondary-button", onClick: showRegionalMap },
       { label: "Close", className: "text-button", onClick: render },
@@ -3336,15 +3423,17 @@ function getRouteJobData(routeId) {
 
 function getRouteStatus(route) {
   const travelCount = getRouteTravelCount(route.id);
+  const pressure = routeHasConsequencePressure(route);
   if (route.planned) return "Future candidate";
   if (getCurrentDispatchRouteId() === route.id) {
-    return canFastTravelRoute(route) ? "Active / fast travel available" : "Active";
+    if (canFastTravelRoute(route)) return pressure ? "Active / fast travel / consequence pressure" : "Active / fast travel available";
+    return pressure ? "Active / consequence pressure" : "Active";
   }
-  if (canLaunchRouteFromRegionalMap(route.id)) return "Available";
-  if (isFastTravelUnlocked(route)) return "Driven before / fast travel unlocked";
-  if (travelCount > 0) return `Completed / driven before (${travelCount})`;
-  if (getRouteLockReason(route)) return "Locked";
-  return "Story route";
+  if (canLaunchRouteFromRegionalMap(route.id)) return pressure ? "Available / consequence pressure" : "Available";
+  if (isFastTravelUnlocked(route)) return pressure ? "Driven before / fast travel / consequence pressure" : "Driven before / fast travel unlocked";
+  if (travelCount > 0) return pressure ? `Completed / consequence pressure (${travelCount})` : `Completed / driven before (${travelCount})`;
+  if (getRouteLockReason(route)) return pressure ? "Locked / consequence pressure" : "Locked";
+  return pressure ? "Consequence pressure" : "Story route";
 }
 
 function getRouteDrivenText(route) {
@@ -3460,6 +3549,7 @@ function getRegionalRouteMarkup() {
   if (!routes.length) return "<p class=\"muted\">No routes mapped yet.</p>";
   const activeRoutes = routes.filter(isCurrentBoardRoute);
   const availableRoutes = routes.filter(isRouteAvailableOnMap);
+  const pressureRoutes = routes.filter(routeHasConsequencePressure);
   const fastTravelRoutes = routes.filter((route) => !isCurrentBoardRoute(route)
     && !isRouteAvailableOnMap(route)
     && isFastTravelUnlocked(route));
@@ -3476,6 +3566,8 @@ function getRegionalRouteMarkup() {
     ${getRouteListMarkup(activeRoutes, "No active route is ready from the map. Check the dispatch board.")}
     <h3>Available Routes</h3>
     ${getRouteListMarkup(availableRoutes, "No additional route is launchable from the current area.")}
+    <h3>Callback / Return-Trip Pressure</h3>
+    ${getRouteListMarkup(pressureRoutes, "No mapped routes are carrying callback or return-trip pressure.")}
     <h3>Unlocked Fast-Travel Routes</h3>
     ${getRouteListMarkup(fastTravelRoutes, "No repeat routes have unlocked fast travel yet.")}
     <h3>Completed Route History</h3>
@@ -3553,6 +3645,11 @@ function showRegionalMap() {
         label: "Review Dispatch Board Routes",
         className: "secondary-button",
         onClick: showDispatchPreview,
+      }] : []),
+      ...(getConsequenceLedgerEntries().length ? [{
+        label: "Review Consequence Ledger",
+        className: "secondary-button",
+        onClick: showConsequenceReview,
       }] : []),
       ...fastTravelRoutes.map((route) => ({
         label: `Fast Travel to ${route.toLabel}`,
@@ -4004,6 +4101,7 @@ function getRoutePrepRows(route, { fastTravel = false } = {}) {
     { label: "Recommended prep", detail: getToolPlanText(toolPlan.recommended) },
     { label: "Risk tags", detail: (job.riskTags || []).join(", ") || "ordinary field pressure" },
     { label: "Callback / return-trip risk", detail: getRouteConsequenceText(route) },
+    getRouteConsequencePressureText(route) ? { label: "Mapped consequence pressure", detail: getRouteConsequencePressureText(route) } : null,
     { label: "Fast travel", detail: getRouteFastTravelText(route) },
     lockReason ? { label: "Locked reason", detail: lockReason } : null,
   ].filter(Boolean);
@@ -5261,6 +5359,7 @@ function getRouteJobCardRows(route) {
     { label: "Fast travel", detail: `${getRouteFastTravelText(route)}${fastTravelCount ? ` Used ${fastTravelCount} time${fastTravelCount === 1 ? "" : "s"}.` : ""}` },
     { label: "Rewards", detail: job.rewards },
     { label: "Callback / return-trip risk", detail: getRouteConsequenceText(route) },
+    getRouteConsequencePressureText(route) ? { label: "Mapped consequence pressure", detail: getRouteConsequencePressureText(route) } : null,
     lastChoice ? { label: "Last route choice", detail: lastChoice } : null,
     travelResult ? { label: "Last travel result", detail: travelResult } : null,
     lockReason ? { label: "Locked reason", detail: lockReason } : null,

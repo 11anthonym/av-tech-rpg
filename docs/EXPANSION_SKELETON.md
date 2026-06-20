@@ -501,6 +501,11 @@ be easy to verify in the browser.
    requirements and ready destinations. Burlington route cards and route prep
    also show saved walkdown result and install branch rows, making the
    walkdown-to-install consequence chain visible before travel.
+72. **Done - Consequence route pressure pass:** Open callback and return-trip
+   ledger entries now map back onto affected routes. The regional map groups
+   routes carrying callback/return-trip pressure, route cards and prep cards
+   show mapped consequence pressure, and the van can open a concise consequence
+   review with affected routes.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

@@ -535,6 +535,7 @@ async function clickButton(page, name) {
       "Load carried items",
       "Review dispatch board routes",
       "Open regional map",
+      "Review consequence ledger",
       "Drive active route",
       "Prep",
     ], "van menu");
@@ -686,6 +687,7 @@ async function clickButton(page, name) {
       "Workday path",
       "Active Job Route",
       "Available Routes",
+      "Callback / Return-Trip Pressure",
       "Unlocked Fast-Travel Routes",
       "Known Destinations",
       "Area Transitions",
@@ -1530,6 +1532,10 @@ async function clickButton(page, name) {
       window.finishSystemsService("reboot");
       const closeoutText = document.querySelector("#modal-backdrop")?.innerText || "";
       const openRiskSaved = Boolean(state.flags.returnTripRisks?.systemsQuickReboot);
+      window.showRegionalMap();
+      const mapText = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.showConsequenceReview();
+      const reviewText = document.querySelector("#modal-backdrop")?.innerText || "";
       window.showCareerClipboard();
       const clipboardText = document.querySelector("#modal-backdrop")?.innerText || "";
       window.finishCallbackCleanup("root");
@@ -1538,6 +1544,8 @@ async function clickButton(page, name) {
       return {
         closeoutShowsConsequence: closeoutText.includes("Closeout consequence") && closeoutText.includes("Systems quick-reboot debt"),
         openRiskSaved,
+        mapShowsPressureRoute: mapText.toLowerCase().includes("callback / return-trip pressure") && mapText.includes("Mapped consequence pressure") && mapText.includes("King of Prussia Room Offline"),
+        reviewShowsAffectedRoute: reviewText.toLowerCase().includes("affected routes") && reviewText.includes("KING OF PRUSSIA") && reviewText.includes("King of Prussia Room Offline"),
         clipboardShowsLedger: clipboardText.includes("Consequence ledger") && clipboardText.includes("King of Prussia Room Offline"),
         resolvedRiskSaved,
         cleanupShowsResolved: cleanupText.includes("Closeout consequence") && cleanupText.includes("Callback pressure drops"),
@@ -1545,6 +1553,8 @@ async function clickButton(page, name) {
     });
     assert(consequenceLedger.closeoutShowsConsequence, "Systems closeout should show consequence ledger language");
     assert(consequenceLedger.openRiskSaved, "Systems quick reboot should save an open return-trip risk");
+    assert(consequenceLedger.mapShowsPressureRoute, "Regional map should group routes carrying consequence pressure");
+    assert(consequenceLedger.reviewShowsAffectedRoute, "Consequence review should list affected routes");
     assert(consequenceLedger.clipboardShowsLedger, "Career clipboard should show the open consequence ledger");
     assert(consequenceLedger.resolvedRiskSaved, "Warranty cleanup should save resolved return-trip risk history");
     assert(consequenceLedger.cleanupShowsResolved, "Warranty cleanup should show resolved consequence language");
