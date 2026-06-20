@@ -516,6 +516,11 @@ be easy to verify in the browser.
    choices, a job prep step, a fast-travel summary, a package review, or the
    normal route summary. This keeps stacked modal handoffs readable without
    adding new work orders.
+75. **Done - Bloat audit pass:** Removed planned-work preview buttons,
+   authoring-style future-job text, and meta playtest questions from the live
+   career snapshot and dispatch-card flow. Keep save-compatible internal IDs,
+   but keep player screens focused on in-world work, consequences, recovery,
+   and the next practical shop step.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

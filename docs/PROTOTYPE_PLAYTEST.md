@@ -1546,6 +1546,12 @@ names the next handoff before the player commits. The card can explain
 route-choice prompts, job prep steps, fast-travel summaries, Burlington package
 review, or the normal route summary from the same launch-preview helper.
 
+Bloat audit pass: the live career snapshot no longer shows planned-work preview
+buttons or playtest-question prompts, and dispatch cards no longer carry
+authoring-style future-job text by default. Keep the test questions in docs and
+keep the game screens focused on current work, consequences, recovery, and the
+next shop step.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

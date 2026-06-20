@@ -3261,7 +3261,7 @@ function getDispatchBoardEntryDefinitions() {
         }
         return "";
       },
-      previewAction: showPrototypeSummary,
+      previewAction: showCareerSnapshot,
     },
   ];
 }
@@ -4864,7 +4864,7 @@ function showRetrofitInstallDebrief() {
         : "The install is done, and the record is strong enough that the next tech should not have to rediscover the route from ceiling dust."}</p>
     `,
     actions: [
-      { label: "Review Career Snapshot", onClick: showPrototypeSummary },
+      { label: "Review Career Snapshot", onClick: showCareerSnapshot },
       ...(canReceiveJoshLabeler() ? [{ label: "Talk Tools", className: "secondary-button", onClick: showJoshLabelerOffer }] : []),
       { label: "Return To Shop", className: "secondary-button", onClick: render },
     ],
@@ -4987,7 +4987,7 @@ function showDispatchPreview() {
   if (entry?.previewAction) return entry.previewAction();
   const blockedEntry = getBlockedDispatchBoardEntry();
   if (blockedEntry?.blockedReason) return notify(blockedEntry.blockedReason);
-  if (state.flags.secureAccessComplete) return showPrototypeSummary();
+  if (state.flags.secureAccessComplete) return showCareerSnapshot();
   return showServiceDispatchPreview();
 }
 
@@ -5466,7 +5466,7 @@ function getDispatchJobOverviewRowsMarkup({ type, setup, familyId = "", routeId 
   `;
 }
 
-function getDispatchBoardMarkup({ type, setup, why, stakes = [], note, managementNote, prep = "", taskCards = [], fieldTasks = [], familyId = "", routeId = "", consequenceHooks = [], showLaterWork = true, showBoardState = true }) {
+function getDispatchBoardMarkup({ type, setup, why, stakes = [], note, managementNote, prep = "", taskCards = [], fieldTasks = [], familyId = "", routeId = "", consequenceHooks = [], showBoardState = true }) {
   return `
     <p><strong>${type}:</strong> ${setup}</p>
     ${getWorkdayLoopGuidanceMarkup()}
@@ -5484,7 +5484,6 @@ function getDispatchBoardMarkup({ type, setup, why, stakes = [], note, managemen
       ${getBoardRoutingMarkup()}
       ${prep ? `<li><strong>Prep</strong><span>${prep}</span></li>` : ""}
       ${state.flags.shiftPrepActive ? `<li><strong>Next-shift prep</strong><span>Stayed late last shift: +1 Fieldcraft and +1 Documentation until this job closes.</span></li>` : ""}
-      ${showLaterWork ? `<li><strong>Later work</strong><span>${getUpcomingDispatchText()}</span></li>` : ""}
     </ul>
     ${getDispatchTaskCardsMarkup(taskCards)}
     ${getFieldTaskPreviewMarkup(fieldTasks)}
@@ -5502,17 +5501,6 @@ function getOpenCallbackBoardMarkup() {
     <li><strong>Open consequence ledger</strong><span>${openCallbacks} unresolved callback${openCallbacks === 1 ? "" : "s"} on the ledger. ${returnTripSummary || "Future work may feel heavier until the callback ledger catches up."}</span></li>
     ${getReturnTripRiskRowsMarkup()}
   `;
-}
-
-function getUpcomingJobs() {
-  return (content.upcomingDispatches || []).filter((job) => (
-    job.id !== "burlington-retrofit-install"
-    || (!state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete)
-  ));
-}
-
-function getUpcomingJobFamilyLabel(job) {
-  return content.jobFamilies?.[job.familyId]?.name || "Future job";
 }
 
 function getPlannedJobBranchId(job) {
@@ -5544,10 +5532,6 @@ function getPlannedJobPresentation(job) {
   };
 }
 
-function getUpcomingJobStateHint(job) {
-  return getPlannedJobPresentation(job).branch?.stateHint || "";
-}
-
 function getPlannedJobBranchMarkup(preview) {
   if (!preview.branch) return "";
   const implementationHook = preview.branchId === "protected"
@@ -5565,82 +5549,11 @@ function getPlannedJobBranchMarkup(preview) {
   `;
 }
 
-function getUpcomingJobCompactText(job) {
-  const preview = getPlannedJobPresentation(job);
-  const consequenceHint = preview.consequenceHooks?.length ? ` Hook: ${preview.consequenceHooks[0]}` : "";
-  const stateHint = getUpcomingJobStateHint(job);
-  return `[PLANNED] ${preview.title} (${getUpcomingJobFamilyLabel(preview)}): ${preview.summary}${stateHint ? ` ${stateHint}` : ""}${consequenceHint}`;
-}
-
-function getUpcomingDispatchText() {
-  return getUpcomingJobs().length
-    ? getUpcomingJobs().map(getUpcomingJobCompactText).join(" ")
-    : "More erasable-marker work will be added after this board clears.";
-}
-
-function getUpcomingJobListMarkup() {
-  const jobs = getUpcomingJobs();
-  if (!jobs.length) return `<p class="muted">More erasable-marker work will be added after this board clears.</p>`;
-  return `
-    <ul class="modal-list">
-      ${jobs.map((job) => {
-        const preview = getPlannedJobPresentation(job);
-        const detail = [
-          `${getUpcomingJobFamilyLabel(preview)}: ${preview.summary}`,
-          getUpcomingJobStateHint(job),
-          preview.consequenceHooks?.length ? `Hooks: ${preview.consequenceHooks.join(" ")}` : "",
-        ].filter(Boolean).join(" ");
-        return `<li><strong>[LOCKED] ${escapeHtml(preview.title)}</strong><span>${escapeHtml(detail)}</span></li>`;
-      }).join("")}
-    </ul>
-  `;
-}
-
 function getPlannedJob(jobId) {
   return (content.upcomingDispatches || []).find((job) => job.id === jobId) || null;
 }
 
-function getPlannedJobPreviewActions() {
-  return getUpcomingJobs().map((job) => ({
-    label: `Preview ${job.title}`,
-    className: "secondary-button",
-    onClick: () => showPlannedJobPreview(job.id),
-  }));
-}
-
-function showPlannedJobPreview(jobId) {
-  const job = getPlannedJob(jobId);
-  if (!job) return notify("That planned work order is not on the board yet.");
-  const preview = getPlannedJobPresentation(job);
-  showModal({
-    kicker: "Planned Work Order",
-    title: preview.title,
-    body: `
-      ${getDispatchBoardMarkup({
-        type: preview.type || "Future Job",
-        setup: preview.setup || preview.summary,
-        why: preview.why || "This job is planned for a future dispatch board slot.",
-        stakes: preview.stakes || [],
-        note: preview.note,
-        managementNote: preview.managementNote || "Please keep this quick.",
-        prep: preview.prep || "",
-        taskCards: preview.taskCards || [],
-        familyId: preview.familyId || "",
-        routeId: preview.routeId || "",
-        consequenceHooks: preview.consequenceHooks || [],
-        showBoardState: false,
-      })}
-      ${getPlannedJobBranchMarkup(preview)}
-      <p class="muted">Locked preview: this work order can be inspected, but it is not on today's drive list.</p>
-    `,
-    actions: [
-      { label: "Back To Career Snapshot", onClick: showPrototypeSummary },
-      { label: "Return To Shop", className: "secondary-button", onClick: render },
-    ],
-  });
-}
-
-function showPrototypeSummary() {
+function showCareerSnapshot() {
   const rank = getCareerRank();
   state.flags.prototypeSummaryViewed = true;
   render();
@@ -5664,18 +5577,13 @@ function showPrototypeSummary() {
       ${getFieldTaskResultLedgerMarkup()}
       <p><strong>Career ledger:</strong></p>
       ${getCareerLedgerMarkup()}
-      <p><strong>Upcoming jobs:</strong></p>
-      ${getUpcomingJobListMarkup()}
-      <p><strong>Career check-in:</strong></p>
+      <p><strong>Next step:</strong></p>
       <ul class="modal-list">
-        <li><strong>Did the walking stay purposeful?</strong><span>Loading and carrying should explain the job without becoming repetitive.</span></li>
-        <li><strong>Did your choices feel visible?</strong><span>Your tools, preparation, diagnosis, survey report, commissioning notes, stockroom decision, access-delay report, systems closeout, and travel-cost choice should change how the workday plays.</span></li>
-        <li><strong>Did progression make you curious?</strong><span>The shop, clipboard, and locked jobs should make one more workday sound appealing.</span></li>
+        <li><strong>Shop reset</strong><span>Return to Radnor Rack & Wire, review the clipboard, and recover before the next board refresh.</span></li>
       </ul>
       <blockquote>Coordination note: "Please remain flexible. Several schedules are currently being finalized retroactively."</blockquote>
     `,
     actions: [
-      ...getPlannedJobPreviewActions(),
       { label: "Review Career Clipboard", onClick: showCareerClipboard },
       { label: "Return To Shop", className: "secondary-button", onClick: render },
       { label: "Return To Title Screen", className: "secondary-button", onClick: showTitleScreen },
@@ -7302,7 +7210,6 @@ function showRetrofitInstallDispatchPreview() {
         prep: state.flags.retrofitInstallPackageReviewed ? `Walkdown package reviewed: ${getRetrofitInstallBranchLabel()}` : "Review the inherited walkdown package before loading the van.",
         taskCards: preview.taskCards,
         fieldTasks: getRetrofitInstallChecks(),
-        showLaterWork: false,
       })}
       ${getPlannedJobBranchMarkup(preview)}
     `,
