@@ -5062,7 +5062,7 @@ function promptConshohockenFollowupTravel({ fastTravel = false } = {}) {
     fastTravel,
     beforeTravel: () => {
       state.flags.conshohockenFollowupStarted = true;
-      state.flags.prototypeSummaryViewed = false;
+      markCareerSnapshotStale();
     },
     afterTravel: (route) => {
       enterScene(route.destinationSceneId);
@@ -5553,9 +5553,18 @@ function getPlannedJob(jobId) {
   return (content.upcomingDispatches || []).find((job) => job.id === jobId) || null;
 }
 
+// Save compatibility keeps this flag name; new code should use career snapshot helpers.
+function markCareerSnapshotReviewed() {
+  state.flags.prototypeSummaryViewed = true;
+}
+
+function markCareerSnapshotStale() {
+  state.flags.prototypeSummaryViewed = false;
+}
+
 function showCareerSnapshot() {
   const rank = getCareerRank();
-  state.flags.prototypeSummaryViewed = true;
+  markCareerSnapshotReviewed();
   render();
   showModal({
     kicker: "Current Board Complete",
@@ -5618,7 +5627,7 @@ function showWarehouseDispatchPreview() {
 
 function startWarehouseRun() {
   state.flags.warehouseStarted = true;
-  state.flags.prototypeSummaryViewed = false;
+  markCareerSnapshotStale();
   consumePackedLunch("the warehouse run");
   setClock(`${state.clock.slice(0, 3)} 4:18 PM`);
   addLog("Started looking for a replacement power supply reportedly stored in one of the vans.");
@@ -5714,7 +5723,7 @@ function finishWarehouseRun(approach) {
   if (correctedLabel) changeEnergy(-getWarehouseLabelEnergyCost());
   state.flags.warehouseComplete = true;
   state.flags.warehouseApproach = approach;
-  state.flags.prototypeSummaryViewed = false;
+  markCareerSnapshotStale();
   setClock(`${state.clock.slice(0, 3)} ${correctedLabel ? "4:43" : "4:35"} PM`);
   if (!state.flags.warehousePaid) {
     state.cash += 48;
@@ -5851,7 +5860,7 @@ function promptSecureAccessTravel({ fastTravel = false } = {}) {
     fastTravel,
     beforeTravel: () => {
       state.flags.secureAccessStarted = true;
-      state.flags.prototypeSummaryViewed = false;
+      markCareerSnapshotStale();
     },
   });
 }
@@ -6007,7 +6016,7 @@ function finishSecureAccess(approach) {
   else state.burnout += 1;
   state.flags.secureAccessComplete = true;
   state.flags.secureAccessApproach = approach;
-  state.flags.prototypeSummaryViewed = false;
+  markCareerSnapshotStale();
   setClock(`${state.clock.slice(0, 3)} ${approach === "absorb" ? "6:22" : "6:38"} PM`);
   if (!state.flags.secureAccessPaid) {
     state.cash += honest ? 112 : 96;
@@ -6123,7 +6132,7 @@ function promptCallbackCleanupTravel({ fastTravel = false } = {}) {
     fastTravel,
     beforeTravel: () => {
       state.flags.callbackCleanupStarted = true;
-      state.flags.prototypeSummaryViewed = false;
+      markCareerSnapshotStale();
     },
   });
 }
@@ -6221,7 +6230,7 @@ function finishCallbackCleanup(approach) {
   else state.burnout += 1;
   state.flags.callbackCleanupComplete = true;
   state.flags.callbackCleanupApproach = approach;
-  state.flags.prototypeSummaryViewed = false;
+  markCareerSnapshotStale();
   setClock(`${state.clock.slice(0, 3)} ${resolved ? "11:16" : "10:38"} AM`);
   if (!state.flags.callbackCleanupPaid) {
     state.cash += resolved ? 68 : 54;
@@ -6325,7 +6334,7 @@ function promptHandoffTravel({ fastTravel = false } = {}) {
     fastTravel,
     beforeTravel: () => {
       state.flags.handoffStarted = true;
-      state.flags.prototypeSummaryViewed = false;
+      markCareerSnapshotStale();
     },
   });
 }
@@ -6421,7 +6430,7 @@ function finishHandoff(approach) {
   if (helpful) changeEnergy(-getHandoffEnergyCost(approach === "cheat" ? 4 : 5));
   state.flags.handoffComplete = true;
   state.flags.handoffApproach = approach;
-  state.flags.prototypeSummaryViewed = false;
+  markCareerSnapshotStale();
   setClock(`${state.clock.slice(0, 3)} ${helpful ? "2:28" : "2:03"} PM`);
   if (!state.flags.handoffPaid) {
     state.cash += helpful ? 64 : 48;
@@ -6546,7 +6555,7 @@ function promptSystemsTravel({ fastTravel = false } = {}) {
     fastTravel,
     beforeTravel: () => {
       state.flags.systemsStarted = true;
-      state.flags.prototypeSummaryViewed = false;
+      markCareerSnapshotStale();
     },
   });
 }
@@ -6651,7 +6660,7 @@ function finishSystemsService(approach) {
   if (documented) changeEnergy(-(approach === "scope" ? 3 : 4));
   state.flags.systemsComplete = true;
   state.flags.systemsApproach = approach;
-  state.flags.prototypeSummaryViewed = false;
+  markCareerSnapshotStale();
   setClock(`${state.clock.slice(0, 3)} ${documented ? "4:24" : "3:47"} PM`);
   if (!state.flags.systemsPaid) {
     state.cash += documented ? 68 : 52;
@@ -6806,7 +6815,7 @@ function finishTravelDispatch(approach) {
   if (documented) changeEnergy(-2);
   state.flags.travelComplete = true;
   state.flags.travelApproach = approach;
-  state.flags.prototypeSummaryViewed = false;
+  markCareerSnapshotStale();
   setClock(`${state.clock.slice(0, 3)} ${documented ? "5:18" : "4:58"} PM`);
   if (!state.flags.travelPaid) {
     state.cash += netPay;
@@ -6952,7 +6961,7 @@ function promptRetrofitWalkdownTravel({ fastTravel = false } = {}) {
     fastTravel,
     beforeTravel: () => {
       state.flags.retrofitWalkdownStarted = true;
-      state.flags.prototypeSummaryViewed = false;
+      markCareerSnapshotStale();
     },
   });
 }
@@ -7073,7 +7082,7 @@ function finishRetrofitWalkdown(approach) {
   if (documented) changeEnergy(-getRetrofitWalkdownCloseoutEnergyCost(approach === "scope" ? 3 : 4));
   state.flags.retrofitWalkdownComplete = true;
   state.flags.retrofitWalkdownApproach = approach;
-  state.flags.prototypeSummaryViewed = false;
+  markCareerSnapshotStale();
   const futureInstallPartialWarning = approach === "document" && strained;
   const futureInstallProtected = approach === "scope" || (approach === "document" && !futureInstallPartialWarning);
   const futureInstallRisk = approach === "accept" || futureInstallPartialWarning;
@@ -7251,7 +7260,7 @@ function promptRetrofitInstallTravel({ fastTravel = false } = {}) {
     beforeTravel: () => {
       state.flags.retrofitInstallStarted = true;
       state.flags.retrofitInstallBranch = getRetrofitInstallBranchIdFromFlags(state.flags);
-      state.flags.prototypeSummaryViewed = false;
+      markCareerSnapshotStale();
     },
   });
 }
@@ -7393,7 +7402,7 @@ function finishRetrofitInstall(approach) {
   state.flags.retrofitInstallRecordComplete = documented;
   state.flags.retrofitInstallRiskResolved = riskResolved;
   state.flags.retrofitInstallRiskInherited = riskInherited;
-  state.flags.prototypeSummaryViewed = false;
+  markCareerSnapshotStale();
   setClock(`${state.clock.slice(0, 3)} ${documented ? "2:42" : "2:08"} PM`);
   if (!state.flags.retrofitInstallPaid) {
     state.cash += documented ? 94 : 76;
@@ -7917,7 +7926,7 @@ function finishCommissioning(approach) {
   state.flags.commissioningApproach = approach;
   state.flags.commissioningCallbackRiskAdded = callbackRiskAdded;
   state.flags.commissioningRiskDocumented = documentedRisk;
-  state.flags.prototypeSummaryViewed = false;
+  markCareerSnapshotStale();
   setClock(`${state.clock.slice(0, 3)} ${approach === "pass" ? (cleanTask ? "3:47" : "3:39") : approach === "craft" ? "4:12" : "4:03"} PM`);
   if (!state.flags.commissioningPaid) {
     state.cash += 84;
@@ -8213,7 +8222,7 @@ function finishSurvey(approach) {
   if (careful) changeEnergy(-getSurveyReportEnergyCost(approach === "pushback" ? 2 : 3));
   state.flags.surveyComplete = true;
   state.flags.surveyApproach = approach;
-  state.flags.prototypeSummaryViewed = false;
+  markCareerSnapshotStale();
   setClock(`${state.clock.slice(0, 3)} ${approach === "trust" ? "2:06" : "2:21"} PM`);
   if (!state.flags.surveyPaid) {
     state.cash += 72;

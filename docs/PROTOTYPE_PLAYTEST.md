@@ -1552,6 +1552,11 @@ authoring-style future-job text by default. Keep the test questions in docs and
 keep the game screens focused on current work, consequences, recovery, and the
 next shop step.
 
+Save-flag intent cleanup pass: `prototypeSummaryViewed` remains the saved flag
+for existing careers, but new writes now go through career snapshot helper
+functions. This keeps compatibility while making future code read in player/game
+terms instead of old prototype scaffolding terms.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

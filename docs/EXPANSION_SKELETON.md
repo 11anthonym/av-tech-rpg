@@ -521,6 +521,11 @@ be easy to verify in the browser.
    career snapshot and dispatch-card flow. Keep save-compatible internal IDs,
    but keep player screens focused on in-world work, consequences, recovery,
    and the next practical shop step.
+76. **Done - Save-flag intent cleanup pass:** Kept the save-compatible
+   `prototypeSummaryViewed` flag, but moved new writes behind career snapshot
+   helper functions. Future cleanup should favor small intent-revealing helpers
+   over broad module churn while the static browser prototype is still proving
+   the workday rhythm.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
