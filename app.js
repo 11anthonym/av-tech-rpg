@@ -4141,6 +4141,13 @@ function showRoutePrepModal(routeId, { fastTravel = false, backAction = showVehi
   });
 }
 
+function showDispatchRoutePrep(routeId, backAction = showDispatchPreview) {
+  return showRoutePrepModal(routeId, {
+    backAction,
+    backLabel: "Back To Job Card",
+  });
+}
+
 function launchRouteFromBoard(routeId, { fastTravel = false } = {}) {
   if (routeId === "conshohockenService") {
     if (isConshohockenFollowupAvailable()) return promptConshohockenFollowupTravel({ fastTravel });
@@ -4966,7 +4973,7 @@ function showServiceDispatchPreview() {
       fieldTasks: content.serviceDispatch.checks,
     }),
     actions: [
-      { label: "Accept Service Call", onClick: () => state.flags.servicePreparation ? promptServiceTravel() : showServicePreparation() },
+      { label: "Review Service Route Prep", onClick: () => showDispatchRoutePrep("conshohockenService", showServiceDispatchPreview) },
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -5002,7 +5009,7 @@ function showConshohockenFollowupPreview() {
     }),
     actions: [
       ...(fastTravelReady ? [{ label: "Open Regional Map", onClick: showRegionalMap }] : []),
-      { label: "Drive Follow-up Route", className: fastTravelReady ? "secondary-button" : undefined, onClick: () => promptConshohockenFollowupTravel() },
+      { label: "Review Follow-up Route Prep", className: fastTravelReady ? "secondary-button" : undefined, onClick: () => showDispatchRoutePrep("conshohockenService", showConshohockenFollowupPreview) },
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -5829,7 +5836,7 @@ function showSecureAccessDispatchPreview() {
       ],
     }),
     actions: [
-      { label: "Accept Navy Yard Job", onClick: () => state.flags.secureAccessPreparation ? promptSecureAccessTravel() : showSecureAccessPreparation() },
+      { label: "Review Navy Yard Route Prep", onClick: () => showDispatchRoutePrep("navyYardAccess", showSecureAccessDispatchPreview) },
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -6155,7 +6162,7 @@ function showCallbackCleanupDispatchPreview() {
       }] : [],
     }),
     actions: [
-      { label: "Accept Warranty Return", onClick: promptCallbackCleanupTravel },
+      { label: "Review Warranty Route Prep", onClick: () => showDispatchRoutePrep("warrantyReturn", showCallbackCleanupDispatchPreview) },
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -6357,7 +6364,7 @@ function showHandoffDispatchPreview() {
       fieldTasks: content.handoffDispatch.checks,
     }),
     actions: [
-      { label: "Accept Handoff", onClick: promptHandoffTravel },
+      { label: "Review Handoff Route Prep", onClick: () => showDispatchRoutePrep("executiveHandoff", showHandoffDispatchPreview) },
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -6533,7 +6540,7 @@ function showSystemsDispatchPreview() {
       fieldTasks: content.systemsDispatch.checks,
     }),
     actions: [
-      { label: "Accept Systems Service", onClick: () => state.flags.systemsPreparation ? promptSystemsTravel() : showSystemsPreparation() },
+      { label: "Review Systems Route Prep", onClick: () => showDispatchRoutePrep("systemsService", showSystemsDispatchPreview) },
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -6930,7 +6937,7 @@ function showRetrofitWalkdownDispatchPreview() {
       fieldTasks: content.retrofitWalkdownDispatch.checks,
     }),
     actions: [
-      { label: "Accept Retrofit Walkdown", onClick: () => state.flags.retrofitWalkdownPreparation ? promptRetrofitWalkdownTravel() : showRetrofitWalkdownPreparation() },
+      { label: "Review Retrofit Route Prep", onClick: () => showDispatchRoutePrep("burlingtonRetrofitWalkdown", showRetrofitWalkdownDispatchPreview) },
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -7261,7 +7268,7 @@ function showRetrofitInstallDispatchPreview() {
       ${getPlannedJobBranchMarkup(preview)}
     `,
     actions: [
-      { label: state.flags.retrofitInstallPackageReviewed ? "Head To Burlington County" : "Review Walkdown Package", onClick: () => state.flags.retrofitInstallPackageReviewed ? promptRetrofitInstallTravel() : showRetrofitInstallPackage() },
+      { label: "Review Install Route Prep", onClick: () => showDispatchRoutePrep("burlingtonRetrofitWalkdown", showRetrofitInstallDispatchPreview) },
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -7550,7 +7557,7 @@ function showCommissioningDispatchPreview() {
       ],
     }),
     actions: [
-      { label: "Accept Commissioning Visit", onClick: promptCommissioningTravel },
+      { label: "Review Commissioning Route Prep", onClick: () => showDispatchRoutePrep("southPhillyCommissioning", showCommissioningDispatchPreview) },
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });
@@ -8067,7 +8074,7 @@ function showSurveyDispatchPreview() {
       fieldTasks: content.surveyDispatch.inspections,
     }),
     actions: [
-      { label: "Accept Site Survey", onClick: () => state.flags.surveyPreparation ? promptSurveyTravel() : showSurveyPreparation() },
+      { label: "Review Survey Route Prep", onClick: () => showDispatchRoutePrep("universitySurvey", showSurveyDispatchPreview) },
       { label: "Return to Shop", className: "secondary-button" },
     ],
   });

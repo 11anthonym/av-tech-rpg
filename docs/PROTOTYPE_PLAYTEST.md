@@ -1536,6 +1536,11 @@ map back onto affected routes. The regional map groups pressured routes, route
 cards and route prep show mapped consequence pressure, and the van can open a
 small consequence review listing affected routes.
 
+Dispatch route prep handoff pass: route-backed dispatch-board actions now open
+the reusable route prep card before continuing into existing prep or travel
+flows. Job cards, van/map actions, required and recommended prep, consequence
+pressure, and route launch now use the same player-facing prep surface.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

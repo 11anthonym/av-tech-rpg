@@ -506,6 +506,11 @@ be easy to verify in the browser.
    routes carrying callback/return-trip pressure, route cards and prep cards
    show mapped consequence pressure, and the van can open a concise consequence
    review with affected routes.
+73. **Done - Dispatch route prep handoff pass:** Route-backed dispatch-board
+   actions now open the same reusable route prep card used by the van and
+   regional map before continuing into existing prep or travel flows. Job cards,
+   route prep, tool plans, consequence pressure, and route launch now stay on
+   one readable path without adding dispatch content.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

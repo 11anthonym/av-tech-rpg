@@ -562,6 +562,30 @@ async function clickButton(page, name) {
     await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.finished = true;
+      state.flags.metJosh = true;
+      state.flags.currentAreaId = "shop";
+      window.showServiceDispatchPreview();
+    });
+    await page.getByRole("button", { name: /Review Service Route Prep/ }).click();
+    await assertModalIncludes(page, [
+      "Route Prep",
+      "One Quick Display Swap",
+      "Required prep",
+      "Recommended prep",
+      "Callback / return-trip risk",
+      "Drive to Client Office",
+      "Back To Job Card",
+    ], "dispatch route prep");
+    await page.getByRole("button", { name: /Drive to Client Office/ }).click();
+    await assertModalIncludes(page, [
+      "Before You Leave",
+      "Prepare For The Service Call",
+    ], "dispatch route prep launch");
+
+    await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
       state.flags.shopBrief = true;
       state.carry = [window.GAME_CONTENT.tutorial.shopLoad[0]];
       window.showVehicleMenu();
