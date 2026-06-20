@@ -511,6 +511,11 @@ be easy to verify in the browser.
    regional map before continuing into existing prep or travel flows. Job cards,
    route prep, tool plans, consequence pressure, and route launch now stay on
    one readable path without adding dispatch content.
+74. **Done - Route launch clarity pass:** Route prep cards now include a
+   state-derived next-step row explaining whether the button opens route
+   choices, a job prep step, a fast-travel summary, a package review, or the
+   normal route summary. This keeps stacked modal handoffs readable without
+   adding new work orders.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

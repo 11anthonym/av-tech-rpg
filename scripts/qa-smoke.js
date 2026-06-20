@@ -555,6 +555,8 @@ async function clickButton(page, name) {
       "Required prep",
       "Recommended prep",
       "Risk tags",
+      "Next after Drive",
+      "Next opens route choices",
       "Travel cost / risk",
       "Drive to Center City",
     ], "van route prep");
@@ -574,6 +576,8 @@ async function clickButton(page, name) {
       "Required prep",
       "Recommended prep",
       "Callback / return-trip risk",
+      "Next after Drive",
+      "Next opens service prep",
       "Drive to Client Office",
       "Back To Job Card",
     ], "dispatch route prep");

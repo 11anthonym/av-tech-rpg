@@ -1541,6 +1541,11 @@ the reusable route prep card before continuing into existing prep or travel
 flows. Job cards, van/map actions, required and recommended prep, consequence
 pressure, and route launch now use the same player-facing prep surface.
 
+Route launch clarity pass: route prep cards now include a next-step row that
+names the next handoff before the player commits. The card can explain
+route-choice prompts, job prep steps, fast-travel summaries, Burlington package
+review, or the normal route summary from the same launch-preview helper.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

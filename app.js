@@ -4082,6 +4082,44 @@ function showTravelRouteModal({ routeId, dispatchEstimate, extraBody = "", actio
   });
 }
 
+function getRouteLaunchPreviewText(route, { fastTravel = false } = {}) {
+  if (!route) return "Route is not mapped yet.";
+  const lockReason = getRouteLockReason(route);
+  if (lockReason) return `Locked: ${lockReason}`;
+  if (fastTravel) {
+    return `Next opens the fast-travel summary for this known route; confirming there spends ${getFastTravelEnergyCost(route)} energy.`;
+  }
+  if (route.id === "centerCityTutorial" && getRouteChoices(route).length) {
+    return "Next opens route choices before the route summary.";
+  }
+  if (route.id === "conshohockenService") {
+    if (isConshohockenFollowupAvailable()) return "Next opens the Conshohocken follow-up route summary.";
+    if (!state.flags.servicePreparation) return "Next opens service prep before travel.";
+    return "Next opens the Conshohocken service route summary.";
+  }
+  if (route.id === "universitySurvey") {
+    if (!state.flags.surveyPreparation) return "Next opens site-survey prep before travel.";
+    return "Next opens the University City survey route summary.";
+  }
+  if (route.id === "navyYardAccess") {
+    if (!state.flags.secureAccessPreparation) return "Next opens secure-access prep before travel.";
+    return "Next opens the Navy Yard route summary.";
+  }
+  if (route.id === "systemsService") {
+    if (!state.flags.systemsPreparation) return "Next opens systems-service prep before travel.";
+    return "Next opens the King of Prussia systems route summary.";
+  }
+  if (route.id === "burlingtonRetrofitWalkdown") {
+    if (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete) {
+      if (!state.flags.retrofitInstallPackageReviewed) return "Next opens the saved walkdown package before the install drive.";
+      return "Next opens the Burlington install route summary.";
+    }
+    if (!state.flags.retrofitWalkdownPreparation) return "Next opens retrofit walkdown prep before travel.";
+    return "Next opens the Burlington walkdown route summary.";
+  }
+  return "Next opens the route summary before travel.";
+}
+
 function getRoutePrepRows(route, { fastTravel = false } = {}) {
   const job = getRouteJobData(route.id);
   const destination = getWorldArea(route.toAreaId);
@@ -4096,6 +4134,7 @@ function getRoutePrepRows(route, { fastTravel = false } = {}) {
     ...getRouteBranchRows(route),
     { label: "Route", detail: `${route.fromLabel} -> ${route.toLabel}` },
     { label: "Route status", detail: getRouteStatus(route) },
+    { label: fastTravel ? "Next after Fast Travel" : "Next after Drive", detail: getRouteLaunchPreviewText(route, { fastTravel }) },
     { label: fastTravel ? "Fast-travel cost" : "Travel cost / risk", detail: fastTravel ? `Known route shortcut, -${getFastTravelEnergyCost(route)} energy.` : getRouteTravelCostRisk(route) },
     { label: "Required prep", detail: getToolPlanText(toolPlan.required, { required: true }) },
     { label: "Recommended prep", detail: getToolPlanText(toolPlan.recommended) },
