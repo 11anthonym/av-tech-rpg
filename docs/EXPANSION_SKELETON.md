@@ -490,6 +490,12 @@ be easy to verify in the browser.
    also surfaces current-area portal cards with origin, destination, status,
    requirement, travel/return effect, and current work step, so spatial movement
    reads more like an RPG route/entrance system.
+70. **Done - Return portal and route prep integration pass:** Completed-job
+   review modals now send the player back to the room and let the RETURN portal
+   perform the actual trip to the shop. Van and regional-map drive actions now
+   open a reusable route prep card using route job metadata, tool plans, route
+   status, travel risk, fast-travel state, and open callback/return-trip context
+   before the route launches.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

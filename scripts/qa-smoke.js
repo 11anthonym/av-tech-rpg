@@ -536,7 +536,27 @@ async function clickButton(page, name) {
       "Review dispatch board routes",
       "Open regional map",
       "Drive active route",
+      "Prep",
     ], "van menu");
+
+    await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.shopBrief = true;
+      state.loaded = [...window.GAME_CONTENT.tutorial.shopLoad];
+      window.showVehicleMenu();
+    });
+    await page.getByRole("button", { name: /Drive Active Route/ }).click();
+    await assertModalIncludes(page, [
+      "Route Prep",
+      "Two Quick Carts",
+      "Job family",
+      "Required prep",
+      "Recommended prep",
+      "Risk tags",
+      "Travel cost / risk",
+      "Drive to Center City",
+    ], "van route prep");
 
     await page.evaluate(() => {
       window.startGame("prototype-tech");
@@ -746,21 +766,24 @@ async function clickButton(page, name) {
       window.enterScene("serviceOffice");
       state.flags.serviceComplete = true;
       window.returnToShopViaCurrentExit("One Quick Display Swap", "Returned to Radnor Rack & Wire after the Conshohocken service call.");
-      const promptText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const modalOpen = state.modalOpen;
+      const modalHidden = document.querySelector("#modal-backdrop")?.classList.contains("hidden") || false;
       const markerText = document.querySelector(".return-portal-marker")?.textContent || "";
       const sceneAfterPrompt = state.sceneId;
-      window.closeModal();
       window.usePortal("serviceOfficeToShop");
       const portalText = document.querySelector("#modal-backdrop")?.innerText || "";
       return {
         sceneAfterPrompt,
-        promptText,
+        modalOpen,
+        modalHidden,
         markerText,
         portalText,
+        logText: state.log.join(" "),
       };
     });
     assert(returnMarkerFlow.sceneAfterPrompt === "serviceOffice", "Return helper should leave player onsite after closeout");
-    assert(returnMarkerFlow.promptText.toLowerCase().includes("return route ready") && returnMarkerFlow.promptText.includes("RETURN marker"), "Return helper should explain the marked return point");
+    assert(!returnMarkerFlow.modalOpen && returnMarkerFlow.modalHidden, "Return helper should not open a second return-ready modal");
+    assert(returnMarkerFlow.logText.includes("Walk to the marked RETURN point"), "Return helper should log the marked return point");
     assert(returnMarkerFlow.markerText === "RETURN", "Return portal marker should render as a readable RETURN control");
     assert(returnMarkerFlow.portalText.toLowerCase().includes("service exit") && returnMarkerFlow.portalText.includes("Back To The Shop"), "Return portal should still open the mapped transition");
 

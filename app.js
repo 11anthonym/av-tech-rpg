@@ -1888,6 +1888,12 @@ function getVehicleMenuFlowMarkup() {
         ? `${activeRoute.fromLabel} to ${activeRoute.toLabel}. ${getRouteStatus(activeRoute)}.`
         : "No active route is launchable from the van right now.",
     },
+    {
+      label: "Prep",
+      detail: activeRoute
+        ? "Review required prep, recommended tools, risk tags, and route status before driving."
+        : "Prep appears here once a route is active.",
+    },
   ];
   return `
     <ul class="modal-list">
@@ -1926,7 +1932,12 @@ function showVehicleMenu() {
       }] : []),
       ...(canDriveCurrentRoute ? [{
         label: `Drive Active Route: ${activeRoute.toLabel}`,
-        onClick: () => launchRouteFromBoard(activeRoute.id),
+        onClick: () => showRoutePrepModal(activeRoute.id, { backAction: showVehicleMenu, backLabel: "Back To Van" }),
+      }] : []),
+      ...(activeRoute ? [{
+        label: "Review Active Route / Prep",
+        className: "secondary-button",
+        onClick: () => showRoutePrepModal(activeRoute.id, { backAction: showVehicleMenu, backLabel: "Back To Van" }),
       }] : []),
       { label: "Review Cargo", className: "secondary-button", onClick: showVehicleCargo },
       ...(state.flags.finished && !state.flags.endShiftPending ? [{
@@ -3280,6 +3291,7 @@ function getCurrentDispatchRouteId() {
   return getCurrentDispatchBoardEntry()?.routeId || null;
 }
 
+// Route history gates fast travel and gives the map its driven-before state.
 function isFastTravelUnlocked(route) {
   return Boolean(route?.fastTravelEligible) && getRouteTravelCount(route.id) > 0;
 }
@@ -3305,6 +3317,7 @@ function getRouteJobVariant(routeId, routeJob) {
   return null;
 }
 
+// Routes define travel; routeJobs define the player-facing job card for that travel.
 function getRouteJobData(routeId) {
   const defaults = content.routeJobDefaults || {};
   const routeJob = content.routeJobs?.[routeId] || {};
@@ -3503,6 +3516,8 @@ function showRegionalMap() {
   const currentArea = getCurrentWorldArea();
   const currentRegion = getWorldRegion(currentArea?.regionId);
   const fastTravelRoutes = getFastTravelRoutes();
+  const activeRoute = getWorldRoute(getCurrentDispatchRouteId());
+  const canDriveActiveRoute = Boolean(activeRoute && canLaunchRouteFromRegionalMap(activeRoute.id));
   const currentLocation = [
     currentRegion?.name,
     currentArea?.label,
@@ -3526,9 +3541,13 @@ function showRegionalMap() {
       ${getRegionalRouteMarkup()}
     `,
     actions: [
+      ...(canDriveActiveRoute ? [{
+        label: `Review / Drive ${activeRoute.toLabel}`,
+        onClick: () => showRoutePrepModal(activeRoute.id, { backAction: showRegionalMap, backLabel: "Back To Map" }),
+      }] : []),
       ...(canLaunchRouteFromRegionalMap("centerCityTutorial") ? [{
         label: "Drive to Center City East",
-        onClick: promptTravel,
+        onClick: () => showRoutePrepModal("centerCityTutorial", { backAction: showRegionalMap, backLabel: "Back To Map" }),
       }] : []),
       ...(state.flags.finished && !state.flags.endShiftPending ? [{
         label: "Review Dispatch Board Routes",
@@ -3538,7 +3557,7 @@ function showRegionalMap() {
       ...fastTravelRoutes.map((route) => ({
         label: `Fast Travel to ${route.toLabel}`,
         className: "secondary-button",
-        onClick: () => promptFastTravelRoute(route.id),
+        onClick: () => showRoutePrepModal(route.id, { fastTravel: true, backAction: showRegionalMap, backLabel: "Back To Map" }),
       })),
       { label: "Back To Van", className: "secondary-button", onClick: showVehicleMenu },
       { label: "Close", className: "text-button", onClick: render },
@@ -3633,6 +3652,7 @@ function getPortalDetailText(portal) {
   return `${getPortalStatusText(portal)} Destination: ${destination}.`;
 }
 
+// Portals are spatial transitions; route history and completion flags decide when they unlock.
 function getPortalCardRows(portal) {
   return [
     { label: "Label", detail: portal?.label || "Unmapped transition" },
@@ -3795,25 +3815,37 @@ function finishReturnPortal(portal) {
   );
 }
 
+function getReturnMarkerInstruction(portal = getCurrentReturnPortal()) {
+  if (!portal) return "";
+  return `The ${portal.label} RETURN marker is active in this area. Leave this review, walk to that marker, and interact with it when you are ready to head back.`;
+}
+
+function getReturnPortalCloseoutNoteMarkup() {
+  const instruction = getReturnMarkerInstruction();
+  return instruction ? `<p class="muted">${escapeHtml(instruction)}</p>` : "";
+}
+
 function showReturnMarkerReady(portal) {
   addLog(`${portal.label} is ready. Walk to the marked RETURN point when you are ready to leave.`);
+  closeModal();
   render();
-  showModal({
-    kicker: "Return Route Ready",
-    title: "Walk To The Marked Return",
-    body: `
-      ${getPortalTransitionMarkup(portal)}
-      <p>The closeout is done. The route back to Radnor Rack & Wire now lives in the room instead of this modal.</p>
-      <p class="muted">Walk to the RETURN marker and interact with it when you want to leave the area.</p>
-    `,
-    actions: [{ label: "Back To Area", onClick: render }],
-  });
 }
 
 function returnToShopViaCurrentExit(fallbackSource, fallbackMessage) {
   const portal = getCurrentReturnPortal();
   if (portal) return showReturnMarkerReady(portal);
   returnToShopAfterDispatch(fallbackSource, fallbackMessage);
+}
+
+function getCloseoutReturnAction(source, message, { beforeReturn = null } = {}) {
+  const portal = getCurrentReturnPortal();
+  return {
+    label: portal ? "Back To Area" : "Return to Radnor Rack & Wire",
+    onClick: () => {
+      if (typeof beforeReturn === "function") beforeReturn();
+      returnToShopViaCurrentExit(source, message);
+    },
+  };
 }
 
 function showCompletedDispatchReturnReview({ title = "Job Already Complete", source = "This job", result = "" } = {}) {
@@ -3938,6 +3970,63 @@ function showTravelRouteModal({ routeId, dispatchEstimate, extraBody = "", actio
       label: actionLabel || (fastTravel ? `Fast Travel to ${route.toLabel}` : route.actionLabel || `Drive to ${route.toLabel}`),
       onClick: () => travelRoute(routeId, { beforeTravel, afterTravel, routeChoice, fastTravel }),
     }],
+  });
+}
+
+function getRoutePrepRows(route, { fastTravel = false } = {}) {
+  const job = getRouteJobData(route.id);
+  const destination = getWorldArea(route.toAreaId);
+  const region = getWorldRegion(destination?.regionId);
+  const toolPlan = getDispatchToolPlan(job.familyId, route.id);
+  const lockReason = getRouteLockReason(route);
+  return [
+    { label: "Job", detail: job.title },
+    { label: "Destination", detail: `${destination?.label || route.toLabel}${region?.name ? `, ${region.name}` : ""}` },
+    { label: "Job family", detail: getJobFamilyName(job.familyId) },
+    { label: "Purpose", detail: job.purpose },
+    { label: "Route", detail: `${route.fromLabel} -> ${route.toLabel}` },
+    { label: "Route status", detail: getRouteStatus(route) },
+    { label: fastTravel ? "Fast-travel cost" : "Travel cost / risk", detail: fastTravel ? `Known route shortcut, -${getFastTravelEnergyCost(route)} energy.` : getRouteTravelCostRisk(route) },
+    { label: "Required prep", detail: getToolPlanText(toolPlan.required, { required: true }) },
+    { label: "Recommended prep", detail: getToolPlanText(toolPlan.recommended) },
+    { label: "Risk tags", detail: (job.riskTags || []).join(", ") || "ordinary field pressure" },
+    { label: "Callback / return-trip risk", detail: getRouteConsequenceText(route) },
+    { label: "Fast travel", detail: getRouteFastTravelText(route) },
+    lockReason ? { label: "Locked reason", detail: lockReason } : null,
+  ].filter(Boolean);
+}
+
+function getRoutePrepMarkup(route, options = {}) {
+  return `
+    <ul class="modal-list">
+      ${getRoutePrepRows(route, options).map((row) => `
+        <li><strong>${escapeHtml(row.label)}</strong><span>${escapeHtml(row.detail)}</span></li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function showRoutePrepModal(routeId, { fastTravel = false, backAction = showVehicleMenu, backLabel = "Back To Van" } = {}) {
+  const route = getWorldRoute(routeId);
+  if (!route) return notify(`Route ${routeId} is not mapped yet.`);
+  if (fastTravel && !canFastTravelRoute(route)) return notify("That fast travel route is not available for the current board route.");
+  const lockReason = getRouteLockReason(route);
+  const launchLabel = fastTravel ? `Fast Travel to ${route.toLabel}` : route.actionLabel || `Drive to ${route.toLabel}`;
+  showModal({
+    kicker: fastTravel ? "Fast Travel Prep" : "Route Prep",
+    title: getRouteJobData(route.id).title,
+    body: `
+      ${getRoutePrepMarkup(route, { fastTravel })}
+      <p class="muted">Prep is informational for now: missing recommended tools do not block the route, but they can change energy pressure, checks, or closeout quality.</p>
+    `,
+    actions: [
+      ...(!lockReason ? [{
+        label: launchLabel,
+        onClick: () => launchRouteFromBoard(route.id, { fastTravel }),
+      }] : []),
+      { label: backLabel, className: "secondary-button", onClick: backAction },
+      { label: "Close", className: "text-button", onClick: render },
+    ],
   });
 }
 
@@ -4240,19 +4329,18 @@ function showResults({ before = null } = {}) {
       ` : ""}
       <blockquote>Management note: "Please improve time management and plan parking more efficiently."</blockquote>
       <p>You survived your first week early. ${rewardTools.length ? "Choose one starter upgrade." : "Your starter kit already covers the current upgrade choices."}</p>
+      ${getReturnPortalCloseoutNoteMarkup()}
     `,
     actions: rewardTools.length ? rewardTools.map((toolId) => ({
       label: content.tools[toolId].name,
       className: "secondary-button",
       onClick: () => chooseReward(toolId),
-    })) : [{
-      label: "Return to Radnor Rack & Wire",
-      onClick: () => {
+    })) : [getCloseoutReturnAction("Two Quick Carts", "Returned to Radnor Rack & Wire after the Center City cart build.", {
+      beforeReturn: () => {
         state.flags.reward = "starter-kit";
         addLog("Starter kit already included the current upgrade choices.");
-        returnToShopViaCurrentExit("Two Quick Carts", "Returned to Radnor Rack & Wire after the Center City cart build.");
       },
-    }],
+    })],
   });
 }
 
@@ -4265,14 +4353,13 @@ function chooseReward(toolId) {
     body: `
       <p>${content.tools[toolId].description}</p>
       <p class="muted">${getToolEffectText(content.tools[toolId])}</p>
+      ${getReturnPortalCloseoutNoteMarkup()}
     `,
-    actions: [{
-      label: "Return to Radnor Rack & Wire",
-      onClick: () => {
+    actions: [getCloseoutReturnAction("Two Quick Carts", "Returned to Radnor Rack & Wire after the Center City cart build.", {
+      beforeReturn: () => {
         addLog(`${content.tools[toolId].name} added to your personal kit.`);
-        returnToShopViaCurrentExit("Two Quick Carts", "Returned to Radnor Rack & Wire after the Center City cart build.");
       },
-    }],
+    })],
   });
 }
 
@@ -4902,11 +4989,9 @@ function finishConshohockenFollowup(approach) {
       <p class="muted">${documented
         ? "The next tech gets a route shortcut and a room note that finally points to the right thing."
         : "Management likes the speed. The next tech still has to interpret the room note."}</p>
+      ${getReturnPortalCloseoutNoteMarkup()}
     `,
-    actions: [{
-      label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopViaCurrentExit(content.followupDispatch.title, "Returned to Radnor Rack & Wire after the Conshohocken label follow-up."),
-    }],
+    actions: [getCloseoutReturnAction(content.followupDispatch.title, "Returned to Radnor Rack & Wire after the Conshohocken label follow-up.")],
   });
 }
 
@@ -4981,7 +5066,7 @@ function getJobFamilyMarkup(familyId) {
     .join(", ");
   return `
     <li><strong>Job family</strong><span>${family.name}: ${family.loop}</span></li>
-    <li><strong>Core RPG skills</strong><span>${skillNames}</span></li>
+    <li><strong>Core skills</strong><span>${skillNames}</span></li>
   `;
 }
 
@@ -5065,6 +5150,7 @@ function getToolDisplayName(toolId) {
   return `${tool.name}${ownsTool(toolId) ? " (owned)" : ""}`;
 }
 
+// dispatchToolPlans define required and recommended prep shown on job/route cards.
 function getDispatchToolPlan(familyId, routeId = "") {
   const plans = content.dispatchToolPlans || {};
   const basePlan = plans[familyId] || plans.default || { required: ["work-order notes"], recommended: ["toolBag"] };
@@ -5899,11 +5985,9 @@ function finishSecureAccess(approach) {
       ${honest
         ? `<blockquote>Management note: "Please avoid creating client-facing narratives around internal scheduling friction."</blockquote>`
         : `<blockquote>Management note: "Thanks for keeping the ticket clean. Please improve onsite arrival efficiency."</blockquote>`}
+      ${getReturnPortalCloseoutNoteMarkup()}
     `,
-    actions: [{
-      label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopViaCurrentExit(content.secureAccessDispatch.title, "Returned to Radnor Rack & Wire after the Navy Yard access job."),
-    }],
+    actions: [getCloseoutReturnAction(content.secureAccessDispatch.title, "Returned to Radnor Rack & Wire after the Navy Yard access job.")],
   });
 }
 
@@ -6107,11 +6191,9 @@ function finishCallbackCleanup(approach) {
       ${resolved
         ? `<blockquote>Management note: "Please avoid implying previous closeout was incomplete when documenting warranty support."</blockquote>`
         : `<blockquote>Management note: "Thanks for keeping warranty hours contained."</blockquote>`}
+      ${getReturnPortalCloseoutNoteMarkup()}
     `,
-    actions: [{
-      label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopViaCurrentExit(content.callbackCleanupDispatch.title, "Returned to Radnor Rack & Wire after the warranty return."),
-    }],
+    actions: [getCloseoutReturnAction(content.callbackCleanupDispatch.title, "Returned to Radnor Rack & Wire after the warranty return.")],
   });
 }
 
@@ -6285,11 +6367,9 @@ function finishHandoff(approach) {
       ${helpful
         ? `<blockquote>Management note: "Please avoid expanding simple handoffs into undocumented training sessions."</blockquote>`
         : `<blockquote>Management note: "Thanks for keeping the handoff efficient."</blockquote>`}
+      ${getReturnPortalCloseoutNoteMarkup()}
     `,
-    actions: [{
-      label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopViaCurrentExit(content.handoffDispatch.title, "Returned to Radnor Rack & Wire after the executive handoff."),
-    }],
+    actions: [getCloseoutReturnAction(content.handoffDispatch.title, "Returned to Radnor Rack & Wire after the executive handoff.")],
   });
 }
 
@@ -6548,11 +6628,9 @@ function finishSystemsService(approach) {
       ${documented
         ? `<blockquote>Management note: "Please keep technical closeout proportionate to the original ticket."</blockquote>`
         : `<blockquote>Management note: "Thanks for resolving this quickly."</blockquote>`}
+      ${getReturnPortalCloseoutNoteMarkup()}
     `,
-    actions: [{
-      label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopViaCurrentExit(content.systemsDispatch.title, "Returned to Radnor Rack & Wire after the King of Prussia systems service."),
-    }],
+    actions: [getCloseoutReturnAction(content.systemsDispatch.title, "Returned to Radnor Rack & Wire after the King of Prussia systems service.")],
   });
 }
 
@@ -6680,11 +6758,9 @@ function finishTravelDispatch(approach) {
       ${documented
         ? `<blockquote>Management note: "Please avoid over-documenting routine travel expenses."</blockquote>`
         : `<blockquote>Management note: "Thanks for keeping the return stop simple."</blockquote>`}
+      ${getReturnPortalCloseoutNoteMarkup()}
     `,
-    actions: [{
-      label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopViaCurrentExit(content.travelDispatch.title, "Returned to Radnor Rack & Wire after the Cherry Hill return stop."),
-    }],
+    actions: [getCloseoutReturnAction(content.travelDispatch.title, "Returned to Radnor Rack & Wire after the Cherry Hill return stop.")],
   });
 }
 
@@ -6989,11 +7065,9 @@ function finishRetrofitWalkdown(approach) {
       ${documented
         ? `<blockquote>Management note: "Please avoid creating field changes from preliminary walkdowns unless the pathway is truly unavailable."</blockquote>`
         : `<blockquote>Management note: "Thanks for confirming the quoted pathway."</blockquote>`}
+      ${getReturnPortalCloseoutNoteMarkup()}
     `,
-    actions: [{
-      label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopViaCurrentExit(content.retrofitWalkdownDispatch.title, "Returned to Radnor Rack & Wire after the Burlington County retrofit walkdown."),
-    }],
+    actions: [getCloseoutReturnAction(content.retrofitWalkdownDispatch.title, "Returned to Radnor Rack & Wire after the Burlington County retrofit walkdown.")],
   });
 }
 
@@ -7308,11 +7382,9 @@ function finishRetrofitInstall(approach) {
       ${documented
         ? `<blockquote>Management note: "Please keep record drawing updates proportionate to the approved install."</blockquote>`
         : `<blockquote>Management note: "Thanks for keeping the install moving."</blockquote>`}
+      ${getReturnPortalCloseoutNoteMarkup()}
     `,
-    actions: [{
-      label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopViaCurrentExit(preview?.title || "Burlington County Retrofit Install", "Returned to Radnor Rack & Wire after the Burlington County retrofit install."),
-    }],
+    actions: [getCloseoutReturnAction(preview?.title || "Burlington County Retrofit Install", "Returned to Radnor Rack & Wire after the Burlington County retrofit install.")],
   });
 }
 
@@ -7830,11 +7902,9 @@ function finishCommissioning(approach) {
         : callbackRiskAdded
           ? `<blockquote>Management note: "Thanks for keeping closeout moving. Service can address any user-reported concerns."</blockquote>`
           : `<blockquote>Management note: "Thanks for protecting the schedule. Please update drawings when time allows."</blockquote>`}
+      ${getReturnPortalCloseoutNoteMarkup()}
     `,
-    actions: [{
-      label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopViaCurrentExit(content.commissioningDispatch.title, "Returned to Radnor Rack & Wire after the South Philadelphia commissioning visit."),
-    }],
+    actions: [getCloseoutReturnAction(content.commissioningDispatch.title, "Returned to Radnor Rack & Wire after the South Philadelphia commissioning visit.")],
   });
 }
 
@@ -8092,11 +8162,9 @@ function finishSurvey(approach) {
       ${approach === "trust"
         ? `<blockquote>Management note: "Thanks for keeping the survey efficient. Installation can confirm final access conditions onsite."</blockquote>`
         : `<blockquote>Management note: "Please avoid introducing unnecessary complexity after sales has aligned the client around a solution."</blockquote>`}
+      ${getReturnPortalCloseoutNoteMarkup()}
     `,
-    actions: [{
-      label: "Return To Radnor Rack & Wire",
-      onClick: () => returnToShopViaCurrentExit(content.surveyDispatch.title, "Returned to Radnor Rack & Wire after the University City survey."),
-    }],
+    actions: [getCloseoutReturnAction(content.surveyDispatch.title, "Returned to Radnor Rack & Wire after the University City survey.")],
   });
 }
 
@@ -8309,17 +8377,16 @@ function showServiceResults() {
       </div>
       <p class="muted">${serviceRiskDetail}</p>
       <blockquote>Client note: "Thank you for fixing the display before the afternoon meeting.${checkedSignalPath ? " The cable notes are helpful." : strainedVerification ? " The room is working, though the notes are light." : ""}"</blockquote>
+      ${getReturnPortalCloseoutNoteMarkup()}
     `,
-    actions: [{
-      label: "Return to Radnor Rack & Wire",
-      onClick: () => {
+    actions: [getCloseoutReturnAction(content.serviceDispatch.title, "Returned to Radnor Rack & Wire after the Conshohocken service call.", {
+      beforeReturn: () => {
         if (!checkedSignalPath) {
           state.flags.serviceCallbackPending = true;
           addLog("A Conshohocken callback note appeared before you made it back to Radnor Rack & Wire.");
         }
-        returnToShopViaCurrentExit(content.serviceDispatch.title, "Returned to Radnor Rack & Wire after the Conshohocken service call.");
       },
-    }],
+    })],
   });
 }
 
@@ -9437,7 +9504,7 @@ function resolveCurrentObjective() {
   const baseObjective = getObjective();
   if (context.returnPortalReady && /return to Radnor Rack & Wire/i.test(baseObjective)) {
     return {
-      text: `Use the ${context.returnPortalLabel} return marker to return to Radnor Rack & Wire.`,
+      text: `Use the RETURN marker to leave ${context.areaLabel}.`,
       context,
     };
   }

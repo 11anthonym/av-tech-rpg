@@ -1518,6 +1518,13 @@ data, including origin, destination, status, requirement, travel or return
 effect, and work step, so locked entrances and return exits are readable before
 the player clicks them.
 
+Return portal and route prep integration pass: completed-job review modals now
+close back to the room instead of offering a second modal return path. The
+RETURN marker performs the shop trip. Van and regional-map drive actions now
+open a compact route prep card from route job metadata and dispatch tool plans
+before travel, showing required prep, recommended prep, route status, travel
+risk, fast-travel state, and consequence pressure.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.
