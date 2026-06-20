@@ -1566,6 +1566,11 @@ Dispatch action cleanup pass: route-backed dispatch previews now use one shared
 route/prep action helper and the same "Review Route & Prep" button. The player
 still lands on the same prep card, but the board surface is less bespoke.
 
+Current-step language cleanup pass: the Current Step panel no longer says
+"Interface:" in the "Where to look" row, and the garage/lobby travel stage now
+reads "Route / Building Entry." Player guidance should sound like practical
+work direction, not implementation language.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

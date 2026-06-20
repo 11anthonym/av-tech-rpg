@@ -229,7 +229,7 @@ async function clickButton(page, name) {
       const consequenceText = document.querySelector("#task-copy")?.textContent || "";
       return { initialText, consequenceText };
     });
-    assert(currentStepBriefing.initialText.includes("Next action") && currentStepBriefing.initialText.includes("Where to look"), "Current step panel should label the next action and interface");
+    assert(currentStepBriefing.initialText.includes("Next action") && currentStepBriefing.initialText.includes("Where to look"), "Current step panel should label the next action and where to look");
     assert(currentStepBriefing.initialText.includes("Route") && currentStepBriefing.initialText.includes("Locked: Talk to the supervisor"), "Current step panel should explain the initial locked route");
     assert(currentStepBriefing.initialText.includes("Consequences") && currentStepBriefing.initialText.includes("No open callback debt"), "Current step panel should show clean consequence state");
     assert(currentStepBriefing.consequenceText.includes("Fast travel: Available now") && currentStepBriefing.consequenceText.includes("Driven before: Yes"), "Current step panel should expose route history and fast travel state");
@@ -794,7 +794,8 @@ async function clickButton(page, name) {
     assert(transitionGuidance.readyNearby.includes("State: READY") && transitionGuidance.readyNearby.includes("Client Lobby"), "Nearby card should explain ready transition destination");
     assert(transitionGuidance.lockedTaskCopy.includes("Area transitions") && transitionGuidance.lockedTaskCopy.includes("Locked: Enter client lobby") && transitionGuidance.lockedTaskCopy.includes("equipment still needs"), "Current step should summarize locked area transition requirements");
     assert(transitionGuidance.readyTaskCopy.includes("Area transitions") && transitionGuidance.readyTaskCopy.includes("Ready: Enter client lobby"), "Current step should summarize ready area transitions");
-    assert(transitionGuidance.taskCopy.includes("Route / Building Transition") && transitionGuidance.taskCopy.includes("Interface:"), "Current step should include loop-stage guidance");
+    assert(transitionGuidance.lockedTaskCopy.includes("Route / Building Entry") && transitionGuidance.lockedTaskCopy.includes("Use Van #3") && !transitionGuidance.lockedTaskCopy.includes("Interface:"), "Locked current step should include player-facing work-step guidance");
+    assert(transitionGuidance.readyTaskCopy.includes("Route / Building Entry") && transitionGuidance.readyTaskCopy.includes("Talk to the nearby contact") && !transitionGuidance.readyTaskCopy.includes("Interface:"), "Ready current step should include player-facing work-step guidance");
 
     const returnMarkerFlow = await page.evaluate(() => {
       window.startGame("prototype-tech");
@@ -1808,7 +1809,7 @@ async function clickButton(page, name) {
     assert(commissioningTerminationTask.showsResultRows, "Commissioning termination task should show structured field-task rows");
     assert(commissioningTerminationTask.beforeChoiceNearby.includes("READY") && commissioningTerminationTask.beforeChoiceInteract.includes("Choose termination task"), "Commissioning termination hotspot should show ready choice state");
     assert(commissioningTerminationTask.afterChoiceNearby.includes("COMPLETED") && commissioningTerminationTask.afterChoiceInteract.includes("Review termination task"), "Commissioning termination hotspot should show completed review state");
-    assert(commissioningTerminationTask.afterChoiceTaskCopy.includes("Interface: use the nearest highlighted interaction") && !commissioningTerminationTask.afterChoiceTaskCopy.includes("career clipboard"), "Training room objective should not point to career-training UI");
+    assert(commissioningTerminationTask.afterChoiceTaskCopy.includes("Use the nearest highlighted interaction") && !commissioningTerminationTask.afterChoiceTaskCopy.includes("career clipboard"), "Training room objective should not point to career-training UI");
     assert(commissioningTerminationTask.reviewShowsSavedResult, "Commissioning termination hotspot should reopen saved task result review");
     assert(commissioningTerminationTask.clipboardShowsHistory, "Career clipboard should show saved commissioning field-task history");
 

@@ -534,6 +534,10 @@ be easy to verify in the browser.
    share one `getDispatchRoutePrepAction()` helper and one player-facing
    "Review Route & Prep" button. This removes bespoke route-prep action labels
    without changing the board-to-route-prep flow.
+79. **Done - Current-step language cleanup pass:** Removed "Interface:" wording
+   from player-facing guidance and renamed the garage/lobby transition stage to
+   "Route / Building Entry." Current-step copy should read like practical work
+   direction, not implementation terminology.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

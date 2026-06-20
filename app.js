@@ -9530,19 +9530,19 @@ function getWorkdayLoopStage(objective = "") {
     if (state.flags.retrofitInstallComplete && !state.flags.prototypeSummaryViewed) return "Shop / Career Snapshot";
     return "Shop / Dispatch Board";
   }
-  if (["garage", "lobby"].includes(state.sceneId)) return "Route / Building Transition";
+  if (["garage", "lobby"].includes(state.sceneId)) return "Route / Building Entry";
   if (/return to radnor|use .*exit/i.test(objective)) return "Closeout / Return";
   if (/close out|choose|review the result|file the survey|handoff style/i.test(objective)) return "Job Site / Closeout";
   return "Job Site / Field Tasks";
 }
 
 function getWorkdayLoopInterfaceHint(objective = "") {
-  if (/dispatch board/i.test(objective)) return "Interface: dispatch board or van route review.";
-  if (/van|load staged equipment|center city east/i.test(objective)) return "Interface: Van #3 connects cargo, map, and routes.";
-  if (/exit|return to radnor/i.test(objective)) return "Interface: use the marked exit/return transition.";
-  if (/career clipboard|field-training focus|training focus|career snapshot/i.test(objective)) return "Interface: career clipboard or dispatch board.";
-  if (/josh|supervisor|client|facilities|security|escort/i.test(objective)) return "Interface: talk to the nearby contact.";
-  return "Interface: use the nearest highlighted interaction.";
+  if (/dispatch board/i.test(objective)) return "Open the dispatch board or review the route from the van.";
+  if (/van|load staged equipment|center city east/i.test(objective)) return "Use Van #3 for cargo, map, and route choices.";
+  if (/exit|return to radnor/i.test(objective)) return "Use the marked exit or RETURN point.";
+  if (/career clipboard|field-training focus|training focus|career snapshot/i.test(objective)) return "Open the career clipboard or dispatch board.";
+  if (/josh|supervisor|client|facilities|security|escort/i.test(objective)) return "Talk to the nearby contact.";
+  return "Use the nearest highlighted interaction.";
 }
 
 function getWorkdayLoopGuidance(objective = resolveCurrentObjective().text) {
