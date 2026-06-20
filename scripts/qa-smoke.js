@@ -739,11 +739,13 @@ async function clickButton(page, name) {
       state.player = { x: 116, y: 185 };
       window.render();
       const lockedNearby = document.querySelector("#nearby-card")?.textContent || "";
+      const lockedTaskCopy = document.querySelector("#task-copy")?.textContent || "";
       window.usePortal("garageToLobby");
       const lockedText = document.querySelector("#modal-backdrop")?.innerText || "";
       state.flags.centerCityEquipmentDelivered = true;
       window.render();
       const readyNearby = document.querySelector("#nearby-card")?.textContent || "";
+      const readyTaskCopy = document.querySelector("#task-copy")?.textContent || "";
       window.usePortal("garageToLobby");
       const readyText = document.querySelector("#modal-backdrop")?.innerText || "";
       return {
@@ -751,6 +753,8 @@ async function clickButton(page, name) {
         readyText,
         lockedNearby,
         readyNearby,
+        lockedTaskCopy,
+        readyTaskCopy,
         taskCopy: document.querySelector("#task-copy")?.textContent || "",
       };
     });
@@ -758,6 +762,8 @@ async function clickButton(page, name) {
     assert(transitionGuidance.readyText.includes("Status") && transitionGuidance.readyText.includes("Ready") && transitionGuidance.readyText.includes("Requirement") && transitionGuidance.readyText.includes("Travel effect") && transitionGuidance.readyText.includes("Client Lobby"), "Ready portal should show transition destination and effects");
     assert(transitionGuidance.lockedNearby.includes("State: LOCKED") && transitionGuidance.lockedNearby.includes("Carry equipment from the van"), "Nearby card should explain locked entrance");
     assert(transitionGuidance.readyNearby.includes("State: READY") && transitionGuidance.readyNearby.includes("Client Lobby"), "Nearby card should explain ready transition destination");
+    assert(transitionGuidance.lockedTaskCopy.includes("Area transitions") && transitionGuidance.lockedTaskCopy.includes("Locked: Enter client lobby") && transitionGuidance.lockedTaskCopy.includes("equipment still needs"), "Current step should summarize locked area transition requirements");
+    assert(transitionGuidance.readyTaskCopy.includes("Area transitions") && transitionGuidance.readyTaskCopy.includes("Ready: Enter client lobby"), "Current step should summarize ready area transitions");
     assert(transitionGuidance.taskCopy.includes("Route / Building Transition") && transitionGuidance.taskCopy.includes("Interface:"), "Current step should include loop-stage guidance");
 
     const returnMarkerFlow = await page.evaluate(() => {
@@ -825,6 +831,34 @@ async function clickButton(page, name) {
     assert(retrofitRouteCard.includes("Burlington County Retrofit Install"), "Retrofit route card should use the install variant after walkdown closeout");
     assert(retrofitRouteCard.includes("Walkdown result: pathway accepted") && retrofitRouteCard.includes("Install branch: Inherited pathway risk"), "Retrofit route card should explain the walkdown-to-install branch");
     assert(retrofitRouteCard.includes("Required tools:") && retrofitRouteCard.includes("Recommended tools:"), "Retrofit route card should show route tool prep");
+
+    const retrofitRoutePrep = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      Object.assign(state.flags, {
+        finished: true,
+        metJosh: true,
+        serviceComplete: true,
+        joshServiceDebriefed: true,
+        conshohockenFollowupComplete: true,
+        surveyComplete: true,
+        commissioningComplete: true,
+        warehouseComplete: true,
+        secureAccessComplete: true,
+        handoffComplete: true,
+        systemsComplete: true,
+        travelComplete: true,
+        retrofitWalkdownComplete: true,
+        retrofitWalkdownApproach: "accept",
+        retrofitInstallRisk: true,
+        retrofitInstallBranch: "risk",
+      });
+      state.flags.currentAreaId = "shop";
+      window.showRoutePrepModal("burlingtonRetrofitWalkdown");
+      return document.querySelector("#modal-backdrop")?.innerText || "";
+    });
+    assert(retrofitRoutePrep.toLowerCase().includes("route prep") && retrofitRoutePrep.includes("Saved walkdown result") && retrofitRoutePrep.includes("Install branch"), "Retrofit route prep should show saved walkdown branch rows");
+    assert(retrofitRoutePrep.includes("Inherited pathway risk") && retrofitRoutePrep.includes("Required prep") && retrofitRoutePrep.includes("Recommended prep"), "Retrofit route prep should show branch risk and prep");
 
     await page.evaluate(() => {
       window.startGame("prototype-tech");

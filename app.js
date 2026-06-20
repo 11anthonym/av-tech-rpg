@@ -3690,6 +3690,18 @@ function getCurrentAreaPortalMarkup() {
   return `<ul class="modal-list">${portals.map((portal) => getPortalCardMarkup(portal)).join("")}</ul>`;
 }
 
+function getPortalBriefText(portal) {
+  const destination = getPortalDestinationLabel(portal);
+  if (isPortalReady(portal)) return `Ready: ${portal.label} -> ${destination}.`;
+  return `Locked: ${portal.label} -> ${destination}. Requirement: ${getPortalRequirementText(portal)}`;
+}
+
+function getCurrentAreaTransitionBriefText() {
+  const portals = getCurrentAreaPortals();
+  if (!portals.length) return "";
+  return portals.map(getPortalBriefText).join(" ");
+}
+
 function getPortalTransitionMarkup(portal) {
   return `
     <div class="results-grid">
@@ -3984,6 +3996,7 @@ function getRoutePrepRows(route, { fastTravel = false } = {}) {
     { label: "Destination", detail: `${destination?.label || route.toLabel}${region?.name ? `, ${region.name}` : ""}` },
     { label: "Job family", detail: getJobFamilyName(job.familyId) },
     { label: "Purpose", detail: job.purpose },
+    ...getRouteBranchRows(route),
     { label: "Route", detail: `${route.fromLabel} -> ${route.toLabel}` },
     { label: "Route status", detail: getRouteStatus(route) },
     { label: fastTravel ? "Fast-travel cost" : "Travel cost / risk", detail: fastTravel ? `Known route shortcut, -${getFastTravelEnergyCost(route)} energy.` : getRouteTravelCostRisk(route) },
@@ -5177,6 +5190,32 @@ function getToolPlanText(items = [], options = {}) {
     .join(", ");
 }
 
+function getRouteBranchRows(route) {
+  if (route?.id !== "burlingtonRetrofitWalkdown") return [];
+  if (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete) {
+    const preview = getRetrofitInstallPreview();
+    const branchLabel = preview?.branch?.label || preview?.branchId || "walkdown result";
+    const branchHint = preview?.branch?.stateHint || "The walkdown result has selected the install branch.";
+    return [
+      { label: "Saved walkdown result", detail: branchHint },
+      { label: "Install branch", detail: branchLabel },
+    ];
+  }
+  if (!state.flags.retrofitWalkdownComplete) {
+    return [{ label: "Saved walkdown result", detail: "Pending. This walkdown closeout will decide the future install branch." }];
+  }
+  if (state.flags.retrofitInstallRiskInherited) {
+    return [{ label: "Burlington consequence", detail: "Install closeout inherited pathway risk into future service." }];
+  }
+  if (state.flags.retrofitInstallRiskResolved) {
+    return [{ label: "Burlington consequence", detail: "Install closeout resolved the pathway risk into record/as-built history." }];
+  }
+  if (state.flags.retrofitInstallComplete) {
+    return [{ label: "Burlington consequence", detail: "Install is complete; future service starts from the saved closeout record." }];
+  }
+  return [];
+}
+
 function getRouteConsequenceText(route) {
   const notes = [];
   if (route?.id === "burlingtonRetrofitWalkdown") {
@@ -5211,6 +5250,7 @@ function getRouteJobCardRows(route) {
     { label: "Job family", detail: getJobFamilyName(job.familyId) },
     { label: "Purpose", detail: job.purpose },
     { label: "Summary", detail: job.summary || "No summary listed." },
+    ...getRouteBranchRows(route),
     { label: "Required tools", detail: getToolPlanText(toolPlan.required, { required: true }) },
     { label: "Recommended tools", detail: getToolPlanText(toolPlan.recommended) },
     { label: "Risk tags", detail: (job.riskTags || []).join(", ") || "ordinary field pressure" },
@@ -9482,6 +9522,10 @@ function getCurrentObjectiveContext() {
   const area = getCurrentWorldArea();
   const route = getCurrentLoopRoute();
   const returnPortal = getCurrentReturnPortal();
+  const visiblePortals = getCurrentAreaPortals();
+  const lockedPortals = visiblePortals.filter((portal) => !isPortalReady(portal));
+  const readyPortals = visiblePortals.filter(isPortalReady);
+  const firstLockedPortal = lockedPortals[0];
   return {
     sceneId: state.sceneId,
     areaId: area?.id || "",
@@ -9493,6 +9537,11 @@ function getCurrentObjectiveContext() {
     vehicleId: getCurrentVehicleId(),
     returnPortalLabel: returnPortal?.label || "",
     returnPortalReady: Boolean(returnPortal && isPortalReady(returnPortal)),
+    visiblePortalCount: visiblePortals.length,
+    lockedPortalCount: lockedPortals.length,
+    readyPortalCount: readyPortals.length,
+    firstLockedPortalLabel: firstLockedPortal?.label || "",
+    firstLockedPortalMessage: firstLockedPortal ? getPortalRequirementText(firstLockedPortal) : "",
     openCallbacks: getUnresolvedCallbackCount(),
     openReturnTripRisks: getReturnTripRiskEntries().length,
     retrofitBranch: state.flags.retrofitInstallBranch || getRetrofitInstallBranchIdFromFlags(state.flags),
@@ -9505,6 +9554,12 @@ function resolveCurrentObjective() {
   if (context.returnPortalReady && /return to Radnor Rack & Wire/i.test(baseObjective)) {
     return {
       text: `Use the RETURN marker to leave ${context.areaLabel}.`,
+      context,
+    };
+  }
+  if (context.lockedPortalCount && /door|entrance|elevator|exit|lobby|client floor|return/i.test(baseObjective)) {
+    return {
+      text: `${context.firstLockedPortalMessage} (${context.firstLockedPortalLabel})`,
       context,
     };
   }
@@ -9570,11 +9625,13 @@ function getCurrentStepBrief(objective = resolveCurrentObjective().text) {
 
 function getCurrentStepRows({ includeLoopPath = true } = {}) {
   const brief = getCurrentStepBrief();
+  const transitionBrief = getCurrentAreaTransitionBriefText();
   return [
     { label: "Work step", detail: brief.stage },
     includeLoopPath ? { label: "Workday path", detail: brief.loopPath } : null,
     { label: "Next action", detail: brief.objective },
     { label: "Where to look", detail: brief.interfaceHint },
+    transitionBrief ? { label: "Area transitions", detail: transitionBrief } : null,
     { label: "Route", detail: brief.route },
     { label: "Consequences", detail: brief.consequences },
     brief.conditionPressure ? { label: "Condition pressure", detail: brief.conditionPressure } : null,

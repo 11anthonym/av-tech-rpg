@@ -1525,6 +1525,12 @@ open a compact route prep card from route job metadata and dispatch tool plans
 before travel, showing required prep, recommended prep, route status, travel
 risk, fast-travel state, and consequence pressure.
 
+Current-step transition awareness pass: the current-step panel now lists visible
+area transitions from portal data, including locked requirements and ready
+destinations. Burlington route cards and route prep also show saved walkdown
+result and install branch rows so the retrofit chain reads as one consequence,
+not two unrelated jobs.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

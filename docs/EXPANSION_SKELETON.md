@@ -496,6 +496,11 @@ be easy to verify in the browser.
    open a reusable route prep card using route job metadata, tool plans, route
    status, travel risk, fast-travel state, and open callback/return-trip context
    before the route launches.
+71. **Done - Current-step transition awareness pass:** The current-step panel
+   now summarizes visible area transitions from portal data, including locked
+   requirements and ready destinations. Burlington route cards and route prep
+   also show saved walkdown result and install branch rows, making the
+   walkdown-to-install consequence chain visible before travel.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
