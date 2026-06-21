@@ -855,6 +855,7 @@ async function clickButton(page, name) {
     assert(returnMarkerFlow.logText.includes("Walk to the marked RETURN point"), "Return helper should log the marked return point");
     assert(returnMarkerFlow.markerText === "RETURN", "Return portal marker should render as a readable RETURN control");
     assert(returnMarkerFlow.portalText.toLowerCase().includes("service exit") && returnMarkerFlow.portalText.includes("Back To The Shop"), "Return portal should still open the mapped transition");
+    assert(returnMarkerFlow.portalText.toLowerCase().includes("before you leave") && returnMarkerFlow.portalText.toLowerCase().includes("risk carried back"), "Return portal should show a departure consequence summary");
 
     const routeJobData = await page.evaluate(() => {
       return Object.keys(window.GAME_CONTENT.world.routes).map((routeId) => ({
@@ -1590,9 +1591,12 @@ async function clickButton(page, name) {
       state.flags.finished = true;
       state.flags.metJosh = true;
       state.flags.handoffComplete = true;
+      window.enterScene("systemsService");
       window.finishSystemsService("reboot");
       const closeoutText = document.querySelector("#modal-backdrop")?.innerText || "";
       const openRiskSaved = Boolean(state.flags.returnTripRisks?.systemsQuickReboot);
+      window.usePortal("systemsServiceToShop");
+      const departureText = document.querySelector("#modal-backdrop")?.innerText || "";
       window.showRegionalMap();
       const mapText = document.querySelector("#modal-backdrop")?.innerText || "";
       window.showConsequenceReview();
@@ -1605,6 +1609,8 @@ async function clickButton(page, name) {
       return {
         closeoutShowsConsequence: closeoutText.includes("Closeout consequence") && closeoutText.includes("Systems quick-reboot debt"),
         openRiskSaved,
+        departureShowsSummary: departureText.toLowerCase().includes("before you leave") && departureText.toLowerCase().includes("what changed") && departureText.toLowerCase().includes("risk carried back"),
+        departureShowsRisk: departureText.includes("Systems quick-reboot debt") && departureText.includes("Open return-trip risks"),
         mapShowsPressureRoute: mapText.toLowerCase().includes("callback / return-trip pressure") && mapText.includes("Mapped consequence pressure") && mapText.includes("King of Prussia Room Offline"),
         reviewShowsAffectedRoute: reviewText.toLowerCase().includes("affected routes") && reviewText.includes("KING OF PRUSSIA") && reviewText.includes("King of Prussia Room Offline"),
         clipboardShowsLedger: clipboardText.includes("Consequence ledger") && clipboardText.includes("King of Prussia Room Offline"),
@@ -1614,6 +1620,8 @@ async function clickButton(page, name) {
     });
     assert(consequenceLedger.closeoutShowsConsequence, "Systems closeout should show consequence ledger language");
     assert(consequenceLedger.openRiskSaved, "Systems quick reboot should save an open return-trip risk");
+    assert(consequenceLedger.departureShowsSummary, "Return marker should recap closeout changes before leaving the job site");
+    assert(consequenceLedger.departureShowsRisk, "Return marker should show systems risk carried back to the shop");
     assert(consequenceLedger.mapShowsPressureRoute, "Regional map should group routes carrying consequence pressure");
     assert(consequenceLedger.reviewShowsAffectedRoute, "Consequence review should list affected routes");
     assert(consequenceLedger.clipboardShowsLedger, "Career clipboard should show the open consequence ledger");

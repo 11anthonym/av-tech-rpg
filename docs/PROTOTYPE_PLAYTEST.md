@@ -1581,6 +1581,11 @@ now reuse the route prep travel-handoff preview. Map, van, board, and prep
 surfaces should all explain the next route action in the same player-facing
 language.
 
+Job-site departure consequence pass: closeout choices now save a small
+before/after and consequence summary. The mapped RETURN marker uses it to show
+"Before You Leave," "What Changed," current closeout effect, risk carried back,
+and the next shop step before the player returns.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

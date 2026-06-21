@@ -546,6 +546,12 @@ be easy to verify in the browser.
    Step route brief now surface the same travel handoff preview used by route
    prep. The van, board, map, and prep screens should all explain what the next
    route action does from one resolver instead of separate copy.
+82. **Done - Job-site departure consequence pass:** Closeout choices now save a
+   compact job-site summary with tracked before/after state and closeout
+   consequence entries. Return markers show a "Before You Leave" recap with
+   what changed, current closeout effect, risk carried back, and the next shop
+   step, keeping the consequence handoff spatial instead of adding another
+   automatic return popup.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

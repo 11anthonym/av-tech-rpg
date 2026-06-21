@@ -1493,6 +1493,166 @@ function getCloseoutConsequenceMarkup(entries = []) {
   `;
 }
 
+function normalizeCloseoutSummaryEntry(entry = {}) {
+  return {
+    id: entry.id || "",
+    source: entry.source || "Closeout",
+    status: entry.status || "documented",
+    cause: entry.cause || entry.detail || "Closeout result saved.",
+    affects: entry.affects || "future field work",
+    detail: entry.detail || "The closeout result is saved.",
+  };
+}
+
+function recordJobSiteCloseoutSummary({ source = "Current job", result = "", before = null, consequences = [] } = {}) {
+  state.flags.lastJobSiteCloseoutSummary = {
+    source,
+    result,
+    sceneId: state.sceneId,
+    areaId: state.flags.currentAreaId || "",
+    clock: state.clock,
+    before: before || null,
+    after: getTrackedStateSnapshot(),
+    consequences: consequences.map(normalizeCloseoutSummaryEntry),
+  };
+}
+
+function normalizeCloseoutSource(value = "") {
+  return `${value}`.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function getReturnPortalSourceAliases(portal) {
+  const aliases = [portal?.returnSource, portal?.label];
+  const portalAliases = {
+    centerCityConferenceRoomToShop: ["Two Quick Carts"],
+    serviceOfficeToShop: [content.serviceDispatch?.title],
+    conshohockenFollowupToShop: [content.followupDispatch?.title],
+    universitySurveyToShop: [content.surveyDispatch?.title],
+    southPhillyCommissioningToShop: [content.commissioningDispatch?.title],
+    navyYardAccessToShop: [content.secureAccessDispatch?.title],
+    warrantyReturnToShop: [content.callbackCleanupDispatch?.title],
+    executiveHandoffToShop: [content.handoffDispatch?.title],
+    systemsServiceToShop: [content.systemsDispatch?.title],
+    burlingtonRetrofitWalkdownToShop: [content.retrofitWalkdownDispatch?.title],
+    burlingtonRetrofitInstallToShop: ["Burlington County Retrofit Install"],
+  };
+  return [...aliases, ...(portalAliases[portal?.id] || [])]
+    .filter(Boolean)
+    .map(normalizeCloseoutSource)
+    .filter(Boolean);
+}
+
+function isCloseoutSourceForPortal(source, portal) {
+  const normalizedSource = normalizeCloseoutSource(source);
+  if (!normalizedSource) return false;
+  return getReturnPortalSourceAliases(portal).includes(normalizedSource);
+}
+
+function getLastJobSiteCloseoutSummaryForPortal(portal) {
+  const summary = state.flags.lastJobSiteCloseoutSummary;
+  if (!summary || !isCloseoutSourceForPortal(summary.source, portal)) return null;
+  return summary;
+}
+
+function getReturnPortalResultFlagKey(portal) {
+  return {
+    centerCityConferenceRoomToShop: "finishChoice",
+    serviceOfficeToShop: "serviceApproach",
+    conshohockenFollowupToShop: "conshohockenFollowupApproach",
+    universitySurveyToShop: "surveyApproach",
+    southPhillyCommissioningToShop: "commissioningApproach",
+    navyYardAccessToShop: "secureAccessApproach",
+    warrantyReturnToShop: "callbackCleanupApproach",
+    executiveHandoffToShop: "handoffApproach",
+    systemsServiceToShop: "systemsApproach",
+    burlingtonRetrofitWalkdownToShop: "retrofitWalkdownApproach",
+    burlingtonRetrofitInstallToShop: "retrofitInstallApproach",
+  }[portal?.id] || "";
+}
+
+function getReturnPortalSavedResultText(portal) {
+  const flagKey = getReturnPortalResultFlagKey(portal);
+  return flagKey ? getCompletedCloseoutPathResult(flagKey) : "";
+}
+
+function getConsequenceEntryKey(entry = {}) {
+  return [
+    entry.id || "",
+    normalizeCloseoutSource(entry.source),
+    entry.status || "",
+    entry.detail || "",
+  ].join("|");
+}
+
+function getReturnPortalCurrentConsequenceEntries(portal, summary) {
+  const summaryEntries = (summary?.consequences || []).map(normalizeCloseoutSummaryEntry);
+  if (summaryEntries.length) return summaryEntries;
+  return getConsequenceLedgerEntries({ includeResolved: true })
+    .filter((entry) => isCloseoutSourceForPortal(entry.source, portal))
+    .map(normalizeCloseoutSummaryEntry);
+}
+
+function getReturnPortalOpenConsequenceEntries(currentEntries = []) {
+  const currentKeys = new Set(currentEntries.map(getConsequenceEntryKey));
+  return getConsequenceLedgerEntries()
+    .map(normalizeCloseoutSummaryEntry)
+    .filter((entry) => !currentKeys.has(getConsequenceEntryKey(entry)));
+}
+
+function getReturnPortalRiskSummaryText() {
+  const callbackCount = getUnresolvedCallbackCount();
+  const riskCount = getReturnTripRiskEntries().length;
+  const parts = [
+    callbackCount ? `${callbackCount} callback${callbackCount === 1 ? "" : "s"}` : "",
+    riskCount ? `${riskCount} return-trip risk${riskCount === 1 ? "" : "s"}` : "",
+  ].filter(Boolean);
+  return parts.length ? `Carrying ${parts.join(" and ")} back to the shop` : "No open callback or return-trip risk";
+}
+
+function getReturnPortalNextStepText() {
+  if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) return "Return to the shop, close out the shift, then talk to Josh about the callback.";
+  return "Return to the shop and close out the workday.";
+}
+
+function getDepartureConsequenceListMarkup(entries, emptyMessage) {
+  if (!entries.length) return `<p class="muted">${escapeHtml(emptyMessage)}</p>`;
+  return `
+    <ul class="modal-list">
+      ${entries.map((entry) => `
+        <li>
+          <strong>${escapeHtml(`${getConsequenceStatusLabel(entry.status)} - ${entry.source}`)}</strong>
+          <span>${escapeHtml(`Because: ${entry.cause} Affects: ${entry.affects}. ${entry.detail}`)}</span>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function getReturnPortalDepartureMarkup(portal) {
+  if (portal?.kind !== "returnRoute") return "";
+  const summary = getLastJobSiteCloseoutSummaryForPortal(portal);
+  const currentEntries = getReturnPortalCurrentConsequenceEntries(portal, summary);
+  const openEntries = getReturnPortalOpenConsequenceEntries(currentEntries);
+  const resultText = summary?.result || getReturnPortalSavedResultText(portal) || "Closeout result saved";
+  return `
+    <h3>Before You Leave</h3>
+    <div class="results-grid">
+      <span>Closeout saved</span><strong>${escapeHtml(summary?.source || portal.returnSource || portal.label || "Current job")}</strong>
+      <span>Result</span><strong>${escapeHtml(resultText)}</strong>
+      <span>Risk remaining</span><strong>${escapeHtml(getReturnPortalRiskSummaryText())}</strong>
+      <span>Next at shop</span><strong>${escapeHtml(getReturnPortalNextStepText())}</strong>
+    </div>
+    ${summary?.before ? `
+      <h3>What Changed</h3>
+      ${getTrackedStateDeltaMarkup(summary.before, summary.after || getTrackedStateSnapshot())}
+    ` : ""}
+    <h3>Current Closeout Effect</h3>
+    ${getDepartureConsequenceListMarkup(currentEntries, "This closeout has no named callback or return-trip consequence recorded.")}
+    <h3>Risk Carried Back</h3>
+    ${getDepartureConsequenceListMarkup(openEntries, "No open callback or return-trip risk is leaving with you.")}
+  `;
+}
+
 function getReturnTripRiskSummaryText(risk) {
   return `${risk.source || "Return-trip risk"}: ${risk.detail || "A weak closeout is still on the ledger."} Affects ${risk.affects || getReturnTripRiskAffectedWork(risk.id)}.`;
 }
@@ -4001,6 +4161,7 @@ function usePortal(portalId) {
       body: `
         ${getPortalTransitionMarkup(portal)}
         <p>${escapeHtml(portal.transition.body || portal.label)}</p>
+        ${getReturnPortalDepartureMarkup(portal)}
       `,
       actions: [{ label: portal.transition.actionLabel || portal.label, onClick: () => finishPortal(portal) }],
     });
@@ -4497,6 +4658,30 @@ function showResults({ before = null } = {}) {
   const tidy = state.flags.finishChoice === "tidy";
   const netPay = tidy ? 152 : 141;
   const rewardTools = content.tutorial.rewardTools.filter((toolId) => !ownsTool(toolId));
+  if (before) {
+    const riskyWorkaround = state.flags.finishChoice === "wiley-workaround";
+    const rushedRisk = state.flags.finishChoice === "rush" && state.flags.tutorialAssemblyCallbackRisk;
+    recordJobSiteCloseoutSummary({
+      source: "Two Quick Carts",
+      result: getCompletedCloseoutPathResult("finishChoice"),
+      before,
+      consequences: [{
+        source: "Two Quick Carts",
+        status: tidy ? "controlled" : riskyWorkaround || rushedRisk ? "open" : "inherited",
+        cause: tidy
+          ? "Cable routing was cleaned up before packing out."
+          : riskyWorkaround
+          ? "Adapter workaround was used as the final install path."
+          : "The cart build was closed quickly with a thinner final check.",
+        affects: getReturnTripRiskAffectedWork("usedTemporaryAdapterPermanently"),
+        detail: tidy
+          ? "The first install leaves no named callback risk."
+          : riskyWorkaround || rushedRisk
+          ? "The closeout can create callback pressure or future warranty work."
+          : "The shortcut is saved on the closeout path even without a named risk.",
+      }],
+    });
+  }
   showModal({
     kicker: "End of Day",
     title: "Two Quick Carts: Complete",
@@ -5136,6 +5321,7 @@ function finishConshohockenFollowup(approach) {
       result: getCompletedCloseoutPathResult("conshohockenFollowupApproach"),
     });
   }
+  const before = getTrackedStateSnapshot();
   const documented = approach === "label";
   const xp = documented ? 30 : 20;
   if (documented) changeEnergy(-2);
@@ -5163,6 +5349,23 @@ function finishConshohockenFollowup(approach) {
   addLog(documented
     ? "Returned to Conshohocken and labeled the coupler path for the next tech."
     : "Dropped labels at Conshohocken and left the note mostly as-found.");
+  const closeoutConsequences = [{
+    source: content.followupDispatch.title,
+    status: documented ? "documented" : "inherited",
+    cause: documented
+      ? "The coupler was labeled and the room note was updated."
+      : "Labels were dropped without fully rebuilding the room note.",
+    affects: "future Conshohocken service notes",
+    detail: documented
+      ? "Future service starts from a clearer room path."
+      : "Future service still has to interpret the room note.",
+  }];
+  recordJobSiteCloseoutSummary({
+    source: content.followupDispatch.title,
+    result: getCompletedCloseoutPathResult("conshohockenFollowupApproach"),
+    before,
+    consequences: closeoutConsequences,
+  });
   render();
   showModal({
     kicker: "Follow-up Complete",
@@ -6039,6 +6242,7 @@ function finishSecureAccess(approach) {
       result: getCompletedCloseoutPathResult("secureAccessApproach"),
     });
   }
+  const before = getTrackedStateSnapshot();
   const honest = approach !== "absorb";
   const strainedNotes = Boolean(state.flags.secureAccessNotesStrained) && approach === "document";
   const strainedTask = Boolean(state.flags.secureAccessTaskStrained);
@@ -6101,6 +6305,12 @@ function finishSecureAccess(approach) {
       ? "Future support gets the rack/access context before guessing."
       : "The process problem remains hidden even though no named rack risk was recorded.",
   }];
+  recordJobSiteCloseoutSummary({
+    source: content.secureAccessDispatch.title,
+    result: getCompletedCloseoutPathResult("secureAccessApproach"),
+    before,
+    consequences: closeoutConsequences,
+  });
   render();
   showModal({
     kicker: "Secure Access Complete",
@@ -6254,6 +6464,7 @@ function finishCallbackCleanup(approach) {
       result: state.flags.callbackCleanupApproach ? `Closeout path: ${state.flags.callbackCleanupApproach}` : "",
     });
   }
+  const before = getTrackedStateSnapshot();
   const resolved = approach !== "bandage";
   const strainedFix = Boolean(state.flags.callbackTroubleshootingStrained) && approach === "root";
   const xp = (approach === "craft" ? 65 : approach === "root" ? 55 : 35) - (strainedFix ? 5 : 0);
@@ -6309,6 +6520,12 @@ function finishCallbackCleanup(approach) {
       ? "Callback pressure drops and any matched return-trip risk moves into resolved history."
       : "Callback debt remains visible for future routing and trust pressure.",
   }];
+  recordJobSiteCloseoutSummary({
+    source: content.callbackCleanupDispatch.title,
+    result: state.flags.callbackCleanupApproach ? `Closeout path: ${state.flags.callbackCleanupApproach}` : "",
+    before,
+    consequences: closeoutConsequences,
+  });
   render();
   showModal({
     kicker: "Warranty Return Complete",
@@ -6457,6 +6674,7 @@ function finishHandoff(approach) {
       result: state.flags.handoffApproach ? `Closeout path: ${state.flags.handoffApproach}` : "",
     });
   }
+  const before = getTrackedStateSnapshot();
   const helpful = approach !== "quick";
   const strainedPrep = Boolean(state.flags.handoffPrepStrained) && approach === "patient";
   const xp = (approach === "cheat" ? 60 : approach === "patient" ? 50 : 30) - (strainedPrep ? 5 : 0);
@@ -6488,6 +6706,23 @@ function finishHandoff(approach) {
   addLog(helpful
     ? "Completed the handoff in client language instead of button-label language."
     : "Completed a quick demo. The client now knows enough to ask better questions later.");
+  const closeoutConsequences = [{
+    source: content.handoffDispatch.title,
+    status: helpful ? "controlled" : "inherited",
+    cause: helpful
+      ? "Client handoff translated the room into usable daily steps."
+      : "The room was demoed quickly and the training gap stayed with the client.",
+    affects: "future handoff support and client confidence",
+    detail: helpful
+      ? "Future questions start from a better client habit."
+      : "Future support may inherit more user confusion.",
+  }];
+  recordJobSiteCloseoutSummary({
+    source: content.handoffDispatch.title,
+    result: state.flags.handoffApproach ? `Closeout path: ${state.flags.handoffApproach}` : "",
+    before,
+    consequences: closeoutConsequences,
+  });
   render();
   showModal({
     kicker: "Handoff Complete",
@@ -6499,6 +6734,7 @@ function finishHandoff(approach) {
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Client outcome</span><strong>${approach === "cheat" ? "Cheat sheet rewritten" : approach === "patient" ? "Daily path practiced" : "Training gap left"}</strong>
       </div>
+      ${getCloseoutConsequenceMarkup(closeoutConsequences)}
       ${helpful
         ? `<blockquote>Management note: "Please avoid expanding simple handoffs into undocumented training sessions."</blockquote>`
         : `<blockquote>Management note: "Thanks for keeping the handoff efficient."</blockquote>`}
@@ -6687,6 +6923,7 @@ function finishSystemsService(approach) {
       result: state.flags.systemsApproach ? `Closeout path: ${state.flags.systemsApproach}` : "",
     });
   }
+  const before = getTrackedStateSnapshot();
   const documented = approach !== "reboot";
   const strained = Boolean(state.flags.systemsChecksStrained) && documented;
   const xp = (approach === "scope" ? 65 : approach === "document" ? 55 : 35) - (strained ? 5 : 0);
@@ -6745,6 +6982,12 @@ function finishSystemsService(approach) {
       ? "Future service gets a usable mismatch trail."
       : "Systems quick-reboot debt is now visible on the return-trip ledger.",
   }];
+  recordJobSiteCloseoutSummary({
+    source: content.systemsDispatch.title,
+    result: state.flags.systemsApproach ? `Closeout path: ${state.flags.systemsApproach}` : "",
+    before,
+    consequences: closeoutConsequences,
+  });
   render();
   showModal({
     kicker: "Systems Service Complete",
@@ -6840,6 +7083,7 @@ function finishTravelDispatch(approach) {
       result: getCompletedCloseoutPathResult("travelApproach"),
     });
   }
+  const before = getTrackedStateSnapshot();
   const tollCost = content.travelDispatch.tollCost || CHERRY_HILL_TOLL_COST;
   const documented = approach !== "absorb";
   const xp = approach === "pushback" ? 45 : approach === "receipt" ? 35 : 25;
@@ -6876,6 +7120,23 @@ function finishTravelDispatch(approach) {
   addLog(documented
     ? "Documented the Cherry Hill return toll instead of letting the van become a charity with ladder racks."
     : "Ate the Cherry Hill toll to keep the ticket moving. The receipt disappeared into the same place as accurate route estimates.");
+  const closeoutConsequences = [{
+    source: content.travelDispatch.title,
+    status: documented ? "documented" : "inherited",
+    cause: documented
+      ? "Return-route cost was filed before it disappeared into the workday."
+      : "The toll was absorbed to keep the ticket simple.",
+    affects: "future travel-cost expectations and shop trust",
+    detail: documented
+      ? "The route friction is visible to the shop."
+      : "The route friction stays hidden and the tech eats the cost.",
+  }];
+  recordJobSiteCloseoutSummary({
+    source: content.travelDispatch.title,
+    result: getCompletedCloseoutPathResult("travelApproach"),
+    before,
+    consequences: closeoutConsequences,
+  });
   render();
   showModal({
     kicker: "Travel Cost Complete",
@@ -6890,6 +7151,7 @@ function finishTravelDispatch(approach) {
         <span>Relationship result</span><strong>${getTravelReputationSummary(approach)}</strong>
         <span>Career record</span><strong>${documented ? "Travel cost documented" : "Unreimbursed travel cost"}</strong>
       </div>
+      ${getCloseoutConsequenceMarkup(closeoutConsequences)}
       ${documented
         ? `<blockquote>Management note: "Please avoid over-documenting routine travel expenses."</blockquote>`
         : `<blockquote>Management note: "Thanks for keeping the return stop simple."</blockquote>`}
@@ -7109,6 +7371,7 @@ function finishRetrofitWalkdown(approach) {
       result: getCompletedCloseoutPathResult("retrofitWalkdownApproach"),
     });
   }
+  const before = getTrackedStateSnapshot();
   const documented = approach !== "accept";
   const strained = Boolean(state.flags.retrofitWalkdownChecksStrained) && approach === "document";
   const xp = (approach === "scope" ? 65 : approach === "document" ? 55 : 35) - (strained ? 5 : 0);
@@ -7182,6 +7445,12 @@ function finishRetrofitWalkdown(approach) {
       ? "The install branch inherits pathway risk."
       : "The install branch starts from a protected pathway note.",
   }];
+  recordJobSiteCloseoutSummary({
+    source: content.retrofitWalkdownDispatch.title,
+    result: getCompletedCloseoutPathResult("retrofitWalkdownApproach"),
+    before,
+    consequences: closeoutConsequences,
+  });
   render();
   showModal({
     kicker: "Retrofit Walkdown Complete",
@@ -7421,6 +7690,7 @@ function finishRetrofitInstall(approach) {
       result: getCompletedCloseoutPathResult("retrofitInstallApproach"),
     });
   }
+  const before = getTrackedStateSnapshot();
   const preview = getRetrofitInstallPreview();
   const branchId = preview?.branchId || "pending";
   const documented = approach === "record";
@@ -7498,6 +7768,12 @@ function finishRetrofitInstall(approach) {
       ? "Future service gets record/as-built context."
       : "The install is complete, but documentation value was left on the table.",
   }];
+  recordJobSiteCloseoutSummary({
+    source: preview?.title || "Burlington County Retrofit Install",
+    result: getCompletedCloseoutPathResult("retrofitInstallApproach"),
+    before,
+    consequences: closeoutConsequences,
+  });
   render();
   showModal({
     kicker: "Retrofit Install Complete",
@@ -7932,6 +8208,7 @@ function finishCommissioning(approach) {
     });
   }
   if (!state.flags.commissioningTerminationAction && state.commissioningChecks.includes("termination")) return showCommissioningTerminationChoice();
+  const before = getTrackedStateSnapshot();
   const careful = approach !== "pass";
   const cleanTask = isCommissioningTerminationClean();
   const stableTask = isCommissioningTerminationStable();
@@ -8015,6 +8292,12 @@ function finishCommissioning(approach) {
       ? "No speaker callback was created by this closeout."
       : "Future support inherits less clarity about the speaker path.",
   }];
+  recordJobSiteCloseoutSummary({
+    source: content.commissioningDispatch.title,
+    result: state.flags.commissioningApproach ? `Closeout path: ${state.flags.commissioningApproach}` : "",
+    before,
+    consequences: closeoutConsequences,
+  });
   render();
   showModal({
     kicker: "Commissioning Visit Complete",
@@ -8249,6 +8532,7 @@ function showSurveyReportChoice() {
 
 function finishSurvey(approach) {
   if (state.flags.surveyComplete) return showSurveyCompleteReview();
+  const before = getTrackedStateSnapshot();
   const careful = approach !== "trust";
   const strainedDocument = Boolean(state.flags.surveyDocumentationStrained) && approach === "document";
   const xp = (approach === "pushback" ? 60 : approach === "document" ? 55 : 35) - (strainedDocument ? 5 : 0);
@@ -8280,6 +8564,23 @@ function finishSurvey(approach) {
   addLog(careful
     ? "Documented the University City access problem before it became an install-day problem."
     : "Marked the University City survey complete without adding the access problem to the quote.");
+  const closeoutConsequences = [{
+    source: content.surveyDispatch.title,
+    status: careful ? "documented" : "inherited",
+    cause: careful
+      ? "Access constraints were filed before the install quote could pretend they were simple."
+      : "The quote was trusted even though the access path still looked constrained.",
+    affects: "future install planning and access expectations",
+    detail: careful
+      ? "Future work starts with the access issue visible."
+      : "Future work may inherit a cleaner-looking quote than the site deserves.",
+  }];
+  recordJobSiteCloseoutSummary({
+    source: content.surveyDispatch.title,
+    result: getCompletedCloseoutPathResult("surveyApproach"),
+    before,
+    consequences: closeoutConsequences,
+  });
   render();
   showModal({
     kicker: "Site Survey Complete",
@@ -8296,6 +8597,7 @@ function finishSurvey(approach) {
       ${approach === "trust"
         ? `<blockquote>Management note: "Thanks for keeping the survey efficient. Installation can confirm final access conditions onsite."</blockquote>`
         : `<blockquote>Management note: "Please avoid introducing unnecessary complexity after sales has aligned the client around a solution."</blockquote>`}
+      ${getCloseoutConsequenceMarkup(closeoutConsequences)}
       ${getReturnPortalCloseoutNoteMarkup()}
     `,
     actions: [getCloseoutReturnAction(content.surveyDispatch.title, "Returned to Radnor Rack & Wire after the University City survey.")],
@@ -8458,6 +8760,7 @@ function showServiceResults() {
       result: getCompletedCloseoutPathResult("serviceApproach"),
     });
   }
+  const before = getTrackedStateSnapshot();
   const verifiedSignalPath = state.flags.serviceApproach === "verify";
   const checkedSignalPath = verifiedSignalPath && !state.flags.serviceVerificationStrained;
   const strainedVerification = verifiedSignalPath && state.flags.serviceVerificationStrained;
@@ -8494,6 +8797,25 @@ function showServiceResults() {
     state.flags.serviceStatsRecorded = true;
   }
   addLog("Replacement display installed. The quick service call is complete.");
+  const closeoutConsequences = [{
+    source: content.serviceDispatch.title,
+    status: serviceReturnRisk ? "open" : "controlled",
+    cause: checkedSignalPath
+      ? "Signal path was verified before the room was closed."
+      : strainedVerification
+      ? "Signal-path verification strained and left the coupler note thin."
+      : "The service ticket was trusted without verifying the signal path.",
+    affects: "Conshohocken callback routing and future display service",
+    detail: checkedSignalPath
+      ? "The room leaves with clean enough notes to protect the next visit."
+      : serviceRiskDetail,
+  }];
+  recordJobSiteCloseoutSummary({
+    source: content.serviceDispatch.title,
+    result: getCompletedCloseoutPathResult("serviceApproach"),
+    before,
+    consequences: closeoutConsequences,
+  });
   render();
   showModal({
     kicker: "Service Call Complete",
@@ -8510,6 +8832,7 @@ function showServiceResults() {
         <span>Return-trip risk</span><strong>${serviceReturnRisk ? "Possible" : "Controlled"}</strong>
       </div>
       <p class="muted">${serviceRiskDetail}</p>
+      ${getCloseoutConsequenceMarkup(closeoutConsequences)}
       <blockquote>Client note: "Thank you for fixing the display before the afternoon meeting.${checkedSignalPath ? " The cable notes are helpful." : strainedVerification ? " The room is working, though the notes are light." : ""}"</blockquote>
       ${getReturnPortalCloseoutNoteMarkup()}
     `,
