@@ -4083,11 +4083,11 @@ function showTravelRouteModal({ routeId, dispatchEstimate, extraBody = "", actio
 }
 
 function getRouteSummaryLaunchPreview(route, { fastTravel = false } = {}) {
-  if (!route) return "Route is not mapped yet.";
+  if (!route) return "This route is not mapped yet.";
   if (fastTravel) {
-    return `Next opens the fast-travel summary for this known route; confirming there spends ${getFastTravelEnergyCost(route)} energy.`;
+    return `Review the known-route shortcut, then spend ${getFastTravelEnergyCost(route)} energy to arrive.`;
   }
-  return `Next opens the ${route.toLabel} route summary.`;
+  return `Review the ${route.toLabel} drive summary before leaving.`;
 }
 
 function getRouteLaunchFlow(routeId, { fastTravel = false } = {}) {
@@ -4096,62 +4096,62 @@ function getRouteLaunchFlow(routeId, { fastTravel = false } = {}) {
   const flow = (preview, launch) => ({ preview, launch });
   if (routeId === "centerCityTutorial") {
     const preview = !fastTravel && getRouteChoices(route).length
-      ? "Next opens route choices before the route summary."
+      ? "Choose a route approach, then review the drive summary."
       : routeSummary;
     return flow(preview, () => promptTravel());
   }
   if (routeId === "conshohockenService") {
     if (isConshohockenFollowupAvailable()) {
       return flow(
-        fastTravel ? routeSummary : "Next opens the Conshohocken follow-up route summary.",
+        fastTravel ? routeSummary : "Review the Conshohocken follow-up drive summary before leaving.",
         () => promptConshohockenFollowupTravel({ fastTravel }),
       );
     }
-    if (!state.flags.servicePreparation) return flow("Next opens service prep before travel.", showServicePreparation);
+    if (!state.flags.servicePreparation) return flow("Review service prep before travel.", showServicePreparation);
     return flow(
-      fastTravel ? routeSummary : "Next opens the Conshohocken service route summary.",
+      fastTravel ? routeSummary : "Review the Conshohocken service drive summary before leaving.",
       () => promptServiceTravel({ fastTravel }),
     );
   }
   if (routeId === "universitySurvey") {
-    if (!state.flags.surveyPreparation) return flow("Next opens site-survey prep before travel.", showSurveyPreparation);
+    if (!state.flags.surveyPreparation) return flow("Review site-survey prep before travel.", showSurveyPreparation);
     return flow(
-      fastTravel ? routeSummary : "Next opens the University City survey route summary.",
+      fastTravel ? routeSummary : "Review the University City survey drive summary before leaving.",
       () => promptSurveyTravel({ fastTravel }),
     );
   }
   if (routeId === "navyYardAccess") {
-    if (!state.flags.secureAccessPreparation) return flow("Next opens secure-access prep before travel.", showSecureAccessPreparation);
+    if (!state.flags.secureAccessPreparation) return flow("Review secure-access prep before travel.", showSecureAccessPreparation);
     return flow(
-      fastTravel ? routeSummary : "Next opens the Navy Yard route summary.",
+      fastTravel ? routeSummary : "Review the Navy Yard drive summary before leaving.",
       () => promptSecureAccessTravel({ fastTravel }),
     );
   }
   if (routeId === "systemsService") {
-    if (!state.flags.systemsPreparation) return flow("Next opens systems-service prep before travel.", showSystemsPreparation);
+    if (!state.flags.systemsPreparation) return flow("Review systems-service prep before travel.", showSystemsPreparation);
     return flow(
-      fastTravel ? routeSummary : "Next opens the King of Prussia systems route summary.",
+      fastTravel ? routeSummary : "Review the King of Prussia systems drive summary before leaving.",
       () => promptSystemsTravel({ fastTravel }),
     );
   }
   if (routeId === "burlingtonRetrofitWalkdown") {
     if (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete) {
-      if (!state.flags.retrofitInstallPackageReviewed) return flow("Next opens the saved walkdown package before the install drive.", showRetrofitInstallPackage);
+      if (!state.flags.retrofitInstallPackageReviewed) return flow("Review the saved walkdown package before the install drive.", showRetrofitInstallPackage);
       return flow(
-        fastTravel ? routeSummary : "Next opens the Burlington install route summary.",
+        fastTravel ? routeSummary : "Review the Burlington install drive summary before leaving.",
         () => promptRetrofitInstallTravel({ fastTravel }),
       );
     }
-    if (!state.flags.retrofitWalkdownPreparation) return flow("Next opens retrofit walkdown prep before travel.", showRetrofitWalkdownPreparation);
+    if (!state.flags.retrofitWalkdownPreparation) return flow("Review retrofit walkdown prep before travel.", showRetrofitWalkdownPreparation);
     return flow(
-      fastTravel ? routeSummary : "Next opens the Burlington walkdown route summary.",
+      fastTravel ? routeSummary : "Review the Burlington walkdown drive summary before leaving.",
       () => promptRetrofitWalkdownTravel({ fastTravel }),
     );
   }
   if (routeId === "southPhillyCommissioning") return flow(routeSummary, () => promptCommissioningTravel({ fastTravel }));
   if (routeId === "warrantyReturn") return flow(routeSummary, () => promptCallbackCleanupTravel({ fastTravel }));
   if (routeId === "executiveHandoff") return flow(routeSummary, () => promptHandoffTravel({ fastTravel }));
-  return flow("That route needs a board hook before it can launch from the van.", () => notify("That route needs a board hook before it can launch from the van."));
+  return flow("That route is not connected to the dispatch board yet.", () => notify("That route is not connected to the dispatch board yet."));
 }
 
 function getRouteLaunchPreviewText(route, { fastTravel = false } = {}) {
@@ -4175,7 +4175,7 @@ function getRoutePrepRows(route, { fastTravel = false } = {}) {
     ...getRouteBranchRows(route),
     { label: "Route", detail: `${route.fromLabel} -> ${route.toLabel}` },
     { label: "Route status", detail: getRouteStatus(route) },
-    { label: fastTravel ? "Next after Fast Travel" : "Next after Drive", detail: getRouteLaunchPreviewText(route, { fastTravel }) },
+    { label: "What happens next", detail: getRouteLaunchPreviewText(route, { fastTravel }) },
     { label: fastTravel ? "Fast-travel cost" : "Travel cost / risk", detail: fastTravel ? `Known route shortcut, -${getFastTravelEnergyCost(route)} energy.` : getRouteTravelCostRisk(route) },
     { label: "Required prep", detail: getToolPlanText(toolPlan.required, { required: true }) },
     { label: "Recommended prep", detail: getToolPlanText(toolPlan.recommended) },
@@ -5432,6 +5432,7 @@ function getRouteJobCardRows(route) {
     { label: "Risk tags", detail: (job.riskTags || []).join(", ") || "ordinary field pressure" },
     { label: "Unlock condition", detail: job.unlockCondition },
     { label: "Route status", detail: getRouteStatus(route) },
+    { label: "What happens next", detail: getRouteLaunchPreviewText(route) },
     { label: "Travel cost/risk", detail: getRouteTravelCostRisk(route) },
     { label: "Driven before", detail: getRouteDrivenText(route) },
     { label: "Fast travel", detail: `${getRouteFastTravelText(route)}${fastTravelCount ? ` Used ${fastTravelCount} time${fastTravelCount === 1 ? "" : "s"}.` : ""}` },
@@ -5480,7 +5481,7 @@ function getDispatchJobOverviewRowsMarkup({ type, setup, familyId = "", routeId 
   const toolPlan = getDispatchToolPlan(resolvedFamilyId, route?.id || "");
   const routeDetail = route
     ? `${route.fromLabel} -> ${route.toLabel}. ${getRouteTravelCostRisk(route)} ${getRouteFastTravelText(route)}`
-    : "Shop-based task; no drive route launches for this board item.";
+    : "Shop-based task; no drive route starts for this board item.";
   const unlockDetail = routeJob?.unlockCondition
     ? `${routeJob.unlockCondition}${route ? ` ${getRouteLockReason(route) || "Launchable when this card is accepted."}` : ""}`
     : "Unlocked by the current dispatch-board progression.";
@@ -9660,7 +9661,7 @@ function resolveCurrentObjective() {
 }
 
 function getCurrentRouteBriefText() {
-  if (state.flags.endShiftPending) return "Route launch is paused until the shift closeout is complete.";
+  if (state.flags.endShiftPending) return "Travel is paused until the shift closeout is complete.";
   const route = getCurrentLoopRoute();
   if (route) {
     const job = getRouteJobData(route.id);
@@ -9669,9 +9670,10 @@ function getCurrentRouteBriefText() {
       `${route.fromLabel} -> ${route.toLabel}`,
       `${job.title}`,
       lockReason ? `Locked: ${lockReason}` : getRouteStatus(route),
+      lockReason ? "" : `What happens next: ${getRouteLaunchPreviewText(route)}`,
       `Driven before: ${getRouteDrivenText(route)}`,
       `Fast travel: ${getRouteFastTravelText(route)}`,
-    ].join(". ");
+    ].filter(Boolean).join(". ");
   }
   const boardEntry = getCurrentDispatchBoardEntry() || getBlockedDispatchBoardEntry();
   if (boardEntry) {

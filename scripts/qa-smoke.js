@@ -555,8 +555,8 @@ async function clickButton(page, name) {
       "Required prep",
       "Recommended prep",
       "Risk tags",
-      "Next after Drive",
-      "Next opens route choices",
+      "What happens next",
+      "Choose a route approach",
       "Travel cost / risk",
       "Drive to Center City",
     ], "van route prep");
@@ -576,8 +576,8 @@ async function clickButton(page, name) {
       "Required prep",
       "Recommended prep",
       "Callback / return-trip risk",
-      "Next after Drive",
-      "Next opens service prep",
+      "What happens next",
+      "Review service prep",
       "Drive to Client Office",
       "Back To Job Card",
     ], "dispatch route prep");
@@ -614,9 +614,9 @@ async function clickButton(page, name) {
       return { servicePrep, serviceReady, retrofitPackage, retrofitInstallReady };
     });
     assert(routeLaunchFlows.servicePrep.includes("service prep"), "Route launch flow should preview service prep before service travel");
-    assert(routeLaunchFlows.serviceReady.includes("service route summary"), "Route launch flow should preview service travel after prep");
+    assert(routeLaunchFlows.serviceReady.includes("service drive summary"), "Route launch flow should preview service travel after prep");
     assert(routeLaunchFlows.retrofitPackage.includes("saved walkdown package"), "Route launch flow should preview Burlington package review before install travel");
-    assert(routeLaunchFlows.retrofitInstallReady.includes("Burlington install route summary"), "Route launch flow should preview Burlington install travel after package review");
+    assert(routeLaunchFlows.retrofitInstallReady.includes("Burlington install drive summary"), "Route launch flow should preview Burlington install travel after package review");
 
     await page.evaluate(() => {
       window.startGame("prototype-tech");
@@ -756,6 +756,7 @@ async function clickButton(page, name) {
       "Required tools:",
       "Recommended tools:",
       "Unlock condition:",
+      "What happens next:",
       "Travel cost/risk:",
       "Fast travel:",
       "Rewards:",
