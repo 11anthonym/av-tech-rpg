@@ -587,6 +587,37 @@ async function clickButton(page, name) {
       "Prepare For The Service Call",
     ], "dispatch route prep launch");
 
+    const routeLaunchFlows = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.finished = true;
+      const servicePrep = window.getRouteLaunchFlow("conshohockenService").preview;
+      state.flags.servicePreparation = "review";
+      const serviceReady = window.getRouteLaunchFlow("conshohockenService").preview;
+      Object.assign(state.flags, {
+        serviceComplete: true,
+        conshohockenFollowupComplete: true,
+        surveyComplete: true,
+        commissioningComplete: true,
+        warehouseComplete: true,
+        secureAccessComplete: true,
+        handoffComplete: true,
+        systemsComplete: true,
+        travelComplete: true,
+        retrofitWalkdownComplete: true,
+        retrofitInstallComplete: false,
+        retrofitInstallPackageReviewed: false,
+      });
+      const retrofitPackage = window.getRouteLaunchFlow("burlingtonRetrofitWalkdown").preview;
+      state.flags.retrofitInstallPackageReviewed = true;
+      const retrofitInstallReady = window.getRouteLaunchFlow("burlingtonRetrofitWalkdown").preview;
+      return { servicePrep, serviceReady, retrofitPackage, retrofitInstallReady };
+    });
+    assert(routeLaunchFlows.servicePrep.includes("service prep"), "Route launch flow should preview service prep before service travel");
+    assert(routeLaunchFlows.serviceReady.includes("service route summary"), "Route launch flow should preview service travel after prep");
+    assert(routeLaunchFlows.retrofitPackage.includes("saved walkdown package"), "Route launch flow should preview Burlington package review before install travel");
+    assert(routeLaunchFlows.retrofitInstallReady.includes("Burlington install route summary"), "Route launch flow should preview Burlington install travel after package review");
+
     await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;

@@ -4082,42 +4082,83 @@ function showTravelRouteModal({ routeId, dispatchEstimate, extraBody = "", actio
   });
 }
 
+function getRouteSummaryLaunchPreview(route, { fastTravel = false } = {}) {
+  if (!route) return "Route is not mapped yet.";
+  if (fastTravel) {
+    return `Next opens the fast-travel summary for this known route; confirming there spends ${getFastTravelEnergyCost(route)} energy.`;
+  }
+  return `Next opens the ${route.toLabel} route summary.`;
+}
+
+function getRouteLaunchFlow(routeId, { fastTravel = false } = {}) {
+  const route = getWorldRoute(routeId);
+  const routeSummary = getRouteSummaryLaunchPreview(route, { fastTravel });
+  const flow = (preview, launch) => ({ preview, launch });
+  if (routeId === "centerCityTutorial") {
+    const preview = !fastTravel && getRouteChoices(route).length
+      ? "Next opens route choices before the route summary."
+      : routeSummary;
+    return flow(preview, () => promptTravel());
+  }
+  if (routeId === "conshohockenService") {
+    if (isConshohockenFollowupAvailable()) {
+      return flow(
+        fastTravel ? routeSummary : "Next opens the Conshohocken follow-up route summary.",
+        () => promptConshohockenFollowupTravel({ fastTravel }),
+      );
+    }
+    if (!state.flags.servicePreparation) return flow("Next opens service prep before travel.", showServicePreparation);
+    return flow(
+      fastTravel ? routeSummary : "Next opens the Conshohocken service route summary.",
+      () => promptServiceTravel({ fastTravel }),
+    );
+  }
+  if (routeId === "universitySurvey") {
+    if (!state.flags.surveyPreparation) return flow("Next opens site-survey prep before travel.", showSurveyPreparation);
+    return flow(
+      fastTravel ? routeSummary : "Next opens the University City survey route summary.",
+      () => promptSurveyTravel({ fastTravel }),
+    );
+  }
+  if (routeId === "navyYardAccess") {
+    if (!state.flags.secureAccessPreparation) return flow("Next opens secure-access prep before travel.", showSecureAccessPreparation);
+    return flow(
+      fastTravel ? routeSummary : "Next opens the Navy Yard route summary.",
+      () => promptSecureAccessTravel({ fastTravel }),
+    );
+  }
+  if (routeId === "systemsService") {
+    if (!state.flags.systemsPreparation) return flow("Next opens systems-service prep before travel.", showSystemsPreparation);
+    return flow(
+      fastTravel ? routeSummary : "Next opens the King of Prussia systems route summary.",
+      () => promptSystemsTravel({ fastTravel }),
+    );
+  }
+  if (routeId === "burlingtonRetrofitWalkdown") {
+    if (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete) {
+      if (!state.flags.retrofitInstallPackageReviewed) return flow("Next opens the saved walkdown package before the install drive.", showRetrofitInstallPackage);
+      return flow(
+        fastTravel ? routeSummary : "Next opens the Burlington install route summary.",
+        () => promptRetrofitInstallTravel({ fastTravel }),
+      );
+    }
+    if (!state.flags.retrofitWalkdownPreparation) return flow("Next opens retrofit walkdown prep before travel.", showRetrofitWalkdownPreparation);
+    return flow(
+      fastTravel ? routeSummary : "Next opens the Burlington walkdown route summary.",
+      () => promptRetrofitWalkdownTravel({ fastTravel }),
+    );
+  }
+  if (routeId === "southPhillyCommissioning") return flow(routeSummary, () => promptCommissioningTravel({ fastTravel }));
+  if (routeId === "warrantyReturn") return flow(routeSummary, () => promptCallbackCleanupTravel({ fastTravel }));
+  if (routeId === "executiveHandoff") return flow(routeSummary, () => promptHandoffTravel({ fastTravel }));
+  return flow("That route needs a board hook before it can launch from the van.", () => notify("That route needs a board hook before it can launch from the van."));
+}
+
 function getRouteLaunchPreviewText(route, { fastTravel = false } = {}) {
   if (!route) return "Route is not mapped yet.";
   const lockReason = getRouteLockReason(route);
   if (lockReason) return `Locked: ${lockReason}`;
-  if (fastTravel) {
-    return `Next opens the fast-travel summary for this known route; confirming there spends ${getFastTravelEnergyCost(route)} energy.`;
-  }
-  if (route.id === "centerCityTutorial" && getRouteChoices(route).length) {
-    return "Next opens route choices before the route summary.";
-  }
-  if (route.id === "conshohockenService") {
-    if (isConshohockenFollowupAvailable()) return "Next opens the Conshohocken follow-up route summary.";
-    if (!state.flags.servicePreparation) return "Next opens service prep before travel.";
-    return "Next opens the Conshohocken service route summary.";
-  }
-  if (route.id === "universitySurvey") {
-    if (!state.flags.surveyPreparation) return "Next opens site-survey prep before travel.";
-    return "Next opens the University City survey route summary.";
-  }
-  if (route.id === "navyYardAccess") {
-    if (!state.flags.secureAccessPreparation) return "Next opens secure-access prep before travel.";
-    return "Next opens the Navy Yard route summary.";
-  }
-  if (route.id === "systemsService") {
-    if (!state.flags.systemsPreparation) return "Next opens systems-service prep before travel.";
-    return "Next opens the King of Prussia systems route summary.";
-  }
-  if (route.id === "burlingtonRetrofitWalkdown") {
-    if (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete) {
-      if (!state.flags.retrofitInstallPackageReviewed) return "Next opens the saved walkdown package before the install drive.";
-      return "Next opens the Burlington install route summary.";
-    }
-    if (!state.flags.retrofitWalkdownPreparation) return "Next opens retrofit walkdown prep before travel.";
-    return "Next opens the Burlington walkdown route summary.";
-  }
-  return "Next opens the route summary before travel.";
+  return getRouteLaunchFlow(route.id, { fastTravel }).preview;
 }
 
 function getRoutePrepRows(route, { fastTravel = false } = {}) {
@@ -4196,24 +4237,7 @@ function getDispatchRoutePrepAction(routeId, backAction, options = {}) {
 }
 
 function launchRouteFromBoard(routeId, { fastTravel = false } = {}) {
-  if (routeId === "conshohockenService") {
-    if (isConshohockenFollowupAvailable()) return promptConshohockenFollowupTravel({ fastTravel });
-    return state.flags.servicePreparation ? promptServiceTravel({ fastTravel }) : showServicePreparation();
-  }
-  if (routeId === "universitySurvey") return state.flags.surveyPreparation ? promptSurveyTravel({ fastTravel }) : showSurveyPreparation();
-  if (routeId === "centerCityTutorial") return promptTravel();
-  if (routeId === "southPhillyCommissioning") return promptCommissioningTravel({ fastTravel });
-  if (routeId === "navyYardAccess") return state.flags.secureAccessPreparation ? promptSecureAccessTravel({ fastTravel }) : showSecureAccessPreparation();
-  if (routeId === "warrantyReturn") return promptCallbackCleanupTravel({ fastTravel });
-  if (routeId === "executiveHandoff") return promptHandoffTravel({ fastTravel });
-  if (routeId === "systemsService") return state.flags.systemsPreparation ? promptSystemsTravel({ fastTravel }) : showSystemsPreparation();
-  if (routeId === "burlingtonRetrofitWalkdown") {
-    if (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete) {
-      return state.flags.retrofitInstallPackageReviewed ? promptRetrofitInstallTravel({ fastTravel }) : showRetrofitInstallPackage();
-    }
-    return state.flags.retrofitWalkdownPreparation ? promptRetrofitWalkdownTravel({ fastTravel }) : showRetrofitWalkdownPreparation();
-  }
-  return notify("That route needs a board hook before it can launch from the van.");
+  return getRouteLaunchFlow(routeId, { fastTravel }).launch();
 }
 
 function promptFastTravelRoute(routeId) {

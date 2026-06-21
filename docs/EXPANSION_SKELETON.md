@@ -538,6 +538,10 @@ be easy to verify in the browser.
    from player-facing guidance and renamed the garage/lobby transition stage to
    "Route / Building Entry." Current-step copy should read like practical work
    direction, not implementation terminology.
+80. **Done - Route launch flow consolidation pass:** Route prep preview text and
+   route launch behavior now resolve through one `getRouteLaunchFlow()` helper.
+   New routes should add one launch flow instead of updating separate preview
+   and launch chains, keeping the board/van/map handoff safer to expand.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

@@ -1571,6 +1571,11 @@ Current-step language cleanup pass: the Current Step panel no longer says
 reads "Route / Building Entry." Player guidance should sound like practical
 work direction, not implementation language.
 
+Route launch flow consolidation pass: route prep "Next after Drive" text and
+the actual drive button now use the same `getRouteLaunchFlow()` resolver. Smoke
+coverage checks service prep, service travel, Burlington package review, and
+Burlington install travel previews so future route additions are less fragile.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.
