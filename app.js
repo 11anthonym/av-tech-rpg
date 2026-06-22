@@ -2320,6 +2320,7 @@ function continueGame() {
   elements.selection.classList.add("hidden");
   elements.gameLayout.classList.remove("hidden");
   elements.menuButton.classList.remove("hidden");
+  closeModal();
   enterScene(state.sceneId, state.player);
   resumeRequiredPrompt();
 }

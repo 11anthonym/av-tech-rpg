@@ -696,6 +696,15 @@ async function clickButton(page, name) {
         marker: window.getInteractionMarkerText(interaction),
         state: interaction.taskState?.()?.id || "",
       }));
+      window.saveGame();
+      window.continueGame();
+      const continuedNextMorningModalHidden = document.querySelector("#modal-backdrop")?.classList.contains("hidden") || false;
+      const continuedNextMorningObjective = window.getObjective();
+      const continuedNextMorningInteractions = window.getInteractions().map((interaction) => ({
+        label: interaction.label,
+        marker: window.getInteractionMarkerText(interaction),
+        state: interaction.taskState?.()?.id || "",
+      }));
       window.showDispatchPreview();
       const boardAttemptHidden = document.querySelector("#modal-backdrop")?.classList.contains("hidden") || false;
       const boardAttemptText = document.querySelector("#modal-backdrop")?.innerText || "";
@@ -713,6 +722,9 @@ async function clickButton(page, name) {
         nextMorningButtons,
         nextMorningObjective,
         nextMorningInteractions,
+        continuedNextMorningModalHidden,
+        continuedNextMorningObjective,
+        continuedNextMorningInteractions,
         boardAttemptHidden,
         boardAttemptText,
         promptedForJosh,
@@ -732,7 +744,10 @@ async function clickButton(page, name) {
     assert(naturalJoshIntro.nextMorningObjective.includes("Josh") && naturalJoshIntro.nextMorningObjective.includes("next route"), "Next morning objective should require finding Josh before the next route");
     assert(naturalJoshIntro.nextMorningInteractions.length === 1 && naturalJoshIntro.nextMorningInteractions[0].label.includes("Josh") && naturalJoshIntro.nextMorningInteractions[0].marker === "JOSH", "Next morning shop should only expose the Josh workbench interaction");
     assert(naturalJoshIntro.nextMorningInteractions[0].state === "ready", "Josh intro interaction should present as a ready task");
-    assert(naturalJoshIntro.boardAttemptText === naturalJoshIntro.nextMorningShiftText && naturalJoshIntro.promptedForJosh, "Next-morning board access should prompt the player to find Josh instead of opening Josh automatically");
+    assert(naturalJoshIntro.continuedNextMorningModalHidden, "Continue should hide stale shift-result modals before the next-morning Josh gate");
+    assert(naturalJoshIntro.continuedNextMorningObjective.includes("Josh"), "Continue should preserve the next-morning Josh objective");
+    assert(naturalJoshIntro.continuedNextMorningInteractions.length === 1 && naturalJoshIntro.continuedNextMorningInteractions[0].marker === "JOSH", "Continue should preserve Josh as the only next-morning interaction");
+    assert(naturalJoshIntro.boardAttemptHidden && naturalJoshIntro.promptedForJosh, "Next-morning board access should prompt the player to find Josh instead of opening Josh automatically");
     assert(naturalJoshIntro.metJosh && naturalJoshIntro.introText.includes("The Person Keeping This Place Running"), "Walking to Josh should trigger the intro conversation");
     assert(naturalJoshIntro.introButtons.some((label) => label.includes("Thank Josh")), "Next-morning Josh intro should return to the shop afterward");
     assert(naturalJoshIntro.interactionsAfterIntro.some((label) => label.includes("Read dispatch board")), "After meeting Josh, dispatch board should become available again");
