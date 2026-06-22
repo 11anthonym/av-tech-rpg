@@ -1586,6 +1586,12 @@ before/after and consequence summary. The mapped RETURN marker uses it to show
 "Before You Leave," "What Changed," current closeout effect, risk carried back,
 and the next shop step before the player returns.
 
+First variable gameplay slice: the Conshohocken service job now rolls saved room
+conditions instead of playing as the same fixed checklist every career. Prep and
+client context can reveal conditions, known conditions can help service checks,
+and unresolved room pressure creates named Conshohocken return-trip risk for the
+Josh/callback follow-up to resolve.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

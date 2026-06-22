@@ -297,6 +297,7 @@ async function clickButton(page, name) {
       state.burnout = 4;
       state.flags.serviceBrief = true;
       state.flags.serviceInspected = true;
+      state.flags.serviceRoomConditions = ["client-time-pressure"];
       state.carry = ["replacement-display"];
       state.player = { x: 760, y: 305 };
       window.render();
@@ -940,6 +941,42 @@ async function clickButton(page, name) {
       "display install",
     ], "service field task preview");
 
+    const serviceConditionGameplay = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("serviceOffice");
+      state.flags.servicePreparation = "contact";
+      state.flags.serviceRoomConditions = ["mislabeled-input", "flaky-replacement-display"];
+      window.ensureServiceRoomConditions();
+      const rolledConditions = [...state.flags.serviceRoomConditions];
+      const knownFromPrep = state.flags.serviceKnownRoomConditions.includes("mislabeled-input");
+      state.flags.serviceBrief = true;
+      window.showServiceClientContext();
+      const clientText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const knownAfterClient = [...state.flags.serviceKnownRoomConditions];
+      state.flags.serviceInspected = true;
+      const adjustedSignal = window.getServiceAdjustedCheck(window.getServiceCheckById("signal-path"));
+      window.chooseServiceApproach("verify");
+      const signalResult = state.flags.fieldTaskResults?.["service-signal-path"];
+      state.carry = ["replacement-display"];
+      const adjustedInstall = window.getServiceAdjustedCheck(window.getServiceInstallCheck(state.carry));
+      return {
+        rolledConditions,
+        knownFromPrep,
+        clientRevealedSecond: knownAfterClient.length === 2,
+        clientText,
+        signalDifficulty: adjustedSignal.difficulty,
+        resultDifficulty: signalResult?.difficulty || 0,
+        installDifficulty: adjustedInstall.difficulty,
+      };
+    });
+    assert(serviceConditionGameplay.rolledConditions.length === 2, "Service room should roll two saved conditions");
+    assert(serviceConditionGameplay.knownFromPrep, "Service prep should reveal a relevant room condition");
+    assert(serviceConditionGameplay.clientRevealedSecond, "Client context should reveal another room condition");
+    assert(serviceConditionGameplay.clientText.includes("ROOM CONDITIONS"), "Client context should show room condition information");
+    assert(serviceConditionGameplay.signalDifficulty > 4 && serviceConditionGameplay.resultDifficulty > 4, "Service room conditions should adjust signal-path difficulty");
+    assert(serviceConditionGameplay.installDifficulty > 4, "Service room conditions should adjust install difficulty");
+
     const serviceSignalTask = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;
@@ -990,6 +1027,30 @@ async function clickButton(page, name) {
     assert(serviceInstallTask.resultSkill === "install", "Service install should use data-backed skill");
     assert(serviceInstallTask.energyChanged, "Service install should affect energy");
     assert(serviceInstallTask.showsResultRows, "Service install should show structured result rows");
+
+    const serviceConditionCloseout = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("serviceOffice");
+      state.flags.serviceRoomConditions = ["mislabeled-input", "flaky-replacement-display"];
+      state.flags.serviceKnownRoomConditions = ["mislabeled-input"];
+      state.flags.serviceApproach = "rush";
+      state.serviceInstalled = window.GAME_CONTENT.serviceDispatch.swapItems.map((item) => item.id);
+      window.showServiceResults();
+      const closeoutText = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.usePortal("serviceOfficeToShop");
+      const departureText = document.querySelector("#modal-backdrop")?.innerText || "";
+      return {
+        riskSaved: Boolean(state.flags.returnTripRisks?.conshohockenServiceRoomPressure),
+        callbackCount: state.stats.callbacks,
+        closeoutText,
+        departureText,
+      };
+    });
+    assert(serviceConditionCloseout.riskSaved, "Risky service closeout should save named Conshohocken return-trip pressure");
+    assert(serviceConditionCloseout.callbackCount === 1, "Risky service closeout should add callback pressure");
+    assert(serviceConditionCloseout.closeoutText.toLowerCase().includes("room conditions") && serviceConditionCloseout.closeoutText.includes("Unresolved room pressure"), "Service closeout should explain unresolved room conditions");
+    assert(serviceConditionCloseout.departureText.includes("Conshohocken") && serviceConditionCloseout.departureText.toLowerCase().includes("risk carried back"), "Return marker should carry service room pressure back to the shop");
 
     await page.evaluate(() => {
       window.startGame("prototype-tech");

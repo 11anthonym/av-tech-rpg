@@ -1348,6 +1348,71 @@ window.GAME_CONTENT = {
         outcome: "Mounts the replacement gear cleanly enough that verification stays about the room, not the swap.",
       },
     ],
+    roomConditions: [
+      {
+        id: "bad-ticket-notes",
+        label: "Bad ticket notes",
+        summary: "The work order says display issue, but the room history points at a path problem.",
+        hiddenSummary: "The ticket notes do not line up cleanly with the room.",
+        revealedSummary: "The email chain says this room has dropped signal before, so the display may not be the whole fault.",
+        prepReveals: ["review", "josh"],
+        checkModifiers: {
+          "signal-path": { difficulty: 1, knownBonus: 1 },
+        },
+        closeoutRisk: "Trusting the ticket can leave the actual signal-path fault for a callback.",
+      },
+      {
+        id: "mislabeled-input",
+        label: "Mislabeled input path",
+        summary: "The wall input and credenza input are labeled like they came from different timelines.",
+        hiddenSummary: "The room labels are not telling the whole truth.",
+        revealedSummary: "The client remembers switching inputs before the display dropped out; the labels are suspect.",
+        prepReveals: ["contact"],
+        checkModifiers: {
+          "signal-path": { difficulty: 1, knownBonus: 1 },
+        },
+        closeoutRisk: "Skipping verification can leave the wrong input path documented as fixed.",
+      },
+      {
+        id: "flaky-replacement-display",
+        label: "Flaky replacement display",
+        summary: "The replacement display works, but it is less forgiving than the ticket implies.",
+        hiddenSummary: "The replacement gear may not be as clean as the dispatch note sounds.",
+        revealedSummary: "The replacement display has a slightly touchy input board; the install needs a cleaner fit.",
+        checkModifiers: {
+          "replacement-display": { difficulty: 1 },
+          "service-install": { difficulty: 1 },
+        },
+        closeoutRisk: "A strained install can become the new reason the room gets called back.",
+      },
+      {
+        id: "loose-mount-hardware",
+        label: "Loose mount hardware",
+        summary: "The hardware tote has the right parts, but the fit needs a careful hand.",
+        hiddenSummary: "The hardware tote is carrying a small install problem.",
+        revealedSummary: "The mount kit is complete but fussy; rushing the hardware can leave a weak install note.",
+        checkModifiers: {
+          "mount-hardware": { difficulty: 1 },
+          "service-install": { difficulty: 1 },
+        },
+        closeoutRisk: "A rushed hardware fit can hand the next tech a physical problem instead of a signal problem.",
+      },
+      {
+        id: "client-time-pressure",
+        label: "Client time pressure",
+        summary: "The next meeting is close enough that every extra check feels expensive.",
+        hiddenSummary: "The client schedule is tighter than the ticket admits.",
+        revealedSummary: "The client needs the room back soon; careful work now has visible schedule pressure.",
+        prepReveals: ["contact"],
+        checkModifiers: {
+          "signal-path": { energy: 1, knownBonus: 1 },
+          "replacement-display": { energy: 1 },
+          "mount-hardware": { energy: 1 },
+          "service-install": { energy: 1 },
+        },
+        closeoutRisk: "Time pressure makes a quick-looking closeout tempting even when the room still has uncertainty.",
+      },
+    ],
     checks: [
       {
         id: "signal-path",

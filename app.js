@@ -1358,6 +1358,7 @@ function getResolvedReturnTripRiskEntries() {
 
 function getReturnTripRiskAffectedWork(riskId) {
   if (riskId === "usedTemporaryAdapterPermanently") return "future Center City service or warranty work";
+  if (riskId === "conshohockenServiceRoomPressure") return "future Conshohocken service and Josh callback cleanup";
   if (riskId === "navyYardRackUpdate") return "future Navy Yard support and warranty routing";
   if (riskId === "southPhillySpeakerTermination") return "commissioning follow-up and warranty return pressure";
   if (riskId === "systemsQuickReboot") return "future systems service or warranty return pressure";
@@ -1679,6 +1680,7 @@ function getConsequenceRouteIds(entry) {
   const routeMap = {
     "callback-debt": ["warrantyReturn", "conshohockenService"],
     usedTemporaryAdapterPermanently: ["centerCityTutorial"],
+    conshohockenServiceRoomPressure: ["conshohockenService"],
     navyYardRackUpdate: ["navyYardAccess"],
     southPhillySpeakerTermination: ["southPhillyCommissioning", "warrantyReturn"],
     systemsQuickReboot: ["systemsService", "warrantyReturn"],
@@ -4464,7 +4466,7 @@ function getServiceSwapTaskState() {
   if (state.flags.serviceComplete) return getTaskState({ completed: true, detail: "The service swap is complete." });
   if (!state.flags.serviceInspected) return getTaskState({ stateId: "ready", detail: "Diagnose the failed display before opening replacement gear." });
   if (!hasCarriedItems()) return getTaskState({ lockedReason: "Pick up replacement gear before installing." });
-  const check = getServiceInstallCheck(state.carry);
+  const check = getServiceAdjustedCheck(getServiceInstallCheck(state.carry));
   const resultState = getFieldTaskState(check);
   if (resultState.id !== "ready") return resultState;
   return getTaskState({ stateId: "ready", detail: `Install ${getServiceItemLabels(state.carry).join(" and ")}.` });
@@ -5106,6 +5108,14 @@ function showJoshCallback() {
 
 function resolveJoshCallback(helpJosh) {
   state.flags.serviceCallbackResolved = true;
+  if (state.flags.returnTripRisks?.conshohockenServiceRoomPressure) {
+    resolveReturnTripRisk("conshohockenServiceRoomPressure", {
+      source: content.serviceDispatch.title,
+      resolution: helpJosh
+        ? "Josh and the player rebuilt the room notes enough to resolve the Conshohocken service pressure."
+        : "Josh closed the callback and removed the active Conshohocken service pressure.",
+    });
+  }
   if (helpJosh) {
     changeEnergy(-3);
     state.reputation.coworkers += 1;
@@ -5219,6 +5229,7 @@ function showServiceDispatchPreview() {
       why: "Unlocked after your first install day. The shop wants to see whether you can handle a small service call without turning it into a meeting.",
       stakes: [
         "Preparation changes diagnosis, energy, or arrival stamina.",
+        "The room can roll different hidden conditions; prep and client context can expose them.",
         "Verifying the signal path can lower return-trip risk.",
         "Rushing can help management now and cost you later.",
       ],
@@ -8715,6 +8726,7 @@ function promptServiceTravel({ fastTravel = false } = {}) {
         }
       }
       delete state.flags.serviceHadPackedLunchBeforeRoute;
+      ensureServiceRoomConditions();
       enterScene(route.destinationSceneId);
     },
   });
@@ -8727,6 +8739,227 @@ function getServiceFieldCheckHistory() {
 
 function getServiceCheckById(checkId) {
   return content.serviceDispatch.checks.find((item) => item.id === checkId);
+}
+
+function getServiceRoomConditionDefinitions() {
+  return content.serviceDispatch.roomConditions || [];
+}
+
+function getServiceRoomConditionById(conditionId) {
+  return getServiceRoomConditionDefinitions().find((condition) => condition.id === conditionId) || null;
+}
+
+function getServiceRoomSeed() {
+  if (!state.flags.serviceRoomSeed) {
+    state.flags.serviceRoomSeed = Math.floor(Math.random() * 1000000000) + 1;
+  }
+  return state.flags.serviceRoomSeed;
+}
+
+function getSeededUnit(seed, salt = "") {
+  let hash = 2166136261;
+  const input = `${seed}:${salt}`;
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return ((hash >>> 0) % 1000000) / 1000000;
+}
+
+function getRolledServiceRoomConditionIds(seed = getServiceRoomSeed()) {
+  return getServiceRoomConditionDefinitions()
+    .map((condition) => ({ id: condition.id, roll: getSeededUnit(seed, condition.id) }))
+    .sort((a, b) => a.roll - b.roll || a.id.localeCompare(b.id))
+    .slice(0, 2)
+    .map((condition) => condition.id);
+}
+
+function ensureServiceRoomConditions({ applyPreparation = true } = {}) {
+  const validIds = new Set(getServiceRoomConditionDefinitions().map((condition) => condition.id));
+  const existing = Array.isArray(state.flags.serviceRoomConditions)
+    ? uniqueValues(state.flags.serviceRoomConditions).filter((conditionId) => validIds.has(conditionId))
+    : [];
+  state.flags.serviceRoomConditions = existing.length ? existing.slice(0, 2) : getRolledServiceRoomConditionIds();
+  state.flags.serviceKnownRoomConditions = Array.isArray(state.flags.serviceKnownRoomConditions)
+    ? uniqueValues(state.flags.serviceKnownRoomConditions).filter((conditionId) => state.flags.serviceRoomConditions.includes(conditionId))
+    : [];
+  if (applyPreparation) revealServiceConditionsFromPreparation();
+  return state.flags.serviceRoomConditions;
+}
+
+function getActiveServiceRoomConditions(options = {}) {
+  return ensureServiceRoomConditions(options).map(getServiceRoomConditionById).filter(Boolean);
+}
+
+function getKnownServiceRoomConditionIds() {
+  ensureServiceRoomConditions({ applyPreparation: false });
+  return state.flags.serviceKnownRoomConditions || [];
+}
+
+function isServiceRoomConditionKnown(conditionId) {
+  return getKnownServiceRoomConditionIds().includes(conditionId);
+}
+
+function revealServiceRoomCondition(conditionId, source = "") {
+  const activeIds = ensureServiceRoomConditions({ applyPreparation: false });
+  if (!activeIds.includes(conditionId)) return null;
+  state.flags.serviceKnownRoomConditions ||= [];
+  if (state.flags.serviceKnownRoomConditions.includes(conditionId)) return getServiceRoomConditionById(conditionId);
+  state.flags.serviceKnownRoomConditions.push(conditionId);
+  const condition = getServiceRoomConditionById(conditionId);
+  if (condition && source) addLog(`${source}: ${condition.label} identified.`);
+  return condition;
+}
+
+function revealNextServiceRoomCondition(source = "Room context") {
+  const hiddenCondition = getActiveServiceRoomConditions({ applyPreparation: false })
+    .find((condition) => !isServiceRoomConditionKnown(condition.id));
+  return hiddenCondition ? revealServiceRoomCondition(hiddenCondition.id, source) : null;
+}
+
+function revealServiceConditionsFromPreparation() {
+  const preparation = state.flags.servicePreparation;
+  if (!preparation || ["none", "lunch", "coffee"].includes(preparation)) return [];
+  state.flags.servicePreparationConditionRevealApplied ||= {};
+  if (state.flags.servicePreparationConditionRevealApplied[preparation]) return [];
+  const activeConditions = getActiveServiceRoomConditions({ applyPreparation: false });
+  const directReveals = activeConditions
+    .filter((condition) => condition.prepReveals?.includes(preparation))
+    .map((condition) => revealServiceRoomCondition(condition.id, "Service prep"))
+    .filter(Boolean);
+  const reveals = directReveals.length ? directReveals : [revealNextServiceRoomCondition("Service prep")].filter(Boolean);
+  state.flags.servicePreparationConditionRevealApplied[preparation] = true;
+  return reveals;
+}
+
+function getServiceConditionCheckModifier(condition, check) {
+  const modifiers = condition?.checkModifiers || {};
+  const keys = uniqueValues([check?.id, check?.contextId]);
+  return keys.map((key) => modifiers[key]).find(Boolean) || null;
+}
+
+function getServiceConditionCheckEffects(check) {
+  const effects = {
+    difficulty: 0,
+    energy: 0,
+    contextBonus: 0,
+    knownLabels: [],
+    hiddenCount: 0,
+  };
+  getActiveServiceRoomConditions().forEach((condition) => {
+    const modifier = getServiceConditionCheckModifier(condition, check);
+    if (!modifier) return;
+    const known = isServiceRoomConditionKnown(condition.id);
+    effects.difficulty += modifier.difficulty || 0;
+    effects.energy += modifier.energy || 0;
+    if (known) effects.contextBonus += modifier.knownBonus || 0;
+    if (known) effects.knownLabels.push(condition.label);
+    else effects.hiddenCount += 1;
+  });
+  return effects;
+}
+
+function getServiceAdjustedCheck(check) {
+  if (!check) return check;
+  const effects = getServiceConditionCheckEffects(check);
+  const conditionNotes = [
+    ...effects.knownLabels.map((label) => `Known pressure: ${label}`),
+    effects.hiddenCount ? `${effects.hiddenCount} hidden room pressure${effects.hiddenCount === 1 ? "" : "s"}` : "",
+  ].filter(Boolean);
+  return {
+    ...check,
+    difficulty: Math.max(0, (check.difficulty || 0) + effects.difficulty),
+    energyCost: Math.max(0, (check.energyCost || 0) + effects.energy),
+    detail: `${check.detail || ""}${conditionNotes.length ? ` Room condition: ${conditionNotes.join("; ")}.` : ""}`,
+  };
+}
+
+function getServiceConditionContextBonus(check) {
+  return getServiceConditionCheckEffects(check).contextBonus;
+}
+
+function revealServiceConditionsForCheck(check) {
+  return getActiveServiceRoomConditions({ applyPreparation: false })
+    .filter((condition) => getServiceConditionCheckModifier(condition, check))
+    .map((condition) => revealServiceRoomCondition(condition.id, "Field check"))
+    .filter(Boolean);
+}
+
+function getServiceRoomConditionMarkup({ revealAll = false } = {}) {
+  const conditions = getActiveServiceRoomConditions();
+  const visible = revealAll ? conditions : conditions.filter((condition) => isServiceRoomConditionKnown(condition.id));
+  const hiddenCount = Math.max(0, conditions.length - visible.length);
+  return `
+    <h3>Room Conditions</h3>
+    ${visible.length ? `
+      <ul class="modal-list">
+        ${visible.map((condition) => `
+          <li>
+            <strong>${escapeHtml(condition.label)}</strong>
+            <span>${escapeHtml(condition.revealedSummary || condition.summary || condition.hiddenSummary || "")}</span>
+          </li>
+        `).join("")}
+      </ul>
+    ` : `<p class="muted">No room condition has been identified yet.</p>`}
+    ${hiddenCount ? `<p class="muted">${hiddenCount} room pressure${hiddenCount === 1 ? " is" : "s are"} still unknown.</p>` : ""}
+  `;
+}
+
+function showServiceClientContext() {
+  if (!state.flags.serviceBrief) return notify("Check in with the client contact first.");
+  if (state.flags.serviceInspected) return notify('Client: "The afternoon meeting starts at one. No pressure."');
+  if (state.flags.serviceClientContext) return notify("The client's symptom context is already in your notes.");
+  state.flags.serviceClientContext = true;
+  changeEnergy(-1);
+  const revealed = revealNextServiceRoomCondition("Client context");
+  showModal({
+    kicker: "Client Context",
+    title: revealed ? revealed.label : "No New Symptom",
+    body: `
+      <p>${escapeHtml(revealed?.revealedSummary || "The client repeats the same symptom: flicker, dropout, and a meeting getting closer.")}</p>
+      ${getServiceRoomConditionMarkup()}
+      <p class="muted">Asking costs a little time and energy, but known room conditions can offset service-check pressure.</p>
+    `,
+    actions: [{ label: "Inspect Display", onClick: render }],
+  });
+}
+
+function isServiceConditionControlled(condition) {
+  const verifiedClean = state.flags.serviceApproach === "verify" && !state.flags.serviceVerificationStrained;
+  const installClean = !state.flags.serviceInstallStrained;
+  if (["bad-ticket-notes", "mislabeled-input"].includes(condition.id)) return verifiedClean;
+  if (["flaky-replacement-display", "loose-mount-hardware"].includes(condition.id)) return installClean;
+  if (condition.id === "client-time-pressure") return verifiedClean || state.flags.serviceClientContext;
+  return verifiedClean || installClean;
+}
+
+function getUnresolvedServiceRoomConditions() {
+  if (!state.flags.serviceComplete && !state.flags.serviceApproach) return [];
+  return getActiveServiceRoomConditions()
+    .filter((condition) => !isServiceConditionControlled(condition));
+}
+
+function getServiceRoomConditionCloseoutEntry({ checkedSignalPath = false, strainedVerification = false } = {}) {
+  const activeConditions = getActiveServiceRoomConditions();
+  const unresolved = getUnresolvedServiceRoomConditions();
+  const labels = activeConditions.map((condition) => condition.label).join(", ") || "ordinary service pressure";
+  const unresolvedLabels = unresolved.map((condition) => condition.label).join(", ");
+  const verifiedText = checkedSignalPath
+    ? "Signal path and room pressure were controlled well enough to protect the next visit."
+    : strainedVerification
+    ? "Verification happened, but the room pressure still left thin notes."
+    : "The room was closed without fully proving the pressure behind the ticket.";
+  return {
+    source: content.serviceDispatch.title,
+    status: unresolved.length ? "open" : "controlled",
+    cause: unresolved.length
+      ? `Unresolved room pressure: ${unresolvedLabels}.`
+      : `Room pressure controlled: ${labels}.`,
+    affects: "Conshohocken callback routing and future display service",
+    detail: unresolved.length
+      ? `${verifiedText} ${unresolved.map((condition) => condition.closeoutRisk).filter(Boolean).join(" ")}`
+      : verifiedText,
+  };
 }
 
 function getServiceInstallCheck(itemIds) {
@@ -8761,17 +8994,27 @@ function showServiceResults() {
     });
   }
   const before = getTrackedStateSnapshot();
+  ensureServiceRoomConditions();
   const verifiedSignalPath = state.flags.serviceApproach === "verify";
   const checkedSignalPath = verifiedSignalPath && !state.flags.serviceVerificationStrained;
   const strainedVerification = verifiedSignalPath && state.flags.serviceVerificationStrained;
-  const xp = checkedSignalPath ? 50 : strainedVerification ? 45 : 40;
-  const serviceReturnRisk = !checkedSignalPath;
-  const diagnosisLabel = checkedSignalPath ? "Signal path verified" : strainedVerification ? "Verification strained" : "Rework required";
+  const unresolvedConditions = getUnresolvedServiceRoomConditions();
+  const serviceReturnRisk = !checkedSignalPath || Boolean(state.flags.serviceInstallStrained) || unresolvedConditions.length > 0;
+  const xp = checkedSignalPath && !serviceReturnRisk ? 55 : checkedSignalPath ? 50 : strainedVerification ? 45 : 40;
+  const diagnosisLabel = checkedSignalPath && !serviceReturnRisk
+    ? "Room pressure controlled"
+    : checkedSignalPath
+    ? "Signal verified; room pressure remains"
+    : strainedVerification
+    ? "Verification strained"
+    : "Ticket trusted";
   const serviceRiskDetail = checkedSignalPath
-    ? "Signal path notes are clean enough to protect the room."
+    ? serviceReturnRisk
+      ? `Signal path notes helped, but unresolved room pressure remains: ${unresolvedConditions.map((condition) => condition.label).join(", ")}.`
+      : "Signal path notes and room conditions are clean enough to protect the room."
     : strainedVerification
       ? "You chose the right process, but the notes stayed thin enough that a return trip can still happen."
-      : "Skipping verification saved time, but the unlabeled path can still send someone back.";
+      : `Skipping verification saved time, but ${unresolvedConditions.length ? unresolvedConditions.map((condition) => condition.label).join(", ") : "the room pressure"} can still send someone back.`;
   state.flags.serviceComplete = true;
   state.carry = [];
   setClock(`${state.clock.slice(0, 3)} ${checkedSignalPath ? "11:26" : "11:44"} AM`);
@@ -8782,9 +9025,9 @@ function showServiceResults() {
   if (!state.flags.serviceProgressAwarded) {
     awardCareerProgress({
       xp,
-      reputation: checkedSignalPath
+      reputation: !serviceReturnRisk
         ? { clients: 2, coworkers: 1, management: 0 }
-        : strainedVerification
+        : checkedSignalPath || strainedVerification
         ? { clients: 1, coworkers: 0, management: 0 }
         : { clients: 0, coworkers: 0, management: 1 },
       source: "One Quick Display Swap",
@@ -8792,24 +9035,25 @@ function showServiceResults() {
     state.flags.serviceProgressAwarded = true;
   }
   if (!state.flags.serviceStatsRecorded) {
-    if (checkedSignalPath) state.stats.carefulFinishes += 1;
+    if (!serviceReturnRisk) state.stats.carefulFinishes += 1;
     else state.stats.callbacks += 1;
     state.flags.serviceStatsRecorded = true;
   }
+  if (serviceReturnRisk) {
+    recordReturnTripRisk("conshohockenServiceRoomPressure", {
+      source: content.serviceDispatch.title,
+      cause: serviceRiskDetail,
+      detail: `Unresolved service pressure: ${unresolvedConditions.map((condition) => condition.label).join(", ") || "thin signal-path closeout"}.`,
+      affects: getReturnTripRiskAffectedWork("conshohockenServiceRoomPressure"),
+    });
+  } else if (state.flags.returnTripRisks?.conshohockenServiceRoomPressure) {
+    resolveReturnTripRisk("conshohockenServiceRoomPressure", {
+      source: content.serviceDispatch.title,
+      resolution: "Signal path, install work, and room pressure were controlled before closeout.",
+    });
+  }
   addLog("Replacement display installed. The quick service call is complete.");
-  const closeoutConsequences = [{
-    source: content.serviceDispatch.title,
-    status: serviceReturnRisk ? "open" : "controlled",
-    cause: checkedSignalPath
-      ? "Signal path was verified before the room was closed."
-      : strainedVerification
-      ? "Signal-path verification strained and left the coupler note thin."
-      : "The service ticket was trusted without verifying the signal path.",
-    affects: "Conshohocken callback routing and future display service",
-    detail: checkedSignalPath
-      ? "The room leaves with clean enough notes to protect the next visit."
-      : serviceRiskDetail,
-  }];
+  const closeoutConsequences = [getServiceRoomConditionCloseoutEntry({ checkedSignalPath, strainedVerification })];
   recordJobSiteCloseoutSummary({
     source: content.serviceDispatch.title,
     result: getCompletedCloseoutPathResult("serviceApproach"),
@@ -8831,6 +9075,7 @@ function showServiceResults() {
         <span>Diagnosis</span><strong>${diagnosisLabel}</strong>
         <span>Return-trip risk</span><strong>${serviceReturnRisk ? "Possible" : "Controlled"}</strong>
       </div>
+      ${getServiceRoomConditionMarkup({ revealAll: true })}
       <p class="muted">${serviceRiskDetail}</p>
       ${getCloseoutConsequenceMarkup(closeoutConsequences)}
       <blockquote>Client note: "Thank you for fixing the display before the afternoon meeting.${checkedSignalPath ? " The cable notes are helpful." : strainedVerification ? " The room is working, though the notes are light." : ""}"</blockquote>
@@ -8838,7 +9083,7 @@ function showServiceResults() {
     `,
     actions: [getCloseoutReturnAction(content.serviceDispatch.title, "Returned to Radnor Rack & Wire after the Conshohocken service call.", {
       beforeReturn: () => {
-        if (!checkedSignalPath) {
+        if (serviceReturnRisk) {
           state.flags.serviceCallbackPending = true;
           addLog("A Conshohocken callback note appeared before you made it back to Radnor Rack & Wire.");
         }
@@ -9091,10 +9336,16 @@ function getInteractions() {
     if (state.flags.serviceComplete) return getScenePortalInteractions("serviceOffice");
     return [
       {
-        x: 300, y: 185, label: "Talk to client contact", npc: "CLIENT",
+        x: 300, y: 185, label: state.flags.serviceBrief && !state.flags.serviceInspected && !state.flags.serviceClientContext ? "Ask client about symptoms" : "Talk to client contact", npc: "CLIENT",
+        taskState: () => {
+          if (!state.flags.serviceBrief) return getTaskState({ stateId: "ready", detail: "Ask what happened before touching the room." });
+          if (!state.flags.serviceInspected && !state.flags.serviceClientContext) return getTaskState({ stateId: "ready", detail: "Spend a little energy to reveal one room condition before diagnosis." });
+          return getTaskState({ completed: true, detail: "Client context is already in your notes." });
+        },
         action: () => {
-          if (state.flags.serviceBrief) return notify('Client: "The afternoon meeting starts at one. No pressure."');
+          if (state.flags.serviceBrief) return showServiceClientContext();
           state.flags.serviceBrief = true;
+          ensureServiceRoomConditions();
           addLog("Client confirmed the display failed during the morning meeting.");
           showModal({
             kicker: "Client Contact",
@@ -9116,7 +9367,7 @@ function getInteractions() {
             });
           }
           if (!hasCarriedItems()) return "";
-          const check = getServiceInstallCheck(state.carry);
+          const check = getServiceAdjustedCheck(getServiceInstallCheck(state.carry));
           return getActionPressureBrief({
             check,
             baseEnergyCost: getAssemblyEnergyCost(check.energyCost),
@@ -9130,17 +9381,21 @@ function getInteractions() {
           if (!state.flags.serviceBrief) return notify("Check in with the client contact first.");
           if (!state.flags.serviceInspected) {
             state.flags.serviceInspected = true;
-            changeEnergy(-getServiceDiagnosisEnergyCost(3));
-            addLog("Confirmed the display needs replacement. The signal path still has an unlabeled coupler.");
+            ensureServiceRoomConditions();
+            revealNextServiceRoomCondition("Diagnosis");
+            const diagnosisCost = getServiceDiagnosisEnergyCost(3);
+            changeEnergy(-diagnosisCost);
+            addLog("Confirmed the display needs replacement. The room pressure is now partly visible.");
             render();
             return showModal({
               kicker: "Diagnosis",
               title: "The Quick Fix Is a Display Swap",
               body: `
                 <p>The display itself is failing. The replacement screen and hardware tote are onsite.</p>
-                <p>There is also an unlabeled coupler behind the credenza. You can verify the signal path now or trust the service ticket and start swapping equipment.</p>
+                <p>The room now has a rolled service profile: some pressure is known, and some may still be hidden unless your prep exposed it.</p>
                 ${getCharacterLine("serviceInspect") ? `<p class="muted">${getCharacterLine("serviceInspect")}</p>` : ""}
                 ${state.flags.servicePreparation === "review" ? `<p class="muted">Reviewing the forwarded email chain saved time during diagnosis.</p>` : ""}
+                ${getServiceRoomConditionMarkup()}
                 ${getChoicePressureMarkup([
                   {
                     label: "Verify signal path",
@@ -9752,21 +10007,23 @@ function getInteractions() {
 }
 
 function chooseServiceApproach(approach) {
+  ensureServiceRoomConditions();
   state.flags.serviceApproach = approach;
   if (approach === "verify") {
-    const check = getServiceCheckById("signal-path");
+    const check = getServiceAdjustedCheck(getServiceCheckById("signal-path"));
     const { skillCheck, energyCost } = resolveFieldTaskCheck({
       check,
       checkId: check.id,
       completedChecks: getServiceFieldCheckHistory(),
       flagKey: "service-signal-path",
-      contextBonus: (state.flags.servicePreparation === "review" ? 1 : 0) + (state.flags.servicePreparation === "josh" ? 1 : 0) + (state.flags.servicePreparation === "contact" ? 1 : 0),
+      contextBonus: (state.flags.servicePreparation === "review" ? 1 : 0) + (state.flags.servicePreparation === "josh" ? 1 : 0) + (state.flags.servicePreparation === "contact" ? 1 : 0) + getServiceConditionContextBonus(check),
       baseEnergyCost: getServiceVerificationEnergyCost(check.energyCost),
       failedEnergyPenalty: 2,
       strainedFlag: "serviceVerificationStrained",
       logText: `${check.label}: ${check.log}.`,
       strainedLogText: "Signal-path verification strained; the coupler note may still leave return-trip risk.",
     });
+    revealServiceConditionsForCheck(check);
     render();
     return showModal({
       kicker: "Signal Path",
@@ -9774,6 +10031,7 @@ function chooseServiceApproach(approach) {
       body: `
         <p>${check.detail}</p>
         ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
+        ${getServiceRoomConditionMarkup()}
         <p class="muted">The replacement display and hardware still need to be installed before closeout.</p>
       `,
       actions: [{ label: "Start Display Swap", onClick: render }],
@@ -9786,19 +10044,22 @@ function chooseServiceApproach(approach) {
 
 function installServicePart() {
   if (!hasCarriedItems()) return notify("Pick up replacement gear from the boxes.");
+  ensureServiceRoomConditions();
   const items = [...state.carry];
-  const check = getServiceInstallCheck(items);
+  const check = getServiceAdjustedCheck(getServiceInstallCheck(items));
   const { skillCheck, energyCost } = resolveFieldTaskCheck({
     check,
     checkId: check.id,
     completedChecks: getServiceFieldCheckHistory(),
     flagKey: `service-install-${items.join("-")}`,
+    contextBonus: getServiceConditionContextBonus(check),
     baseEnergyCost: getAssemblyEnergyCost(check.energyCost),
     failedEnergyPenalty: 2,
     strainedFlag: "serviceInstallStrained",
     logText: `${getServiceItemLabels(items).join(" and ")} installed ${ownsTool("drill") ? "with your drill" : "with your screwdriver"}.`,
     strainedLogText: "Service install check strained; the closeout should not hide the flaky replacement path.",
   });
+  revealServiceConditionsForCheck(check);
   state.serviceDelivered.push(...items);
   state.serviceInstalled.push(...items);
   state.carry = [];
@@ -9818,6 +10079,7 @@ function installServicePart() {
     body: `
       <p>${check.detail}</p>
       ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
+      ${getServiceRoomConditionMarkup()}
     `,
     actions: [{ label: "Keep Working", onClick: render }],
   });

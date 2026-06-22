@@ -552,6 +552,12 @@ be easy to verify in the browser.
    what changed, current closeout effect, risk carried back, and the next shop
    step, keeping the consequence handoff spatial instead of adding another
    automatic return popup.
+83. **Done - First variable gameplay slice:** The Conshohocken service job now
+   rolls saved room conditions that can change check difficulty, energy
+   pressure, and callback risk. Prep and optional client context can reveal
+   conditions before checks, known conditions can offset service pressure, and
+   unresolved room pressure records a named Conshohocken return-trip risk that
+   Josh can later resolve.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
