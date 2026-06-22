@@ -2083,7 +2083,7 @@ function showVehicleCargo() {
         <span>Organization</span><strong>${escapeHtml(vehicle.organization)}</strong>
         <span>Reliability</span><strong>${escapeHtml(vehicle.reliability)}</strong>
       </div>
-      <p class="muted">Future vehicle upgrades can hang more route, storage, comfort, and fast-travel behavior from this same vehicle surface.</p>
+      <p class="muted">Van #3 ties cargo, route choices, storage, comfort, and fast travel into the same workday surface.</p>
     `,
     actions: [
       { label: "Back To Van", onClick: showVehicleMenu },
@@ -2148,6 +2148,7 @@ function getVehicleMenuFlowMarkup() {
 
 function showVehicleMenu() {
   if (shouldIntroduceJoshBeforeNextDispatch()) return notifyJoshIntroRequired();
+  if (state.flags.endShiftPending) return showEndShiftModal();
   const vehicle = getCurrentVehicle();
   const tutorialRoute = getWorldRoute("centerCityTutorial");
   const activeRoute = getWorldRoute(getCurrentDispatchRouteId()) || (isTutorialRouteReady() ? tutorialRoute : null);
@@ -2164,7 +2165,7 @@ function showVehicleMenu() {
         <span>Clearance</span><strong>${escapeHtml(vehicle.clearance)}</strong>
         <span>Comfort</span><strong>${escapeHtml(vehicle.comfort)}</strong>
       </div>
-      <p class="muted">The van is the route, cargo, and world interface for the workday.</p>
+      <p class="muted">Use the van to check cargo, review prep, open the map, or drive when the job is ready.</p>
       <h3>Current Work</h3>
       ${getWorkdayLoopGuidanceMarkup()}
       ${getVehicleMenuFlowMarkup()}
@@ -2620,6 +2621,7 @@ function previewShiftChoice(choice) {
 
 function canHelpJoshAfterShift() {
   if (!state.flags.metJosh) return false;
+  if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) return false;
   return !state.flags.joshIntroEndShiftSource
     || state.flags.joshIntroEndShiftSource !== state.flags.endShiftSource;
 }
@@ -2883,7 +2885,11 @@ function completeShift(choice) {
     addLog("Stayed late to prep tomorrow's first job. Fieldcraft and documentation get a next-shift boost, but the extra unpaid time landed hard.");
   } else if (choice === "help-josh") {
     const helpJoshCopy = getHelpJoshShiftCopy();
-    if (!helpJoshCopy) return notify("Meet Josh before making him part of end-shift plans.");
+    if (!helpJoshCopy) {
+      return notify(state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved
+        ? "Clear the callback note with Josh before making generic end-shift plans."
+        : "Meet Josh before making him part of end-shift plans.");
+    }
     changeEnergy(-HELP_JOSH_ENERGY_COST);
     state.burnout += STAY_LATE_BURNOUT_GAIN;
     stayedLate = true;
@@ -3781,6 +3787,7 @@ function getKnownDestinationMarkup() {
 
 function showRegionalMap() {
   if (shouldIntroduceJoshBeforeNextDispatch()) return notifyJoshIntroRequired();
+  if (state.flags.endShiftPending) return showEndShiftModal();
   const currentArea = getCurrentWorldArea();
   const currentRegion = getWorldRegion(currentArea?.regionId);
   const fastTravelRoutes = getFastTravelRoutes();
@@ -3934,7 +3941,7 @@ function getPortalCardRows(portal) {
     { label: "Status", detail: getPortalStatusText(portal) },
     { label: "Requirement", detail: getPortalRequirementText(portal) },
     { label: portal?.kind === "returnRoute" ? "Return effect" : "Travel effect", detail: getPortalTravelEffectText(portal) },
-    { label: "Work step", detail: getWorkdayLoopStage(getObjective()) },
+    { label: "Now", detail: getWorkdayLoopStage(getObjective()) },
   ];
 }
 
@@ -5479,11 +5486,13 @@ function getFieldTaskPreviewMarkup(fieldTasks = []) {
 function getJobFamilyMarkup(familyId) {
   const family = content.jobFamilies?.[familyId];
   if (!family) return "";
+  const workPattern = family.workPattern || family.loop || "Field steps vary by job.";
   const skillNames = family.coreSkills
     .map((skillId) => getSkillDefinition(skillId)?.name || skillId)
     .join(", ");
   return `
-    <li><strong>Job family</strong><span>${family.name}: ${family.loop}</span></li>
+    <li><strong>Job family</strong><span>${family.name}</span></li>
+    <li><strong>Work pattern</strong><span>${workPattern}</span></li>
     <li><strong>Core skills</strong><span>${skillNames}</span></li>
   `;
 }
@@ -5797,16 +5806,16 @@ function getPlannedJobPresentation(job) {
 function getPlannedJobBranchMarkup(preview) {
   if (!preview.branch) return "";
   const implementationHook = preview.branchId === "protected"
-    ? "Start the first playable install with reduced discovery friction and a record-drawing closeout."
+    ? "Install can start with fewer unknowns and a cleaner record-drawing closeout."
     : preview.branchId === "partial"
-    ? "Start the first playable install with one warned-but-unresolved pathway question."
+    ? "Install starts with one warned-but-unresolved pathway question."
     : preview.branchId === "risk"
-    ? "Start the first playable install by surfacing the missing pathway as field-change pressure."
+    ? "Install starts by surfacing the missing pathway as field-change pressure."
     : "Keep the install locked until the walkdown chooses a branch.";
   return `
     <ul class="modal-list">
       <li><strong>Inherited walkdown result</strong><span>${escapeHtml(preview.branch.stateHint || preview.branch.label)}</span></li>
-      <li><strong>First implementation hook</strong><span>${escapeHtml(implementationHook)}</span></li>
+      <li><strong>Install impact</strong><span>${escapeHtml(implementationHook)}</span></li>
     </ul>
   `;
 }
@@ -9626,6 +9635,24 @@ function showServiceResults() {
   });
 }
 
+function getEndShiftShopInteractions() {
+  return [{
+    x: 350,
+    y: 185,
+    label: "Close out shift",
+    taskState: () => getTaskState({
+      stateId: "ready",
+      detail: state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved
+        ? "Close the workday first. Josh's callback note waits for the next morning."
+        : "End the current workday before taking another route.",
+    }),
+    pressure: () => getActionPressureBrief({
+      includeLedger: true,
+    }),
+    action: showEndShiftModal,
+  }];
+}
+
 function getInteractions() {
   if (state.sceneId === "shop") {
     const warehouseActive = state.flags.warehouseStarted && !state.flags.warehouseComplete;
@@ -9639,6 +9666,7 @@ function getInteractions() {
         action: showJoshConversation,
       }];
     }
+    if (state.flags.endShiftPending) return getEndShiftShopInteractions();
     return [
       {
         x: 330, y: 330, label: "Talk to supervisor", npc: "SUP",
@@ -10880,10 +10908,10 @@ function getCurrentStepRows({ includeLoopPath = true } = {}) {
   const brief = getCurrentStepBrief();
   const transitionBrief = getCurrentAreaTransitionBriefText();
   return [
-    { label: "Work step", detail: brief.stage },
-    includeLoopPath ? { label: "Workday path", detail: brief.loopPath } : null,
-    { label: "Next action", detail: brief.objective },
-    { label: "Where to look", detail: brief.interfaceHint },
+    { label: "Now", detail: brief.stage },
+    includeLoopPath ? { label: "Day plan", detail: brief.loopPath } : null,
+    { label: "Next", detail: brief.objective },
+    { label: "Nearby cue", detail: brief.interfaceHint },
     transitionBrief ? { label: "Area transitions", detail: transitionBrief } : null,
     { label: "Route", detail: brief.route },
     { label: "Consequences", detail: brief.consequences },

@@ -229,7 +229,7 @@ async function clickButton(page, name) {
       const consequenceText = document.querySelector("#task-copy")?.textContent || "";
       return { initialText, consequenceText };
     });
-    assert(currentStepBriefing.initialText.includes("Next action") && currentStepBriefing.initialText.includes("Where to look"), "Current step panel should label the next action and where to look");
+    assert(currentStepBriefing.initialText.includes("Next") && currentStepBriefing.initialText.includes("Nearby cue"), "Current step panel should label the next action and nearby cue");
     assert(currentStepBriefing.initialText.includes("Route") && currentStepBriefing.initialText.includes("Locked: Talk to the supervisor"), "Current step panel should explain the initial locked route");
     assert(currentStepBriefing.initialText.includes("Consequences") && currentStepBriefing.initialText.includes("No open callback debt"), "Current step panel should show clean consequence state");
     assert(currentStepBriefing.consequenceText.includes("Fast travel: Available now") && currentStepBriefing.consequenceText.includes("Driven before: Yes"), "Current step panel should expose route history and fast travel state");
@@ -529,10 +529,10 @@ async function clickButton(page, name) {
     });
     await assertModalIncludes(page, [
       "Current Work",
-      "Work step",
-      "Workday path",
+      "Now",
+      "Day plan",
       "[Shop]",
-      "Where to look",
+      "Nearby cue",
       "Review cargo",
       "Load carried items",
       "Review dispatch board routes",
@@ -685,6 +685,12 @@ async function clickButton(page, name) {
         marker: window.getInteractionMarkerText(interaction),
         state: interaction.taskState?.()?.id || "",
       }));
+      window.showVehicleMenu();
+      const sameDayVanText = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.closeModal();
+      window.showRegionalMap();
+      const sameDayMapText = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.closeModal();
       window.showDispatchPreview();
       const sameDayBoardText = document.querySelector("#modal-backdrop")?.innerText || "";
       window.completeShift("clock-out");
@@ -717,6 +723,8 @@ async function clickButton(page, name) {
         sameDayModalHidden,
         sameDayObjective,
         sameDayInteractions,
+        sameDayVanText,
+        sameDayMapText,
         sameDayBoardText,
         nextMorningShiftText,
         nextMorningButtons,
@@ -737,7 +745,9 @@ async function clickButton(page, name) {
     assert(naturalJoshIntro.sameDayModalHidden, "Returning from the first job should not auto-open a Josh modal");
     assert(naturalJoshIntro.sameDayObjective.includes("Close out the shift"), "Same-day return should keep the objective on shift closeout");
     assert(naturalJoshIntro.sameDayInteractions.some((interaction) => interaction.label.includes("Close out shift")), "Same-day return should expose shift closeout");
+    assert(naturalJoshIntro.sameDayInteractions.length === 1 && naturalJoshIntro.sameDayInteractions[0].marker === "CLOSE", "Same-day end-shift shop should focus on one closeout marker");
     assert(!naturalJoshIntro.sameDayInteractions.some((interaction) => interaction.marker === "JOSH"), "Josh intro should not be available during first-day closeout");
+    assert(naturalJoshIntro.sameDayVanText.includes("Close Out The Workday") && naturalJoshIntro.sameDayMapText.includes("Close Out The Workday"), "End-shift van and map calls should route to closeout");
     assert(naturalJoshIntro.sameDayBoardText.includes("Close Out The Workday"), "Same-day board access should route to end-shift closeout");
     assert(naturalJoshIntro.nextMorningShiftText.toLowerCase().includes("shift result"), "Clocking out should show the shift result before the next morning");
     assert(!naturalJoshIntro.nextMorningButtons.some((label) => label.includes("Review Dispatch Board Routes")), "Next morning shift result should not offer the board before meeting Josh");
@@ -777,6 +787,11 @@ async function clickButton(page, name) {
       window.showEndShiftModal();
       const laterShiftText = document.querySelector("#modal-backdrop")?.innerText || "";
       const laterShiftButtons = [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent || "");
+      state.flags.serviceCallbackPending = true;
+      state.flags.serviceCallbackResolved = false;
+      window.showEndShiftModal();
+      const pendingCallbackText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const pendingCallbackButtons = [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent || "");
       return {
         beforeIntroText,
         beforeIntroButtons,
@@ -786,6 +801,8 @@ async function clickButton(page, name) {
         sameShiftIntroButtons,
         laterShiftText,
         laterShiftButtons,
+        pendingCallbackText,
+        pendingCallbackButtons,
       };
     });
     assert(!endShiftJoshGate.beforeIntroText.includes("Help Josh"), "First end-shift modal should not offer Josh help before the player has met him");
@@ -794,6 +811,7 @@ async function clickButton(page, name) {
     assert(endShiftJoshGate.afterIntroText.includes("Help Josh") && endShiftJoshGate.afterIntroButtons.some((label) => label.includes("Help Josh")), "End-shift modal should offer Josh help after the player has met him");
     assert(!endShiftJoshGate.sameShiftIntroText.includes("Help Josh") && endShiftJoshGate.sameShiftIntroButtons.every((label) => !/Josh|lead tech/i.test(label)), "Same-shift Josh intro should not immediately unlock Help Josh");
     assert(endShiftJoshGate.laterShiftText.includes("Help Josh") && endShiftJoshGate.laterShiftButtons.some((label) => label.includes("Help Josh")), "Later shifts should offer Josh help after the intro shift has passed");
+    assert(endShiftJoshGate.pendingCallbackText.includes("callback note") && endShiftJoshGate.pendingCallbackButtons.every((label) => !label.includes("Help Josh")), "Pending callback note should suppress generic Josh help until the next-morning debrief");
 
     const shiftResultDelta = await page.evaluate(() => {
       window.startGame("prototype-tech");
@@ -829,7 +847,7 @@ async function clickButton(page, name) {
     await page.evaluate(() => window.showRegionalMap());
     await assertModalIncludes(page, [
       "Current Work",
-      "Workday path",
+      "Day plan",
       "Active Job Route",
       "Available Routes",
       "Callback / Return-Trip Pressure",
