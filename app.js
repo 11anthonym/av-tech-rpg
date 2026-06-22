@@ -8965,8 +8965,11 @@ function rollServiceImmediateIncident(option, rollOverride = null) {
 }
 
 function recordServiceRoomIncident(condition, option, rollResult) {
+  const entries = getServiceRoomIncidentEntries();
+  const incidentId = `${condition.id}-${option.id}-${entries.length + 1}`;
   const detail = option.incidentResult || `${condition.label} caused an immediate room issue.`;
-  getServiceRoomIncidentEntries().push({
+  entries.push({
+    id: incidentId,
     conditionId: condition.id,
     conditionLabel: condition.label,
     actionId: option.id,
@@ -8975,10 +8978,29 @@ function recordServiceRoomIncident(condition, option, rollResult) {
     chance: rollResult.chance,
     roll: rollResult.roll,
     clock: state.clock,
+    incidentFlags: Object.keys(option.incidentFlags || {}),
+    status: "open",
   });
   state.flags.serviceImmediatePressure = true;
   addLog(option.incidentLog || detail);
   return detail;
+}
+
+function getServiceRoomIncidentId(incident, index = 0) {
+  return incident.id || `${incident.conditionId || "incident"}-${incident.actionId || "action"}-${index + 1}`;
+}
+
+function getOpenServiceRoomIncidents() {
+  return getServiceRoomIncidentEntries().filter((incident) => !incident.recovered);
+}
+
+function getRecoverableServiceRoomIncidents() {
+  if (state.flags.serviceComplete) return [];
+  return getOpenServiceRoomIncidents();
+}
+
+function getServiceRoomIncidentById(incidentId) {
+  return getServiceRoomIncidentEntries().find((incident, index) => getServiceRoomIncidentId(incident, index) === incidentId) || null;
 }
 
 function getServiceRoomIncidentMarkup() {
@@ -8991,6 +9013,8 @@ function getServiceRoomIncidentMarkup() {
         <li>
           <strong>${escapeHtml(incident.conditionLabel)}</strong>
           <span>${escapeHtml(incident.detail)}</span>
+          <span>Status: ${escapeHtml(incident.recovered ? "Recovered" : incident.mitigated ? "Mitigated, technical risk remains" : "Open")}</span>
+          ${incident.recoveryDetail ? `<span>Recovery: ${escapeHtml(incident.recoveryDetail)}</span>` : ""}
           <span>Risk roll: ${formatServiceIncidentChance(incident.chance)} chance, rolled ${Math.round((incident.roll || 0) * 100)}%.</span>
         </li>
       `).join("")}
@@ -9252,7 +9276,145 @@ function resolveServiceConditionResponse(conditionId, optionId, rollOverride = n
       <p class="muted">${controlled ? "This condition will not add callback pressure at closeout unless another problem remains." : "This condition can still become a return-trip risk when the room is closed out."}</p>
     `,
     actions: [
+      ...(incidentHappened ? [{ label: "Recover Incident", onClick: showServiceIncidentRecoveryChoice }] : []),
       ...(getActionableServiceRoomConditions().length ? [{ label: "Handle Another Condition", onClick: showServiceRoomConditionChoice }] : []),
+      { label: "Back To Room", className: "secondary-button", onClick: render },
+    ],
+  });
+}
+
+function getServiceIncidentRecoveryOptions(incident) {
+  if (!incident) return [];
+  return [
+    {
+      id: "stabilize",
+      label: "Stabilize room and own the delay (-3 energy)",
+      detail: "Spend the energy to fix the visible problem, explain the delay, and protect the next visit. Coworkers and clients respect it; management dislikes the time.",
+      result: `${incident.conditionLabel} is recovered before closeout. The immediate problem is no longer callback pressure by itself.`,
+      log: `Recovered the ${incident.conditionLabel.toLowerCase()} incident before closeout.`,
+      energyCost: 3,
+      reputation: { clients: 1, coworkers: 1, management: -1 },
+      stat: "documentedTaskRisks",
+      recovered: true,
+      controlled: true,
+    },
+    {
+      id: "calm-client",
+      label: "Calm the client and keep moving (-1 energy)",
+      detail: "Recover some trust in the room, but leave the technical uncertainty for closeout.",
+      result: `${incident.conditionLabel} is calmer in the moment, but the technical risk remains open.`,
+      log: `Calmed the client after the ${incident.conditionLabel.toLowerCase()} incident, but the technical risk remained.`,
+      energyCost: 1,
+      reputation: { clients: 1 },
+      mitigated: true,
+      controlled: false,
+    },
+    {
+      id: "carry",
+      label: "Carry it into closeout",
+      detail: "Spend nothing now. The incident stays open and will shape the return-trip risk.",
+      result: `${incident.conditionLabel} stays open for closeout.`,
+      log: `${incident.conditionLabel} incident carried into closeout.`,
+      controlled: false,
+    },
+  ];
+}
+
+function showServiceIncidentRecoveryChoice() {
+  const incidents = getRecoverableServiceRoomIncidents();
+  if (!incidents.length) return notify("No open room incident needs recovery.");
+  if (incidents.length === 1) return showServiceIncidentRecoveryOptions(getServiceRoomIncidentId(incidents[0], 0));
+  showModal({
+    kicker: "Incident Recovery",
+    title: "Choose What To Recover",
+    body: `
+      <p>The room has visible pressure now. Recovering it can change closeout instead of only logging a future problem.</p>
+      ${getServiceRoomIncidentMarkup()}
+    `,
+    actions: [
+      ...incidents.map((incident, index) => ({
+        label: `Recover ${incident.conditionLabel}`,
+        onClick: () => showServiceIncidentRecoveryOptions(getServiceRoomIncidentId(incident, index)),
+      })),
+      { label: "Back To Room", className: "secondary-button", onClick: render },
+    ],
+  });
+}
+
+function showServiceIncidentRecoveryOptions(incidentId) {
+  const incident = getServiceRoomIncidentById(incidentId);
+  if (!incident || incident.recovered) return notify("That room incident is no longer open.");
+  const options = getServiceIncidentRecoveryOptions(incident);
+  showModal({
+    kicker: "Incident Recovery",
+    title: incident.conditionLabel,
+    body: `
+      <p>${escapeHtml(incident.detail)}</p>
+      ${getChoicePressureMarkup(options.map((option) => ({ label: option.label, detail: option.detail })))}
+      <p class="muted">A recovery choice changes the current room state before closeout.</p>
+    `,
+    actions: options.map((option) => ({
+      label: option.label,
+      className: option.recovered ? undefined : "secondary-button",
+      onClick: () => resolveServiceIncidentRecovery(incidentId, option.id),
+    })),
+  });
+}
+
+function resolveServiceIncidentRecovery(incidentId, optionId) {
+  const incident = getServiceRoomIncidentById(incidentId);
+  const option = getServiceIncidentRecoveryOptions(incident).find((item) => item.id === optionId);
+  if (!incident || !option) return notify("That incident recovery is not available.");
+  if (state.flags.serviceComplete) return notify("The service call is already closed out.");
+  if (incident.recovered) return notify("That room incident is already recovered.");
+
+  if (option.energyCost) changeEnergy(-option.energyCost);
+  applyReputationDelta(option.reputation || {});
+  if (option.stat) state.stats[option.stat] = (state.stats[option.stat] || 0) + 1;
+  state.stats.fieldTaskChoicesMade = (state.stats.fieldTaskChoicesMade || 0) + 1;
+
+  incident.recoveryAction = option.id;
+  incident.recoveryDetail = option.result;
+  incident.status = option.recovered ? "recovered" : option.mitigated ? "mitigated" : "open";
+  incident.mitigated = Boolean(option.mitigated);
+  incident.recovered = Boolean(option.recovered);
+
+  if (option.controlled) {
+    const resolution = getServiceConditionResolution(incident.conditionId);
+    if (resolution) {
+      resolution.controlled = true;
+      resolution.recoveredIncident = true;
+      resolution.detail = `${resolution.detail} Recovery: ${option.result}`;
+    } else {
+      recordServiceConditionResolution(incident.conditionId, {
+        actionId: option.id,
+        label: option.label,
+        detail: option.result,
+        controlled: true,
+        recoveredIncident: true,
+      });
+    }
+    (incident.incidentFlags || []).forEach((flagKey) => {
+      if (["serviceVerificationStrained", "serviceInstallStrained", "serviceClientAngry"].includes(flagKey)) {
+        state.flags[flagKey] = false;
+      }
+    });
+  }
+
+  state.flags.serviceImmediatePressure = getOpenServiceRoomIncidents().length > 0;
+  addLog(option.log);
+  markCareerSnapshotStale();
+  render();
+  showModal({
+    kicker: "Incident Recovery",
+    title: option.recovered ? "Incident Recovered" : option.mitigated ? "Client Calmed" : "Pressure Carried",
+    body: `
+      <p>${escapeHtml(option.result)}</p>
+      ${getServiceRoomIncidentMarkup()}
+      <p class="muted">${option.recovered ? "This incident will not create return-trip pressure unless another service issue remains." : "The room still carries technical pressure into closeout."}</p>
+    `,
+    actions: [
+      ...(getRecoverableServiceRoomIncidents().some((item) => !item.recoveryAction || !item.recovered) ? [{ label: "Review Open Incident", onClick: showServiceIncidentRecoveryChoice }] : []),
       { label: "Back To Room", className: "secondary-button", onClick: render },
     ],
   });
@@ -9279,7 +9441,7 @@ function getUnresolvedServiceRoomConditions() {
 function getServiceRoomConditionCloseoutEntry({ checkedSignalPath = false, strainedVerification = false } = {}) {
   const activeConditions = getActiveServiceRoomConditions();
   const unresolved = getUnresolvedServiceRoomConditions();
-  const incidents = getServiceRoomIncidentEntries();
+  const incidents = getOpenServiceRoomIncidents();
   const labels = activeConditions.map((condition) => condition.label).join(", ") || "ordinary service pressure";
   const unresolvedLabels = unresolved.map((condition) => condition.label).join(", ");
   const incidentLabels = incidents.map((incident) => incident.conditionLabel).join(", ");
@@ -9343,7 +9505,7 @@ function showServiceResults() {
   const checkedSignalPath = verifiedSignalPath && !state.flags.serviceVerificationStrained;
   const strainedVerification = verifiedSignalPath && state.flags.serviceVerificationStrained;
   const unresolvedConditions = getUnresolvedServiceRoomConditions();
-  const immediateIncidents = getServiceRoomIncidentEntries();
+  const immediateIncidents = getOpenServiceRoomIncidents();
   const serviceReturnRisk = Boolean(state.flags.serviceInstallStrained) || unresolvedConditions.length > 0 || immediateIncidents.length > 0;
   const openPressureLabels = [
     ...unresolvedConditions.map((condition) => condition.label),
@@ -9712,6 +9874,20 @@ function getInteractions() {
           });
         },
       },
+      ...(getRecoverableServiceRoomIncidents().length ? [{
+        x: 610, y: 385, label: "Recover room incident",
+        markerText: "FIX",
+        taskState: () => getTaskState({
+          stateId: "strained",
+          detail: `${getRecoverableServiceRoomIncidents().length} visible room incident${getRecoverableServiceRoomIncidents().length === 1 ? "" : "s"} can still be recovered before closeout.`,
+        }),
+        pressure: () => getActionPressureBrief({
+          baseEnergyCost: 3,
+          includeSkill: false,
+          includeLedger: true,
+        }),
+        action: showServiceIncidentRecoveryChoice,
+      }] : []),
       ...(getActionableServiceRoomConditions().length ? [{
         x: 520, y: 342, label: "Handle room pressure",
         markerText: "RISK",
@@ -10750,6 +10926,7 @@ function getObjective() {
     if (state.flags.conshohockenFollowupStarted) return "Review the coupler label follow-up.";
     if (!state.flags.serviceBrief) return "Check in with the client contact.";
     if (!state.flags.serviceInspected) return "Inspect the failed display.";
+    if (getRecoverableServiceRoomIncidents().length) return "Recover the visible room incident or carry it into closeout.";
     if (getActionableServiceRoomConditions().length) return "Decide how to handle the known room pressure or continue the display swap.";
     return `Install replacement gear (${state.serviceInstalled.length}/${content.serviceDispatch.swapItems.length}).`;
   }

@@ -1006,11 +1006,36 @@ async function clickButton(page, name) {
       window.resolveServiceConditionResponse("mislabeled-input", "quick-trace", 0.2);
       const incidentText = document.querySelector("#modal-backdrop")?.innerText || "";
       const incidentResolution = incidentState.flags.serviceConditionResolutions?.["mislabeled-input"];
+      const incidentLabels = window.getInteractions().map((interaction) => interaction.label);
+      const incidentObjective = window.getObjective();
       incidentState.flags.serviceApproach = "rush";
       incidentState.serviceInstalled = window.GAME_CONTENT.serviceDispatch.swapItems.map((item) => item.id);
       window.showServiceResults();
       const incidentCloseoutText = document.querySelector("#modal-backdrop")?.innerText || "";
       const incidentRiskSaved = Boolean(incidentState.flags.returnTripRisks?.conshohockenServiceRoomPressure);
+
+      window.startGame("prototype-tech");
+      const recoveryState = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("serviceOffice");
+      recoveryState.flags.serviceRoomConditions = ["mislabeled-input"];
+      recoveryState.flags.serviceKnownRoomConditions = ["mislabeled-input"];
+      recoveryState.flags.serviceBrief = true;
+      recoveryState.flags.serviceInspected = true;
+      window.resolveServiceConditionResponse("mislabeled-input", "quick-trace", 0.2);
+      const recoveryIncidentId = recoveryState.flags.serviceRoomIncidents?.[0]?.id;
+      window.showServiceIncidentRecoveryChoice();
+      const recoveryChoiceText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const beforeRecoveryEnergy = recoveryState.energy;
+      window.resolveServiceIncidentRecovery(recoveryIncidentId, "stabilize");
+      const recoveryText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const recoveredIncident = recoveryState.flags.serviceRoomIncidents?.[0];
+      const recoveredResolution = recoveryState.flags.serviceConditionResolutions?.["mislabeled-input"];
+      const recoveryEnergyChanged = recoveryState.energy !== beforeRecoveryEnergy;
+      recoveryState.flags.serviceApproach = "rush";
+      recoveryState.serviceInstalled = window.GAME_CONTENT.serviceDispatch.swapItems.map((item) => item.id);
+      window.showServiceResults();
+      const recoveredCloseoutText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const recoveredRiskSaved = Boolean(recoveryState.flags.returnTripRisks?.conshohockenServiceRoomPressure);
 
       window.startGame("prototype-tech");
       const successState = window.AV_TECH_RPG_DEBUG.state;
@@ -1035,8 +1060,17 @@ async function clickButton(page, name) {
         documentText,
         incidentText,
         incidentResolution,
+        incidentLabels,
+        incidentObjective,
         incidentCloseoutText,
         incidentRiskSaved,
+        recoveryChoiceText,
+        recoveryText,
+        recoveredIncident,
+        recoveredResolution,
+        recoveryEnergyChanged,
+        recoveredCloseoutText,
+        recoveredRiskSaved,
         successResolution,
         successCloseoutText,
         successRiskSaved: Boolean(successState.flags.returnTripRisks?.conshohockenServiceRoomPressure),
@@ -1050,7 +1084,13 @@ async function clickButton(page, name) {
     assert(serviceConditionChoices.documentText.includes("Pressure Controlled"), "Careful service response should show immediate resolution");
     assert(serviceConditionChoices.incidentText.includes("Immediate Problem") && serviceConditionChoices.incidentText.includes("risk happened in the room"), "Failed quick response should create visible immediate pressure");
     assert(serviceConditionChoices.incidentResolution?.incident && !serviceConditionChoices.incidentResolution?.controlled, "Failed quick response should save unresolved incident state");
+    assert(serviceConditionChoices.incidentLabels.includes("Recover room incident"), "Immediate service pressure should create a visible recovery action");
+    assert(serviceConditionChoices.incidentObjective.includes("visible room incident"), "Objective should point to immediate incident recovery");
     assert(serviceConditionChoices.incidentCloseoutText.toLowerCase().includes("immediate site pressure") && serviceConditionChoices.incidentRiskSaved, "Immediate service pressure should carry into closeout risk");
+    assert(serviceConditionChoices.recoveryChoiceText.includes("Stabilize room and own the delay"), "Incident recovery should show a recovery tradeoff");
+    assert(serviceConditionChoices.recoveryText.includes("Incident Recovered") && serviceConditionChoices.recoveredIncident?.recovered, "Incident recovery should visibly recover the site problem");
+    assert(serviceConditionChoices.recoveredResolution?.controlled && serviceConditionChoices.recoveryEnergyChanged, "Incident recovery should control the condition and spend energy");
+    assert(serviceConditionChoices.recoveredCloseoutText.includes("Return-trip risk\nControlled") && !serviceConditionChoices.recoveredRiskSaved, "Recovered incident should avoid callback pressure");
     assert(serviceConditionChoices.successResolution?.controlled && !serviceConditionChoices.successResolution?.incident, "Successful quick response should save controlled state");
     assert(serviceConditionChoices.successCloseoutText.toLowerCase().includes("quick choices held") && !serviceConditionChoices.successRiskSaved, "Lucky quick service response should avoid callback pressure");
 
