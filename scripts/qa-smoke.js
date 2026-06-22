@@ -678,25 +678,43 @@ async function clickButton(page, name) {
       state.flags.metJosh = false;
       window.enterScene("shop");
       window.render();
-      const modalHiddenBefore = document.querySelector("#modal-backdrop")?.classList.contains("hidden") || false;
-      const objectiveBefore = window.getObjective();
-      const interactionsBefore = window.getInteractions().map((interaction) => ({
+      const sameDayModalHidden = document.querySelector("#modal-backdrop")?.classList.contains("hidden") || false;
+      const sameDayObjective = window.getObjective();
+      const sameDayInteractions = window.getInteractions().map((interaction) => ({
         label: interaction.label,
         marker: window.getInteractionMarkerText(interaction),
-        state: interaction.taskState?.().id || "",
+        state: interaction.taskState?.()?.id || "",
+      }));
+      window.showDispatchPreview();
+      const sameDayBoardText = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.completeShift("clock-out");
+      const nextMorningShiftText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const nextMorningButtons = [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent || "");
+      const nextMorningObjective = window.getObjective();
+      const nextMorningInteractions = window.getInteractions().map((interaction) => ({
+        label: interaction.label,
+        marker: window.getInteractionMarkerText(interaction),
+        state: interaction.taskState?.()?.id || "",
       }));
       window.showDispatchPreview();
       const boardAttemptHidden = document.querySelector("#modal-backdrop")?.classList.contains("hidden") || false;
+      const boardAttemptText = document.querySelector("#modal-backdrop")?.innerText || "";
       const promptedForJosh = state.log.some((entry) => entry.includes("Find Josh"));
       window.getInteractions()[0].action();
       const introText = document.querySelector("#modal-backdrop")?.innerText || "";
       const introButtons = [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent || "");
       const interactionsAfterIntro = window.getInteractions().map((interaction) => interaction.label);
       return {
-        modalHiddenBefore,
-        objectiveBefore,
-        interactionsBefore,
+        sameDayModalHidden,
+        sameDayObjective,
+        sameDayInteractions,
+        sameDayBoardText,
+        nextMorningShiftText,
+        nextMorningButtons,
+        nextMorningObjective,
+        nextMorningInteractions,
         boardAttemptHidden,
+        boardAttemptText,
         promptedForJosh,
         metJosh: Boolean(state.flags.metJosh),
         introText,
@@ -704,14 +722,20 @@ async function clickButton(page, name) {
         interactionsAfterIntro,
       };
     });
-    assert(naturalJoshIntro.modalHiddenBefore, "Post-first-day Josh intro should not auto-open a modal");
-    assert(naturalJoshIntro.objectiveBefore.includes("Josh") && naturalJoshIntro.objectiveBefore.includes("before closing out"), "Post-first-day objective should require finding Josh first");
-    assert(naturalJoshIntro.interactionsBefore.length === 1 && naturalJoshIntro.interactionsBefore[0].label.includes("Josh") && naturalJoshIntro.interactionsBefore[0].marker === "JOSH", "Post-first-day shop should only expose the Josh workbench interaction");
-    assert(naturalJoshIntro.interactionsBefore[0].state === "ready", "Josh intro interaction should present as a ready task");
-    assert(naturalJoshIntro.boardAttemptHidden && naturalJoshIntro.promptedForJosh, "Board access should prompt the player to find Josh instead of opening Josh automatically");
+    assert(naturalJoshIntro.sameDayModalHidden, "Returning from the first job should not auto-open a Josh modal");
+    assert(naturalJoshIntro.sameDayObjective.includes("Close out the shift"), "Same-day return should keep the objective on shift closeout");
+    assert(naturalJoshIntro.sameDayInteractions.some((interaction) => interaction.label.includes("Close out shift")), "Same-day return should expose shift closeout");
+    assert(!naturalJoshIntro.sameDayInteractions.some((interaction) => interaction.marker === "JOSH"), "Josh intro should not be available during first-day closeout");
+    assert(naturalJoshIntro.sameDayBoardText.includes("Close Out The Workday"), "Same-day board access should route to end-shift closeout");
+    assert(naturalJoshIntro.nextMorningShiftText.toLowerCase().includes("shift result"), "Clocking out should show the shift result before the next morning");
+    assert(!naturalJoshIntro.nextMorningButtons.some((label) => label.includes("Review Dispatch Board Routes")), "Next morning shift result should not offer the board before meeting Josh");
+    assert(naturalJoshIntro.nextMorningObjective.includes("Josh") && naturalJoshIntro.nextMorningObjective.includes("next route"), "Next morning objective should require finding Josh before the next route");
+    assert(naturalJoshIntro.nextMorningInteractions.length === 1 && naturalJoshIntro.nextMorningInteractions[0].label.includes("Josh") && naturalJoshIntro.nextMorningInteractions[0].marker === "JOSH", "Next morning shop should only expose the Josh workbench interaction");
+    assert(naturalJoshIntro.nextMorningInteractions[0].state === "ready", "Josh intro interaction should present as a ready task");
+    assert(naturalJoshIntro.boardAttemptText === naturalJoshIntro.nextMorningShiftText && naturalJoshIntro.promptedForJosh, "Next-morning board access should prompt the player to find Josh instead of opening Josh automatically");
     assert(naturalJoshIntro.metJosh && naturalJoshIntro.introText.includes("The Person Keeping This Place Running"), "Walking to Josh should trigger the intro conversation");
-    assert(naturalJoshIntro.introButtons.some((label) => label.includes("Close Out Shift")), "Josh intro should hand the player back to shift closeout afterward");
-    assert(naturalJoshIntro.interactionsAfterIntro.some((label) => label.includes("Close out shift")), "After meeting Josh, shift closeout should become available again");
+    assert(naturalJoshIntro.introButtons.some((label) => label.includes("Thank Josh")), "Next-morning Josh intro should return to the shop afterward");
+    assert(naturalJoshIntro.interactionsAfterIntro.some((label) => label.includes("Read dispatch board")), "After meeting Josh, dispatch board should become available again");
 
     const endShiftJoshGate = await page.evaluate(() => {
       window.startGame("prototype-tech");
@@ -733,6 +757,7 @@ async function clickButton(page, name) {
       window.showEndShiftModal();
       const sameShiftIntroText = document.querySelector("#modal-backdrop")?.innerText || "";
       const sameShiftIntroButtons = [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent || "");
+      state.flags.metJosh = true;
       state.flags.endShiftSource = "One Quick Display Swap";
       window.showEndShiftModal();
       const laterShiftText = document.querySelector("#modal-backdrop")?.innerText || "";

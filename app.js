@@ -2787,13 +2787,23 @@ function startEndShift(source) {
 function shouldIntroduceJoshBeforeNextDispatch() {
   return state.sceneId === "shop"
     && state.flags.finished
+    && !state.flags.endShiftPending
+    && !state.flags.metJosh
+    && !state.flags.serviceStarted
+    && !state.flags.serviceComplete;
+}
+
+function shouldHideJoshUntilNextMorning() {
+  return state.sceneId === "shop"
+    && state.flags.finished
+    && state.flags.endShiftPending
     && !state.flags.metJosh
     && !state.flags.serviceStarted
     && !state.flags.serviceComplete;
 }
 
 function notifyJoshIntroRequired() {
-  return notify("Find Josh at the workbench before closing out the first day.");
+  return notify("Find Josh at the workbench before taking the next route.");
 }
 
 function shouldShowRetrofitInstallDebrief() {
@@ -2808,10 +2818,6 @@ function returnToShopAfterDispatch(source, message) {
   startEndShift(source);
   if (message) addLog(message);
   enterScene("shop");
-  if (shouldIntroduceJoshBeforeNextDispatch()) {
-    addLog("Josh is at the workbench. Find him before closing out the first day.");
-    return render();
-  }
   showEndShiftModal();
 }
 
@@ -5011,6 +5017,7 @@ function chooseTraining(trainingId) {
 }
 
 function showJoshConversation() {
+  if (shouldHideJoshUntilNextMorning()) return notify("Close out the first day before catching Josh tomorrow morning.");
   const josh = content.coworkers.josh;
   if (!state.flags.metJosh) {
     state.flags.metJosh = true;
@@ -9653,7 +9660,7 @@ function getInteractions() {
           }
         },
       },
-      ...(state.flags.finished ? [{
+      ...(state.flags.finished && !shouldHideJoshUntilNextMorning() ? [{
         x: 690, y: 245, label: state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved
           ? state.flags.endShiftPending ? "Callback note waiting with Josh" : "Talk to Josh about callback"
           : "Talk to Josh",
@@ -10700,6 +10707,7 @@ function getWorkdayLoopStage(objective = "") {
       return "Van / Route";
     }
     if (state.flags.serviceComplete && hasPendingTraining()) return "Shop / Career Growth";
+    if (shouldIntroduceJoshBeforeNextDispatch()) return "Shop / Coworker Check-in";
     if (state.flags.retrofitInstallComplete && !state.flags.retrofitInstallDebriefed) return "Shop / Debrief";
     if (state.flags.retrofitInstallComplete && !state.flags.prototypeSummaryViewed) return "Shop / Career Snapshot";
     return "Shop / Dispatch Board";
@@ -10906,7 +10914,7 @@ function getWorkdayLoopGuidanceMarkup() {
 
 function getObjective() {
   if (state.sceneId === "shop") {
-    if (shouldIntroduceJoshBeforeNextDispatch()) return "Check in with Josh at the workbench before closing out.";
+    if (shouldIntroduceJoshBeforeNextDispatch()) return "Check in with Josh at the workbench before taking the next route.";
     if (state.flags.endShiftPending) {
       if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) {
         return "Close out the shift; Josh has the Conshohocken callback note waiting.";
