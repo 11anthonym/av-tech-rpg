@@ -977,6 +977,83 @@ async function clickButton(page, name) {
     assert(serviceConditionGameplay.signalDifficulty > 4 && serviceConditionGameplay.resultDifficulty > 4, "Service room conditions should adjust signal-path difficulty");
     assert(serviceConditionGameplay.installDifficulty > 4, "Service room conditions should adjust install difficulty");
 
+    const serviceConditionChoices = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("serviceOffice");
+      state.flags.serviceRoomConditions = ["mislabeled-input"];
+      state.flags.serviceKnownRoomConditions = ["mislabeled-input"];
+      state.flags.serviceBrief = true;
+      state.flags.serviceInspected = true;
+      const labels = window.getInteractions().map((interaction) => interaction.label);
+      const objective = window.getObjective();
+      const beforeDifficulty = window.getServiceAdjustedCheck(window.getServiceCheckById("signal-path")).difficulty;
+      window.showServiceConditionResponseChoice("mislabeled-input");
+      const choiceText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const beforeEnergy = state.energy;
+      window.resolveServiceConditionResponse("mislabeled-input", "document");
+      const afterDifficulty = window.getServiceAdjustedCheck(window.getServiceCheckById("signal-path")).difficulty;
+      const documentText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const documentEnergyChanged = state.energy !== beforeEnergy;
+
+      window.startGame("prototype-tech");
+      const incidentState = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("serviceOffice");
+      incidentState.flags.serviceRoomConditions = ["mislabeled-input"];
+      incidentState.flags.serviceKnownRoomConditions = ["mislabeled-input"];
+      incidentState.flags.serviceBrief = true;
+      incidentState.flags.serviceInspected = true;
+      window.resolveServiceConditionResponse("mislabeled-input", "quick-trace", 0.2);
+      const incidentText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const incidentResolution = incidentState.flags.serviceConditionResolutions?.["mislabeled-input"];
+      incidentState.flags.serviceApproach = "rush";
+      incidentState.serviceInstalled = window.GAME_CONTENT.serviceDispatch.swapItems.map((item) => item.id);
+      window.showServiceResults();
+      const incidentCloseoutText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const incidentRiskSaved = Boolean(incidentState.flags.returnTripRisks?.conshohockenServiceRoomPressure);
+
+      window.startGame("prototype-tech");
+      const successState = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("serviceOffice");
+      successState.flags.serviceRoomConditions = ["mislabeled-input"];
+      successState.flags.serviceKnownRoomConditions = ["mislabeled-input"];
+      successState.flags.serviceBrief = true;
+      successState.flags.serviceInspected = true;
+      window.resolveServiceConditionResponse("mislabeled-input", "quick-trace", 0.9);
+      const successResolution = successState.flags.serviceConditionResolutions?.["mislabeled-input"];
+      successState.flags.serviceApproach = "rush";
+      successState.serviceInstalled = window.GAME_CONTENT.serviceDispatch.swapItems.map((item) => item.id);
+      window.showServiceResults();
+      const successCloseoutText = document.querySelector("#modal-backdrop")?.innerText || "";
+      return {
+        labels,
+        objective,
+        choiceText,
+        beforeDifficulty,
+        afterDifficulty,
+        energyChanged: documentEnergyChanged,
+        documentText,
+        incidentText,
+        incidentResolution,
+        incidentCloseoutText,
+        incidentRiskSaved,
+        successResolution,
+        successCloseoutText,
+        successRiskSaved: Boolean(successState.flags.returnTripRisks?.conshohockenServiceRoomPressure),
+      };
+    });
+    assert(serviceConditionChoices.labels.includes("Handle room pressure"), "Known service pressure should create a visible room decision");
+    assert(serviceConditionChoices.objective.includes("known room pressure"), "Objective should point to known service pressure decisions");
+    assert(serviceConditionChoices.choiceText.includes("35% incident risk"), "Quick service responses should show incident odds");
+    assert(serviceConditionChoices.afterDifficulty < serviceConditionChoices.beforeDifficulty, "Careful service response should remove controlled condition pressure from later checks");
+    assert(serviceConditionChoices.energyChanged, "Careful service response should spend energy now");
+    assert(serviceConditionChoices.documentText.includes("Pressure Controlled"), "Careful service response should show immediate resolution");
+    assert(serviceConditionChoices.incidentText.includes("Immediate Problem") && serviceConditionChoices.incidentText.includes("risk happened in the room"), "Failed quick response should create visible immediate pressure");
+    assert(serviceConditionChoices.incidentResolution?.incident && !serviceConditionChoices.incidentResolution?.controlled, "Failed quick response should save unresolved incident state");
+    assert(serviceConditionChoices.incidentCloseoutText.toLowerCase().includes("immediate site pressure") && serviceConditionChoices.incidentRiskSaved, "Immediate service pressure should carry into closeout risk");
+    assert(serviceConditionChoices.successResolution?.controlled && !serviceConditionChoices.successResolution?.incident, "Successful quick response should save controlled state");
+    assert(serviceConditionChoices.successCloseoutText.toLowerCase().includes("quick choices held") && !serviceConditionChoices.successRiskSaved, "Lucky quick service response should avoid callback pressure");
+
     const serviceSignalTask = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;

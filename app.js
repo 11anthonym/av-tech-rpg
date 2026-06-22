@@ -8847,6 +8847,7 @@ function getServiceConditionCheckEffects(check) {
     hiddenCount: 0,
   };
   getActiveServiceRoomConditions().forEach((condition) => {
+    if (isServiceConditionControlled(condition)) return;
     const modifier = getServiceConditionCheckModifier(condition, check);
     if (!modifier) return;
     const known = isServiceRoomConditionKnown(condition.id);
@@ -8897,11 +8898,13 @@ function getServiceRoomConditionMarkup({ revealAll = false } = {}) {
           <li>
             <strong>${escapeHtml(condition.label)}</strong>
             <span>${escapeHtml(condition.revealedSummary || condition.summary || condition.hiddenSummary || "")}</span>
+            ${getServiceConditionResolution(condition.id) ? `<span>Response: ${escapeHtml(getServiceConditionResolution(condition.id).detail)}</span>` : ""}
           </li>
         `).join("")}
       </ul>
     ` : `<p class="muted">No room condition has been identified yet.</p>`}
     ${hiddenCount ? `<p class="muted">${hiddenCount} room pressure${hiddenCount === 1 ? " is" : "s are"} still unknown.</p>` : ""}
+    ${getServiceRoomIncidentMarkup()}
   `;
 }
 
@@ -8924,9 +8927,343 @@ function showServiceClientContext() {
   });
 }
 
+// Service room responses let one-off room pressure become a reusable mid-job RPG choice.
+function getServiceConditionResolutionMap() {
+  state.flags.serviceConditionResolutions ||= {};
+  return state.flags.serviceConditionResolutions;
+}
+
+function getServiceConditionResolution(conditionId) {
+  return getServiceConditionResolutionMap()[conditionId] || null;
+}
+
+function recordServiceConditionResolution(conditionId, resolution) {
+  getServiceConditionResolutionMap()[conditionId] = {
+    conditionId,
+    clock: state.clock,
+    ...resolution,
+  };
+}
+
+function getServiceRoomIncidentEntries() {
+  state.flags.serviceRoomIncidents ||= [];
+  return state.flags.serviceRoomIncidents;
+}
+
+function formatServiceIncidentChance(chance = 0) {
+  return `${Math.round(chance * 100)}%`;
+}
+
+function rollServiceImmediateIncident(option, rollOverride = null) {
+  if (!option.incidentChance) return null;
+  const roll = Number.isFinite(rollOverride) ? rollOverride : Math.random();
+  return {
+    roll,
+    chance: option.incidentChance,
+    happened: roll < option.incidentChance,
+  };
+}
+
+function recordServiceRoomIncident(condition, option, rollResult) {
+  const detail = option.incidentResult || `${condition.label} caused an immediate room issue.`;
+  getServiceRoomIncidentEntries().push({
+    conditionId: condition.id,
+    conditionLabel: condition.label,
+    actionId: option.id,
+    actionLabel: option.label,
+    detail,
+    chance: rollResult.chance,
+    roll: rollResult.roll,
+    clock: state.clock,
+  });
+  state.flags.serviceImmediatePressure = true;
+  addLog(option.incidentLog || detail);
+  return detail;
+}
+
+function getServiceRoomIncidentMarkup() {
+  const incidents = getServiceRoomIncidentEntries();
+  if (!incidents.length) return "";
+  return `
+    <h3>Immediate Site Pressure</h3>
+    <ul class="modal-list">
+      ${incidents.map((incident) => `
+        <li>
+          <strong>${escapeHtml(incident.conditionLabel)}</strong>
+          <span>${escapeHtml(incident.detail)}</span>
+          <span>Risk roll: ${formatServiceIncidentChance(incident.chance)} chance, rolled ${Math.round((incident.roll || 0) * 100)}%.</span>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function getServiceQuickResponseOption(condition, config) {
+  return {
+    id: config.id,
+    label: `${config.label} (-1 energy, ${formatServiceIncidentChance(config.incidentChance)} incident risk)`,
+    detail: `${config.detail} If the risk roll fails, the client sees the problem immediately and the closeout inherits pressure.`,
+    result: config.successResult,
+    log: config.successLog,
+    energyCost: 1,
+    reputation: config.successReputation || { management: 1 },
+    stat: config.successStat || "",
+    controlled: true,
+    incidentChance: config.incidentChance,
+    incidentResult: config.incidentResult,
+    incidentLog: config.incidentLog,
+    incidentReputation: config.incidentReputation || { clients: -2, management: -1 },
+    incidentBurnout: config.incidentBurnout ?? 1,
+    incidentFlags: config.incidentFlags || {},
+  };
+}
+
+function getServiceConditionResponseOptions(condition) {
+  if (!condition) return [];
+  const leaveOption = {
+    id: "leave",
+    label: "Leave it for closeout",
+    detail: "Saves energy now, but this pressure can still create callback debt.",
+    result: `${condition.label} was left unresolved for closeout.`,
+    log: `${condition.label} left unresolved during the Conshohocken service call.`,
+    controlled: false,
+  };
+
+  if (["bad-ticket-notes", "mislabeled-input"].includes(condition.id)) {
+    return [
+      {
+        id: "document",
+        label: "Document signal-path discrepancy (-2 energy)",
+        detail: "Costs energy and makes the signal-path problem visible before closeout. Coworkers benefit from the note; management dislikes the delay.",
+        result: `${condition.label} is controlled by a clear signal-path note.`,
+        log: `Documented ${condition.label.toLowerCase()} before closing the service call.`,
+        energyCost: 2,
+        reputation: { coworkers: 1, management: -1 },
+        stat: "documentedTaskRisks",
+        controlled: true,
+      },
+      getServiceQuickResponseOption(condition, {
+        id: "quick-trace",
+        label: "Quick-trace the path",
+        detail: "Fast troubleshooting can preserve the schedule without doing a full signal-path proof.",
+        successResult: `${condition.label} holds after a quick trace.`,
+        successLog: `Quick-traced ${condition.label.toLowerCase()} without a visible dropout.`,
+        incidentChance: 0.35,
+        incidentResult: "The signal drops while the client is watching; the room is working again, but trust in the closeout is damaged.",
+        incidentLog: "Immediate service pressure: the signal dropped in front of the client during a quick trace.",
+        incidentFlags: { serviceVerificationStrained: true },
+      }),
+      leaveOption,
+    ];
+  }
+
+  if (condition.id === "flaky-replacement-display") {
+    return [
+      {
+        id: "stabilize",
+        label: "Stabilize replacement input board (-3 energy)",
+        detail: "Spend extra effort on the replacement path before the room gets booked again.",
+        result: "Replacement input-board pressure is controlled before closeout.",
+        log: "Stabilized the replacement display input board before closeout.",
+        energyCost: 3,
+        reputation: { coworkers: 1 },
+        stat: "carefulFinishes",
+        controlled: true,
+      },
+      getServiceQuickResponseOption(condition, {
+        id: "force-board",
+        label: "Force the replacement board",
+        detail: "A quick board reseat might get the meeting moving without a careful bench check.",
+        successResult: "The replacement input board settles after a quick reseat.",
+        successLog: "Forced the replacement input board into service without an immediate failure.",
+        incidentChance: 0.45,
+        incidentResult: "The replacement display flickers hard after the quick reseat. The client sees the failure and the install now needs extra recovery.",
+        incidentLog: "Immediate service pressure: the replacement display flickered hard after a rushed board reseat.",
+        incidentFlags: { serviceInstallStrained: true },
+      }),
+      leaveOption,
+    ];
+  }
+
+  if (condition.id === "loose-mount-hardware") {
+    return [
+      {
+        id: "square",
+        label: "Square the mount hardware (-3 energy)",
+        detail: "Costs energy now, but prevents a shaky install from becoming the next tech's problem.",
+        result: "Loose mount pressure is controlled by extra hardware cleanup.",
+        log: "Squared the loose mount hardware before closing the service call.",
+        energyCost: 3,
+        reputation: { clients: 1 },
+        stat: "carefulFinishes",
+        controlled: true,
+      },
+      getServiceQuickResponseOption(condition, {
+        id: "snug-mount-fast",
+        label: "Snug the mount fast",
+        detail: "A fast hardware pass can save energy if the mount is less loose than it looks.",
+        successResult: "The mount holds after a fast hardware pass.",
+        successLog: "Snugged the loose mount hardware quickly and it held under test.",
+        incidentChance: 0.4,
+        incidentResult: "The display sags during the fast hardware pass. Nothing breaks, but the client sees a shaky install and the room needs extra recovery.",
+        incidentLog: "Immediate service pressure: the display sagged during a rushed mount pass.",
+        incidentFlags: { serviceInstallStrained: true },
+      }),
+      leaveOption,
+    ];
+  }
+
+  if (condition.id === "client-time-pressure") {
+    return [
+      {
+        id: "expectation",
+        label: "Set client expectation (-1 energy)",
+        detail: "Tell the client the swap may need verification time. It protects the room, but slows the management-friendly path.",
+        result: "Client time pressure is controlled by setting expectations before closeout.",
+        log: "Set the client's expectation that verification could beat a rushed swap.",
+        energyCost: 1,
+        reputation: { clients: 1, management: -1 },
+        controlled: true,
+      },
+      getServiceQuickResponseOption(condition, {
+        id: "promise-fast",
+        label: "Promise the room will be ready",
+        detail: "A confident promise can keep the client calm if the swap really stays smooth.",
+        successResult: "The client accepts the quick promise and gives you room to finish.",
+        successLog: "Promised a fast room recovery and kept the client calm.",
+        incidentChance: 0.3,
+        incidentResult: "The room is not ready as promised. The client gets angry before closeout and future service trust drops.",
+        incidentLog: "Immediate service pressure: the client got angry after a rushed room-ready promise slipped.",
+        incidentFlags: { serviceClientAngry: true },
+      }),
+      leaveOption,
+    ];
+  }
+
+  return [leaveOption];
+}
+
+function getActionableServiceRoomConditions() {
+  if (!state.flags.serviceInspected || state.flags.serviceComplete) return [];
+  return getActiveServiceRoomConditions()
+    .filter((condition) => isServiceRoomConditionKnown(condition.id))
+    .filter((condition) => !getServiceConditionResolution(condition.id))
+    .filter((condition) => !isServiceConditionControlled(condition));
+}
+
+function getServiceConditionChoicePressureMarkup(condition, options) {
+  return getChoicePressureMarkup(options.map((option) => ({
+    label: option.label,
+    detail: option.detail,
+  })));
+}
+
+function showServiceRoomConditionChoice() {
+  const conditions = getActionableServiceRoomConditions();
+  if (!conditions.length) return notify("No known room pressure is waiting on a decision.");
+  if (conditions.length === 1) return showServiceConditionResponseChoice(conditions[0].id);
+  showModal({
+    kicker: "Room Pressure",
+    title: "Choose What To Handle",
+    body: `
+      <p>Known service-room pressure can be handled now or carried into closeout as callback risk.</p>
+      ${getServiceRoomConditionMarkup()}
+    `,
+    actions: [
+      ...conditions.map((condition) => ({
+        label: `Handle ${condition.label}`,
+        onClick: () => showServiceConditionResponseChoice(condition.id),
+      })),
+      { label: "Back To Room", className: "secondary-button", onClick: render },
+    ],
+  });
+}
+
+function showServiceConditionResponseChoice(conditionId) {
+  const condition = getServiceRoomConditionById(conditionId);
+  if (!condition || !isServiceRoomConditionKnown(conditionId)) return notify("That room pressure is not in your notes yet.");
+  if (getServiceConditionResolution(conditionId)) return notify("That room pressure already has a response.");
+  const options = getServiceConditionResponseOptions(condition);
+  showModal({
+    kicker: "Room Pressure",
+    title: condition.label,
+    body: `
+      <p>${escapeHtml(condition.revealedSummary || condition.summary || condition.hiddenSummary || "")}</p>
+      ${getServiceConditionChoicePressureMarkup(condition, options)}
+      <p class="muted">Handling a room condition can prevent callback pressure. Leaving it saves energy but keeps the risk alive.</p>
+    `,
+    actions: options.map((option) => ({
+      label: option.label,
+      className: option.controlled ? undefined : "secondary-button",
+      onClick: () => resolveServiceConditionResponse(condition.id, option.id),
+    })),
+  });
+}
+
+function applyReputationDelta(delta = {}) {
+  Object.entries(delta).forEach(([key, value]) => {
+    state.reputation[key] = (state.reputation[key] || 0) + value;
+  });
+}
+
+function resolveServiceConditionResponse(conditionId, optionId, rollOverride = null) {
+  const condition = getServiceRoomConditionById(conditionId);
+  const option = getServiceConditionResponseOptions(condition).find((item) => item.id === optionId);
+  if (!condition || !option) return notify("That room-pressure response is not available.");
+  if (!isServiceRoomConditionKnown(conditionId)) return notify("That room pressure is not in your notes yet.");
+  if (state.flags.serviceComplete) return notify("The service call is already closed out.");
+  if (getServiceConditionResolution(conditionId)) return notify("That room pressure already has a response.");
+
+  if (option.energyCost) changeEnergy(-option.energyCost);
+  const rollResult = rollServiceImmediateIncident(option, rollOverride);
+  const incidentHappened = Boolean(rollResult?.happened);
+  const controlled = option.controlled !== false && !incidentHappened;
+  const resultDetail = incidentHappened
+    ? recordServiceRoomIncident(condition, option, rollResult)
+    : option.result;
+  if (incidentHappened) {
+    applyReputationDelta(option.incidentReputation || {});
+    if (option.incidentBurnout) state.burnout = Math.max(0, state.burnout + option.incidentBurnout);
+    Object.assign(state.flags, option.incidentFlags || {});
+  } else {
+    applyReputationDelta(option.reputation || {});
+    if (option.stat) state.stats[option.stat] = (state.stats[option.stat] || 0) + 1;
+    addLog(option.log);
+  }
+  state.stats.fieldTaskChoicesMade = (state.stats.fieldTaskChoicesMade || 0) + 1;
+  recordServiceConditionResolution(conditionId, {
+    actionId: option.id,
+    label: option.label,
+    detail: resultDetail,
+    controlled,
+    incident: incidentHappened,
+    incidentChance: rollResult?.chance || 0,
+    incidentRoll: rollResult?.roll ?? null,
+  });
+  markCareerSnapshotStale();
+  render();
+  showModal({
+    kicker: "Room Pressure Response",
+    title: incidentHappened ? "Immediate Problem" : controlled ? "Pressure Controlled" : "Risk Carried Forward",
+    body: `
+      <p>${escapeHtml(resultDetail)}</p>
+      ${rollResult ? `<p class="muted"><strong>Incident roll:</strong> ${formatServiceIncidentChance(rollResult.chance)} chance, rolled ${Math.round(rollResult.roll * 100)}%. ${incidentHappened ? "The risk happened in the room." : "The quick action held this time."}</p>` : ""}
+      ${getServiceRoomConditionMarkup()}
+      <p class="muted">${controlled ? "This condition will not add callback pressure at closeout unless another problem remains." : "This condition can still become a return-trip risk when the room is closed out."}</p>
+    `,
+    actions: [
+      ...(getActionableServiceRoomConditions().length ? [{ label: "Handle Another Condition", onClick: showServiceRoomConditionChoice }] : []),
+      { label: "Back To Room", className: "secondary-button", onClick: render },
+    ],
+  });
+}
+
 function isServiceConditionControlled(condition) {
-  const verifiedClean = state.flags.serviceApproach === "verify" && !state.flags.serviceVerificationStrained;
-  const installClean = !state.flags.serviceInstallStrained;
+  if (getServiceConditionResolution(condition.id)?.controlled) return true;
+  const installComplete = state.serviceInstalled.length === content.serviceDispatch.swapItems.length;
+  const verificationComplete = getServiceFieldCheckHistory().includes("signal-path");
+  const verifiedClean = verificationComplete && state.flags.serviceApproach === "verify" && !state.flags.serviceVerificationStrained;
+  const installClean = installComplete && !state.flags.serviceInstallStrained;
   if (["bad-ticket-notes", "mislabeled-input"].includes(condition.id)) return verifiedClean;
   if (["flaky-replacement-display", "loose-mount-hardware"].includes(condition.id)) return installClean;
   if (condition.id === "client-time-pressure") return verifiedClean || state.flags.serviceClientContext;
@@ -8942,22 +9279,29 @@ function getUnresolvedServiceRoomConditions() {
 function getServiceRoomConditionCloseoutEntry({ checkedSignalPath = false, strainedVerification = false } = {}) {
   const activeConditions = getActiveServiceRoomConditions();
   const unresolved = getUnresolvedServiceRoomConditions();
+  const incidents = getServiceRoomIncidentEntries();
   const labels = activeConditions.map((condition) => condition.label).join(", ") || "ordinary service pressure";
   const unresolvedLabels = unresolved.map((condition) => condition.label).join(", ");
+  const incidentLabels = incidents.map((incident) => incident.conditionLabel).join(", ");
+  const openPressure = unresolved.length || incidents.length;
   const verifiedText = checkedSignalPath
     ? "Signal path and room pressure were controlled well enough to protect the next visit."
     : strainedVerification
     ? "Verification happened, but the room pressure still left thin notes."
-    : "The room was closed without fully proving the pressure behind the ticket.";
+    : openPressure
+    ? "The room was closed without fully proving the pressure behind the ticket."
+    : "Known room pressure was handled before closeout, even without a full signal-path verification.";
   return {
     source: content.serviceDispatch.title,
-    status: unresolved.length ? "open" : "controlled",
+    status: openPressure ? "open" : "controlled",
     cause: unresolved.length
       ? `Unresolved room pressure: ${unresolvedLabels}.`
+      : incidents.length
+      ? `Immediate site pressure: ${incidentLabels}.`
       : `Room pressure controlled: ${labels}.`,
     affects: "Conshohocken callback routing and future display service",
-    detail: unresolved.length
-      ? `${verifiedText} ${unresolved.map((condition) => condition.closeoutRisk).filter(Boolean).join(" ")}`
+    detail: openPressure
+      ? `${verifiedText} ${unresolved.map((condition) => condition.closeoutRisk).filter(Boolean).join(" ")} ${incidents.map((incident) => incident.detail).join(" ")}`.trim()
       : verifiedText,
   };
 }
@@ -8999,10 +9343,19 @@ function showServiceResults() {
   const checkedSignalPath = verifiedSignalPath && !state.flags.serviceVerificationStrained;
   const strainedVerification = verifiedSignalPath && state.flags.serviceVerificationStrained;
   const unresolvedConditions = getUnresolvedServiceRoomConditions();
-  const serviceReturnRisk = !checkedSignalPath || Boolean(state.flags.serviceInstallStrained) || unresolvedConditions.length > 0;
-  const xp = checkedSignalPath && !serviceReturnRisk ? 55 : checkedSignalPath ? 50 : strainedVerification ? 45 : 40;
+  const immediateIncidents = getServiceRoomIncidentEntries();
+  const serviceReturnRisk = Boolean(state.flags.serviceInstallStrained) || unresolvedConditions.length > 0 || immediateIncidents.length > 0;
+  const openPressureLabels = [
+    ...unresolvedConditions.map((condition) => condition.label),
+    ...immediateIncidents.map((incident) => incident.conditionLabel),
+  ].filter(Boolean).join(", ");
+  const xp = checkedSignalPath && !serviceReturnRisk ? 55 : !verifiedSignalPath && !serviceReturnRisk ? 48 : checkedSignalPath ? 50 : strainedVerification ? 45 : 40;
   const diagnosisLabel = checkedSignalPath && !serviceReturnRisk
     ? "Room pressure controlled"
+    : !verifiedSignalPath && !serviceReturnRisk
+    ? "Quick choices held"
+    : immediateIncidents.length
+    ? "Immediate room pressure"
     : checkedSignalPath
     ? "Signal verified; room pressure remains"
     : strainedVerification
@@ -9010,11 +9363,15 @@ function showServiceResults() {
     : "Ticket trusted";
   const serviceRiskDetail = checkedSignalPath
     ? serviceReturnRisk
-      ? `Signal path notes helped, but unresolved room pressure remains: ${unresolvedConditions.map((condition) => condition.label).join(", ")}.`
+      ? `Signal path notes helped, but open room pressure remains: ${openPressureLabels || "site pressure"}.`
       : "Signal path notes and room conditions are clean enough to protect the room."
     : strainedVerification
       ? "You chose the right process, but the notes stayed thin enough that a return trip can still happen."
-      : `Skipping verification saved time, but ${unresolvedConditions.length ? unresolvedConditions.map((condition) => condition.label).join(", ") : "the room pressure"} can still send someone back.`;
+      : immediateIncidents.length
+      ? `The quick path caused pressure in the room: ${immediateIncidents.map((incident) => incident.detail).join(" ")}`
+      : serviceReturnRisk
+      ? `Skipping verification saved time, but ${unresolvedConditions.length ? unresolvedConditions.map((condition) => condition.label).join(", ") : "the room pressure"} can still send someone back.`
+      : "You skipped full verification, but the known room pressure was handled before closeout.";
   state.flags.serviceComplete = true;
   state.carry = [];
   setClock(`${state.clock.slice(0, 3)} ${checkedSignalPath ? "11:26" : "11:44"} AM`);
@@ -9355,6 +9712,20 @@ function getInteractions() {
           });
         },
       },
+      ...(getActionableServiceRoomConditions().length ? [{
+        x: 520, y: 342, label: "Handle room pressure",
+        markerText: "RISK",
+        taskState: () => getTaskState({
+          stateId: state.flags.serviceImmediatePressure ? "strained" : "ready",
+          detail: `${getActionableServiceRoomConditions().length} known room pressure decision${getActionableServiceRoomConditions().length === 1 ? "" : "s"} can change the service outcome now.`,
+        }),
+        pressure: () => getActionPressureBrief({
+          baseEnergyCost: 1,
+          includeSkill: false,
+          includeLedger: true,
+        }),
+        action: showServiceRoomConditionChoice,
+      }] : []),
       {
         x: 760, y: 305, label: state.flags.serviceInspected ? "Install replacement parts" : "Inspect failed display",
         pressure: () => {
@@ -10379,6 +10750,7 @@ function getObjective() {
     if (state.flags.conshohockenFollowupStarted) return "Review the coupler label follow-up.";
     if (!state.flags.serviceBrief) return "Check in with the client contact.";
     if (!state.flags.serviceInspected) return "Inspect the failed display.";
+    if (getActionableServiceRoomConditions().length) return "Decide how to handle the known room pressure or continue the display swap.";
     return `Install replacement gear (${state.serviceInstalled.length}/${content.serviceDispatch.swapItems.length}).`;
   }
   if (state.sceneId === "universitySurvey") {
