@@ -340,6 +340,7 @@ async function clickButton(page, name) {
         && markerRect.bottom > decorRect.top
         && markerRect.top < decorRect.bottom);
       state.flags.finished = true;
+      state.flags.metJosh = true;
       window.render();
       const finishedShopMarkers = [...document.querySelectorAll(".interaction-marker")].map((marker) => ({
         text: marker.textContent,
@@ -667,6 +668,50 @@ async function clickButton(page, name) {
     assert(directVanLoad.nearbyBefore.startsWith("LOAD - Load carried items") && directVanLoad.interactBefore.startsWith("Interact: LOAD - "), "Nearby and interact copy should show the direct load action");
     assert(directVanLoad.loadedCount === 1 && directVanLoad.carriedCount === 0, "Direct van interaction should load carried cargo");
     assert(!directVanLoad.modalOpen, "Direct van loading should not open the van modal");
+
+    const naturalJoshIntro = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.finished = true;
+      state.flags.endShiftPending = true;
+      state.flags.endShiftSource = "Two Quick Carts";
+      state.flags.metJosh = false;
+      window.enterScene("shop");
+      window.render();
+      const modalHiddenBefore = document.querySelector("#modal-backdrop")?.classList.contains("hidden") || false;
+      const objectiveBefore = window.getObjective();
+      const interactionsBefore = window.getInteractions().map((interaction) => ({
+        label: interaction.label,
+        marker: window.getInteractionMarkerText(interaction),
+        state: interaction.taskState?.().id || "",
+      }));
+      window.showDispatchPreview();
+      const boardAttemptHidden = document.querySelector("#modal-backdrop")?.classList.contains("hidden") || false;
+      const promptedForJosh = state.log.some((entry) => entry.includes("Find Josh"));
+      window.getInteractions()[0].action();
+      const introText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const introButtons = [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent || "");
+      const interactionsAfterIntro = window.getInteractions().map((interaction) => interaction.label);
+      return {
+        modalHiddenBefore,
+        objectiveBefore,
+        interactionsBefore,
+        boardAttemptHidden,
+        promptedForJosh,
+        metJosh: Boolean(state.flags.metJosh),
+        introText,
+        introButtons,
+        interactionsAfterIntro,
+      };
+    });
+    assert(naturalJoshIntro.modalHiddenBefore, "Post-first-day Josh intro should not auto-open a modal");
+    assert(naturalJoshIntro.objectiveBefore.includes("Josh") && naturalJoshIntro.objectiveBefore.includes("before closing out"), "Post-first-day objective should require finding Josh first");
+    assert(naturalJoshIntro.interactionsBefore.length === 1 && naturalJoshIntro.interactionsBefore[0].label.includes("Josh") && naturalJoshIntro.interactionsBefore[0].marker === "JOSH", "Post-first-day shop should only expose the Josh workbench interaction");
+    assert(naturalJoshIntro.interactionsBefore[0].state === "ready", "Josh intro interaction should present as a ready task");
+    assert(naturalJoshIntro.boardAttemptHidden && naturalJoshIntro.promptedForJosh, "Board access should prompt the player to find Josh instead of opening Josh automatically");
+    assert(naturalJoshIntro.metJosh && naturalJoshIntro.introText.includes("The Person Keeping This Place Running"), "Walking to Josh should trigger the intro conversation");
+    assert(naturalJoshIntro.introButtons.some((label) => label.includes("Close Out Shift")), "Josh intro should hand the player back to shift closeout afterward");
+    assert(naturalJoshIntro.interactionsAfterIntro.some((label) => label.includes("Close out shift")), "After meeting Josh, shift closeout should become available again");
 
     const endShiftJoshGate = await page.evaluate(() => {
       window.startGame("prototype-tech");

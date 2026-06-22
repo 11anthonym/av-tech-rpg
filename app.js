@@ -2147,7 +2147,7 @@ function getVehicleMenuFlowMarkup() {
 }
 
 function showVehicleMenu() {
-  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
+  if (shouldIntroduceJoshBeforeNextDispatch()) return notifyJoshIntroRequired();
   const vehicle = getCurrentVehicle();
   const tutorialRoute = getWorldRoute("centerCityTutorial");
   const activeRoute = getWorldRoute(getCurrentDispatchRouteId()) || (isTutorialRouteReady() ? tutorialRoute : null);
@@ -2325,7 +2325,7 @@ function continueGame() {
 }
 
 function resumeRequiredPrompt() {
-  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
+  if (shouldIntroduceJoshBeforeNextDispatch()) return render();
   if (state.flags.endShiftPending) return showEndShiftModal();
   if (state.flags.finished && !state.flags.reward) return showResults();
   if (state.sceneId === "garage" && state.delivered.length === content.tutorial.garageUnload.length) {
@@ -2792,6 +2792,10 @@ function shouldIntroduceJoshBeforeNextDispatch() {
     && !state.flags.serviceComplete;
 }
 
+function notifyJoshIntroRequired() {
+  return notify("Find Josh at the workbench before closing out the first day.");
+}
+
 function shouldShowRetrofitInstallDebrief() {
   return state.sceneId === "shop"
     && state.flags.retrofitInstallComplete
@@ -2804,7 +2808,10 @@ function returnToShopAfterDispatch(source, message) {
   startEndShift(source);
   if (message) addLog(message);
   enterScene("shop");
-  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
+  if (shouldIntroduceJoshBeforeNextDispatch()) {
+    addLog("Josh is at the workbench. Find him before closing out the first day.");
+    return render();
+  }
   showEndShiftModal();
 }
 
@@ -2905,7 +2912,7 @@ function getShiftPrepSkillBonus(skillId) {
 }
 
 function showBreakArea() {
-  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
+  if (shouldIntroduceJoshBeforeNextDispatch()) return notifyJoshIntroRequired();
   if (state.flags.endShiftPending) return showEndShiftModal();
   showModal({
     kicker: "Break Area",
@@ -3110,7 +3117,7 @@ function jumpDebugScenario(scenarioId) {
   closeModal();
   if (scenarioId === "post-first-job") {
     applyDebugCompletedFirstJob({ metJosh: false, endShiftPending: true });
-    return showJoshConversation();
+    return render();
   }
   if (scenarioId === "service-ready") return applyDebugServiceReady();
   if (scenarioId === "service-complete") return applyDebugServiceComplete();
@@ -3766,7 +3773,7 @@ function getKnownDestinationMarkup() {
 }
 
 function showRegionalMap() {
-  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
+  if (shouldIntroduceJoshBeforeNextDispatch()) return notifyJoshIntroRequired();
   const currentArea = getCurrentWorldArea();
   const currentRegion = getWorldRegion(currentArea?.regionId);
   const fastTravelRoutes = getFastTravelRoutes();
@@ -4740,7 +4747,7 @@ function chooseReward(toolId) {
 }
 
 function showPersonalKit() {
-  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
+  if (shouldIntroduceJoshBeforeNextDispatch()) return notifyJoshIntroRequired();
   const ownedTools = state.tools.map((toolId) => content.tools[toolId]);
   const partsBrainActive = hasActivePartsBrainFind();
   showModal({
@@ -4785,7 +4792,7 @@ function useCircuitHutPartsBrain() {
 }
 
 function showCareerClipboard() {
-  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
+  if (shouldIntroduceJoshBeforeNextDispatch()) return notifyJoshIntroRequired();
   const rank = getCareerRank();
   const nextRank = getNextCareerRank();
   const pendingTraining = hasPendingTraining();
@@ -5162,7 +5169,7 @@ function receiveJoshLabeler() {
 }
 
 function showSupplyCounter() {
-  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
+  if (shouldIntroduceJoshBeforeNextDispatch()) return notifyJoshIntroRequired();
   const availableTools = Object.values(content.tools).filter((tool) => tool.price > 0 && !ownsTool(tool.id));
   showModal({
     kicker: "Radnor Rack & Wire Supply Counter",
@@ -5208,7 +5215,7 @@ function takeBreak() {
 }
 
 function showDispatchPreview() {
-  if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
+  if (shouldIntroduceJoshBeforeNextDispatch()) return notifyJoshIntroRequired();
   if (state.flags.endShiftPending) return showEndShiftModal();
   const entry = getCurrentDispatchBoardEntry();
   if (entry?.previewAction) return entry.previewAction();
@@ -9614,11 +9621,21 @@ function showServiceResults() {
 function getInteractions() {
   if (state.sceneId === "shop") {
     const warehouseActive = state.flags.warehouseStarted && !state.flags.warehouseComplete;
+    if (shouldIntroduceJoshBeforeNextDispatch()) {
+      return [{
+        x: 690, y: 245, label: "Talk to Josh at the workbench", npc: "JOSH",
+        taskState: () => getTaskState({
+          stateId: "ready",
+          detail: "First stop after the Center City job. Find Josh before closing out or taking another route.",
+        }),
+        action: showJoshConversation,
+      }];
+    }
     return [
       {
         x: 330, y: 330, label: "Talk to supervisor", npc: "SUP",
         action: () => {
-          if (shouldIntroduceJoshBeforeNextDispatch()) return showJoshConversation();
+          if (shouldIntroduceJoshBeforeNextDispatch()) return notifyJoshIntroRequired();
           if (state.flags.endShiftPending) return showEndShiftModal();
           if (state.flags.serviceComplete && hasPendingTraining()) return notify('Supervisor: "You leveled up fast. Mark a training focus on the clipboard before coordination adds anything else."');
           if (state.flags.finished) return notify('Supervisor: "Check the board when you are ready. It will still say quick, because coordination never learns."');
@@ -9659,7 +9676,7 @@ function getInteractions() {
       {
         x: 150, y: 270, label: "Read dispatch board",
         action: () => shouldIntroduceJoshBeforeNextDispatch()
-          ? showJoshConversation()
+          ? notifyJoshIntroRequired()
           : state.flags.endShiftPending
           ? showEndShiftModal()
           : state.flags.finished
