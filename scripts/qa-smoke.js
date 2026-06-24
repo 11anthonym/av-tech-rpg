@@ -874,7 +874,10 @@ async function clickButton(page, name) {
       state.loaded = [...window.GAME_CONTENT.tutorial.shopLoad];
       const route = window.getWorldRoute("centerCityTutorial");
       const choice = route.choices.find((item) => item.id === "loadingZoneGamble");
+      const originalRandom = Math.random;
+      Math.random = () => 0.9;
       window.travelRoute("centerCityTutorial", { routeChoice: choice });
+      Math.random = originalRandom;
       window.showRegionalMap();
       const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
       const result = state.flags.travelResults?.centerCityTutorial;
@@ -882,20 +885,48 @@ async function clickButton(page, name) {
         resultSaved: Boolean(result),
         choiceId: result?.choiceId || "",
         energyDelta: result?.energyDelta || 0,
+        riskLabel: result?.riskLabel || "",
+        riskHit: Boolean(result?.riskHit),
         arrivalClock: result?.arrivalClock || "",
         routeCount: state.flags.routeHistory?.centerCityTutorial || 0,
         cardShowsResult: modalText.includes("Last travel result")
           && modalText.includes("Try the loading-zone approach")
           && modalText.includes("-2 energy")
+          && modalText.includes("Curb conflict held")
           && modalText.includes("MON 7:58 AM"),
       };
     });
     assert(travelResult.resultSaved, "Route travel should save latest travel-result data");
     assert(travelResult.choiceId === "loadingZoneGamble", "Travel result should save the selected route choice");
     assert(travelResult.energyDelta === -2, "Travel result should save route energy delta");
+    assert(travelResult.riskLabel === "Curb conflict" && !travelResult.riskHit, "Travel result should save a held route-risk roll");
     assert(travelResult.arrivalClock === "MON 7:58 AM", "Travel result should save arrival clock");
     assert(travelResult.routeCount === 1, "Travel result should preserve route history count");
     assert(travelResult.cardShowsResult, "Regional map route card should show latest travel result");
+
+    const failedTravelRisk = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.shopBrief = true;
+      state.loaded = [...window.GAME_CONTENT.tutorial.shopLoad];
+      const route = window.getWorldRoute("centerCityTutorial");
+      const choice = route.choices.find((item) => item.id === "loadingZoneGamble");
+      const originalRandom = Math.random;
+      Math.random = () => 0.1;
+      window.travelRoute("centerCityTutorial", { routeChoice: choice });
+      Math.random = originalRandom;
+      const result = state.flags.travelResults?.centerCityTutorial;
+      return {
+        energyDelta: result?.energyDelta || 0,
+        burnoutDelta: result?.burnoutDelta || 0,
+        riskHit: Boolean(result?.riskHit),
+        riskDetail: result?.riskDetail || "",
+        logShowsRisk: state.log.some((entry) => entry.includes("Loading-zone gamble failed")),
+      };
+    });
+    assert(failedTravelRisk.energyDelta === -4 && failedTravelRisk.burnoutDelta === 1, "Failed route-risk roll should add immediate energy and burnout pressure");
+    assert(failedTravelRisk.riskHit && failedTravelRisk.riskDetail.includes("security"), "Failed route-risk roll should save readable detail");
+    assert(failedTravelRisk.logShowsRisk, "Failed route-risk roll should log the immediate travel outcome");
 
     const transitionGuidance = await page.evaluate(() => {
       window.startGame("prototype-tech");

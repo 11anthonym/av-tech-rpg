@@ -834,6 +834,20 @@ window.GAME_CONTENT = {
             detail: "Save a few minutes near the building, but burn energy dealing with curb pressure that nobody actually arranged.",
             arrivalTime: "7:58 AM",
             energyDelta: -2,
+            riskRoll: {
+              label: "Curb conflict",
+              chance: 0.35,
+              success: {
+                detail: "The curb stays clear long enough. You still spend energy working the loading zone, but no extra pressure follows.",
+                log: "Loading-zone gamble held; curb access stayed clear long enough.",
+              },
+              failure: {
+                detail: "Building security waves the van off mid-unload. The saved minutes turn into stress before the job even starts.",
+                energyDelta: -2,
+                burnoutDelta: 1,
+                log: "Loading-zone gamble failed; building security pushed the van off the curb mid-unload.",
+              },
+            },
             log: "Tried the loading-zone approach. It saved minutes and spent them immediately on curb stress.",
           },
           {

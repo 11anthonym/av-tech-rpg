@@ -2167,7 +2167,7 @@ function showVehicleMenu() {
       </div>
       <p class="muted">Use the van to check cargo, review prep, open the map, or drive when the job is ready.</p>
       <h3>Current Work</h3>
-      ${getWorkdayLoopGuidanceMarkup()}
+      ${getCurrentStepGuidanceMarkup()}
       ${getVehicleMenuFlowMarkup()}
     `,
     actions: [
@@ -2760,7 +2760,7 @@ function showShiftResultModal({ choice, source, before, recovery }) {
       <h3>What Changed</h3>
       ${getTrackedStateDeltaMarkup(before)}
       <h3>Next Step</h3>
-      ${getCurrentStepListMarkup({ includeLoopPath: false })}
+      ${getCurrentStepListMarkup({ includeDayPlan: false })}
     `,
     actions: [
       ...(canReviewBoard ? [{ label: "Review Dispatch Board Routes", onClick: showDispatchPreview }] : []),
@@ -3638,11 +3638,20 @@ function getTravelResultDeltaText(result) {
   return deltas.length ? deltas.join(", ") : "no stat change";
 }
 
+function getTravelRiskResultText(result) {
+  if (!result?.riskLabel) return "";
+  const rollText = Number.isFinite(result.riskRoll) && Number.isFinite(result.riskChance)
+    ? ` Rolled ${formatChance(result.riskRoll)} against ${formatChance(result.riskChance)}.`
+    : "";
+  const outcome = result.riskHit ? "hit" : "held";
+  return ` Risk: ${result.riskLabel} ${outcome}.${rollText}${result.riskDetail ? ` ${result.riskDetail}` : ""}`;
+}
+
 function getTravelResultText(result) {
   if (!result) return "";
   const arrival = result.arrivalClock ? ` Arrived ${result.arrivalClock}.` : "";
   const count = result.travelCount ? ` Route driven ${result.travelCount} time${result.travelCount === 1 ? "" : "s"}.` : "";
-  return `${result.mode || "Drive"}: ${getTravelResultDeltaText(result)}.${arrival}${count}`;
+  return `${result.mode || "Drive"}: ${getTravelResultDeltaText(result)}.${arrival}${count}${getTravelRiskResultText(result)}`;
 }
 
 function getLastTravelResult(route) {
@@ -3660,6 +3669,7 @@ function getRouteTravelCostRisk(route) {
       if (choice.cashDelta) impacts.push(`${choice.cashDelta > 0 ? "+" : "-"}$${Math.abs(choice.cashDelta)}`);
       if (choice.burnoutDelta) impacts.push(`${choice.burnoutDelta > 0 ? "+" : ""}${choice.burnoutDelta} burnout`);
       if (choice.arrivalTime && choice.arrivalTime !== route.arrivalTime) impacts.push(`arrival ${choice.arrivalTime}`);
+      if (choice.riskRoll?.chance) impacts.push(`${formatChance(choice.riskRoll.chance)} ${choice.riskRoll.label || "risk"}`);
       return `${choice.label}${impacts.length ? ` (${impacts.join(", ")})` : ""}`;
     });
     costs.push(`choices: ${choiceImpacts.join("; ")}`);
@@ -3808,7 +3818,7 @@ function showRegionalMap() {
       </div>
       <p class="muted">Fast travel unlocks after you have driven an eligible route once. It still respects active board prep and costs route energy.</p>
       <h3>Current Work</h3>
-      ${getWorkdayLoopGuidanceMarkup()}
+      ${getCurrentStepGuidanceMarkup()}
       <h3>Known Destinations</h3>
       ${getKnownDestinationMarkup()}
       <h3>Area Transitions</h3>
@@ -3941,7 +3951,7 @@ function getPortalCardRows(portal) {
     { label: "Status", detail: getPortalStatusText(portal) },
     { label: "Requirement", detail: getPortalRequirementText(portal) },
     { label: portal?.kind === "returnRoute" ? "Return effect" : "Travel effect", detail: getPortalTravelEffectText(portal) },
-    { label: "Now", detail: getWorkdayLoopStage(getObjective()) },
+    { label: "Now", detail: getCurrentStepStage(getObjective()) },
   ];
 }
 
@@ -4020,7 +4030,7 @@ function recordRouteTravel(route, routeChoice = null) {
   if (route.toAreaId) state.flags.currentAreaId = route.toAreaId;
 }
 
-function recordTravelResult(route, routeChoice = null, { fastTravel = false, before = {} } = {}) {
+function recordTravelResult(route, routeChoice = null, { fastTravel = false, before = {}, routeOutcome = null } = {}) {
   const result = {
     routeId: route.id,
     destination: route.toLabel,
@@ -4032,6 +4042,11 @@ function recordTravelResult(route, routeChoice = null, { fastTravel = false, bef
     startClock: before.clock || "",
     arrivalClock: state.clock,
     travelCount: getRouteTravelCount(route.id),
+    riskLabel: routeOutcome?.risk?.label || "",
+    riskHit: Boolean(routeOutcome?.risk?.hit),
+    riskRoll: routeOutcome?.risk?.roll ?? null,
+    riskChance: routeOutcome?.risk?.chance ?? null,
+    riskDetail: routeOutcome?.risk?.detail || "",
   };
   state.flags.travelResults ||= {};
   state.flags.travelResults[route.id] = result;
@@ -4041,12 +4056,36 @@ function recordTravelResult(route, routeChoice = null, { fastTravel = false, bef
   addLog(`Travel result recorded for ${route.toLabel}: ${getTravelResultDeltaText(result)}.`);
 }
 
+function applyRouteTravelEffect(effect = {}) {
+  if (effect.energyDelta) changeEnergy(effect.energyDelta);
+  if (effect.cashDelta) state.cash += effect.cashDelta;
+  if (effect.burnoutDelta) state.burnout = Math.max(0, state.burnout + effect.burnoutDelta);
+}
+
+function resolveRouteChoiceRisk(route, routeChoice) {
+  const risk = routeChoice?.riskRoll;
+  if (!risk?.chance) return null;
+  const roll = Math.random();
+  const hit = roll < risk.chance;
+  const outcome = hit ? risk.failure || {} : risk.success || {};
+  applyRouteTravelEffect(outcome);
+  addLog(outcome.log || `${risk.label || routeChoice.label} ${hit ? "hit" : "held"} on the ${route.toLabel} route.`);
+  return {
+    label: risk.label || "Route risk",
+    chance: risk.chance,
+    roll,
+    hit,
+    detail: outcome.detail || "",
+  };
+}
+
 function applyRouteChoice(route, routeChoice) {
-  if (!routeChoice) return;
-  if (routeChoice.energyDelta) changeEnergy(routeChoice.energyDelta);
-  if (routeChoice.cashDelta) state.cash += routeChoice.cashDelta;
-  if (routeChoice.burnoutDelta) state.burnout = Math.max(0, state.burnout + routeChoice.burnoutDelta);
+  if (!routeChoice) return {};
+  applyRouteTravelEffect(routeChoice);
   addLog(routeChoice.log || `${routeChoice.label} selected for ${route.toLabel}.`);
+  return {
+    risk: resolveRouteChoiceRisk(route, routeChoice),
+  };
 }
 
 function applyFastTravelRoute(route) {
@@ -4069,13 +4108,13 @@ function travelRoute(routeId, { beforeTravel, afterTravel, routeChoice, fastTrav
     clock: state.clock,
   };
   if (fastTravel) applyFastTravelRoute(route);
-  applyRouteChoice(route, routeChoice);
+  const routeOutcome = applyRouteChoice(route, routeChoice);
   if (route.packedLunchContext) consumePackedLunch(route.packedLunchContext);
   const arrivalClock = getRouteArrivalClock(route, routeChoice);
   if (arrivalClock) setClock(arrivalClock);
   if (route.arrivalLog) addLog(route.arrivalLog);
   recordRouteTravel(route, routeChoice);
-  recordTravelResult(route, routeChoice, { fastTravel, before });
+  recordTravelResult(route, routeChoice, { fastTravel, before, routeOutcome });
   if (afterTravel) return afterTravel(route);
   if (route.destinationSceneId) return enterScene(route.destinationSceneId);
   return render();
@@ -4198,6 +4237,7 @@ function getRouteChoiceImpactMarkup(choice) {
   if (choice.energyDelta) impacts.push(`${choice.energyDelta > 0 ? "+" : ""}${choice.energyDelta} energy`);
   if (choice.cashDelta) impacts.push(`${choice.cashDelta > 0 ? "+" : "-"}$${Math.abs(choice.cashDelta)}`);
   if (choice.burnoutDelta) impacts.push(`${choice.burnoutDelta > 0 ? "+" : ""}${choice.burnoutDelta} burnout`);
+  if (choice.riskRoll?.chance) impacts.push(`${formatChance(choice.riskRoll.chance)} ${choice.riskRoll.label || "risk"}`);
   return impacts.length ? ` <em>${escapeHtml(impacts.join(" / "))}</em>` : "";
 }
 
@@ -5740,7 +5780,7 @@ function getDispatchJobOverviewRowsMarkup({ type, setup, familyId = "", routeId 
 function getDispatchBoardMarkup({ type, setup, why, stakes = [], note, managementNote, prep = "", taskCards = [], fieldTasks = [], familyId = "", routeId = "", consequenceHooks = [], showBoardState = true }) {
   return `
     <p><strong>${type}:</strong> ${setup}</p>
-    ${getWorkdayLoopGuidanceMarkup()}
+    ${getCurrentStepGuidanceMarkup()}
     <ul class="modal-list">
       ${showBoardState ? getDispatchBoardStateMarkup() : ""}
       ${getDispatchJobOverviewRowsMarkup({ type, setup, familyId, routeId, consequenceHooks })}
@@ -8974,8 +9014,12 @@ function getServiceRoomIncidentEntries() {
   return state.flags.serviceRoomIncidents;
 }
 
-function formatServiceIncidentChance(chance = 0) {
+function formatChance(chance = 0) {
   return `${Math.round(chance * 100)}%`;
+}
+
+function formatServiceIncidentChance(chance = 0) {
+  return formatChance(chance);
 }
 
 function rollServiceImmediateIncident(option, rollOverride = null) {
@@ -10726,7 +10770,7 @@ function notify(message) {
   render();
 }
 
-function getWorkdayLoopStage(objective = "") {
+function getCurrentStepStage(objective = "") {
   if (!state.sceneId) return "Workday";
   if (state.sceneId === "shop") {
     if (state.flags.endShiftPending) return "Return / End Shift";
@@ -10747,7 +10791,7 @@ function getWorkdayLoopStage(objective = "") {
   return "Job Site / Field Tasks";
 }
 
-function getWorkdayLoopInterfaceHint(objective = "") {
+function getCurrentStepCue(objective = "") {
   if (/dispatch board/i.test(objective)) return "Open the dispatch board or review the route from the van.";
   if (/van|load staged equipment|center city east/i.test(objective)) return "Use Van #3 for cargo, map, and route choices.";
   if (/exit|return to radnor/i.test(objective)) return "Use the marked exit or RETURN point.";
@@ -10756,15 +10800,15 @@ function getWorkdayLoopInterfaceHint(objective = "") {
   return "Use the nearest highlighted interaction.";
 }
 
-function getWorkdayLoopGuidance(objective = resolveCurrentObjective().text) {
+function getCurrentStepGuidance(objective = resolveCurrentObjective().text) {
   return {
-    stage: getWorkdayLoopStage(objective),
+    stage: getCurrentStepStage(objective),
     objective,
-    interfaceHint: getWorkdayLoopInterfaceHint(objective),
+    interfaceHint: getCurrentStepCue(objective),
   };
 }
 
-function getWorkdayLoopPath(stage) {
+function getDayPlanPath(stage) {
   const steps = [
     "Shop",
     "Van / Dispatch Board",
@@ -10790,7 +10834,7 @@ function getWorkdayLoopPath(stage) {
   return steps.map((step) => step === current ? `[${step}]` : step).join(" -> ");
 }
 
-function getCurrentLoopRoute() {
+function getCurrentStepRoute() {
   const currentRoute = getWorldRoute(getCurrentDispatchRouteId());
   if (currentRoute) return currentRoute;
   const tutorialRoute = getWorldRoute("centerCityTutorial");
@@ -10800,7 +10844,7 @@ function getCurrentLoopRoute() {
 
 function getCurrentObjectiveContext() {
   const area = getCurrentWorldArea();
-  const route = getCurrentLoopRoute();
+  const route = getCurrentStepRoute();
   const returnPortal = getCurrentReturnPortal();
   const visiblePortals = getCurrentAreaPortals();
   const lockedPortals = visiblePortals.filter((portal) => !isPortalReady(portal));
@@ -10848,7 +10892,7 @@ function resolveCurrentObjective() {
 
 function getCurrentRouteBriefText() {
   if (state.flags.endShiftPending) return "Travel is paused until the shift closeout is complete.";
-  const route = getCurrentLoopRoute();
+  const route = getCurrentStepRoute();
   if (route) {
     const job = getRouteJobData(route.id);
     const lockReason = getRouteLockReason(route);
@@ -10894,22 +10938,22 @@ function getCurrentConsequenceBriefText() {
 }
 
 function getCurrentStepBrief(objective = resolveCurrentObjective().text) {
-  const guidance = getWorkdayLoopGuidance(objective);
+  const guidance = getCurrentStepGuidance(objective);
   return {
     ...guidance,
-    loopPath: getWorkdayLoopPath(guidance.stage),
+    dayPlan: getDayPlanPath(guidance.stage),
     route: getCurrentRouteBriefText(),
     consequences: getCurrentConsequenceBriefText(),
     conditionPressure: getConditionPressureSummary(),
   };
 }
 
-function getCurrentStepRows({ includeLoopPath = true } = {}) {
+function getCurrentStepRows({ includeDayPlan = true } = {}) {
   const brief = getCurrentStepBrief();
   const transitionBrief = getCurrentAreaTransitionBriefText();
   return [
     { label: "Now", detail: brief.stage },
-    includeLoopPath ? { label: "Day plan", detail: brief.loopPath } : null,
+    includeDayPlan ? { label: "Day plan", detail: brief.dayPlan } : null,
     { label: "Next", detail: brief.objective },
     { label: "Nearby cue", detail: brief.interfaceHint },
     transitionBrief ? { label: "Area transitions", detail: transitionBrief } : null,
@@ -10919,25 +10963,25 @@ function getCurrentStepRows({ includeLoopPath = true } = {}) {
   ].filter(Boolean);
 }
 
-function getCurrentStepListMarkup({ className = "modal-list", includeLoopPath = true } = {}) {
+function getCurrentStepListMarkup({ className = "modal-list", includeDayPlan = true } = {}) {
   return `
     <ul class="${className}">
-      ${getCurrentStepRows({ includeLoopPath }).map((row) => `<li><strong>${escapeHtml(row.label)}</strong><span>${escapeHtml(row.detail)}</span></li>`).join("")}
+      ${getCurrentStepRows({ includeDayPlan }).map((row) => `<li><strong>${escapeHtml(row.label)}</strong><span>${escapeHtml(row.detail)}</span></li>`).join("")}
     </ul>
   `;
 }
 
 function getCurrentStepPanelMarkup() {
-  return getCurrentStepListMarkup({ className: "current-step-list", includeLoopPath: false });
+  return getCurrentStepListMarkup({ className: "current-step-list", includeDayPlan: false });
 }
 
-function getWorkdayLoopGuidanceText() {
-  return getCurrentStepRows({ includeLoopPath: false })
+function getCurrentStepGuidanceText() {
+  return getCurrentStepRows({ includeDayPlan: false })
     .map((row) => `${row.label}: ${row.detail}`)
     .join(" ");
 }
 
-function getWorkdayLoopGuidanceMarkup() {
+function getCurrentStepGuidanceMarkup() {
   return getCurrentStepListMarkup();
 }
 
