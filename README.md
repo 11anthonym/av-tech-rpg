@@ -125,20 +125,21 @@ The prototype autosaves the active career in the browser's local storage. Use
 Career` to remove the local save. A save created from a directly opened file is
 separate from a save created on a hosted website.
 
-The hosted page cache-busts `styles.css`, `data.js`, and `app.js` on each load
-so a hard refresh can pick up the newest deployed files without clearing the
-saved career. The save key remains `av-tech-rpg-save-v1`; only an intentional
-save migration or save-key change should reset prototype progress.
+The hosted page cache-busts `styles.css` and the ordered browser script list on
+each load so a hard refresh can pick up the newest deployed files without
+clearing the saved career. The save key remains `av-tech-rpg-save-v1`; only an
+intentional save migration or save-key change should reset prototype progress.
 
 ## Share Online
 
 Play the hosted version at
 [https://11anthonym.github.io/av-tech-rpg/](https://11anthonym.github.io/av-tech-rpg/).
 
-The game is a static website: `index.html`, `styles.css`, `data.js`, and
-`app.js`. It can be hosted without a build step on GitHub Pages, Netlify,
-Cloudflare Pages, or any ordinary static web host. GitHub Pages is the simplest
-repository-based option for a public play link.
+The game is a static website: `index.html`, `styles.css`, `data.js`, `app.js`,
+and a small set of plain browser helper scripts loaded by `index.html`. It can
+be hosted without a build step on GitHub Pages, Netlify, Cloudflare Pages, or
+any ordinary static web host. GitHub Pages is the simplest repository-based
+option for a public play link.
 
 ## Development
 
@@ -155,3 +156,11 @@ python -m http.server 4173 --bind 127.0.0.1
 
 Then open [http://127.0.0.1:4173](http://127.0.0.1:4173). Use `WASD` or the
 arrow keys to walk and `E`, `Space`, or the on-screen button to interact.
+
+Before pushing structural changes, run the static script guard and the browser
+smoke test:
+
+```powershell
+node scripts/qa-static-scripts.js
+$env:NODE_PATH="<path-to-playwright-node-modules>"; node scripts/qa-smoke.js
+```
