@@ -175,6 +175,21 @@
     <script>
       (() => {
         const version = window.AV_TECH_RPG_ASSET_VERSION || Date.now().toString(36);
+        const scripts = [
+          "data.js",
+          "app.js",
+          "save-system.js",
+          "field-task-system.js",
+          "route-system.js",
+          "consequence-system.js",
+          "dispatch-board-system.js",
+          "portal-system.js",
+          "objective-system.js",
+          "job-card-system.js",
+          "vehicle-system.js",
+          "regional-map-system.js",
+          "bootstrap.js",
+        ];
         const loadScript = (src, onLoad) => {
           const script = document.createElement("script");
           script.src = `${src}?v=${version}`;
@@ -184,7 +199,12 @@
           };
           document.body.appendChild(script);
         };
-        loadScript("data.js", () => loadScript("app.js", () => loadScript("save-system.js", () => loadScript("field-task-system.js", () => loadScript("route-system.js", () => loadScript("consequence-system.js", () => loadScript("dispatch-board-system.js", () => loadScript("portal-system.js", () => loadScript("objective-system.js", () => loadScript("job-card-system.js", () => loadScript("vehicle-system.js", () => loadScript("regional-map-system.js", () => loadScript("bootstrap.js")))))))))))));
+        const loadNext = (index = 0) => {
+          const src = scripts[index];
+          if (!src) return;
+          loadScript(src, () => loadNext(index + 1));
+        };
+        loadNext();
       })();
     </script>
   </body>
