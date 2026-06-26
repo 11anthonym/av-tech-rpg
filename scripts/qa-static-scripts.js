@@ -31,9 +31,19 @@ function assertNoDuplicates(scripts) {
 }
 
 function assertScriptOrder(scripts) {
-  assert(scripts[0] === "data.js", "data.js must load first so GAME_CONTENT exists.");
-  assert(scripts[1] === "app.js", "app.js must load second so shared state and base helpers exist.");
-  assert(scripts.at(-1) === "bootstrap.js", "bootstrap.js must load last so extracted helpers are available before startup.");
+  assert(scripts[0] === "src/content/data.js", "src/content/data.js must load first so GAME_CONTENT exists.");
+  assert(scripts[1] === "src/core/app.js", "src/core/app.js must load second so shared state and base helpers exist.");
+  assert(scripts.at(-1) === "src/core/bootstrap.js", "src/core/bootstrap.js must load last so extracted helpers are available before startup.");
+}
+
+function assertScriptLayout(scripts) {
+  const misplaced = scripts.filter((script) => {
+    if (script === "src/content/data.js") return false;
+    if (script === "src/core/app.js") return false;
+    if (script === "src/core/bootstrap.js") return false;
+    return !script.startsWith("src/systems/");
+  });
+  assert(!misplaced.length, `Runtime scripts should live under src/content, src/core, or src/systems: ${misplaced.join(", ")}`);
 }
 
 function assertFilesExist(scripts) {
@@ -54,7 +64,7 @@ function assertSyntax(scripts) {
 }
 
 function assertExtractedHelpersAfterApp(scripts) {
-  const appIndex = scripts.indexOf("app.js");
+  const appIndex = scripts.indexOf("src/core/app.js");
   const systemScripts = scripts.filter((script) => script.endsWith("-system.js"));
   const beforeApp = systemScripts.filter((script) => scripts.indexOf(script) < appIndex);
   assert(!beforeApp.length, `System helpers should load after app.js: ${beforeApp.join(", ")}`);
@@ -64,6 +74,7 @@ const scripts = readIndexScripts();
 assert(scripts.length > 0, "No scripts found in the static loader list.");
 assertNoDuplicates(scripts);
 assertScriptOrder(scripts);
+assertScriptLayout(scripts);
 assertFilesExist(scripts);
 assertExtractedHelpersAfterApp(scripts);
 assertSyntax(scripts);

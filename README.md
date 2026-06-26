@@ -101,6 +101,9 @@ The current vertical slice is scoped in
 Instructions for extending the data-driven prototype live in
 [docs/ADDING_CONTENT.md](docs/ADDING_CONTENT.md).
 
+The current static browser file organization is documented in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 The design-reference notes live in
 [docs/DESIGN_REFERENCES.md](docs/DESIGN_REFERENCES.md).
 
@@ -135,11 +138,11 @@ intentional save migration or save-key change should reset prototype progress.
 Play the hosted version at
 [https://11anthonym.github.io/av-tech-rpg/](https://11anthonym.github.io/av-tech-rpg/).
 
-The game is a static website: `index.html`, `styles.css`, `data.js`, `app.js`,
-and a small set of plain browser helper scripts loaded by `index.html`. It can
-be hosted without a build step on GitHub Pages, Netlify, Cloudflare Pages, or
-any ordinary static web host. GitHub Pages is the simplest repository-based
-option for a public play link.
+The game is a static website: `index.html`, `styles.css`, content in
+`src/content/`, core startup/orchestration in `src/core/`, and no-build browser
+systems in `src/systems/`. It can be hosted without a build step on GitHub
+Pages, Netlify, Cloudflare Pages, or any ordinary static web host. GitHub Pages
+is the simplest repository-based option for a public play link.
 
 ## Development
 

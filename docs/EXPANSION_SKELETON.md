@@ -142,7 +142,7 @@ What not to copy blindly:
 Then implement in this order:
 
 1. Add or reuse a job family in `content.jobFamilies`.
-2. Add the job's content block in `data.js`.
+2. Add the job's content block in `src/content/data.js`.
 3. Add the scene layout if it needs a new walkable space.
 4. Add a dispatch preview using `getDispatchBoardMarkup({ familyId })`.
 5. Use `resolveSkillCheck()` for one to three meaningful task checks.
@@ -529,7 +529,7 @@ be easy to verify in the browser.
 77. **Done - Static asset bootstrap cleanup pass:** Replaced `document.write()`
    cache-busting with small DOM-created stylesheet and script loaders. The page
    still stays no-build and GitHub Pages friendly, but avoids parser-writing
-   behavior and keeps `data.js` loading before `app.js`.
+   behavior and keeps `src/content/data.js` loading before `src/core/app.js`.
 78. **Done - Dispatch action cleanup pass:** Route-backed dispatch previews now
    share one `getDispatchRoutePrepAction()` helper and one player-facing
    "Review Route & Prep" button. This removes bespoke route-prep action labels

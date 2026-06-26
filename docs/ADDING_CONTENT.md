@@ -2,13 +2,18 @@
 
 The prototype separates content from game logic:
 
-- `data.js` contains technicians, tools, vehicles, world areas/routes, tutorial
-  items, and scene layouts.
-- `app.js` contains movement, interaction rules, progression, and rendering.
+- `src/content/data.js` contains technicians, tools, vehicles, world
+  areas/routes, tutorial items, and scene layouts.
+- `src/core/app.js` contains the remaining scene orchestration and rendering
+  entry points.
+- `src/systems/` contains focused browser systems for save migration, routes,
+  portals, vehicles, job cards, field tasks, consequences, conditions, the shop
+  hub, and the daily shift rhythm.
 - `styles.css` contains presentation.
 
-Start by editing `data.js`. Most new content should not require changes to the
-game engine.
+Start by editing `src/content/data.js`. Most new content should not require
+changes to `src/core/app.js`; if behavior is needed, prefer the matching
+`src/systems/*-system.js` file.
 
 ## Save Data
 
@@ -35,7 +40,7 @@ build.
 
 ## Add a Tool
 
-1. Open `data.js`.
+1. Open `src/content/data.js`.
 2. Add a new entry inside `tools`.
 3. Give it a unique ID, name, description, and readable effect.
 4. Add the ID to `tutorial.rewardTools` if it should appear after the tutorial.
@@ -56,7 +61,8 @@ labeler: {
 
 Set `price` to a positive number to stock the tool at the post-tutorial supply
 counter. The HUD renders the `effect` text automatically. Modifier keys only
-change gameplay after `app.js` reads them. The first reusable modifiers are:
+change gameplay after the relevant system helper reads them. The first reusable
+modifiers are:
 
 - `pickupEnergyReduction`
 - `assemblyEnergyReduction`
@@ -69,17 +75,19 @@ rendered, and then folded into task checks. For example, a drill can add
 `install: 1`, a labeler can add `documentation: 1`, and a tool bag can add
 `fieldcraft: 1`.
 
-When a tool needs a new kind of behavior, add its modifier to `data.js`, read it
-through `getToolModifier()` in `app.js`, and keep the tool ID stable.
+When a tool needs a new kind of behavior, add its modifier to
+`src/content/data.js`, read it through `getToolModifier()` from the relevant
+system, and keep the tool ID stable.
 
 ## Add Career Progression
 
-`data.js` contains the early career ranks, skill tree, and field-training
-goals, and field-training choices. Each rank has a level, display name, and
-experience requirement. Each career goal has a stable ID, readable name, metric,
-target, and reward preview. Each skill has a stable ID, readable branch, display
-name, and description. Each training choice has a stable ID, branch,
-description, readable effect, modifier map, and optional `skillBonuses` map.
+`src/content/data.js` contains the early career ranks, skill tree,
+field-training goals, and field-training choices. Each rank has a level,
+display name, and experience requirement. Each career goal has a stable ID,
+readable name, metric, target, and reward preview. Each skill has a stable ID,
+readable branch, display name, and description. Each training choice has a
+stable ID, branch, description, readable effect, modifier map, and optional
+`skillBonuses` map.
 
 The current reusable skill IDs are:
 
@@ -116,16 +124,17 @@ values that future jobs can branch from. If a new metric is not already covered
 by `getCareerGoalValue()`, add it there rather than hardcoding display text in a
 job modal.
 
-Skills affect deterministic task checks in `app.js`. A task compares the
-active technician's skill value plus tools, training, and small prep bonuses
-against a difficulty. Results are visible in the field log or modal text. A
-passed check can reduce energy or protect the closeout; a strained check can
-cost extra energy, soften reputation gains, lower XP, add callback risk, or
-make a later choice more important.
+Skills affect deterministic task checks through
+`src/systems/field-task-system.js` and job-specific orchestration. A task
+compares the active technician's skill value plus tools, training, and small
+prep bonuses against a difficulty. Results are visible in the field log or
+modal text. A passed check can reduce energy or protect the closeout; a strained
+check can cost extra energy, soften reputation gains, lower XP, add callback
+risk, or make a later choice more important.
 
 When adding a new task check:
 
-1. Add or reuse a skill in `data.js`.
+1. Add or reuse a skill in `src/content/data.js`.
 2. Prefer structured task metadata with `id`, `label`, `type`, `skillId`,
    `difficulty`, `energyCost`, `requiredTool`, `optionalTool`, `contextId`,
    success/strained text, and risk labels.
@@ -152,7 +161,8 @@ The chosen task lives in `content.commissioningDispatch.terminationTasks`, write
 to `fieldTaskResults`, and then changes the final closeout, reputation, XP,
 callback debt, and career ledger.
 
-Jobs award experience and reputation in `app.js` when their result is recorded.
+Jobs award experience and reputation through job-specific orchestration and
+`src/systems/shift-system.js` when their result is recorded.
 Keep those awards guarded by a saved flag so reopening a result modal cannot
 grant the same progression twice.
 
@@ -196,7 +206,7 @@ creating scene-specific movement penalties.
 
 Coworker relationship milestones can grant a tool without stocking it at the
 supply counter. Keep the tool's `price` at `0`, give the relationship a readable
-reputation requirement in `data.js`, and award the stable tool ID from the
+reputation requirement in `src/content/data.js`, and award the stable tool ID from the
 shop interaction after the requirement is met.
 
 The Conshohocken service call and University City survey each have one lightweight
@@ -204,7 +214,7 @@ preparation choice before travel. Keep preparation effects small and legible:
 one saved flag, one visible payoff during the job, and no separate inventory
 screen.
 
-Add future job ideas to `upcomingDispatches` in `data.js` before implementing
+Add future job ideas to `upcomingDispatches` in `src/content/data.js` before implementing
 them. The current-prototype summary renders these as locked previews so players
 can see nearby goals without expanding the playable scope prematurely.
 
@@ -270,7 +280,7 @@ same fields the current premade technicians already use.
 
 When adding creator content:
 
-1. Add a `background`, `workStyle`, or `trait` in `data.js`.
+1. Add a `background`, `workStyle`, or `trait` in `src/content/data.js`.
 2. Give it a stable ID, readable name, effect, and tradeoff.
 3. Use `skillBonuses`, `statModifiers`, and `startingTools` where the choice
    should affect the derived technician.
@@ -345,7 +355,7 @@ flavor text or revealing every cost only after the click.
 
 ## Add Character-Specific Lines
 
-`data.js` has a `characterLines` object keyed by technician ID. Scene logic can
+`src/content/data.js` has a `characterLines` object keyed by technician ID. Scene logic can
 call `getCharacterLine("lineId", fallback)` and safely fall back to default text
 when the active character has no custom line.
 
@@ -556,7 +566,7 @@ should walk around. Leave signs and floor notes non-solid. The movement engine
 handles collision automatically.
 
 Scene-specific interactions still belong in `getInteractions()` inside
-`app.js`. Add `npc: "SUP"` or another short label to an interaction when it
+`src/core/app.js`. Add `npc: "SUP"` or another short label to an interaction when it
 should render as a visible person. Keep new maps small and test whether every
 walking trip creates a decision, a joke, or a useful sense of place.
 
@@ -611,7 +621,7 @@ new job.
 
 The implementation is intentionally hand-authored:
 
-- `content.systemsDispatch` in `data.js` stores the title, summary, task cards,
+- `content.systemsDispatch` in `src/content/data.js` stores the title, summary, task cards,
   and three check definitions.
 - `content.scenes.systemsService` stores the small walkable room.
 - `showSystemsDispatchPreview()` renders the dispatch-board pitch.

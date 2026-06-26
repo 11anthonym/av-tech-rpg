@@ -46,7 +46,8 @@ through use.
    profile and an example formula that custom characters can approximate.
 4. Keep early choices readable in the first dispatch. If a background or trait
    does not affect an early task, it should not be in the first creator pass.
-5. Prefer data definitions in `data.js` over one-off conditionals in `app.js`.
+5. Prefer data definitions in `src/content/data.js` over one-off conditionals
+   in `src/core/app.js` or job-specific systems.
 
 ## Creation Formula
 
