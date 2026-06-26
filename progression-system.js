@@ -136,6 +136,14 @@ function formatSignedNumber(value) {
   return value > 0 ? `+${value}` : `${value}`;
 }
 
+function formatReputation(value) {
+  return value > 0 ? `+${value}` : `${value}`;
+}
+
+function formatReputationDelta(reputation) {
+  return `Client ${formatReputation(reputation.clients || 0)} / Team ${formatReputation(reputation.coworkers || 0)} / Mgmt ${formatReputation(reputation.management || 0)}`;
+}
+
 function getSkillBonusLabel(skillBonuses = {}) {
   const entries = Object.entries(skillBonuses).filter(([, bonus]) => bonus);
   if (!entries.length) return "";
