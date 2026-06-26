@@ -8,13 +8,39 @@ from `index.html`.
 
 - `src/content/data.js` owns content data: technicians, tools, vehicles, world
   definitions, scenes, routes, job metadata, and dispatch text.
-- `src/core/app.js` owns shared runtime state, DOM element references, startup
-  orchestration, rendering, and the remaining job-specific scene flow.
-- `src/core/bootstrap.js` starts the game after every runtime script has loaded.
+- `src/core/app.js` is the lean shared runtime root. It owns initial state,
+  shared constants, DOM element references, and tiny global utilities.
+- `src/core/bootstrap.js` owns DOM event wiring and starts the game after every
+  runtime script has loaded.
 - `src/systems/*-system.js` files own focused systems such as routes, portals,
   saves, vehicles, objectives, job cards, conditions, consequences, daily
-  shifts, the shop hub, and field tasks.
+  shifts, the shop hub, field tasks, dispatch flows, rendering, interaction
+  markers, and movement.
 - `scripts/` contains developer QA scripts and is not loaded by the game.
+
+## System Boundaries
+
+The current split is intentionally plain browser JavaScript instead of a module
+graph. Each system file exposes focused helpers into the shared runtime scope,
+and `src/core/bootstrap.js` is the only file that wires events and starts the
+app.
+
+- State and shared runtime handles stay in `src/core/app.js`.
+- Startup and browser event wiring stay in `src/core/bootstrap.js`.
+- Technician profile selection and career start stay in `character-system.js`.
+- Save migration and continue/new-career behavior stay in `save-system.js`.
+- Player movement stays in `movement-system.js`.
+- Scene drawing and HUD refresh stay in `render-system.js`.
+- Nearby-object/portal/contact marker presentation stays in
+  `interaction-ui-system.js`.
+- Interaction routing stays in `scene-interactions-system.js`.
+- Route, regional map, van, job-card, objective, portal, and consequence
+  helpers stay in their matching system files.
+- Job-specific field flows stay in their dispatch system files until they share
+  enough behavior to justify a deeper extraction.
+
+This keeps the repo closer to a real game structure without forcing a build
+step, bundled imports, or an engine migration.
 
 ## Current Loading Choice
 
@@ -33,7 +59,7 @@ server requirement, the safer structure is:
 3. Keep top-level startup in `src/core/bootstrap.js` only.
 4. Keep load order explicit in `index.html`.
 5. Keep `scripts/qa-static-scripts.js` enforcing that all listed runtime files
-   exist, parse, and live in the expected folders.
+   exist, parse, live in the expected folders, and keep `src/core/app.js` lean.
 
 This follows the practical parts of browser guidance without introducing a
 build step, external dependency, or engine migration.
@@ -43,6 +69,10 @@ build step, external dependency, or engine migration.
 - Add content data to `src/content/data.js` first.
 - Add behavior to the nearest existing `src/systems/*-system.js` file.
 - Add a new system file only when it owns a real reusable gameplay surface.
+- Keep `src/core/app.js` under the static QA line budget by moving gameplay UI,
+  input, routing, and dispatch behavior into systems.
+- When adding a `src/systems/*-system.js` file, add it to the ordered script
+  list in `index.html`. Static QA will fail if it is missing.
 - Avoid putting new runtime scripts in the repository root.
 - Avoid adding top-level startup side effects to system files; define helpers
   there and let `src/core/bootstrap.js` start the app.

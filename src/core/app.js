@@ -168,26 +168,6 @@ const elements = {
   modalActions: document.querySelector("#modal-actions"),
 };
 
-function startGame(technicianOrId) {
-  const technician = typeof technicianOrId === "string"
-    ? content.technicians.find((item) => item.id === technicianOrId)
-    : technicianOrId;
-  if (!technician) return;
-  resetRuntimeState();
-  state.technician = technician;
-  state.tools = uniqueValues(["screwdriver", ...(state.technician.startingTools || [])]);
-  state.vehicleId = content.world?.defaultVehicleId || "van3";
-  state.energy = state.technician.stats.energy;
-  state.burnout = state.technician.stats.burnout;
-  state.cash = state.technician.startingCash || 0;
-  addLog(`${state.technician.name}'s first day started${state.technician.custom ? " from a custom build" : ""}. Nobody mentioned an onboarding packet.`);
-  elements.titleScreen.classList.add("hidden");
-  elements.selection.classList.add("hidden");
-  elements.gameLayout.classList.remove("hidden");
-  elements.menuButton.classList.remove("hidden");
-  enterScene("shop");
-}
-
 function notify(message) {
   addLog(message);
   render();
@@ -201,36 +181,4 @@ function escapeHtml(value) {
     "\"": "&quot;",
     "'": "&#39;",
   }[char]));
-}
-
-let avTechRpgStarted = false;
-
-function startAvTechRpg() {
-  if (avTechRpgStarted) return;
-  avTechRpgStarted = true;
-
-  document.addEventListener("keydown", (event) => {
-    const key = event.key.toLowerCase();
-    if (["arrowleft", "arrowright", "arrowup", "arrowdown", "w", "a", "s", "d", "e", " "].includes(key)) {
-      event.preventDefault();
-    }
-    keys.add(key);
-    if ((key === "e" || key === " ") && !event.repeat) interact();
-    if (!event.repeat && ["arrowleft", "arrowright", "arrowup", "arrowdown", "w", "a", "s", "d"].includes(key)) {
-      movePlayer();
-    }
-  });
-
-  document.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
-  elements.interactButton.addEventListener("click", interact);
-  elements.continueButton.addEventListener("click", continueGame);
-  elements.newGameButton.addEventListener("click", promptNewCareer);
-  elements.clearSaveButton.addEventListener("click", promptClearSavedGame);
-  elements.selectionBackButton.addEventListener("click", showTitleScreen);
-  elements.menuButton.addEventListener("click", showTitleScreen);
-  setInterval(movePlayer, 16);
-
-  installDebugTools();
-  renderSelection();
-  showTitleScreen();
 }

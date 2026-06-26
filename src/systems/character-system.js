@@ -11,6 +11,26 @@ function addNumericMap(target, source = {}) {
   });
 }
 
+function startGame(technicianOrId) {
+  const technician = typeof technicianOrId === "string"
+    ? content.technicians.find((item) => item.id === technicianOrId)
+    : technicianOrId;
+  if (!technician) return;
+  resetRuntimeState();
+  state.technician = technician;
+  state.tools = uniqueValues(["screwdriver", ...(state.technician.startingTools || [])]);
+  state.vehicleId = content.world?.defaultVehicleId || "van3";
+  state.energy = state.technician.stats.energy;
+  state.burnout = state.technician.stats.burnout;
+  state.cash = state.technician.startingCash || 0;
+  addLog(`${state.technician.name}'s first day started${state.technician.custom ? " from a custom build" : ""}. Nobody mentioned an onboarding packet.`);
+  elements.titleScreen.classList.add("hidden");
+  elements.selection.classList.add("hidden");
+  elements.gameLayout.classList.remove("hidden");
+  elements.menuButton.classList.remove("hidden");
+  enterScene("shop");
+}
+
 function getCreatorConfig() {
   return content.characterCreation;
 }

@@ -67,6 +67,7 @@ async function clickButton(page, name) {
     await page.goto(url);
     await page.evaluate(() => localStorage.clear());
     await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => window.AV_TECH_RPG_READY === true);
 
     assert(await page.locator("#title-screen").isVisible(), "Title screen should render");
     await clickButton(page, "New Career");

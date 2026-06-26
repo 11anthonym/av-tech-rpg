@@ -6,6 +6,9 @@ const { spawnSync } = require("child_process");
 
 const projectRoot = path.resolve(__dirname, "..");
 const indexPath = path.join(projectRoot, "index.html");
+const appCorePath = path.join(projectRoot, "src/core/app.js");
+const systemsPath = path.join(projectRoot, "src/systems");
+const APP_CORE_MAX_LINES = 320;
 
 function assert(condition, message) {
   if (!condition) {
@@ -51,6 +54,28 @@ function assertFilesExist(scripts) {
   assert(!missing.length, `Script files missing from disk: ${missing.join(", ")}`);
 }
 
+function assertSystemsDirectoryListed(scripts) {
+  const systemFiles = fs.readdirSync(systemsPath)
+    .filter((file) => file.endsWith(".js"))
+    .map((file) => `src/systems/${file}`)
+    .sort();
+  const listedSystemFiles = scripts
+    .filter((script) => script.startsWith("src/systems/"))
+    .sort();
+  const missing = systemFiles.filter((script) => !listedSystemFiles.includes(script));
+  const unknown = listedSystemFiles.filter((script) => !systemFiles.includes(script));
+  assert(!missing.length, `System files missing from index.html loader: ${missing.join(", ")}`);
+  assert(!unknown.length, `index.html references unknown system files: ${unknown.join(", ")}`);
+}
+
+function assertAppCoreStaysLean() {
+  const lineCount = fs.readFileSync(appCorePath, "utf8").split(/\r?\n/).length;
+  assert(
+    lineCount <= APP_CORE_MAX_LINES,
+    `src/core/app.js is ${lineCount} lines; keep core lean and move gameplay surfaces into src/systems/ (limit ${APP_CORE_MAX_LINES}).`,
+  );
+}
+
 function assertSyntax(scripts) {
   const failures = scripts
     .map((script) => {
@@ -76,7 +101,9 @@ assertNoDuplicates(scripts);
 assertScriptOrder(scripts);
 assertScriptLayout(scripts);
 assertFilesExist(scripts);
+assertSystemsDirectoryListed(scripts);
 assertExtractedHelpersAfterApp(scripts);
+assertAppCoreStaysLean();
 assertSyntax(scripts);
 
-console.log(`Static script QA passed: ${scripts.length} scripts listed, present, ordered, and syntax-valid.`);
+console.log(`Static script QA passed: ${scripts.length} scripts listed, present, ordered, lean, and syntax-valid.`);
