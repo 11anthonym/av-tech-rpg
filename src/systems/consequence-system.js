@@ -479,23 +479,25 @@ function getConsequenceRouteIds(entry) {
   return [];
 }
 
+function getCloseoutRouteSourceNames(routeJob = {}) {
+  return [
+    routeJob.title,
+    getDispatchReference(routeJob.dispatchId)?.title,
+    routeJob.followup?.title,
+    getDispatchReference(routeJob.followup?.dispatchId)?.title,
+    routeJob.install?.title,
+    getDispatchReference(routeJob.install?.dispatchId)?.title,
+  ].filter(Boolean);
+}
+
 function getCloseoutSummaryRouteIds(summary) {
   if (!summary) return [];
   const source = normalizeCloseoutSource(summary.source);
-  const mappings = [
-    { routeIds: ["centerCityTutorial"], sources: ["Two Quick Carts"] },
-    { routeIds: ["conshohockenService"], sources: [content.serviceDispatch?.title, content.followupDispatch?.title] },
-    { routeIds: ["universitySurvey"], sources: [content.surveyDispatch?.title] },
-    { routeIds: ["southPhillyCommissioning"], sources: [content.commissioningDispatch?.title] },
-    { routeIds: ["navyYardAccess"], sources: [content.secureAccessDispatch?.title] },
-    { routeIds: ["warrantyReturn"], sources: [content.callbackCleanupDispatch?.title] },
-    { routeIds: ["executiveHandoff"], sources: [content.handoffDispatch?.title] },
-    { routeIds: ["systemsService"], sources: [content.systemsDispatch?.title] },
-    { routeIds: ["burlingtonRetrofitWalkdown"], sources: [content.retrofitWalkdownDispatch?.title, "Burlington County Retrofit Install"] },
-  ];
-  return mappings
-    .filter((mapping) => mapping.sources.map(normalizeCloseoutSource).includes(source))
-    .flatMap((mapping) => mapping.routeIds);
+  return Object.entries(content.routeJobs || {})
+    .filter(([, routeJob]) => getCloseoutRouteSourceNames(routeJob)
+      .map(normalizeCloseoutSource)
+      .includes(source))
+    .map(([routeId]) => routeId);
 }
 
 function getConsequenceRouteImpactEntries({ includeResolved = false } = {}) {

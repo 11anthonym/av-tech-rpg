@@ -2099,6 +2099,8 @@ async function clickButton(page, name) {
       state.flags.handoffComplete = true;
       window.enterScene("systemsService");
       window.finishSystemsService("scope");
+      window.showSystemsDispatchPreview();
+      const systemsBoardText = document.querySelector("#modal-backdrop")?.innerText || "";
       window.finishTravelDispatch("receipt");
       const openEntries = window.getConsequenceLedgerEntries().length;
       const reviewAvailable = window.hasConsequenceReviewInfo();
@@ -2121,6 +2123,7 @@ async function clickButton(page, name) {
         savedHistory,
         systemsHistoryText,
         systemsPrepText,
+        systemsBoardText,
         closeoutSource: state.flags.lastJobSiteCloseoutSummary?.source || "",
       };
     });
@@ -2135,6 +2138,7 @@ async function clickButton(page, name) {
     assert(consequenceReviewAudit.history[0] === "Cherry Hill Return Toll" && consequenceReviewAudit.history[1] === "King of Prussia Room Offline", "Closeout history should keep newest-first records");
     assert(consequenceReviewAudit.savedHistory[0] === "Cherry Hill Return Toll" && consequenceReviewAudit.savedHistory[1] === "King of Prussia Room Offline", "Saved closeout history should migrate newest-first records");
     assert(consequenceReviewAudit.systemsHistoryText.includes("Documented King of Prussia Room Offline") && consequenceReviewAudit.systemsHistoryText.includes("Future service gets a usable mismatch trail"), "Route closeout history helper should map saved closeout history back to its route");
+    assert(consequenceReviewAudit.systemsBoardText.includes("Recent route closeout") && consequenceReviewAudit.systemsBoardText.includes("Future service gets a usable mismatch trail"), "Dispatch board job card should show saved closeout history for its route");
     assert(consequenceReviewAudit.systemsPrepText.includes("Recent closeout history") && consequenceReviewAudit.systemsPrepText.includes("Future service gets a usable mismatch trail"), "Route prep should show saved closeout history for this route");
     assert(consequenceReviewAudit.mapText.includes("Recent closeout history") && consequenceReviewAudit.mapText.includes("Future service gets a usable mismatch trail"), "Regional map route cards should show saved closeout history for this route");
 

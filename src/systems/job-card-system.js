@@ -298,6 +298,7 @@ function getDispatchJobOverviewRowsMarkup({ type, setup, familyId = "", routeId 
   const routeJob = route ? getRouteJobData(route.id) : null;
   const resolvedFamilyId = familyId || routeJob?.familyId || "";
   const toolPlan = getDispatchToolPlan(resolvedFamilyId, route?.id || "");
+  const routeCloseoutHistoryText = route ? getRouteCloseoutHistoryText(route) : "";
   const routeDetail = route
     ? `${route.fromLabel} -> ${route.toLabel}. ${getRouteTravelCostRisk(route)} ${getRouteFastTravelText(route)}`
     : "Shop-based task; no drive route starts for this board item.";
@@ -315,6 +316,7 @@ function getDispatchJobOverviewRowsMarkup({ type, setup, familyId = "", routeId 
     <li><strong>Rewards</strong><span>${escapeHtml(routeJob?.rewards || "Cash, XP, reputation, and ledger changes on closeout.")}</span></li>
     <li><strong>Unlock condition</strong><span>${escapeHtml(unlockDetail)}</span></li>
     <li><strong>Callback / return-trip effects</strong><span>${escapeHtml(getDispatchCallbackEffectsText(consequenceHooks))}</span></li>
+    ${routeCloseoutHistoryText ? `<li><strong>Recent route closeout</strong><span>${escapeHtml(routeCloseoutHistoryText)}</span></li>` : ""}
   `;
 }
 

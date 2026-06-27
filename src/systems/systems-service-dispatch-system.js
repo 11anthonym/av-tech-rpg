@@ -19,6 +19,7 @@ function showSystemsDispatchPreview() {
       prep: state.flags.systemsPreparation ? `Preparation selected: ${getSystemsPreparationLabel()}` : "",
       taskCards: content.systemsDispatch.taskCards,
       fieldTasks: content.systemsDispatch.checks,
+      routeId: "systemsService",
     }),
     actions: [
       getDispatchRoutePrepAction("systemsService", showSystemsDispatchPreview),

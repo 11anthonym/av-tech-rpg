@@ -585,6 +585,9 @@ be easy to verify in the browser.
    from recent closeout history when a saved job outcome belongs to that route.
    Controlled or documented outcomes stay visible without being mislabeled as
    open callback pressure.
+90. **Done - Job-card route memory pass:** Dispatch job cards can now show
+   recent route closeout memory, and closeout-to-route matching is derived from
+   route job metadata instead of a hand-maintained source table.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

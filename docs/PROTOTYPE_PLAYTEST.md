@@ -1653,6 +1653,11 @@ closeout history for the route they belong to. This keeps documented or
 controlled outcomes visible on job-facing surfaces without turning them into
 active callback pressure.
 
+Job-card route memory pass: dispatch job cards can now show the same recent
+route closeout memory as map/prep cards. The source-to-route match is derived
+from route job metadata and dispatch titles, so future jobs can reuse the
+pattern without another hand-built lookup.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.
