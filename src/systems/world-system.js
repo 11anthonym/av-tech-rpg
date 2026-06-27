@@ -273,6 +273,7 @@ function getRoutePrepRows(route, { fastTravel = false } = {}) {
     { label: "Risk tags", detail: (job.riskTags || []).join(", ") || "ordinary field pressure" },
     { label: "Callback / return-trip risk", detail: getRouteConsequenceText(route) },
     getRouteConsequencePressureText(route) ? { label: "Mapped consequence pressure", detail: getRouteConsequencePressureText(route) } : null,
+    getRouteCloseoutHistoryText(route) ? { label: "Recent closeout history", detail: getRouteCloseoutHistoryText(route) } : null,
     { label: "Fast travel", detail: getRouteFastTravelText(route) },
     lockReason ? { label: "Locked reason", detail: lockReason } : null,
   ].filter(Boolean);

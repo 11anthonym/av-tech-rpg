@@ -479,6 +479,25 @@ function getConsequenceRouteIds(entry) {
   return [];
 }
 
+function getCloseoutSummaryRouteIds(summary) {
+  if (!summary) return [];
+  const source = normalizeCloseoutSource(summary.source);
+  const mappings = [
+    { routeIds: ["centerCityTutorial"], sources: ["Two Quick Carts"] },
+    { routeIds: ["conshohockenService"], sources: [content.serviceDispatch?.title, content.followupDispatch?.title] },
+    { routeIds: ["universitySurvey"], sources: [content.surveyDispatch?.title] },
+    { routeIds: ["southPhillyCommissioning"], sources: [content.commissioningDispatch?.title] },
+    { routeIds: ["navyYardAccess"], sources: [content.secureAccessDispatch?.title] },
+    { routeIds: ["warrantyReturn"], sources: [content.callbackCleanupDispatch?.title] },
+    { routeIds: ["executiveHandoff"], sources: [content.handoffDispatch?.title] },
+    { routeIds: ["systemsService"], sources: [content.systemsDispatch?.title] },
+    { routeIds: ["burlingtonRetrofitWalkdown"], sources: [content.retrofitWalkdownDispatch?.title, "Burlington County Retrofit Install"] },
+  ];
+  return mappings
+    .filter((mapping) => mapping.sources.map(normalizeCloseoutSource).includes(source))
+    .flatMap((mapping) => mapping.routeIds);
+}
+
 function getConsequenceRouteImpactEntries({ includeResolved = false } = {}) {
   return getConsequenceLedgerEntries({ includeResolved })
     .flatMap((entry) => getConsequenceRouteIds(entry).map((routeId) => ({ ...entry, routeId })))
@@ -498,6 +517,23 @@ function getRouteConsequencePressureText(route) {
   const entries = route ? getRouteConsequenceImpactEntries(route.id) : [];
   if (!entries.length) return "";
   return entries.map((entry) => `${getConsequenceStatusLabel(entry.status)} ${entry.source}: ${entry.detail} Affects: ${entry.affects}.`).join(" ");
+}
+
+function getRouteCloseoutHistoryEntries(routeId) {
+  if (!routeId) return [];
+  return getJobSiteCloseoutHistory()
+    .filter((summary) => getCloseoutSummaryRouteIds(summary).includes(routeId));
+}
+
+function getRouteCloseoutHistoryText(route) {
+  const entries = route ? getRouteCloseoutHistoryEntries(route.id) : [];
+  if (!entries.length) return "";
+  return entries.map((summary) => {
+    const consequence = summary.consequences?.[0];
+    const status = consequence ? getConsequenceStatusLabel(consequence.status) : "Saved";
+    const detail = consequence?.detail || summary.result || "Closeout result saved.";
+    return `${status} ${summary.source}: ${detail}`;
+  }).join(" ");
 }
 
 function getConsequenceRouteImpactMarkup() {

@@ -581,6 +581,10 @@ be easy to verify in the browser.
    bounded recent-history list instead of only replacing the previous summary.
    The consequence review keeps the latest closeout detailed and shows earlier
    closeouts as compact RPG consequence records.
+89. **Done - Route closeout-memory pass:** Route cards and route prep now pull
+   from recent closeout history when a saved job outcome belongs to that route.
+   Controlled or documented outcomes stay visible without being mislabeled as
+   open callback pressure.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

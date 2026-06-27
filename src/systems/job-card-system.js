@@ -257,6 +257,7 @@ function getRouteJobCardRows(route) {
     { label: "Rewards", detail: job.rewards },
     { label: "Callback / return-trip risk", detail: getRouteConsequenceText(route) },
     getRouteConsequencePressureText(route) ? { label: "Mapped consequence pressure", detail: getRouteConsequencePressureText(route) } : null,
+    getRouteCloseoutHistoryText(route) ? { label: "Recent closeout history", detail: getRouteCloseoutHistoryText(route) } : null,
     lastChoice ? { label: "Last route choice", detail: lastChoice } : null,
     travelResult ? { label: "Last travel result", detail: travelResult } : null,
     lockReason ? { label: "Locked reason", detail: lockReason } : null,

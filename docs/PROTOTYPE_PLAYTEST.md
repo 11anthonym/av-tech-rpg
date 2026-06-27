@@ -1648,6 +1648,11 @@ still gives the newest closeout full detail, then shows earlier closeouts as
 compact saved consequence records. This moves the workday closer to an RPG log:
 choices remain visible after the next job starts, without adding new dispatches.
 
+Route closeout-memory pass: route cards and route prep now show recent saved
+closeout history for the route they belong to. This keeps documented or
+controlled outcomes visible on job-facing surfaces without turning them into
+active callback pressure.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.
