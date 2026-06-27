@@ -132,7 +132,7 @@ function finishCallbackCleanup(approach) {
   const resolved = approach !== "bandage";
   const strainedFix = Boolean(state.flags.callbackTroubleshootingStrained) && approach === "root";
   const xp = (approach === "craft" ? 65 : approach === "root" ? 55 : 35) - (strainedFix ? 5 : 0);
-  const callbackRiskIds = ["usedTemporaryAdapterPermanently", "navyYardRackUpdate", "southPhillySpeakerTermination", "systemsQuickReboot"];
+  const callbackRiskIds = ["usedTemporaryAdapterPermanently", "centerCityCartPressure", "navyYardRackUpdate", "southPhillySpeakerTermination", "systemsQuickReboot"];
   const resolvedRiskId = resolved ? callbackRiskIds.find((riskId) => state.flags.returnTripRisks?.[riskId]) : "";
   if (resolved) changeEnergy(-(getCallbackCleanupRepairEnergyCost(approach === "craft" ? 5 : 6) + (strainedFix ? 2 : 0)));
   else state.burnout += 1;

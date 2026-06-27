@@ -67,7 +67,7 @@ function getCartPickupTaskState() {
 function getCartInstallTaskState(destination) {
   if (!state.flags.roomBrief) return getTaskState({ lockedReason: "Ask the supervisor how to start the cart build." });
   if (!hasCarriedItems()) return getTaskState({ lockedReason: "Pick up the next cart component first." });
-  const part = content.tutorial.assembly.find((item) => item.id === state.carry[0]);
+  const part = getTutorialAdjustedAssemblyPart(content.tutorial.assembly.find((item) => item.id === state.carry[0]));
   if (!part) return getTaskState({ lockedReason: "The carried item is not a cart component." });
   if (part.destination !== destination) return getTaskState({ lockedReason: `${part.label} belongs on the other cart.` });
   const resultState = getFieldTaskState(part);

@@ -27,6 +27,7 @@ function showLobbyTransition() {
 
 function showSupervisorDeparture() {
   state.flags.supervisorLeft = true;
+  const pressure = ensureTutorialInstallPressure();
   setClock("MON 11:38 AM");
   showModal({
     kicker: "Supervisor Update",
@@ -34,6 +35,7 @@ function showSupervisorDeparture() {
     body: `
       <p><strong>Supervisor:</strong> "I'm sorry. They need me at another site for meetings. Finish the second cart the same way and text me if anything gets weird."</p>
       <p>Your supervisor leaves apologetically. They appear to be having a worse day than you.</p>
+      ${pressure ? getTutorialInstallPressureMarkup() : ""}
     `,
     actions: [{
       label: "Finish Cart 2 Alone",
@@ -45,9 +47,254 @@ function showSupervisorDeparture() {
   });
 }
 
+function getTutorialInstallPressureDefinitions() {
+  return content.tutorial.installPressures || [];
+}
+
+function getTutorialInstallPressureById(pressureId) {
+  return getTutorialInstallPressureDefinitions().find((pressure) => pressure.id === pressureId) || null;
+}
+
+function getTutorialInstallPressureSeed() {
+  if (!state.flags.tutorialInstallPressureSeed) {
+    state.flags.tutorialInstallPressureSeed = Math.floor(Math.random() * 1000000000) + 1;
+  }
+  return state.flags.tutorialInstallPressureSeed;
+}
+
+function ensureTutorialInstallPressure() {
+  const definitions = getTutorialInstallPressureDefinitions();
+  if (!definitions.length) return null;
+  const validIds = new Set(definitions.map((pressure) => pressure.id));
+  if (!validIds.has(state.flags.tutorialInstallPressureId)) {
+    state.flags.tutorialInstallPressureId = getRolledPressureConditionIds(definitions, getTutorialInstallPressureSeed(), { limit: 1 })[0];
+  }
+  return getTutorialInstallPressureById(state.flags.tutorialInstallPressureId);
+}
+
+function getTutorialInstallPressureResolution() {
+  const pressure = ensureTutorialInstallPressure();
+  const resolution = state.flags.tutorialInstallPressureResolution || null;
+  return pressure && resolution?.pressureId === pressure.id ? resolution : null;
+}
+
+function isTutorialInstallPressureControlled() {
+  return Boolean(getTutorialInstallPressureResolution()?.controlled);
+}
+
+function getActionableTutorialInstallPressure() {
+  if (!state.flags.supervisorLeft || state.flags.finished) return null;
+  const pressure = ensureTutorialInstallPressure();
+  if (!pressure || getTutorialInstallPressureResolution()) return null;
+  return pressure;
+}
+
+function getUncontrolledTutorialInstallPressure() {
+  const pressure = ensureTutorialInstallPressure();
+  if (!pressure || isTutorialInstallPressureControlled()) return null;
+  return pressure;
+}
+
+function getTutorialPressureCheckModifier(pressure, check) {
+  const modifiers = pressure?.checkModifiers || {};
+  const keys = uniqueValues([check?.id, check?.contextId]);
+  return keys.map((key) => modifiers[key]).find(Boolean) || null;
+}
+
+function getTutorialInstallPressureEffects(check) {
+  if (!state.flags.supervisorLeft) {
+    return { pressure: null, difficulty: 0, energy: 0 };
+  }
+  const pressure = getUncontrolledTutorialInstallPressure();
+  const modifier = getTutorialPressureCheckModifier(pressure, check);
+  return {
+    pressure,
+    difficulty: modifier?.difficulty || 0,
+    energy: modifier?.energy || 0,
+  };
+}
+
+function getTutorialAdjustedAssemblyPart(part) {
+  if (!part) return part;
+  const effects = getTutorialInstallPressureEffects(part);
+  const pressureNote = effects.pressure
+    ? ` First-day pressure: ${effects.pressure.label}. ${effects.pressure.revealedSummary}`
+    : "";
+  return {
+    ...part,
+    difficulty: Math.max(0, (part.difficulty || 0) + effects.difficulty),
+    energyCost: Math.max(0, (part.energyCost || 0) + effects.energy),
+    detail: `${part.detail || ""}${pressureNote}`,
+  };
+}
+
+function getTutorialInstallPressureMarkup() {
+  const pressure = ensureTutorialInstallPressure();
+  if (!pressure) return "";
+  const resolution = getTutorialInstallPressureResolution();
+  return `
+    <h3>First-Day Pressure</h3>
+    <ul class="modal-list">
+      <li>
+        <strong>${escapeHtml(pressure.label)}</strong>
+        <span>${escapeHtml(pressure.revealedSummary || "")}</span>
+        ${resolution ? `<span>Response: ${escapeHtml(resolution.detail)}</span>` : ""}
+        ${resolution?.incidentChance ? `<span>Risk roll: ${formatChance(resolution.incidentChance)} chance, rolled ${Math.round((resolution.incidentRoll || 0) * 100)}%.</span>` : ""}
+      </li>
+    </ul>
+  `;
+}
+
+function getTutorialPressureResponseOptions(pressure) {
+  if (!pressure) return [];
+  const careful = pressure.carefulOption || {};
+  const quick = pressure.quickOption || {};
+  return [
+    {
+      id: careful.id || "careful",
+      label: `${careful.label || "Handle carefully"} (-${careful.energyCost || 2} energy)`,
+      detail: careful.detail || "Spend energy now to control the issue before closeout.",
+      result: careful.result || `${pressure.label} is controlled before closeout.`,
+      log: careful.log || `${pressure.label} handled carefully before closeout.`,
+      energyCost: careful.energyCost ?? 2,
+      reputation: careful.reputation || { coworkers: 1, management: -1 },
+      stat: careful.stat || "documentedTaskRisks",
+      controlled: true,
+    },
+    {
+      id: quick.id || "quick",
+      label: `${quick.label || "Try a quick fix"} (-${quick.energyCost || 1} energy, ${formatChance(quick.incidentChance || 0.3)} incident risk)`,
+      detail: quick.detail || "Save energy now, but a bad roll makes the room pressure visible.",
+      result: quick.result || `${pressure.label} holds after a quick fix.`,
+      log: quick.log || `${pressure.label} quick fix held during the room test.`,
+      energyCost: quick.energyCost ?? 1,
+      reputation: quick.reputation || { management: 1 },
+      controlled: true,
+      incidentChance: quick.incidentChance ?? 0.3,
+      incidentResult: quick.incidentResult || `${pressure.label} caused an immediate room issue.`,
+      incidentLog: quick.incidentLog || `${pressure.label} caused an immediate room issue during the first install.`,
+      incidentReputation: quick.incidentReputation || { clients: -1, management: -1 },
+      incidentBurnout: quick.incidentBurnout ?? 1,
+    },
+    {
+      id: "leave",
+      label: "Leave it for closeout",
+      detail: "Spend nothing now. Tidy closeout can still catch it; a rushed closeout can carry it back to the shop.",
+      result: pressure.leaveResult || `${pressure.label} was left for closeout.`,
+      log: `${pressure.label} left for closeout on the first install day.`,
+      controlled: false,
+    },
+  ];
+}
+
+function showTutorialInstallPressureChoice() {
+  const pressure = getActionableTutorialInstallPressure();
+  if (!pressure) {
+    return getTutorialInstallPressureResolution()
+      ? showModal({
+        kicker: "First-Day Pressure",
+        title: "Already Handled",
+        body: getTutorialInstallPressureMarkup(),
+        actions: [{ label: "Back To Room", onClick: render }],
+      })
+      : notify("No cart-room pressure needs a decision right now.");
+  }
+  const options = getTutorialPressureResponseOptions(pressure);
+  showModal({
+    kicker: "First-Day Pressure",
+    title: pressure.label,
+    body: `
+      <p>${escapeHtml(pressure.revealedSummary || "")}</p>
+      ${getChoicePressureMarkup(options.map((option) => ({ label: option.label, detail: option.detail })))}
+      <p class="muted">This is the first small version of field pressure: spend energy now, risk a quick fix, or leave the issue for closeout.</p>
+    `,
+    actions: options.map((option) => ({
+      label: option.label,
+      className: option.controlled ? undefined : "secondary-button",
+      onClick: () => resolveTutorialInstallPressureResponse(pressure.id, option.id),
+    })),
+  });
+}
+
+function resolveTutorialInstallPressureResponse(pressureId, optionId, rollOverride = null) {
+  const pressure = getTutorialInstallPressureById(pressureId);
+  const option = getTutorialPressureResponseOptions(pressure).find((item) => item.id === optionId);
+  if (!pressure || !option) return notify("That cart-pressure response is not available.");
+  if (state.flags.finished) return notify("The first install is already closed out.");
+  if (getTutorialInstallPressureResolution()) return notify("That cart pressure already has a response.");
+
+  if (option.energyCost) changeEnergy(-option.energyCost);
+  const rollResult = rollImmediatePressureIncident(option, rollOverride);
+  const incidentHappened = Boolean(rollResult?.happened);
+  const controlled = option.controlled !== false && !incidentHappened;
+  const detail = incidentHappened ? option.incidentResult : option.result;
+  if (incidentHappened) {
+    applyReputationDelta(option.incidentReputation || {});
+    if (option.incidentBurnout) state.burnout = Math.max(0, state.burnout + option.incidentBurnout);
+    state.flags.tutorialInstallPressureIncident = true;
+    state.flags.cartAssemblyStrained = true;
+    addLog(option.incidentLog || detail);
+  } else {
+    applyReputationDelta(option.reputation || {});
+    if (option.stat) state.stats[option.stat] = (state.stats[option.stat] || 0) + 1;
+    addLog(option.log || detail);
+  }
+  state.stats.fieldTaskChoicesMade = (state.stats.fieldTaskChoicesMade || 0) + 1;
+  state.flags.tutorialInstallPressureResolution = {
+    pressureId: pressure.id,
+    actionId: option.id,
+    label: option.label,
+    detail,
+    controlled,
+    incident: incidentHappened,
+    incidentChance: rollResult?.chance || 0,
+    incidentRoll: rollResult?.roll ?? null,
+  };
+  markCareerSnapshotStale();
+  render();
+  showModal({
+    kicker: "First-Day Pressure",
+    title: incidentHappened ? "The Room Notices" : controlled ? "Pressure Controlled" : "Saved For Closeout",
+    body: `
+      <p>${escapeHtml(detail)}</p>
+      ${rollResult ? `<p class="muted"><strong>Incident roll:</strong> ${formatChance(rollResult.chance)} chance, rolled ${Math.round(rollResult.roll * 100)}%. ${incidentHappened ? "The risk happened in the room." : "The quick fix held this time."}</p>` : ""}
+      ${getTutorialInstallPressureMarkup()}
+      <p class="muted">${controlled ? "This pressure will not add return-trip risk unless another closeout problem remains." : "This pressure can still be cleaned up by a tidy closeout, but rushing will carry it back."}</p>
+    `,
+    actions: [{ label: "Back To Room", onClick: render }],
+  });
+}
+
+function controlTutorialInstallPressureAtCloseout() {
+  const pressure = getUncontrolledTutorialInstallPressure();
+  if (!pressure) return null;
+  const detail = `${pressure.label} was caught during careful cable dressing and final cart cleanup.`;
+  state.flags.tutorialInstallPressureResolution = {
+    pressureId: pressure.id,
+    actionId: "tidy-closeout",
+    label: "Caught during tidy closeout",
+    detail,
+    controlled: true,
+    incident: Boolean(state.flags.tutorialInstallPressureIncident),
+    controlledAtCloseout: true,
+  };
+  return detail;
+}
+
+function getTutorialOpenPressureRiskDetail() {
+  const pressure = getUncontrolledTutorialInstallPressure();
+  if (!pressure) return "";
+  const resolution = getTutorialInstallPressureResolution();
+  const incidentText = resolution?.incident || state.flags.tutorialInstallPressureIncident
+    ? " The issue already became visible in the room."
+    : "";
+  return `${pressure.label}: ${pressure.closeoutRisk || "A rushed closeout can leave this as return-trip pressure."}${incidentText}`;
+}
+
 function installCartPart(destination) {
   if (!hasCarriedItems()) return notify("Pick up the next cart component from the delivered boxes.");
-  const part = content.tutorial.assembly.find((item) => item.id === state.carry[0]);
+  const basePart = content.tutorial.assembly.find((item) => item.id === state.carry[0]);
+  const part = getTutorialAdjustedAssemblyPart(basePart);
   if (!part || part.destination !== destination) return notify(`${part?.label || "That component"} belongs on the other cart.`);
   const { skillCheck, energyCost } = resolveFieldTaskCheck({
     check: part,
@@ -91,6 +338,7 @@ function showFinishChoice() {
       })
       : showResults();
   }
+  const openPressure = getUncontrolledTutorialInstallPressure();
   setClock("MON 5:46 PM");
   showModal({
     kicker: "Last Decision",
@@ -99,19 +347,20 @@ function showFinishChoice() {
       <p>The work order expected you to be done hours ago. You can clean up the cable routing or leave before traffic gets worse.</p>
       ${canUseMakeThatWorkShortcut() ? `<p class="muted">${getCharacterLine("finishChoice", "You can make the awkward path work for now. The question is whether it deserves to become the install.")}</p>` : ""}
       ${state.flags.cartAssemblyStrained ? `<p class="muted">Some assembly checks were strained. Dressing the cables properly also gives you time to catch the shaky details.</p>` : ""}
+      ${openPressure ? getTutorialInstallPressureMarkup() : ""}
       <p><strong>Energy:</strong> ${state.energy}/${getMaxEnergy()}</p>
       ${getChoicePressureMarkup([
         {
           label: "Dress properly",
-          detail: "Careful install closeout. Costs time and energy now; likely protects the client and next tech while making management impatient.",
+          detail: `Careful install closeout. Costs time and energy now; likely protects the client and next tech while making management impatient.${openPressure ? ` Also gives you time to control ${openPressure.label}.` : ""}`,
         },
         ...(canUseMakeThatWorkShortcut() ? [{
           label: "Use the workaround",
-          detail: "Fast improvisation. Saves energy now, but may turn today's temporary fix into tomorrow's return trip.",
+          detail: `Fast improvisation. Saves energy now, but may turn today's temporary fix into tomorrow's return trip.${openPressure ? ` Does not fully resolve ${openPressure.label}.` : ""}`,
         }] : []),
         {
           label: "Zip ties and leave",
-          detail: "Management-friendly speed. Lower effort now; future risk depends on how clean the build really was.",
+          detail: `Management-friendly speed. Lower effort now; future risk depends on how clean the build really was.${openPressure ? ` Riskier while ${openPressure.label} is still open.` : ""}`,
         },
       ])}
     `,
@@ -138,12 +387,16 @@ function finishJob(choice) {
       : showResults();
   }
   const before = getTrackedStateSnapshot();
+  const openPressureBeforeCloseout = getUncontrolledTutorialInstallPressure();
+  const openPressureRiskDetail = getTutorialOpenPressureRiskDetail();
   state.flags.finished = true;
   state.flags.finishChoice = choice;
   if (choice === "tidy") {
     changeEnergy(-getCableDressEnergyCost());
     state.burnout += 1;
     setClock("MON 6:21 PM");
+    const pressureCloseout = controlTutorialInstallPressureAtCloseout();
+    if (pressureCloseout) addLog(pressureCloseout);
     addLog("Cable routing cleaned up. Client is happy. Management notices the clock.");
   } else if (choice === "wiley-workaround") {
     changeEnergy(-2);
@@ -158,9 +411,18 @@ function finishJob(choice) {
   } else {
     changeEnergy(-4);
     setClock("MON 5:54 PM");
-    if (state.flags.cartAssemblyStrained) {
+    if (state.flags.cartAssemblyStrained || openPressureBeforeCloseout) {
       state.stats.callbacks += 1;
       state.flags.tutorialAssemblyCallbackRisk = true;
+    }
+    if (openPressureBeforeCloseout) {
+      state.flags.tutorialInstallPressureCallbackRisk = true;
+      recordReturnTripRisk("centerCityCartPressure", {
+        source: "Two Quick Carts",
+        cause: openPressureRiskDetail,
+        detail: openPressureRiskDetail,
+        affects: getReturnTripRiskAffectedWork("centerCityCartPressure"),
+      });
     }
     addLog("You left before traffic got worse. The second cart may become a callback.");
   }
@@ -192,28 +454,38 @@ function showResults({ before = null } = {}) {
   const tidy = state.flags.finishChoice === "tidy";
   const netPay = tidy ? 152 : 141;
   const rewardTools = content.tutorial.rewardTools.filter((toolId) => !ownsTool(toolId));
+  let closeoutConsequences = [];
   if (before) {
     const riskyWorkaround = state.flags.finishChoice === "wiley-workaround";
-    const rushedRisk = state.flags.finishChoice === "rush" && state.flags.tutorialAssemblyCallbackRisk;
+    const pressureResolution = getTutorialInstallPressureResolution();
+    const pressure = ensureTutorialInstallPressure();
+    const rushedRisk = state.flags.finishChoice === "rush" && (state.flags.tutorialAssemblyCallbackRisk || state.flags.tutorialInstallPressureCallbackRisk);
+    closeoutConsequences = [{
+      source: "Two Quick Carts",
+      status: tidy ? "controlled" : riskyWorkaround || rushedRisk ? "open" : "inherited",
+      cause: tidy
+        ? pressureResolution?.controlledAtCloseout
+          ? `${pressure?.label || "First-day pressure"} was caught during careful closeout.`
+          : "Cable routing was cleaned up before packing out."
+        : riskyWorkaround
+        ? "Adapter workaround was used as the final install path."
+        : state.flags.tutorialInstallPressureCallbackRisk
+        ? `${pressure?.label || "First-day pressure"} was rushed through closeout.`
+        : "The cart build was closed quickly with a thinner final check.",
+      affects: getReturnTripRiskAffectedWork(state.flags.tutorialInstallPressureCallbackRisk ? "centerCityCartPressure" : "usedTemporaryAdapterPermanently"),
+      detail: tidy
+        ? pressureResolution?.controlledAtCloseout
+          ? `${pressureResolution.detail} The first install leaves no named callback risk.`
+          : "The first install leaves no named callback risk."
+        : riskyWorkaround || rushedRisk
+        ? "The closeout can create callback pressure or future warranty work."
+        : "The shortcut is saved on the closeout path even without a named risk.",
+    }];
     recordJobSiteCloseoutSummary({
       source: "Two Quick Carts",
       result: getCompletedCloseoutPathResult("finishChoice"),
       before,
-      consequences: [{
-        source: "Two Quick Carts",
-        status: tidy ? "controlled" : riskyWorkaround || rushedRisk ? "open" : "inherited",
-        cause: tidy
-          ? "Cable routing was cleaned up before packing out."
-          : riskyWorkaround
-          ? "Adapter workaround was used as the final install path."
-          : "The cart build was closed quickly with a thinner final check.",
-        affects: getReturnTripRiskAffectedWork("usedTemporaryAdapterPermanently"),
-        detail: tidy
-          ? "The first install leaves no named callback risk."
-          : riskyWorkaround || rushedRisk
-          ? "The closeout can create callback pressure or future warranty work."
-          : "The shortcut is saved on the closeout path even without a named risk.",
-      }],
+      consequences: closeoutConsequences,
     });
   }
   showModal({
@@ -234,6 +506,7 @@ function showResults({ before = null } = {}) {
       ${before ? `
         <h3>What Changed</h3>
         ${getTrackedStateDeltaMarkup(before)}
+        ${getCloseoutConsequenceMarkup(closeoutConsequences)}
       ` : ""}
       <blockquote>Management note: "Please improve time management and plan parking more efficiently."</blockquote>
       <p>You survived your first week early. ${rewardTools.length ? "Choose one starter upgrade." : "Your starter kit already covers the current upgrade choices."}</p>

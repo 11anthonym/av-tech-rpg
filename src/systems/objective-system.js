@@ -330,6 +330,7 @@ function getObjective() {
   }
   if (!state.flags.roomBrief) return "Ask the supervisor how to start the cart build.";
   if (state.flags.finished) return "Use the room exit to return to Radnor Rack & Wire.";
+  if (getActionableTutorialInstallPressure()) return "Decide how to handle the first-day cart pressure or continue the build.";
   if (state.assembled.length < 2) return `Assemble Cart 1 with your supervisor (${state.assembled.length}/2).`;
   if (state.assembled.length < 4) return `Finish Cart 2 alone (${state.assembled.length - 2}/2).`;
   return "Review the result of your first day.";

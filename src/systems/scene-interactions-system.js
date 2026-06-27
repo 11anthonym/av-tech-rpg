@@ -937,10 +937,20 @@ function getInteractions() {
         render();
       },
     },
+    ...(getActionableTutorialInstallPressure() ? [{
+      x: 430, y: 330, label: "Handle cart pressure",
+      taskState: () => getTaskState({
+        stateId: "ready",
+        detail: `${getActionableTutorialInstallPressure()?.label || "First-day pressure"} can be handled now or carried into closeout.`,
+      }),
+      pressure: () => getChoicePressureMarkup(getTutorialPressureResponseOptions(getActionableTutorialInstallPressure())
+        .map((option) => ({ label: option.label, detail: option.detail }))),
+      action: showTutorialInstallPressureChoice,
+    }] : []),
     {
       x: 530, y: 220, label: "Install component on Cart 1",
       pressure: () => {
-        const part = content.tutorial.assembly.find((item) => item.id === state.carry[0]);
+        const part = getTutorialAdjustedAssemblyPart(content.tutorial.assembly.find((item) => item.id === state.carry[0]));
         return getActionPressureBrief({
           check: part,
           baseEnergyCost: part ? getAssemblyEnergyCost(part.energyCost) : null,
@@ -955,7 +965,7 @@ function getInteractions() {
     {
       x: 755, y: 390, label: "Install component on Cart 2",
       pressure: () => {
-        const part = content.tutorial.assembly.find((item) => item.id === state.carry[0]);
+        const part = getTutorialAdjustedAssemblyPart(content.tutorial.assembly.find((item) => item.id === state.carry[0]));
         return getActionPressureBrief({
           check: part,
           baseEnergyCost: part ? getAssemblyEnergyCost(part.energyCost) : null,

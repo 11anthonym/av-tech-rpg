@@ -562,6 +562,11 @@ be easy to verify in the browser.
    odds, immediate incident rolls, and stable incident IDs now live in a small
    reusable pressure helper. Keep dispatch-specific copy and consequences in
    the dispatch file until another existing job proves the same pattern.
+85. **Done - First-day pressure teaching pass:** The first cart job now rolls
+   one small install pressure after the supervisor leaves. It affects cart-task
+   cost, creates a visible room decision, can trigger an immediate incident on
+   a quick fix, and can be controlled by careful closeout or carried back as
+   Center City return-trip risk.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

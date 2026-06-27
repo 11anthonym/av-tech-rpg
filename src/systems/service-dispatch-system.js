@@ -613,12 +613,6 @@ function showServiceConditionResponseChoice(conditionId) {
   });
 }
 
-function applyReputationDelta(delta = {}) {
-  Object.entries(delta).forEach(([key, value]) => {
-    state.reputation[key] = (state.reputation[key] || 0) + value;
-  });
-}
-
 function resolveServiceConditionResponse(conditionId, optionId, rollOverride = null) {
   const condition = getServiceRoomConditionById(conditionId);
   const option = getServiceConditionResponseOptions(condition).find((item) => item.id === optionId);

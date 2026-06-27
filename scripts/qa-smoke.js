@@ -141,6 +141,88 @@ async function clickButton(page, name) {
     assert(cartAssemblyTask.energyChanged, "Tutorial cart assembly should affect energy");
     assert(cartAssemblyTask.showsResultRows, "Tutorial cart assembly should show structured result rows");
 
+    const tutorialPressureGameplay = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("client");
+      state.flags.roomBrief = true;
+      state.flags.supervisorLeft = true;
+      state.flags.tutorialInstallPressureId = "cable-bag-mismatch";
+      window.ensureTutorialInstallPressure();
+      state.carry = ["cart-2-display"];
+      const labels = window.getInteractions().map((interaction) => interaction.label);
+      const objective = window.getObjective();
+      const basePart = window.GAME_CONTENT.tutorial.assembly.find((item) => item.id === "cart-2-display");
+      const beforeAdjusted = window.getTutorialAdjustedAssemblyPart(basePart);
+      window.showTutorialInstallPressureChoice();
+      const choiceText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const beforeEnergy = state.energy;
+      window.resolveTutorialInstallPressureResponse("cable-bag-mismatch", "sort-labels");
+      const carefulText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const afterAdjusted = window.getTutorialAdjustedAssemblyPart(basePart);
+      const carefulResolution = state.flags.tutorialInstallPressureResolution;
+
+      window.startGame("prototype-tech");
+      const quickState = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("client");
+      quickState.flags.roomBrief = true;
+      quickState.flags.supervisorLeft = true;
+      quickState.flags.tutorialInstallPressureId = "cable-bag-mismatch";
+      window.ensureTutorialInstallPressure();
+      window.resolveTutorialInstallPressureResponse("cable-bag-mismatch", "match-by-memory", 0.1);
+      const quickText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const quickResolution = quickState.flags.tutorialInstallPressureResolution;
+      quickState.assembled = window.GAME_CONTENT.tutorial.assembly.map((item) => item.id);
+      quickState.energy = 80;
+      window.finishJob("rush");
+      const quickCloseoutText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const quickRiskSaved = Boolean(quickState.flags.returnTripRisks?.centerCityCartPressure);
+      const quickCallbackRisk = Boolean(quickState.flags.tutorialInstallPressureCallbackRisk);
+
+      window.startGame("prototype-tech");
+      const tidyState = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("client");
+      tidyState.flags.roomBrief = true;
+      tidyState.flags.supervisorLeft = true;
+      tidyState.flags.tutorialInstallPressureId = "cable-bag-mismatch";
+      window.ensureTutorialInstallPressure();
+      tidyState.assembled = window.GAME_CONTENT.tutorial.assembly.map((item) => item.id);
+      tidyState.energy = 80;
+      window.finishJob("tidy");
+      const tidyText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const tidyResolution = tidyState.flags.tutorialInstallPressureResolution;
+
+      return {
+        labels,
+        objective,
+        choiceText,
+        beforeDifficulty: beforeAdjusted.difficulty,
+        afterDifficulty: afterAdjusted.difficulty,
+        carefulEnergyChanged: state.energy !== beforeEnergy,
+        carefulText,
+        carefulResolution,
+        quickText,
+        quickResolution,
+        quickRiskSaved,
+        quickCallbackRisk,
+        quickCloseoutText,
+        tidyText,
+        tidyResolution,
+        tidyRiskSaved: Boolean(tidyState.flags.returnTripRisks?.centerCityCartPressure),
+      };
+    });
+    assert(tutorialPressureGameplay.labels.includes("Handle cart pressure"), "First-day pressure should create a visible room decision");
+    assert(tutorialPressureGameplay.objective.includes("first-day cart pressure"), "Current objective should point to first-day pressure");
+    assert(tutorialPressureGameplay.choiceText.includes("30% incident risk"), "First-day quick pressure option should show incident odds");
+    assert(tutorialPressureGameplay.beforeDifficulty > tutorialPressureGameplay.afterDifficulty, "Careful first-day pressure response should remove adjusted task pressure");
+    assert(tutorialPressureGameplay.carefulEnergyChanged, "Careful first-day pressure response should spend energy now");
+    assert(tutorialPressureGameplay.carefulText.includes("Pressure Controlled") && tutorialPressureGameplay.carefulResolution?.controlled, "Careful first-day pressure response should save controlled state");
+    assert(tutorialPressureGameplay.quickText.includes("The Room Notices") && tutorialPressureGameplay.quickResolution?.incident, "Failed first-day quick response should create visible room pressure");
+    assert(tutorialPressureGameplay.quickRiskSaved && tutorialPressureGameplay.quickCallbackRisk, "Rushed first-day pressure should save Center City return-trip risk");
+    assert(tutorialPressureGameplay.quickCloseoutText.includes("Open return-trip risks"), "Rushed first-day pressure closeout should show return-trip consequence");
+    assert(tutorialPressureGameplay.tidyText.includes("caught during careful closeout") && tutorialPressureGameplay.tidyResolution?.controlledAtCloseout, "Tidy first-day closeout should control unresolved pressure");
+    assert(!tutorialPressureGameplay.tidyRiskSaved, "Tidy first-day closeout should not save Center City pressure risk");
+
     const tutorialCloseoutDelta = await page.evaluate(() => {
       window.startGame("wiley");
       const state = window.AV_TECH_RPG_DEBUG.state;

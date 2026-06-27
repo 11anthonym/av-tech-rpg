@@ -1622,6 +1622,14 @@ immediate incident rolls, and stable incident IDs now live in a small reusable
 system. Conshohocken still owns its room-specific choices and closeout, but the
 uncertainty tools are ready for the next existing-job proof.
 
+First-day pressure teaching pass: the Two Quick Carts tutorial now rolls one
+small cart-room pressure after the supervisor leaves. The player can spend
+energy to control it, try a faster fix with visible incident odds, or leave it
+for closeout. Careful closeout can catch unresolved pressure; rushed closeout
+can turn it into named Center City return-trip risk. This keeps the tutorial
+friendly while teaching the core RPG idea earlier: field pressure changes task
+costs, room choices, result text, and future consequence.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

@@ -20,6 +20,12 @@ function formatCash(amount) {
   return amount < 0 ? `-$${Math.abs(amount)}` : `$${amount}`;
 }
 
+function applyReputationDelta(delta = {}) {
+  Object.entries(delta).forEach(([key, value]) => {
+    state.reputation[key] = (state.reputation[key] || 0) + value;
+  });
+}
+
 function uniqueValues(values) {
   return [...new Set(values.filter(Boolean))];
 }

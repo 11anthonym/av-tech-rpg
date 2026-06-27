@@ -32,6 +32,7 @@ function getResolvedReturnTripRiskEntries() {
 
 function getReturnTripRiskAffectedWork(riskId) {
   if (riskId === "usedTemporaryAdapterPermanently") return "future Center City service or warranty work";
+  if (riskId === "centerCityCartPressure") return "future Center City cart service or warranty work";
   if (riskId === "conshohockenServiceRoomPressure") return "future Conshohocken service and Josh callback cleanup";
   if (riskId === "navyYardRackUpdate") return "future Navy Yard support and warranty routing";
   if (riskId === "southPhillySpeakerTermination") return "commissioning follow-up and warranty return pressure";
@@ -354,6 +355,7 @@ function getConsequenceRouteIds(entry) {
   const routeMap = {
     "callback-debt": ["warrantyReturn", "conshohockenService"],
     usedTemporaryAdapterPermanently: ["centerCityTutorial"],
+    centerCityCartPressure: ["centerCityTutorial"],
     conshohockenServiceRoomPressure: ["conshohockenService"],
     navyYardRackUpdate: ["navyYardAccess"],
     southPhillySpeakerTermination: ["southPhillyCommissioning", "warrantyReturn"],
