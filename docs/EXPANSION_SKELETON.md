@@ -572,6 +572,11 @@ be easy to verify in the browser.
    dispatches still own their saved state, copy, logs, and closeout details,
    but energy, reputation, stats, burnout, incident flags, and incident rolls
    now resolve through one reusable path.
+87. **Done - Consequence review audit pass:** The van/map consequence review now
+   opens when the last job-site closeout has a saved record, even if no open
+   callback or return-trip debt remains. The review shows the last closeout,
+   tracked state changes, saved consequence result, active debt, and mapped
+   route pressure in one place.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

@@ -141,7 +141,7 @@ function showRegionalMap() {
         className: "secondary-button",
         onClick: showDispatchPreview,
       }] : []),
-      ...(getConsequenceLedgerEntries().length ? [{
+      ...(hasConsequenceReviewInfo() ? [{
         label: "Review Consequence Ledger",
         className: "secondary-button",
         onClick: showConsequenceReview,

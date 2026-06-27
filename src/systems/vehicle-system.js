@@ -73,7 +73,6 @@ function getVehicleMenuFlowMarkup() {
   const tutorialRoute = getWorldRoute("centerCityTutorial");
   const activeRoute = getWorldRoute(getCurrentDispatchRouteId()) || (isTutorialRouteReady() ? tutorialRoute : null);
   const canReviewBoard = state.flags.finished && !state.flags.endShiftPending;
-  const consequenceCount = getConsequenceLedgerEntries().length;
   const rows = [
     {
       label: "Review cargo",
@@ -99,9 +98,7 @@ function getVehicleMenuFlowMarkup() {
     },
     {
       label: "Review consequence ledger",
-      detail: consequenceCount
-        ? `${consequenceCount} open callback or return-trip consequence${consequenceCount === 1 ? "" : "s"} affecting routes or prep.`
-        : "No open callback or return-trip pressure is attached to the workday.",
+      detail: getConsequenceReviewMenuText(),
     },
     {
       label: "Drive active route",
@@ -167,7 +164,7 @@ function showVehicleMenu() {
         className: "secondary-button",
         onClick: showDispatchPreview,
       }] : []),
-      ...(getConsequenceLedgerEntries().length ? [{
+      ...(hasConsequenceReviewInfo() ? [{
         label: "Review Consequence Ledger",
         className: "secondary-button",
         onClick: showConsequenceReview,

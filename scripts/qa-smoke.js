@@ -2091,6 +2091,35 @@ async function clickButton(page, name) {
     assert(consequenceLedger.resolvedRiskSaved, "Warranty cleanup should save resolved return-trip risk history");
     assert(consequenceLedger.cleanupShowsResolved, "Warranty cleanup should show resolved consequence language");
 
+    const consequenceReviewAudit = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.finished = true;
+      state.flags.metJosh = true;
+      state.flags.handoffComplete = true;
+      window.enterScene("systemsService");
+      window.finishSystemsService("scope");
+      const openEntries = window.getConsequenceLedgerEntries().length;
+      const reviewAvailable = window.hasConsequenceReviewInfo();
+      window.showRegionalMap();
+      const mapText = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.showConsequenceReview();
+      const reviewText = document.querySelector("#modal-backdrop")?.innerText || "";
+      return {
+        openEntries,
+        reviewAvailable,
+        mapText,
+        reviewText,
+        closeoutSource: state.flags.lastJobSiteCloseoutSummary?.source || "",
+      };
+    });
+    assert(consequenceReviewAudit.openEntries === 0, "Controlled systems closeout should leave no open consequence entries");
+    assert(consequenceReviewAudit.reviewAvailable, "Consequence review should remain available after a saved controlled closeout");
+    assert(consequenceReviewAudit.mapText.includes("Review Consequence Ledger"), "Regional map should expose consequence review after saved closeout history");
+    assert(consequenceReviewAudit.reviewText.toLowerCase().includes("last job-site closeout") && consequenceReviewAudit.reviewText.toLowerCase().includes("saved consequence record"), "Consequence review should show the last closeout audit trail");
+    assert(consequenceReviewAudit.reviewText.includes("King of Prussia Room Offline") && consequenceReviewAudit.reviewText.includes("Future service gets a usable mismatch trail"), "Consequence review should show controlled closeout consequence details");
+    assert(consequenceReviewAudit.closeoutSource === "King of Prussia Room Offline", "Last closeout source should be saved for consequence review");
+
     await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;

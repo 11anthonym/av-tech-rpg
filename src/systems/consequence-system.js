@@ -139,6 +139,26 @@ function getConsequenceLedgerEntries({ includeResolved = false } = {}) {
   return entries;
 }
 
+function hasConsequenceReviewInfo() {
+  return Boolean(state.flags.lastJobSiteCloseoutSummary)
+    || getConsequenceLedgerEntries({ includeResolved: true }).length > 0;
+}
+
+function getConsequenceReviewMenuText() {
+  const openEntries = getConsequenceLedgerEntries();
+  const summary = state.flags.lastJobSiteCloseoutSummary;
+  if (openEntries.length && summary) {
+    return `${openEntries.length} open consequence${openEntries.length === 1 ? "" : "s"} plus the last ${summary.source || "job"} closeout record.`;
+  }
+  if (openEntries.length) {
+    return `${openEntries.length} open callback or return-trip consequence${openEntries.length === 1 ? "" : "s"} affecting routes or prep.`;
+  }
+  if (summary) {
+    return `Last closeout saved: ${summary.source || "current job"}. Review what changed and whether risk was controlled or carried.`;
+  }
+  return "No job closeout or open consequence has been recorded yet.";
+}
+
 function getConsequenceLedgerMarkup({ includeResolved = false, emptyMessage = "No consequence ledger entries are active right now." } = {}) {
   const entries = getConsequenceLedgerEntries({ includeResolved });
   if (!entries.length) return `<p class="muted">${emptyMessage}</p>`;
@@ -191,6 +211,27 @@ function recordJobSiteCloseoutSummary({ source = "Current job", result = "", bef
     after: getTrackedStateSnapshot(),
     consequences: consequences.map(normalizeCloseoutSummaryEntry),
   };
+}
+
+function getLastJobSiteCloseoutReviewMarkup() {
+  const summary = state.flags.lastJobSiteCloseoutSummary;
+  if (!summary) return `<p class="muted">No job-site closeout has been saved yet.</p>`;
+  const area = getWorldArea(summary.areaId);
+  const consequenceEntries = (summary.consequences || []).map(normalizeCloseoutSummaryEntry);
+  return `
+    <div class="results-grid">
+      <span>Job</span><strong>${escapeHtml(summary.source || "Current job")}</strong>
+      <span>Result</span><strong>${escapeHtml(summary.result || "Closeout result saved")}</strong>
+      <span>Area</span><strong>${escapeHtml(area?.label || summary.areaId || "Job site")}</strong>
+      <span>Clock</span><strong>${escapeHtml(summary.clock || state.clock)}</strong>
+    </div>
+    ${summary.before ? `
+      <h3>What Changed</h3>
+      ${getTrackedStateDeltaMarkup(summary.before, summary.after || getTrackedStateSnapshot())}
+    ` : ""}
+    <h3>Saved Consequence Record</h3>
+    ${getDepartureConsequenceListMarkup(consequenceEntries, "This closeout saved no named callback or return-trip consequence.")}
+  `;
 }
 
 function normalizeCloseoutSource(value = "") {
@@ -413,6 +454,8 @@ function showConsequenceReview() {
     kicker: "Consequence Ledger",
     title: "Callback And Return-Trip Pressure",
     body: `
+      <h3>Last Job-Site Closeout</h3>
+      ${getLastJobSiteCloseoutReviewMarkup()}
       <h3>Active Consequences</h3>
       ${getConsequenceLedgerMarkup()}
       <h3>Affected Routes</h3>

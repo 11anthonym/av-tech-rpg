@@ -1636,6 +1636,12 @@ job still own their scene-specific copy and saved consequence state, but energy,
 reputation, stat, burnout, incident-flag, and incident-roll handling now use the
 same reusable path.
 
+Consequence review audit pass: the van/map consequence review now opens after a
+saved job-site closeout even when the player controlled the risk and left no
+open debt. The review shows the last closeout, what changed, the saved
+consequence record, active debt if any, and mapped route pressure. This keeps
+"good" RPG outcomes visible instead of only showing the bad ledger entries.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.
