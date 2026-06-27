@@ -169,22 +169,8 @@ function getServiceRoomSeed() {
   return state.flags.serviceRoomSeed;
 }
 
-function getSeededUnit(seed, salt = "") {
-  let hash = 2166136261;
-  const input = `${seed}:${salt}`;
-  for (let index = 0; index < input.length; index += 1) {
-    hash ^= input.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return ((hash >>> 0) % 1000000) / 1000000;
-}
-
 function getRolledServiceRoomConditionIds(seed = getServiceRoomSeed()) {
-  return getServiceRoomConditionDefinitions()
-    .map((condition) => ({ id: condition.id, roll: getSeededUnit(seed, condition.id) }))
-    .sort((a, b) => a.roll - b.roll || a.id.localeCompare(b.id))
-    .slice(0, 2)
-    .map((condition) => condition.id);
+  return getRolledPressureConditionIds(getServiceRoomConditionDefinitions(), seed, { limit: 2 });
 }
 
 function ensureServiceRoomConditions({ applyPreparation = true } = {}) {
@@ -363,27 +349,13 @@ function getServiceRoomIncidentEntries() {
   return state.flags.serviceRoomIncidents;
 }
 
-function formatChance(chance = 0) {
-  return `${Math.round(chance * 100)}%`;
-}
-
 function formatServiceIncidentChance(chance = 0) {
   return formatChance(chance);
 }
 
-function rollServiceImmediateIncident(option, rollOverride = null) {
-  if (!option.incidentChance) return null;
-  const roll = Number.isFinite(rollOverride) ? rollOverride : Math.random();
-  return {
-    roll,
-    chance: option.incidentChance,
-    happened: roll < option.incidentChance,
-  };
-}
-
 function recordServiceRoomIncident(condition, option, rollResult) {
   const entries = getServiceRoomIncidentEntries();
-  const incidentId = `${condition.id}-${option.id}-${entries.length + 1}`;
+  const incidentId = getPressureIncidentId({ conditionId: condition.id, actionId: option.id }, entries.length, "service-incident");
   const detail = option.incidentResult || `${condition.label} caused an immediate room issue.`;
   entries.push({
     id: incidentId,
@@ -404,7 +376,7 @@ function recordServiceRoomIncident(condition, option, rollResult) {
 }
 
 function getServiceRoomIncidentId(incident, index = 0) {
-  return incident.id || `${incident.conditionId || "incident"}-${incident.actionId || "action"}-${index + 1}`;
+  return getPressureIncidentId(incident, index, "service-incident");
 }
 
 function getOpenServiceRoomIncidents() {
@@ -656,7 +628,7 @@ function resolveServiceConditionResponse(conditionId, optionId, rollOverride = n
   if (getServiceConditionResolution(conditionId)) return notify("That room pressure already has a response.");
 
   if (option.energyCost) changeEnergy(-option.energyCost);
-  const rollResult = rollServiceImmediateIncident(option, rollOverride);
+  const rollResult = rollImmediatePressureIncident(option, rollOverride);
   const incidentHappened = Boolean(rollResult?.happened);
   const controlled = option.controlled !== false && !incidentHappened;
   const resultDetail = incidentHappened

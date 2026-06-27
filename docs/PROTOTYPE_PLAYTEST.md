@@ -1592,6 +1592,36 @@ client context can reveal conditions, known conditions can help service checks,
 and unresolved room pressure creates named Conshohocken return-trip risk for the
 Josh/callback follow-up to resolve.
 
+## RPG Gameplay Proof Phase
+
+The next phase should prove that one existing job can feel like a real RPG
+situation before the project adds more map or dispatch breadth. Conshohocken
+service is the proof case because it already has the right ingredients:
+
+1. Saved room conditions create a different job texture per career.
+2. Prep and client context reveal or reduce pressure before the player commits.
+3. Field tasks use skill, tools, energy, burnout, and known room pressure.
+4. Quick choices can save energy while risking immediate site incidents.
+5. Recovery choices can change the room before closeout.
+6. Closeout records what was controlled, ignored, or inherited.
+7. Return-trip pressure maps back onto the route and Josh/callback follow-up.
+
+Next passes should spread this pattern carefully:
+
+- Extract only small reusable pieces after the service job proves them twice.
+- Prefer one visible mid-job choice over a new dispatch.
+- Make odds, condition pressure, and likely consequences readable before the
+  player commits, then show exact changes afterward.
+- Apply the next pressure pattern to an existing job such as first-day carts,
+  commissioning, or Burlington only when it teaches a reusable lesson.
+- Keep randomness saved and explainable. A room can be uncertain; the UI should
+  never feel arbitrary.
+
+Job-pressure helper pass: seeded condition rolls, readable chance labels,
+immediate incident rolls, and stable incident IDs now live in a small reusable
+system. Conshohocken still owns its room-specific choices and closeout, but the
+uncertainty tools are ready for the next existing-job proof.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

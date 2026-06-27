@@ -1076,6 +1076,26 @@ async function clickButton(page, name) {
       "display install",
     ], "service field task preview");
 
+    const jobPressureHelpers = await page.evaluate(() => {
+      const conditions = [
+        { id: "alpha" },
+        { id: "bravo" },
+        { id: "charlie" },
+      ];
+      return {
+        chanceText: window.formatChance(0.35),
+        firstRoll: window.getRolledPressureConditionIds(conditions, 12345, { limit: 2 }).join(","),
+        secondRoll: window.getRolledPressureConditionIds(conditions, 12345, { limit: 2 }).join(","),
+        incidentHit: window.rollImmediatePressureIncident({ incidentChance: 0.4 }, 0.2)?.happened,
+        incidentMiss: window.rollImmediatePressureIncident({ incidentChance: 0.4 }, 0.8)?.happened,
+        incidentId: window.getPressureIncidentId({ conditionId: "room", actionId: "quick" }, 0),
+      };
+    });
+    assert(jobPressureHelpers.chanceText === "35%", "Job pressure helper should format readable odds");
+    assert(jobPressureHelpers.firstRoll === jobPressureHelpers.secondRoll && jobPressureHelpers.firstRoll.split(",").length === 2, "Job pressure helper should roll saved conditions deterministically");
+    assert(jobPressureHelpers.incidentHit === true && jobPressureHelpers.incidentMiss === false, "Job pressure helper should resolve immediate incidents from chance rolls");
+    assert(jobPressureHelpers.incidentId === "room-quick-1", "Job pressure helper should provide stable incident IDs");
+
     const serviceConditionGameplay = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;
@@ -2177,6 +2197,7 @@ async function clickButton(page, name) {
     });
     assert(Boolean(saveRoundTrip), "Smoke state should save");
     await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => window.AV_TECH_RPG_READY === true);
     await clickButton(page, "Continue Career");
     const continued = await page.evaluate(() => {
       const state = window.AV_TECH_RPG_DEBUG.state;

@@ -36,6 +36,8 @@ app.
 - Interaction routing stays in `scene-interactions-system.js`.
 - Route, regional map, van, job-card, objective, portal, and consequence
   helpers stay in their matching system files.
+- Job-pressure helpers hold small reusable pieces for seeded condition rolls,
+  readable odds, immediate incident rolls, and stable incident IDs.
 - Job-specific field flows stay in their dispatch system files until they share
   enough behavior to justify a deeper extraction.
 

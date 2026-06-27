@@ -558,6 +558,10 @@ be easy to verify in the browser.
    conditions before checks, known conditions can offset service pressure, and
    unresolved room pressure records a named Conshohocken return-trip risk that
    Josh can later resolve.
+84. **Done - Job pressure helper pass:** Seeded condition selection, readable
+   odds, immediate incident rolls, and stable incident IDs now live in a small
+   reusable pressure helper. Keep dispatch-specific copy and consequences in
+   the dispatch file until another existing job proves the same pattern.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
