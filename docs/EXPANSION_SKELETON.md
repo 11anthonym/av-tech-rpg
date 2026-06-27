@@ -588,6 +588,10 @@ be easy to verify in the browser.
 90. **Done - Job-card route memory pass:** Dispatch job cards can now show
    recent route closeout memory, and closeout-to-route matching is derived from
    route job metadata instead of a hand-maintained source table.
+91. **Done - Current-step closeout memory pass:** The always-visible current
+   step panel now names the latest saved closeout when no open debt is active,
+   so controlled/documented outcomes remain visible outside map and review
+   modals.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

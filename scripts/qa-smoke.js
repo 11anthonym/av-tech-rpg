@@ -2102,6 +2102,7 @@ async function clickButton(page, name) {
       window.showSystemsDispatchPreview();
       const systemsBoardText = document.querySelector("#modal-backdrop")?.innerText || "";
       window.finishTravelDispatch("receipt");
+      const currentStepText = document.querySelector("#task-copy")?.textContent || "";
       const openEntries = window.getConsequenceLedgerEntries().length;
       const reviewAvailable = window.hasConsequenceReviewInfo();
       const history = window.getJobSiteCloseoutHistory().map((summary) => summary.source);
@@ -2124,6 +2125,7 @@ async function clickButton(page, name) {
         systemsHistoryText,
         systemsPrepText,
         systemsBoardText,
+        currentStepText,
         closeoutSource: state.flags.lastJobSiteCloseoutSummary?.source || "",
       };
     });
@@ -2141,6 +2143,7 @@ async function clickButton(page, name) {
     assert(consequenceReviewAudit.systemsBoardText.includes("Recent route closeout") && consequenceReviewAudit.systemsBoardText.includes("Future service gets a usable mismatch trail"), "Dispatch board job card should show saved closeout history for its route");
     assert(consequenceReviewAudit.systemsPrepText.includes("Recent closeout history") && consequenceReviewAudit.systemsPrepText.includes("Future service gets a usable mismatch trail"), "Route prep should show saved closeout history for this route");
     assert(consequenceReviewAudit.mapText.includes("Recent closeout history") && consequenceReviewAudit.mapText.includes("Future service gets a usable mismatch trail"), "Regional map route cards should show saved closeout history for this route");
+    assert(consequenceReviewAudit.currentStepText.includes("Last closeout") && consequenceReviewAudit.currentStepText.includes("The route friction is visible to the shop."), "Current step panel should keep the latest controlled closeout visible");
 
     await page.evaluate(() => {
       window.startGame("prototype-tech");

@@ -242,6 +242,15 @@ function getJobSiteCloseoutHistory() {
   return records.slice(0, JOB_SITE_CLOSEOUT_HISTORY_LIMIT);
 }
 
+function getLatestJobSiteCloseoutBriefText() {
+  const summary = getJobSiteCloseoutHistory()[0];
+  if (!summary) return "";
+  const consequence = summary.consequences?.[0];
+  const status = consequence ? getConsequenceStatusLabel(consequence.status) : "Saved";
+  const detail = consequence?.detail || summary.result || "Closeout result saved.";
+  return `No open callback debt. Last closeout: ${status} - ${summary.source}. ${detail}`;
+}
+
 function recordJobSiteCloseoutSummary({ source = "Current job", result = "", before = null, consequences = [] } = {}) {
   const previousHistory = getJobSiteCloseoutHistory();
   const summary = normalizeJobSiteCloseoutSummary({

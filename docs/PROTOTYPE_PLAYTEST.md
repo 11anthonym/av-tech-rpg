@@ -1658,6 +1658,11 @@ route closeout memory as map/prep cards. The source-to-route match is derived
 from route job metadata and dispatch titles, so future jobs can reuse the
 pattern without another hand-built lookup.
 
+Current-step closeout memory pass: the always-visible current step panel now
+shows the latest saved closeout when there is no open callback or return-trip
+debt. Controlled/documented outcomes stay visible without forcing the player to
+open the map, job card, or consequence review.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

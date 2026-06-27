@@ -160,6 +160,8 @@ function getCurrentConsequenceBriefText() {
     const first = openEntries[0];
     return `Open: ${countText}. Cause: ${first.cause} Future effect: ${first.affects}.`;
   }
+  const latestCloseout = getLatestJobSiteCloseoutBriefText();
+  if (latestCloseout) return latestCloseout;
   const resolvedEntries = getConsequenceLedgerEntries({ includeResolved: true })
     .filter((entry) => entry.status !== "open");
   const lastResolved = resolvedEntries[resolvedEntries.length - 1];
