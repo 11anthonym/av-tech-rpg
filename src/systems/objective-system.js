@@ -174,6 +174,7 @@ function getCurrentStepBrief(objective = resolveCurrentObjective().text) {
   return {
     ...guidance,
     dayPlan: getDayPlanPath(guidance.stage),
+    workday: getWorkdayRhythmBriefText(),
     route: getCurrentRouteBriefText(),
     consequences: getCurrentConsequenceBriefText(),
     conditionPressure: getConditionPressureSummary(),
@@ -185,6 +186,7 @@ function getCurrentStepRows({ includeDayPlan = true } = {}) {
   const transitionBrief = getCurrentAreaTransitionBriefText();
   return [
     { label: "Now", detail: brief.stage },
+    { label: "Workday", detail: brief.workday },
     includeDayPlan ? { label: "Day plan", detail: brief.dayPlan } : null,
     { label: "Next", detail: brief.objective },
     { label: "Nearby cue", detail: brief.interfaceHint },

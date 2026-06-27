@@ -53,6 +53,32 @@ function advanceToNextMorning(days = 1) {
   setClock(`${day} 7:18 AM`);
 }
 
+function getWorkdayPhase(clock = state.clock) {
+  const parts = getClockParts(clock);
+  let hour24 = parts.hour % 12;
+  if (parts.period === "PM") hour24 += 12;
+  if (hour24 < 12) return "morning";
+  if (hour24 < 17) return "afternoon";
+  if (hour24 < 20) return "late shift";
+  return "evening";
+}
+
+function getWorkdayRhythmBriefText() {
+  if (!state.technician) return "Workday has not started yet.";
+  const parts = getClockParts();
+  const maxEnergy = getMaxEnergy();
+  const pressure = [];
+  if (state.flags.endShiftPending) pressure.push("shift closeout pending");
+  if (state.flags.shiftPrepActive) pressure.push("next-shift prep active");
+  if (state.flags.energyExhaustedThisShift) pressure.push("zero-energy pressure active");
+  if (state.energy > 0 && state.energy <= Math.ceil(maxEnergy * LOW_ENERGY_SPEED_THRESHOLD)) pressure.push("low energy");
+  if (state.burnout >= HIGH_BURNOUT_SPEED_THRESHOLD) pressure.push("high burnout");
+  if (state.flags.consecutiveLateNights) {
+    pressure.push(`${state.flags.consecutiveLateNights} late night${state.flags.consecutiveLateNights === 1 ? "" : "s"} in a row`);
+  }
+  return `${parts.day} ${getWorkdayPhase()}. Shift ${state.stats.shiftsCompleted + 1}. Energy ${state.energy}/${maxEnergy}. Burnout ${state.burnout}. ${pressure.length ? pressure.join("; ") : "No daily pressure active."}`;
+}
+
 function getOvernightRecovery({ stayedLate = false, burnout = state.burnout } = {}) {
   const enduranceBonus = state.training.includes("endurance") ? 10 : 0;
   const burnoutPenalty = burnout * 10;

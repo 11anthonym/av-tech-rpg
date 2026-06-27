@@ -592,6 +592,10 @@ be easy to verify in the browser.
    step panel now names the latest saved closeout when no open debt is active,
    so controlled/documented outcomes remain visible outside map and review
    modals.
+92. **Done - Workday rhythm briefing pass:** The current-step panel now includes
+   a reusable Workday row with day phase, shift number, energy, burnout, and
+   active daily pressure such as next-shift prep, low energy, high burnout, or
+   zero-energy pressure.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

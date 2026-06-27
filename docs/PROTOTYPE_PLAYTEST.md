@@ -1663,6 +1663,12 @@ shows the latest saved closeout when there is no open callback or return-trip
 debt. Controlled/documented outcomes stay visible without forcing the player to
 open the map, job card, or consequence review.
 
+Workday rhythm briefing pass: the current-step panel now includes a compact
+Workday row with day phase, shift number, energy, burnout, and active daily
+pressure such as next-shift prep, low energy, high burnout, or zero-energy
+pressure. This keeps the Stardew-style day loop visible while the prototype
+still uses cards and compact top-down rooms.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

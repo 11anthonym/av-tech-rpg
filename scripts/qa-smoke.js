@@ -308,13 +308,18 @@ async function clickButton(page, name) {
         cause: "Quick reboot skipped the mismatch note.",
         detail: "Future service inherits a thin diagnosis.",
       };
+      state.flags.shiftPrepActive = true;
+      state.energy = 18;
+      state.burnout = 4;
       window.render();
       const consequenceText = document.querySelector("#task-copy")?.textContent || "";
       return { initialText, consequenceText };
     });
     assert(currentStepBriefing.initialText.includes("Next") && currentStepBriefing.initialText.includes("Nearby cue"), "Current step panel should label the next action and nearby cue");
+    assert(currentStepBriefing.initialText.includes("Workday") && currentStepBriefing.initialText.includes("MON morning") && currentStepBriefing.initialText.includes("Energy 100/100"), "Current step panel should show daily rhythm state");
     assert(currentStepBriefing.initialText.includes("Route") && currentStepBriefing.initialText.includes("Locked: Talk to the supervisor"), "Current step panel should explain the initial locked route");
     assert(currentStepBriefing.initialText.includes("Consequences") && currentStepBriefing.initialText.includes("No open callback debt"), "Current step panel should show clean consequence state");
+    assert(currentStepBriefing.consequenceText.includes("next-shift prep active") && currentStepBriefing.consequenceText.includes("low energy") && currentStepBriefing.consequenceText.includes("high burnout"), "Current step panel should expose daily pressure state");
     assert(currentStepBriefing.consequenceText.includes("Fast travel: Available now") && currentStepBriefing.consequenceText.includes("Driven before: Yes"), "Current step panel should expose route history and fast travel state");
     assert(currentStepBriefing.consequenceText.includes("Open: 1 callback") && currentStepBriefing.consequenceText.includes("return-trip risk"), "Current step panel should expose callback and return-trip debt");
 
