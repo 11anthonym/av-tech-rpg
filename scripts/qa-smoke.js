@@ -1159,6 +1159,38 @@ async function clickButton(page, name) {
     ], "service field task preview");
 
     const jobPressureHelpers = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      const startingEnergy = state.energy;
+      const startingClients = state.reputation.clients;
+      const cleanOutcome = window.resolvePressureResponseOutcome({
+        energyCost: 2,
+        result: "Held the room steady.",
+        reputation: { clients: 1 },
+        stat: "documentedTaskRisks",
+        incidentChance: 0.5,
+        incidentResult: "The room noticed the shortcut.",
+        incidentReputation: { clients: -2 },
+        incidentBurnout: 1,
+        incidentFlags: { smokePressureIncident: true },
+      }, 0.9);
+      const afterClean = {
+        energy: state.energy,
+        clients: state.reputation.clients,
+        stat: state.stats.documentedTaskRisks,
+        choices: state.stats.fieldTaskChoicesMade,
+      };
+      const incidentOutcome = window.resolvePressureResponseOutcome({
+        energyCost: 1,
+        result: "This should not display.",
+        reputation: { clients: 5 },
+        stat: "documentedTaskRisks",
+        incidentChance: 0.5,
+        incidentResult: "The quick response created smoke-test pressure.",
+        incidentReputation: { clients: -2 },
+        incidentBurnout: 1,
+        incidentFlags: { smokePressureIncident: true },
+      }, 0.1);
       const conditions = [
         { id: "alpha" },
         { id: "bravo" },
@@ -1171,12 +1203,28 @@ async function clickButton(page, name) {
         incidentHit: window.rollImmediatePressureIncident({ incidentChance: 0.4 }, 0.2)?.happened,
         incidentMiss: window.rollImmediatePressureIncident({ incidentChance: 0.4 }, 0.8)?.happened,
         incidentId: window.getPressureIncidentId({ conditionId: "room", actionId: "quick" }, 0),
+        cleanOutcome,
+        incidentOutcome,
+        startingEnergy,
+        startingClients,
+        afterClean,
+        finalEnergy: state.energy,
+        finalClients: state.reputation.clients,
+        finalBurnout: state.burnout,
+        finalStat: state.stats.documentedTaskRisks,
+        finalChoices: state.stats.fieldTaskChoicesMade,
+        incidentFlag: state.flags.smokePressureIncident,
       };
     });
     assert(jobPressureHelpers.chanceText === "35%", "Job pressure helper should format readable odds");
     assert(jobPressureHelpers.firstRoll === jobPressureHelpers.secondRoll && jobPressureHelpers.firstRoll.split(",").length === 2, "Job pressure helper should roll saved conditions deterministically");
     assert(jobPressureHelpers.incidentHit === true && jobPressureHelpers.incidentMiss === false, "Job pressure helper should resolve immediate incidents from chance rolls");
     assert(jobPressureHelpers.incidentId === "room-quick-1", "Job pressure helper should provide stable incident IDs");
+    assert(jobPressureHelpers.cleanOutcome.incidentHappened === false && jobPressureHelpers.cleanOutcome.controlled === true, "Pressure response helper should mark controlled non-incidents");
+    assert(jobPressureHelpers.afterClean.energy === jobPressureHelpers.startingEnergy - 2 && jobPressureHelpers.afterClean.clients === jobPressureHelpers.startingClients + 1 && jobPressureHelpers.afterClean.stat === 1, "Pressure response helper should apply clean response energy, reputation, and stat changes");
+    assert(jobPressureHelpers.incidentOutcome.incidentHappened === true && jobPressureHelpers.incidentOutcome.controlled === false, "Pressure response helper should mark incident outcomes");
+    assert(jobPressureHelpers.finalEnergy === jobPressureHelpers.startingEnergy - 3 && jobPressureHelpers.finalClients === jobPressureHelpers.startingClients - 1 && jobPressureHelpers.finalBurnout === 1, "Pressure response helper should apply incident energy, reputation, and burnout changes");
+    assert(jobPressureHelpers.finalStat === 1 && jobPressureHelpers.finalChoices === 2 && jobPressureHelpers.incidentFlag === true, "Pressure response helper should keep failed incident stats separate while recording choices and flags");
 
     const serviceConditionGameplay = await page.evaluate(() => {
       window.startGame("prototype-tech");

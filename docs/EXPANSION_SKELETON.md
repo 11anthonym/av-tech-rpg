@@ -567,6 +567,11 @@ be easy to verify in the browser.
    cost, creates a visible room decision, can trigger an immediate incident on
    a quick fix, and can be controlled by careful closeout or carried back as
    Center City return-trip risk.
+86. **Done - Pressure response consolidation pass:** Shared pressure-response
+   bookkeeping now lives in the job-pressure helper. Service and tutorial
+   dispatches still own their saved state, copy, logs, and closeout details,
+   but energy, reputation, stats, burnout, incident flags, and incident rolls
+   now resolve through one reusable path.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

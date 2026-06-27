@@ -1630,6 +1630,12 @@ can turn it into named Center City return-trip risk. This keeps the tutorial
 friendly while teaching the core RPG idea earlier: field pressure changes task
 costs, room choices, result text, and future consequence.
 
+Pressure-response consolidation pass: shared pressure response bookkeeping now
+lives in `job-pressure-system.js`. Conshohocken service and the first-day cart
+job still own their scene-specific copy and saved consequence state, but energy,
+reputation, stat, burnout, incident-flag, and incident-roll handling now use the
+same reusable path.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

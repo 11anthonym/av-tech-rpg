@@ -223,23 +223,14 @@ function resolveTutorialInstallPressureResponse(pressureId, optionId, rollOverri
   if (state.flags.finished) return notify("The first install is already closed out.");
   if (getTutorialInstallPressureResolution()) return notify("That cart pressure already has a response.");
 
-  if (option.energyCost) changeEnergy(-option.energyCost);
-  const rollResult = rollImmediatePressureIncident(option, rollOverride);
-  const incidentHappened = Boolean(rollResult?.happened);
-  const controlled = option.controlled !== false && !incidentHappened;
-  const detail = incidentHappened ? option.incidentResult : option.result;
+  const { rollResult, incidentHappened, controlled, detail } = resolvePressureResponseOutcome(option, rollOverride);
   if (incidentHappened) {
-    applyReputationDelta(option.incidentReputation || {});
-    if (option.incidentBurnout) state.burnout = Math.max(0, state.burnout + option.incidentBurnout);
     state.flags.tutorialInstallPressureIncident = true;
     state.flags.cartAssemblyStrained = true;
     addLog(option.incidentLog || detail);
   } else {
-    applyReputationDelta(option.reputation || {});
-    if (option.stat) state.stats[option.stat] = (state.stats[option.stat] || 0) + 1;
     addLog(option.log || detail);
   }
-  state.stats.fieldTaskChoicesMade = (state.stats.fieldTaskChoicesMade || 0) + 1;
   state.flags.tutorialInstallPressureResolution = {
     pressureId: pressure.id,
     actionId: option.id,

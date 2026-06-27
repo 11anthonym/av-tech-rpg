@@ -37,3 +37,32 @@ function rollImmediatePressureIncident(option = {}, rollOverride = null) {
 function getPressureIncidentId(incident = {}, index = 0, fallbackPrefix = "incident") {
   return incident.id || `${incident.conditionId || fallbackPrefix}-${incident.actionId || "action"}-${index + 1}`;
 }
+
+function resolvePressureResponseOutcome(option = {}, rollOverride = null) {
+  state.flags = state.flags || {};
+  state.stats = state.stats || {};
+  if (option.energyCost) changeEnergy(-option.energyCost);
+  const rollResult = rollImmediatePressureIncident(option, rollOverride);
+  const incidentHappened = Boolean(rollResult?.happened);
+  const controlled = option.controlled !== false && !incidentHappened;
+  const detail = incidentHappened
+    ? option.incidentResult || option.result || "The quick response created immediate pressure."
+    : option.result || "The response is recorded.";
+
+  if (incidentHappened) {
+    applyReputationDelta(option.incidentReputation || {});
+    if (option.incidentBurnout) state.burnout = Math.max(0, state.burnout + option.incidentBurnout);
+    Object.assign(state.flags, option.incidentFlags || {});
+  } else {
+    applyReputationDelta(option.reputation || {});
+    if (option.stat) state.stats[option.stat] = (state.stats[option.stat] || 0) + 1;
+  }
+
+  state.stats.fieldTaskChoicesMade = (state.stats.fieldTaskChoicesMade || 0) + 1;
+  return {
+    rollResult,
+    incidentHappened,
+    controlled,
+    detail,
+  };
+}

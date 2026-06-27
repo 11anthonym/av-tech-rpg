@@ -621,23 +621,15 @@ function resolveServiceConditionResponse(conditionId, optionId, rollOverride = n
   if (state.flags.serviceComplete) return notify("The service call is already closed out.");
   if (getServiceConditionResolution(conditionId)) return notify("That room pressure already has a response.");
 
-  if (option.energyCost) changeEnergy(-option.energyCost);
-  const rollResult = rollImmediatePressureIncident(option, rollOverride);
-  const incidentHappened = Boolean(rollResult?.happened);
-  const controlled = option.controlled !== false && !incidentHappened;
+  const { rollResult, incidentHappened, controlled } = resolvePressureResponseOutcome(option, rollOverride);
   const resultDetail = incidentHappened
     ? recordServiceRoomIncident(condition, option, rollResult)
     : option.result;
   if (incidentHappened) {
-    applyReputationDelta(option.incidentReputation || {});
-    if (option.incidentBurnout) state.burnout = Math.max(0, state.burnout + option.incidentBurnout);
-    Object.assign(state.flags, option.incidentFlags || {});
+    // The shared pressure resolver applies stats; service records a richer incident entry above.
   } else {
-    applyReputationDelta(option.reputation || {});
-    if (option.stat) state.stats[option.stat] = (state.stats[option.stat] || 0) + 1;
-    addLog(option.log);
+    addLog(option.log || resultDetail);
   }
-  state.stats.fieldTaskChoicesMade = (state.stats.fieldTaskChoicesMade || 0) + 1;
   recordServiceConditionResolution(conditionId, {
     actionId: option.id,
     label: option.label,
