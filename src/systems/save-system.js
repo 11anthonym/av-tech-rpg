@@ -102,6 +102,14 @@ function migrateSavedGame(savedGame) {
   if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
     flags.serviceCallbackPending = true;
   }
+  flags.jobSiteCloseoutHistory = Array.isArray(flags.jobSiteCloseoutHistory)
+    ? flags.jobSiteCloseoutHistory.slice(0, 5)
+    : flags.lastJobSiteCloseoutSummary
+    ? [flags.lastJobSiteCloseoutSummary]
+    : [];
+  if (!flags.lastJobSiteCloseoutSummary && flags.jobSiteCloseoutHistory[0]) {
+    flags.lastJobSiteCloseoutSummary = flags.jobSiteCloseoutHistory[0];
+  }
   if (!flags.currentAreaId) {
     flags.currentAreaId = getWorldAreaByScene(savedGame.sceneId)?.id || content.world?.homeAreaId || "shop";
   }

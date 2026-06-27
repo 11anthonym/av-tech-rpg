@@ -2099,8 +2099,12 @@ async function clickButton(page, name) {
       state.flags.handoffComplete = true;
       window.enterScene("systemsService");
       window.finishSystemsService("scope");
+      window.finishTravelDispatch("receipt");
       const openEntries = window.getConsequenceLedgerEntries().length;
       const reviewAvailable = window.hasConsequenceReviewInfo();
+      const history = window.getJobSiteCloseoutHistory().map((summary) => summary.source);
+      window.saveGame();
+      const savedHistory = window.getSavedGame().flags.jobSiteCloseoutHistory.map((summary) => summary.source);
       window.showRegionalMap();
       const mapText = document.querySelector("#modal-backdrop")?.innerText || "";
       window.showConsequenceReview();
@@ -2110,6 +2114,8 @@ async function clickButton(page, name) {
         reviewAvailable,
         mapText,
         reviewText,
+        history,
+        savedHistory,
         closeoutSource: state.flags.lastJobSiteCloseoutSummary?.source || "",
       };
     });
@@ -2117,8 +2123,12 @@ async function clickButton(page, name) {
     assert(consequenceReviewAudit.reviewAvailable, "Consequence review should remain available after a saved controlled closeout");
     assert(consequenceReviewAudit.mapText.includes("Review Consequence Ledger"), "Regional map should expose consequence review after saved closeout history");
     assert(consequenceReviewAudit.reviewText.toLowerCase().includes("last job-site closeout") && consequenceReviewAudit.reviewText.toLowerCase().includes("saved consequence record"), "Consequence review should show the last closeout audit trail");
-    assert(consequenceReviewAudit.reviewText.includes("King of Prussia Room Offline") && consequenceReviewAudit.reviewText.includes("Future service gets a usable mismatch trail"), "Consequence review should show controlled closeout consequence details");
-    assert(consequenceReviewAudit.closeoutSource === "King of Prussia Room Offline", "Last closeout source should be saved for consequence review");
+    assert(consequenceReviewAudit.reviewText.toLowerCase().includes("recent closeout history"), "Consequence review should show recent closeout history");
+    assert(consequenceReviewAudit.reviewText.includes("Cherry Hill Return Toll") && consequenceReviewAudit.reviewText.includes("The route friction is visible to the shop."), "Consequence review should show the newest controlled closeout details");
+    assert(consequenceReviewAudit.reviewText.includes("King of Prussia Room Offline") && consequenceReviewAudit.reviewText.includes("Future service gets a usable mismatch trail"), "Consequence review should keep earlier controlled closeout history");
+    assert(consequenceReviewAudit.closeoutSource === "Cherry Hill Return Toll", "Last closeout source should update to the newest closeout");
+    assert(consequenceReviewAudit.history[0] === "Cherry Hill Return Toll" && consequenceReviewAudit.history[1] === "King of Prussia Room Offline", "Closeout history should keep newest-first records");
+    assert(consequenceReviewAudit.savedHistory[0] === "Cherry Hill Return Toll" && consequenceReviewAudit.savedHistory[1] === "King of Prussia Room Offline", "Saved closeout history should migrate newest-first records");
 
     await page.evaluate(() => {
       window.startGame("prototype-tech");

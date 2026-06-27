@@ -1642,6 +1642,12 @@ open debt. The review shows the last closeout, what changed, the saved
 consequence record, active debt if any, and mapped route pressure. This keeps
 "good" RPG outcomes visible instead of only showing the bad ledger entries.
 
+Recent closeout history pass: job-site closeouts now keep a small rolling
+history instead of replacing the previous result outright. Consequence review
+still gives the newest closeout full detail, then shows earlier closeouts as
+compact saved consequence records. This moves the workday closer to an RPG log:
+choices remain visible after the next job starts, without adding new dispatches.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

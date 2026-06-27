@@ -577,6 +577,10 @@ be easy to verify in the browser.
    callback or return-trip debt remains. The review shows the last closeout,
    tracked state changes, saved consequence result, active debt, and mapped
    route pressure in one place.
+88. **Done - Recent closeout history pass:** Job-site closeouts now write a
+   bounded recent-history list instead of only replacing the previous summary.
+   The consequence review keeps the latest closeout detailed and shows earlier
+   closeouts as compact RPG consequence records.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

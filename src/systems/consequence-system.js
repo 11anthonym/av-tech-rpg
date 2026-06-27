@@ -1,5 +1,7 @@
 // Consequence helpers own callback debt, return-trip risk, route pressure, and closeout departure summaries.
 // Job scenes record consequences; this layer makes them readable across van, map, portal, and career surfaces.
+const JOB_SITE_CLOSEOUT_HISTORY_LIMIT = 5;
+
 function recordReturnTripRisk(riskId, detail) {
   state.flags.returnTripRisks ||= {};
   state.flags.returnTripRisks[riskId] = { status: "open", ...detail };
@@ -140,21 +142,22 @@ function getConsequenceLedgerEntries({ includeResolved = false } = {}) {
 }
 
 function hasConsequenceReviewInfo() {
-  return Boolean(state.flags.lastJobSiteCloseoutSummary)
+  return getJobSiteCloseoutHistory().length > 0
     || getConsequenceLedgerEntries({ includeResolved: true }).length > 0;
 }
 
 function getConsequenceReviewMenuText() {
   const openEntries = getConsequenceLedgerEntries();
-  const summary = state.flags.lastJobSiteCloseoutSummary;
+  const history = getJobSiteCloseoutHistory();
+  const summary = history[0];
   if (openEntries.length && summary) {
-    return `${openEntries.length} open consequence${openEntries.length === 1 ? "" : "s"} plus the last ${summary.source || "job"} closeout record.`;
+    return `${openEntries.length} open consequence${openEntries.length === 1 ? "" : "s"} plus ${history.length} recent closeout record${history.length === 1 ? "" : "s"}.`;
   }
   if (openEntries.length) {
     return `${openEntries.length} open callback or return-trip consequence${openEntries.length === 1 ? "" : "s"} affecting routes or prep.`;
   }
   if (summary) {
-    return `Last closeout saved: ${summary.source || "current job"}. Review what changed and whether risk was controlled or carried.`;
+    return `${history.length} recent closeout record${history.length === 1 ? "" : "s"} saved. Last: ${summary.source || "current job"}.`;
   }
   return "No job closeout or open consequence has been recorded yet.";
 }
@@ -200,8 +203,48 @@ function normalizeCloseoutSummaryEntry(entry = {}) {
   };
 }
 
+function normalizeJobSiteCloseoutSummary(summary = {}) {
+  return {
+    source: summary.source || "Current job",
+    result: summary.result || "",
+    sceneId: summary.sceneId || "",
+    areaId: summary.areaId || "",
+    clock: summary.clock || state.clock,
+    before: summary.before || null,
+    after: summary.after || null,
+    consequences: (summary.consequences || []).map(normalizeCloseoutSummaryEntry),
+  };
+}
+
+function getCloseoutSummaryKey(summary = {}) {
+  return [
+    summary.source || "",
+    summary.result || "",
+    summary.clock || "",
+    summary.sceneId || "",
+  ].join("|");
+}
+
+function getJobSiteCloseoutHistory() {
+  const records = [];
+  const seen = new Set();
+  const addRecord = (summary) => {
+    if (!summary || typeof summary !== "object") return;
+    const normalized = normalizeJobSiteCloseoutSummary(summary);
+    const key = getCloseoutSummaryKey(normalized);
+    if (seen.has(key)) return;
+    seen.add(key);
+    records.push(normalized);
+  };
+  addRecord(state.flags.lastJobSiteCloseoutSummary);
+  (Array.isArray(state.flags.jobSiteCloseoutHistory) ? state.flags.jobSiteCloseoutHistory : [])
+    .forEach(addRecord);
+  return records.slice(0, JOB_SITE_CLOSEOUT_HISTORY_LIMIT);
+}
+
 function recordJobSiteCloseoutSummary({ source = "Current job", result = "", before = null, consequences = [] } = {}) {
-  state.flags.lastJobSiteCloseoutSummary = {
+  const previousHistory = getJobSiteCloseoutHistory();
+  const summary = normalizeJobSiteCloseoutSummary({
     source,
     result,
     sceneId: state.sceneId,
@@ -210,11 +253,17 @@ function recordJobSiteCloseoutSummary({ source = "Current job", result = "", bef
     before: before || null,
     after: getTrackedStateSnapshot(),
     consequences: consequences.map(normalizeCloseoutSummaryEntry),
-  };
+  });
+  const summaryKey = getCloseoutSummaryKey(summary);
+  state.flags.lastJobSiteCloseoutSummary = summary;
+  state.flags.jobSiteCloseoutHistory = [
+    summary,
+    ...previousHistory.filter((item) => getCloseoutSummaryKey(item) !== summaryKey),
+  ].slice(0, JOB_SITE_CLOSEOUT_HISTORY_LIMIT);
 }
 
 function getLastJobSiteCloseoutReviewMarkup() {
-  const summary = state.flags.lastJobSiteCloseoutSummary;
+  const summary = getJobSiteCloseoutHistory()[0];
   if (!summary) return `<p class="muted">No job-site closeout has been saved yet.</p>`;
   const area = getWorldArea(summary.areaId);
   const consequenceEntries = (summary.consequences || []).map(normalizeCloseoutSummaryEntry);
@@ -231,6 +280,26 @@ function getLastJobSiteCloseoutReviewMarkup() {
     ` : ""}
     <h3>Saved Consequence Record</h3>
     ${getDepartureConsequenceListMarkup(consequenceEntries, "This closeout saved no named callback or return-trip consequence.")}
+  `;
+}
+
+function getRecentJobSiteCloseoutHistoryMarkup() {
+  const previous = getJobSiteCloseoutHistory().slice(1);
+  if (!previous.length) return `<p class="muted">No earlier job-site closeouts are saved yet.</p>`;
+  return `
+    <ul class="modal-list">
+      ${previous.map((summary) => {
+        const consequenceText = summary.consequences?.length
+          ? summary.consequences.map((entry) => `${getConsequenceStatusLabel(entry.status)}: ${entry.detail}`).join(" ")
+          : "No named consequence saved.";
+        return `
+          <li>
+            <strong>${escapeHtml(`${summary.source || "Current job"} - ${summary.result || "Closeout saved"}`)}</strong>
+            <span>${escapeHtml(`${summary.clock || "Saved earlier"}. ${consequenceText}`)}</span>
+          </li>
+        `;
+      }).join("")}
+    </ul>
   `;
 }
 
@@ -456,6 +525,8 @@ function showConsequenceReview() {
     body: `
       <h3>Last Job-Site Closeout</h3>
       ${getLastJobSiteCloseoutReviewMarkup()}
+      <h3>Recent Closeout History</h3>
+      ${getRecentJobSiteCloseoutHistoryMarkup()}
       <h3>Active Consequences</h3>
       ${getConsequenceLedgerMarkup()}
       <h3>Affected Routes</h3>
