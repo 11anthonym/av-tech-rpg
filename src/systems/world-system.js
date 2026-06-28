@@ -268,6 +268,7 @@ function getRoutePrepRows(route, { fastTravel = false } = {}) {
     { label: "Route status", detail: getRouteStatus(route) },
     { label: "What happens next", detail: getRouteLaunchPreviewText(route, { fastTravel }) },
     { label: fastTravel ? "Fast-travel cost" : "Travel cost / risk", detail: fastTravel ? `Known route shortcut, -${getFastTravelEnergyCost(route)} energy.` : getRouteTravelCostRisk(route) },
+    { label: "Today's condition", detail: getDailyConditionPrepText({ includeClean: true }) },
     { label: "Required prep", detail: getToolPlanText(toolPlan.required, { required: true }) },
     { label: "Recommended prep", detail: getToolPlanText(toolPlan.recommended) },
     { label: "Risk tags", detail: (job.riskTags || []).join(", ") || "ordinary field pressure" },

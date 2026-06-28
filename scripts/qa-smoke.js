@@ -645,6 +645,8 @@ async function clickButton(page, name) {
       "Required prep",
       "Recommended prep",
       "Risk tags",
+      "Today's condition",
+      "Ready: no active low-energy",
       "What happens next",
       "Choose a route approach",
       "Travel cost / risk",
@@ -663,6 +665,7 @@ async function clickButton(page, name) {
     await assertModalIncludes(page, [
       "Route Prep",
       "One Quick Display Swap",
+      "Today's condition",
       "Required prep",
       "Recommended prep",
       "Callback / return-trip risk",
@@ -671,11 +674,32 @@ async function clickButton(page, name) {
       "Drive to Client Office",
       "Back To Job Card",
     ], "dispatch route prep");
+
     await page.getByRole("button", { name: /Drive to Client Office/ }).click();
     await assertModalIncludes(page, [
       "Before You Leave",
       "Prepare For The Service Call",
     ], "dispatch route prep launch");
+
+    const pressuredRoutePrep = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.finished = true;
+      state.flags.metJosh = true;
+      state.flags.currentAreaId = "shop";
+      state.energy = 12;
+      state.burnout = 4;
+      window.showServiceDispatchPreview();
+      const jobCardText = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.showRoutePrepModal("conshohockenService");
+      const routePrepText = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.showRegionalMap();
+      const mapText = document.querySelector("#modal-backdrop")?.innerText || "";
+      return { jobCardText, routePrepText, mapText };
+    });
+    assert(pressuredRoutePrep.jobCardText.includes("Today's condition") && pressuredRoutePrep.jobCardText.includes("Low energy") && pressuredRoutePrep.jobCardText.includes("High burnout"), "Dispatch job card should show active daily condition pressure");
+    assert(pressuredRoutePrep.routePrepText.includes("Today's condition") && pressuredRoutePrep.routePrepText.includes("-2 to skill checks"), "Route prep should show condition skill pressure before travel");
+    assert(pressuredRoutePrep.mapText.includes("Today's condition") && pressuredRoutePrep.mapText.includes("Field checks: Low energy"), "Regional route cards should expose active condition pressure");
 
     const routeLaunchFlows = await page.evaluate(() => {
       window.startGame("prototype-tech");

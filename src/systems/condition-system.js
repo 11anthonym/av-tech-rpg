@@ -137,6 +137,28 @@ function getConditionPressureSummary() {
   return `${reasonText}. Walk speed ${getMovementSpeed()}/${PLAYER_SPEED} (${formatSignedNumber(getMovementPressureDelta(details))}).`;
 }
 
+function getDailyConditionPrepText({ includeClean = false } = {}) {
+  if (!state.technician) return includeClean ? "No technician selected yet." : "";
+  const notes = [];
+  const conditionSkillPressure = typeof getConditionSkillPressureSummary === "function"
+    ? getConditionSkillPressureSummary()
+    : "";
+  const exhaustionPenalty = getExhaustionSkillPenalty();
+  const movementPressure = getConditionPressureSummary();
+  if (conditionSkillPressure) notes.push(`Field checks: ${conditionSkillPressure}`);
+  if (state.flags.energyExhaustedThisShift || exhaustionPenalty) {
+    notes.push(`Zero-energy pressure: ${exhaustionPenalty ? `skill checks are at -${exhaustionPenalty}; ` : ""}ordinary rest is capped unless you take recovery.`);
+  }
+  if (movementPressure) notes.push(`Movement: ${movementPressure}`);
+  if (state.flags.shiftPrepActive) {
+    notes.push("Next-shift prep is active: Fieldcraft and Documentation get support until this job closes.");
+  }
+  if (!notes.length && includeClean) {
+    return "Ready: no active low-energy, burnout, exhaustion, carry, or prep pressure is changing this route.";
+  }
+  return notes.join(" ");
+}
+
 function markEnergyCrash() {
   if (state.flags.energyExhaustedThisShift) return;
   state.flags.energyExhaustedThisShift = true;

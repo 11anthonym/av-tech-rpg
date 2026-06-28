@@ -239,6 +239,7 @@ function getRouteJobCardRows(route) {
   const lockReason = getRouteLockReason(route);
   const travelResult = getTravelResultText(getLastTravelResult(route));
   const toolPlan = getDispatchToolPlan(job.familyId, route.id);
+  const dailyConditionText = getDailyConditionPrepText();
   return [
     { label: "Destination", detail: `${destination?.label || route.toLabel}${region?.name ? `, ${region.name}` : ""}` },
     { label: "Job family", detail: getJobFamilyName(job.familyId) },
@@ -252,6 +253,7 @@ function getRouteJobCardRows(route) {
     { label: "Route status", detail: getRouteStatus(route) },
     { label: "What happens next", detail: getRouteLaunchPreviewText(route) },
     { label: "Travel cost/risk", detail: getRouteTravelCostRisk(route) },
+    dailyConditionText ? { label: "Today's condition", detail: dailyConditionText } : null,
     { label: "Driven before", detail: getRouteDrivenText(route) },
     { label: "Fast travel", detail: `${getRouteFastTravelText(route)}${fastTravelCount ? ` Used ${fastTravelCount} time${fastTravelCount === 1 ? "" : "s"}.` : ""}` },
     { label: "Rewards", detail: job.rewards },
@@ -299,6 +301,7 @@ function getDispatchJobOverviewRowsMarkup({ type, setup, familyId = "", routeId 
   const resolvedFamilyId = familyId || routeJob?.familyId || "";
   const toolPlan = getDispatchToolPlan(resolvedFamilyId, route?.id || "");
   const routeCloseoutHistoryText = route ? getRouteCloseoutHistoryText(route) : "";
+  const dailyConditionText = getDailyConditionPrepText({ includeClean: true });
   const routeDetail = route
     ? `${route.fromLabel} -> ${route.toLabel}. ${getRouteTravelCostRisk(route)} ${getRouteFastTravelText(route)}`
     : "Shop-based task; no drive route starts for this board item.";
@@ -313,6 +316,7 @@ function getDispatchJobOverviewRowsMarkup({ type, setup, familyId = "", routeId 
     <li><strong>Recommended tools</strong><span>${escapeHtml(getToolPlanText(toolPlan.recommended))}</span></li>
     <li><strong>Risk tags</strong><span>${escapeHtml(getDispatchRiskTags({ routeId: route?.id || "", familyId: resolvedFamilyId, consequenceHooks }))}</span></li>
     <li><strong>Route</strong><span>${escapeHtml(routeDetail)}</span></li>
+    <li><strong>Today's condition</strong><span>${escapeHtml(dailyConditionText)}</span></li>
     <li><strong>Rewards</strong><span>${escapeHtml(routeJob?.rewards || "Cash, XP, reputation, and ledger changes on closeout.")}</span></li>
     <li><strong>Unlock condition</strong><span>${escapeHtml(unlockDetail)}</span></li>
     <li><strong>Callback / return-trip effects</strong><span>${escapeHtml(getDispatchCallbackEffectsText(consequenceHooks))}</span></li>

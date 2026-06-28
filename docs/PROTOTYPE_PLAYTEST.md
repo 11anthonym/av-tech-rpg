@@ -1676,6 +1676,11 @@ recovery carries into the next morning as visible RPG state instead of only a
 one-time modal result. Save version 24 keeps older careers compatible by
 defaulting missing shift history to an empty list.
 
+Condition-aware prep pass: route prep, dispatch job cards, and active regional
+route cards now show today's field condition before the player drives. Clean
+state says the route is ready; low energy, high burnout, zero-energy pressure,
+carry drag, and next-shift prep show as practical route/job risk.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

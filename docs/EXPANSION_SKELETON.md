@@ -601,6 +601,10 @@ be easy to verify in the browser.
    Workday row and shift result modal show the latest closeout choice so
    clocking out, staying late, helping Josh, or taking recovery remains visible
    on the next day.
+94. **Done - Condition-aware prep pass:** Route prep, dispatch job cards, and
+   active regional route cards now surface today's field condition before the
+   player drives out. Low energy, burnout, exhaustion, carry pressure, and
+   next-shift prep are visible as route/job risk instead of only sidebar stats.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
