@@ -568,7 +568,7 @@ function getShiftPrepSkillBonus(skillId) {
   return ["fieldcraft", "documentation"].includes(skillId) ? 1 : 0;
 }
 
-function showBreakArea() {
+function showBreakArea({ backAction = null, backLabel = "Leave Break Area" } = {}) {
   if (shouldIntroduceJoshBeforeNextDispatch()) return notifyJoshIntroRequired();
   if (state.flags.endShiftPending) return showEndShiftModal();
   showModal({
@@ -589,17 +589,22 @@ function showBreakArea() {
       ...(!state.flags.packedLunchReady ? [{ label: "Pack lunch for next job", className: "secondary-button", onClick: packLunchForNextDispatch }] : []),
       ...(state.cash >= 5 ? [{ label: "Buy bad shop coffee - $5 (+12 energy, +1 burnout)", className: "secondary-button", onClick: buyBreakCoffee }] : []),
       { label: "Take unpaid recovery day (full energy, management may notice)", className: "secondary-button", onClick: takeRecoveryDayFromShop },
-      { label: "Leave Break Area", className: "text-button" },
+      { label: backLabel, className: "text-button", onClick: backAction || undefined },
     ],
   });
 }
 
-function takeShortBreak() {
+function applyShortBreak(logText = "Took a short break. Energy improved, and the clock moved instead of the calendar.") {
   if (state.energy >= getMaxEnergy()) return notify("You are already at full energy. The chair is still bad.");
   changeEnergy(10);
   advanceClockMinutes(15);
   state.stats.sameDayBreaks += 1;
-  addLog("Took a short break. Energy improved, and the clock moved instead of the calendar.");
+  addLog(logText);
+  return true;
+}
+
+function takeShortBreak() {
+  if (!applyShortBreak()) return;
   render();
 }
 

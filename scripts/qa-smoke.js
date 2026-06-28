@@ -687,19 +687,36 @@ async function clickButton(page, name) {
       state.flags.finished = true;
       state.flags.metJosh = true;
       state.flags.currentAreaId = "shop";
-      state.energy = 12;
+      state.energy = 18;
       state.burnout = 4;
       window.showServiceDispatchPreview();
       const jobCardText = document.querySelector("#modal-backdrop")?.innerText || "";
       window.showRoutePrepModal("conshohockenService");
       const routePrepText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const routePrepButtons = [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent || "");
+      window.takeRoutePrepShortBreak("conshohockenService", { backAction: window.showDispatchPreview, backLabel: "Back To Job Card" });
+      const afterBreakRoutePrepText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const afterBreakButtons = [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent || "");
       window.showRegionalMap();
       const mapText = document.querySelector("#modal-backdrop")?.innerText || "";
-      return { jobCardText, routePrepText, mapText };
+      return {
+        jobCardText,
+        routePrepText,
+        routePrepButtons,
+        afterBreakRoutePrepText,
+        afterBreakButtons,
+        afterBreakEnergy: state.energy,
+        afterBreakClock: state.clock,
+        mapText,
+      };
     });
     assert(pressuredRoutePrep.jobCardText.includes("Today's condition") && pressuredRoutePrep.jobCardText.includes("Low energy") && pressuredRoutePrep.jobCardText.includes("High burnout"), "Dispatch job card should show active daily condition pressure");
     assert(pressuredRoutePrep.routePrepText.includes("Today's condition") && pressuredRoutePrep.routePrepText.includes("-2 to skill checks"), "Route prep should show condition skill pressure before travel");
-    assert(pressuredRoutePrep.mapText.includes("Today's condition") && pressuredRoutePrep.mapText.includes("Field checks: Low energy"), "Regional route cards should expose active condition pressure");
+    assert(pressuredRoutePrep.routePrepButtons.some((label) => label.includes("Take 15-Minute Break Before Driving")) && pressuredRoutePrep.routePrepButtons.some((label) => label.includes("Open Break Area")), "Pressured route prep should offer recovery choices before driving");
+    assert(pressuredRoutePrep.afterBreakEnergy === 28 && pressuredRoutePrep.afterBreakClock.includes("7:26 AM"), "Route-prep break should restore energy and advance the clock");
+    assert(pressuredRoutePrep.afterBreakRoutePrepText.includes("Today's condition") && pressuredRoutePrep.afterBreakRoutePrepText.includes("High burnout") && pressuredRoutePrep.afterBreakRoutePrepText.includes("-1 to skill checks"), "Route prep should reopen with updated condition pressure after a break");
+    assert(pressuredRoutePrep.afterBreakButtons.some((label) => label.includes("Back To Job Card")), "Route-prep break should preserve the original back action");
+    assert(pressuredRoutePrep.mapText.includes("Today's condition") && pressuredRoutePrep.mapText.includes("Field checks: High burnout"), "Regional route cards should expose active condition pressure");
 
     const routeLaunchFlows = await page.evaluate(() => {
       window.startGame("prototype-tech");

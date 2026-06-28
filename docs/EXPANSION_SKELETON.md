@@ -605,6 +605,10 @@ be easy to verify in the browser.
    active regional route cards now surface today's field condition before the
    player drives out. Low energy, burnout, exhaustion, carry pressure, and
    next-shift prep are visible as route/job risk instead of only sidebar stats.
+95. **Done - Actionable route-prep recovery pass:** Pressured route prep at the
+   shop now offers a 15-minute break and break-area recovery options before the
+   player drives. The same route prep card reopens with updated energy, clock,
+   and condition pressure so the warning becomes a choice.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

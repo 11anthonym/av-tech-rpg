@@ -1681,6 +1681,12 @@ route cards now show today's field condition before the player drives. Clean
 state says the route is ready; low energy, high burnout, zero-energy pressure,
 carry drag, and next-shift prep show as practical route/job risk.
 
+Actionable route-prep recovery pass: when a pressured route prep card opens at
+the shop, the player can take a 15-minute break or open break-area recovery
+options before driving. The prep card reopens with updated energy, clock, and
+condition pressure, making recovery a visible choice instead of hidden sidebar
+math.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

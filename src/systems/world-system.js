@@ -290,12 +290,52 @@ function getRoutePrepMarkup(route, options = {}) {
   `;
 }
 
+function canUseRoutePrepRecovery() {
+  const homeAreaId = content.world?.homeAreaId || "shop";
+  const atHomeBase = state.sceneId === "shop" && getCurrentWorldArea()?.id === homeAreaId;
+  const hasConditionPressure = state.flags.energyExhaustedThisShift
+    || getExhaustionSkillPenalty() > 0
+    || (state.energy > 0 && state.energy <= Math.ceil(getMaxEnergy() * LOW_ENERGY_SPEED_THRESHOLD))
+    || state.burnout >= HIGH_BURNOUT_SPEED_THRESHOLD;
+  return atHomeBase && hasConditionPressure && !state.flags.endShiftPending;
+}
+
+function takeRoutePrepShortBreak(routeId, options = {}) {
+  const route = getWorldRoute(routeId);
+  const destination = route?.toLabel || "the route";
+  if (!applyShortBreak(`Took a 15-minute break before leaving for ${destination}. Energy improved, and the clock moved.`)) return;
+  render();
+  showRoutePrepModal(routeId, options);
+}
+
+function getRoutePrepRecoveryActions(route, options = {}) {
+  if (!canUseRoutePrepRecovery()) return [];
+  const actions = [];
+  if (state.energy < getMaxEnergy()) {
+    actions.push({
+      label: "Take 15-Minute Break Before Driving (+10 energy)",
+      className: "secondary-button",
+      onClick: () => takeRoutePrepShortBreak(route.id, options),
+    });
+  }
+  actions.push({
+    label: "Open Break Area / Recovery Options",
+    className: "secondary-button",
+    onClick: () => showBreakArea({
+      backAction: () => showRoutePrepModal(route.id, options),
+      backLabel: "Back To Route Prep",
+    }),
+  });
+  return actions;
+}
+
 function showRoutePrepModal(routeId, { fastTravel = false, backAction = showVehicleMenu, backLabel = "Back To Van" } = {}) {
   const route = getWorldRoute(routeId);
   if (!route) return notify(`Route ${routeId} is not mapped yet.`);
   if (fastTravel && !canFastTravelRoute(route)) return notify("That fast travel route is not available for the current board route.");
   const lockReason = getRouteLockReason(route);
   const launchLabel = fastTravel ? `Fast Travel to ${route.toLabel}` : route.actionLabel || `Drive to ${route.toLabel}`;
+  const routePrepOptions = { fastTravel, backAction, backLabel };
   showModal({
     kicker: fastTravel ? "Fast Travel Prep" : "Route Prep",
     title: getRouteJobData(route.id).title,
@@ -308,6 +348,7 @@ function showRoutePrepModal(routeId, { fastTravel = false, backAction = showVehi
         label: launchLabel,
         onClick: () => launchRouteFromBoard(route.id, { fastTravel }),
       }] : []),
+      ...getRoutePrepRecoveryActions(route, routePrepOptions),
       { label: backLabel, className: "secondary-button", onClick: backAction },
       { label: "Close", className: "text-button", onClick: render },
     ],
