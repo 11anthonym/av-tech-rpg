@@ -5,7 +5,7 @@ const MIN_PLAYER_SPEED = 4;
 const LOW_ENERGY_SPEED_THRESHOLD = 0.25;
 const HIGH_BURNOUT_SPEED_THRESHOLD = 4;
 const SAVE_KEY = "av-tech-rpg-save-v1";
-const SAVE_VERSION = 23;
+const SAVE_VERSION = 24;
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const STAY_LATE_PREP_ENERGY_COST = 32;
 const HELP_JOSH_ENERGY_COST = 30;
@@ -22,6 +22,7 @@ const EXHAUSTION_NEXT_MORNING_CAP_LOSS = 40;
 const EXHAUSTION_INCIDENT_CAP_LOSS = 8;
 const MIN_EXHAUSTION_NEXT_MORNING_ENERGY = 20;
 const MAX_EXHAUSTION_SKILL_PENALTY = 3;
+const SHIFT_HISTORY_LIMIT = 5;
 
 function createInitialState() {
   return {

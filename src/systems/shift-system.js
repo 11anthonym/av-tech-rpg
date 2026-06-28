@@ -76,7 +76,98 @@ function getWorkdayRhythmBriefText() {
   if (state.flags.consecutiveLateNights) {
     pressure.push(`${state.flags.consecutiveLateNights} late night${state.flags.consecutiveLateNights === 1 ? "" : "s"} in a row`);
   }
-  return `${parts.day} ${getWorkdayPhase()}. Shift ${state.stats.shiftsCompleted + 1}. Energy ${state.energy}/${maxEnergy}. Burnout ${state.burnout}. ${pressure.length ? pressure.join("; ") : "No daily pressure active."}`;
+  const latestShift = getLatestShiftMemoryText();
+  const pressureText = pressure.length ? pressure.join("; ") : "No daily pressure active";
+  return `${parts.day} ${getWorkdayPhase()}. Shift ${state.stats.shiftsCompleted + 1}. Energy ${state.energy}/${maxEnergy}. Burnout ${state.burnout}. ${pressureText}.${latestShift ? ` ${latestShift}` : ""}`;
+}
+
+function getShiftChoiceLabel(choice) {
+  return {
+    "prep": "Stayed late to prep",
+    "help-josh": "Helped Josh",
+    "recovery-day": "Took a recovery day",
+    "clock-out": "Clocked out clean",
+  }[choice] || "Closed out";
+}
+
+function normalizeShiftHistoryEntry(entry = {}) {
+  const choice = entry.choice || "clock-out";
+  return {
+    id: entry.id || `shift-${entry.shiftNumber || 0}`,
+    shiftNumber: Number.isFinite(entry.shiftNumber) ? entry.shiftNumber : 0,
+    source: entry.source || "Shift",
+    choice,
+    choiceLabel: entry.choiceLabel || getShiftChoiceLabel(choice),
+    clockBefore: entry.clockBefore || "",
+    clockAfter: entry.clockAfter || "",
+    energyBefore: Number.isFinite(entry.energyBefore) ? entry.energyBefore : null,
+    energyAfter: Number.isFinite(entry.energyAfter) ? entry.energyAfter : null,
+    burnoutBefore: Number.isFinite(entry.burnoutBefore) ? entry.burnoutBefore : null,
+    burnoutAfter: Number.isFinite(entry.burnoutAfter) ? entry.burnoutAfter : null,
+    energyRecovered: Number.isFinite(entry.energyRecovered) ? entry.energyRecovered : 0,
+    burnoutRecovered: Number.isFinite(entry.burnoutRecovered) ? entry.burnoutRecovered : 0,
+    nextShiftPrep: Boolean(entry.nextShiftPrep),
+    recoveryDay: Boolean(entry.recoveryDay),
+    stayedLate: Boolean(entry.stayedLate),
+  };
+}
+
+function getShiftHistory() {
+  if (!Array.isArray(state.flags.shiftHistory)) {
+    state.flags.shiftHistory = [];
+  }
+  state.flags.shiftHistory = state.flags.shiftHistory
+    .slice(0, SHIFT_HISTORY_LIMIT)
+    .map(normalizeShiftHistoryEntry);
+  return state.flags.shiftHistory;
+}
+
+function getLatestShiftHistoryEntry() {
+  return getShiftHistory()[0] || null;
+}
+
+function getLatestShiftMemoryText() {
+  const entry = getLatestShiftHistoryEntry();
+  if (!entry) return "";
+  const details = [];
+  if (Number.isFinite(entry.energyBefore) && Number.isFinite(entry.energyAfter)) {
+    details.push(`energy ${entry.energyBefore} to ${entry.energyAfter}`);
+  }
+  if (Number.isFinite(entry.burnoutBefore) && Number.isFinite(entry.burnoutAfter)) {
+    details.push(`burnout ${entry.burnoutBefore} to ${entry.burnoutAfter}`);
+  }
+  if (entry.energyRecovered) details.push(`recovered ${entry.energyRecovered} energy overnight`);
+  if (entry.burnoutRecovered) details.push(`reduced burnout by ${entry.burnoutRecovered}`);
+  if (entry.nextShiftPrep) details.push("today starts with prep advantage");
+  if (entry.recoveryDay) details.push("the board skipped a day for recovery");
+  return `Last shift: ${entry.choiceLabel} after ${entry.source}${details.length ? `; ${details.join("; ")}` : ""}.`;
+}
+
+function recordShiftHistory({ choice, source, before, recovery, stayedLate }) {
+  const after = getTrackedStateSnapshot();
+  const entry = normalizeShiftHistoryEntry({
+    id: `shift-${state.stats.shiftsCompleted}`,
+    shiftNumber: state.stats.shiftsCompleted,
+    source,
+    choice,
+    choiceLabel: getShiftChoiceLabel(choice),
+    clockBefore: before.clock,
+    clockAfter: after.clock,
+    energyBefore: before.energy,
+    energyAfter: after.energy,
+    burnoutBefore: before.burnout,
+    burnoutAfter: after.burnout,
+    energyRecovered: recovery.energyRecovered,
+    burnoutRecovered: recovery.burnoutRecovered,
+    nextShiftPrep: after.nextShiftPrep,
+    recoveryDay: choice === "recovery-day",
+    stayedLate,
+  });
+  state.flags.shiftHistory = [
+    entry,
+    ...getShiftHistory(),
+  ].slice(0, SHIFT_HISTORY_LIMIT);
+  return entry;
 }
 
 function getOvernightRecovery({ stayedLate = false, burnout = state.burnout } = {}) {
@@ -309,6 +400,8 @@ function showShiftResultModal({ choice, source, before, recovery }) {
       <p>${escapeHtml(getShiftChoiceResultText(choice, recovery))}</p>
       <h3>What Changed</h3>
       ${getTrackedStateDeltaMarkup(before)}
+      <h3>Workday Memory</h3>
+      <p class="muted">${escapeHtml(getLatestShiftMemoryText() || "No prior shift result recorded yet.")}</p>
       <h3>Next Step</h3>
       ${getCurrentStepListMarkup({ includeDayPlan: false })}
     `,
@@ -464,6 +557,7 @@ function completeShift(choice) {
   if (choice !== "recovery-day") state.stats.overnightRests += 1;
   clearEndShiftState();
   advanceToNextMorning(days);
+  recordShiftHistory({ choice, source, before, recovery, stayedLate });
   addLog(`${source} closed out. Recovered ${recovery.energyRecovered} energy${recovery.burnoutRecovered ? ` and reduced burnout by ${recovery.burnoutRecovered}` : ""}.`);
   render();
   showShiftResultModal({ choice, source, before, recovery });

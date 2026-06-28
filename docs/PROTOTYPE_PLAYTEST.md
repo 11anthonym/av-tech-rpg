@@ -1669,6 +1669,13 @@ pressure such as next-shift prep, low energy, high burnout, or zero-energy
 pressure. This keeps the Stardew-style day loop visible while the prototype
 still uses cards and compact top-down rooms.
 
+Workday memory pass: shift closeout now stores the latest few shift results in
+save-migrated history. The shift result modal and current-step Workday row name
+the last closeout choice, so staying late, helping Josh, clocking out, or taking
+recovery carries into the next morning as visible RPG state instead of only a
+one-time modal result. Save version 24 keeps older careers compatible by
+defaulting missing shift history to an empty list.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

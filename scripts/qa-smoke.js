@@ -914,11 +914,17 @@ async function clickButton(page, name) {
       window.completeShift("prep");
       const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
       const buttons = [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent || "");
+      const currentStepText = document.querySelector("#task-copy")?.textContent || "";
+      window.saveGame();
+      const savedShiftHistory = window.getSavedGame().flags.shiftHistory || [];
       return {
         modalText,
         buttons,
+        currentStepText,
         endShiftPending: Boolean(state.flags.endShiftPending),
         shiftPrepActive: Boolean(state.flags.shiftPrepActive),
+        shiftHistory: state.flags.shiftHistory || [],
+        savedShiftHistory,
         clock: state.clock,
         management: state.reputation.management,
         shiftsCompleted: state.stats.shiftsCompleted,
@@ -928,6 +934,10 @@ async function clickButton(page, name) {
     assert(shiftResultText.includes("shift result") && shiftResultText.includes("what changed"), "Shift completion should show a result summary");
     assert(shiftResultDelta.modalText.includes("Energy") && shiftResultDelta.modalText.includes("Burnout") && shiftResultDelta.modalText.includes("Management reputation"), "Shift result should show changed condition and reputation");
     assert(shiftResultDelta.modalText.includes("Next-shift prep") && shiftResultText.includes("next step"), "Shift result should show prep consequence and next step");
+    assert(shiftResultText.includes("workday memory") && shiftResultDelta.modalText.includes("Last shift: Stayed late to prep after Smoke Shift"), "Shift result should record a readable workday memory");
+    assert(shiftResultDelta.currentStepText.includes("Last shift: Stayed late to prep after Smoke Shift"), "Current step panel should keep the latest shift memory visible");
+    assert(shiftResultDelta.shiftHistory.length === 1 && shiftResultDelta.shiftHistory[0].choice === "prep" && shiftResultDelta.shiftHistory[0].source === "Smoke Shift", "Prep shift result should store compact shift history");
+    assert(shiftResultDelta.savedShiftHistory.length === 1 && shiftResultDelta.savedShiftHistory[0].choiceLabel === "Stayed late to prep", "Shift history should persist through save migration");
     assert(shiftResultDelta.buttons.some((label) => label.includes("Review Dispatch Board Routes")), "Shift result should offer the dispatch board when available");
     assert(!shiftResultDelta.endShiftPending && shiftResultDelta.shiftPrepActive, "Prep shift result should clear end-shift state and keep next-shift prep active");
     assert(shiftResultDelta.clock.startsWith("TUE") && shiftResultDelta.management === -1 && shiftResultDelta.shiftsCompleted === 1, "Prep shift result should preserve clock, reputation, and shift stats");

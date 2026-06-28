@@ -110,6 +110,9 @@ function migrateSavedGame(savedGame) {
   if (!flags.lastJobSiteCloseoutSummary && flags.jobSiteCloseoutHistory[0]) {
     flags.lastJobSiteCloseoutSummary = flags.jobSiteCloseoutHistory[0];
   }
+  flags.shiftHistory = Array.isArray(flags.shiftHistory)
+    ? flags.shiftHistory.slice(0, SHIFT_HISTORY_LIMIT)
+    : [];
   if (!flags.currentAreaId) {
     flags.currentAreaId = getWorldAreaByScene(savedGame.sceneId)?.id || content.world?.homeAreaId || "shop";
   }

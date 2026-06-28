@@ -596,6 +596,11 @@ be easy to verify in the browser.
    a reusable Workday row with day phase, shift number, energy, burnout, and
    active daily pressure such as next-shift prep, low energy, high burnout, or
    zero-energy pressure.
+93. **Done - Workday memory pass:** Shift closeout now records a bounded,
+   save-migrated history of the last few shift outcomes. The current-step
+   Workday row and shift result modal show the latest closeout choice so
+   clocking out, staying late, helping Josh, or taking recovery remains visible
+   on the next day.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
