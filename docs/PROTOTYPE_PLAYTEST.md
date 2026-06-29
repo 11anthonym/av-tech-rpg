@@ -1687,6 +1687,11 @@ options before driving. The prep card reopens with updated energy, clock, and
 condition pressure, making recovery a visible choice instead of hidden sidebar
 math.
 
+Route-choice condition pressure pass: explicit route choices now preview and
+apply field condition pressure. Leaving with low energy or high burnout can add
+travel energy/burnout deltas, and the saved travel result keeps the condition
+detail visible on later route cards.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

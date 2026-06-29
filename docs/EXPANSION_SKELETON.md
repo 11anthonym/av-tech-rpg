@@ -609,6 +609,10 @@ be easy to verify in the browser.
    shop now offers a 15-minute break and break-area recovery options before the
    player drives. The same route prep card reopens with updated energy, clock,
    and condition pressure so the warning becomes a choice.
+96. **Done - Route-choice condition pressure pass:** Explicit route choices now
+   preview and apply low-energy, high-burnout, or zero-energy pressure as travel
+   deltas. Saved travel results and route cards retain the condition detail so
+   field condition affects the route layer, not only task checks.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

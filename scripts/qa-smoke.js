@@ -1067,6 +1067,34 @@ async function clickButton(page, name) {
     assert(failedTravelRisk.riskHit && failedTravelRisk.riskDetail.includes("security"), "Failed route-risk roll should save readable detail");
     assert(failedTravelRisk.logShowsRisk, "Failed route-risk roll should log the immediate travel outcome");
 
+    const conditionedRouteChoice = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.shopBrief = true;
+      state.loaded = [...window.GAME_CONTENT.tutorial.shopLoad];
+      state.energy = 18;
+      state.burnout = 4;
+      const route = window.getWorldRoute("centerCityTutorial");
+      const choice = route.choices.find((item) => item.id === "garageRoute");
+      window.showRouteChoiceModal({ routeId: "centerCityTutorial" });
+      const choiceText = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.travelRoute("centerCityTutorial", { routeChoice: choice });
+      const result = state.flags.travelResults?.centerCityTutorial;
+      return {
+        choiceText,
+        energyDelta: result?.energyDelta || 0,
+        burnoutDelta: result?.burnoutDelta || 0,
+        conditionPressureText: result?.conditionPressureText || "",
+        resultText: window.getTravelResultText(result),
+        energy: state.energy,
+        burnout: state.burnout,
+      };
+    });
+    assert(conditionedRouteChoice.choiceText.includes("Today's condition") && conditionedRouteChoice.choiceText.includes("condition -1 energy, +1 burnout"), "Route choice modal should preview condition pressure before travel");
+    assert(conditionedRouteChoice.energyDelta === -1 && conditionedRouteChoice.burnoutDelta === 1, "Route condition pressure should change travel result deltas");
+    assert(conditionedRouteChoice.conditionPressureText.includes("low energy") && conditionedRouteChoice.conditionPressureText.includes("high burnout"), "Travel result should save readable route condition pressure");
+    assert(conditionedRouteChoice.resultText.includes("Condition:") && conditionedRouteChoice.energy === 17 && conditionedRouteChoice.burnout === 5, "Travel result text and state should reflect route condition pressure");
+
     const transitionGuidance = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;

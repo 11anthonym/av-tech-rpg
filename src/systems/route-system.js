@@ -34,11 +34,50 @@ function getTravelResultText(result) {
   if (!result) return "";
   const arrival = result.arrivalClock ? ` Arrived ${result.arrivalClock}.` : "";
   const count = result.travelCount ? ` Route driven ${result.travelCount} time${result.travelCount === 1 ? "" : "s"}.` : "";
-  return `${result.mode || "Drive"}: ${getTravelResultDeltaText(result)}.${arrival}${count}${getTravelRiskResultText(result)}`;
+  const condition = result.conditionPressureText ? ` Condition: ${result.conditionPressureText}` : "";
+  return `${result.mode || "Drive"}: ${getTravelResultDeltaText(result)}.${arrival}${count}${getTravelRiskResultText(result)}${condition}`;
 }
 
 function getLastTravelResult(route) {
   return state.flags.travelResults?.[route.id] || null;
+}
+
+function getRouteConditionPressureEffect() {
+  if (!state.technician) return null;
+  const pressure = {
+    energyDelta: 0,
+    burnoutDelta: 0,
+    reasons: [],
+  };
+  const exhaustionPenalty = getExhaustionSkillPenalty();
+  if (state.flags.energyExhaustedThisShift || exhaustionPenalty) {
+    pressure.energyDelta -= 2;
+    pressure.burnoutDelta += 1;
+    pressure.reasons.push("zero-energy pressure");
+  } else {
+    if (state.energy > 0 && state.energy <= Math.ceil(getMaxEnergy() * LOW_ENERGY_SPEED_THRESHOLD)) {
+      pressure.energyDelta -= 1;
+      pressure.reasons.push("low energy");
+    }
+    if (state.burnout >= HIGH_BURNOUT_SPEED_THRESHOLD) {
+      pressure.burnoutDelta += 1;
+      pressure.reasons.push("high burnout");
+    }
+  }
+  if (!pressure.energyDelta && !pressure.burnoutDelta) return null;
+  pressure.detail = `${pressure.reasons.join(", ")} makes route choices cost ${getTravelResultDeltaText(pressure)}.`;
+  return pressure;
+}
+
+function getRouteConditionPressureText(effect = getRouteConditionPressureEffect()) {
+  if (!effect) return "";
+  return effect.detail || `${effect.reasons?.join(", ") || "condition pressure"} affects this route choice.`;
+}
+
+function getRouteConditionPressureMarkup() {
+  const text = getRouteConditionPressureText();
+  if (!text) return "";
+  return `<p class="expense"><strong>Today's condition:</strong> ${escapeHtml(text)}</p>`;
 }
 
 function getRouteTravelCostRisk(route) {
@@ -102,6 +141,7 @@ function recordTravelResult(route, routeChoice = null, { fastTravel = false, bef
     riskRoll: routeOutcome?.risk?.roll ?? null,
     riskChance: routeOutcome?.risk?.chance ?? null,
     riskDetail: routeOutcome?.risk?.detail || "",
+    conditionPressureText: routeOutcome?.conditionPressure ? getRouteConditionPressureText(routeOutcome.conditionPressure) : "",
   };
   state.flags.travelResults ||= {};
   state.flags.travelResults[route.id] = result;
@@ -134,12 +174,21 @@ function resolveRouteChoiceRisk(route, routeChoice) {
   };
 }
 
+function applyRouteConditionPressure(route, pressure = getRouteConditionPressureEffect()) {
+  if (!pressure) return null;
+  applyRouteTravelEffect(pressure);
+  addLog(`Route condition pressure on ${route.toLabel}: ${getTravelResultDeltaText(pressure)} from ${pressure.reasons.join(", ")}.`);
+  return pressure;
+}
+
 function applyRouteChoice(route, routeChoice) {
   if (!routeChoice) return {};
+  const conditionPressure = getRouteConditionPressureEffect();
   applyRouteTravelEffect(routeChoice);
   addLog(routeChoice.log || `${routeChoice.label} selected for ${route.toLabel}.`);
   return {
     risk: resolveRouteChoiceRisk(route, routeChoice),
+    conditionPressure: applyRouteConditionPressure(route, conditionPressure),
   };
 }
 
@@ -177,11 +226,13 @@ function travelRoute(routeId, { beforeTravel, afterTravel, routeChoice, fastTrav
 
 function getRouteChoiceImpactMarkup(choice) {
   const impacts = [];
+  const conditionPressure = getRouteConditionPressureEffect();
   if (choice.arrivalTime) impacts.push(`Arrive ${choice.arrivalTime}`);
   if (choice.energyDelta) impacts.push(`${choice.energyDelta > 0 ? "+" : ""}${choice.energyDelta} energy`);
   if (choice.cashDelta) impacts.push(`${choice.cashDelta > 0 ? "+" : "-"}$${Math.abs(choice.cashDelta)}`);
   if (choice.burnoutDelta) impacts.push(`${choice.burnoutDelta > 0 ? "+" : ""}${choice.burnoutDelta} burnout`);
   if (choice.riskRoll?.chance) impacts.push(`${formatChance(choice.riskRoll.chance)} ${choice.riskRoll.label || "risk"}`);
+  if (conditionPressure) impacts.push(`condition ${getTravelResultDeltaText(conditionPressure)}`);
   return impacts.length ? ` <em>${escapeHtml(impacts.join(" / "))}</em>` : "";
 }
 
@@ -198,6 +249,7 @@ function showRouteChoiceModal({ routeId, dispatchEstimate, extraBody = "", actio
     body: `
       ${dispatchEstimate ? `<p><strong>Work-order estimate:</strong> ${dispatchEstimate}</p>` : ""}
       ${extraBody}
+      ${getRouteConditionPressureMarkup()}
       ${getRouteLineMarkup(route)}
       <ul class="modal-list">
         ${choices.map((choice) => `
