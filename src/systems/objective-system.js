@@ -185,28 +185,38 @@ function getCurrentStepRows({ includeDayPlan = true } = {}) {
   const brief = getCurrentStepBrief();
   const transitionBrief = getCurrentAreaTransitionBriefText();
   return [
-    { label: "Now", detail: brief.stage },
-    { label: "Workday", detail: brief.workday },
-    includeDayPlan ? { label: "Day plan", detail: brief.dayPlan } : null,
-    { label: "Next", detail: brief.objective },
-    { label: "Nearby cue", detail: brief.interfaceHint },
-    transitionBrief ? { label: "Area transitions", detail: transitionBrief } : null,
-    { label: "Route", detail: brief.route },
-    { label: "Consequences", detail: brief.consequences },
-    brief.conditionPressure ? { label: "Condition pressure", detail: brief.conditionPressure } : null,
+    { key: "now", label: "Now", detail: brief.stage },
+    { key: "workday", label: "Workday", detail: brief.workday },
+    includeDayPlan ? { key: "day-plan", label: "Day plan", detail: brief.dayPlan } : null,
+    { key: "next", label: "Next task", detail: brief.objective },
+    { key: "nearby", label: "Nearby cue", detail: brief.interfaceHint },
+    transitionBrief ? { key: "area-transitions", label: "Area transitions", detail: transitionBrief } : null,
+    { key: "route", label: "Route", detail: brief.route },
+    { key: "consequences", label: "Consequences", detail: brief.consequences },
+    brief.conditionPressure ? { key: "condition-pressure", label: "Condition pressure", detail: brief.conditionPressure } : null,
   ].filter(Boolean);
 }
 
-function getCurrentStepListMarkup({ className = "modal-list", includeDayPlan = true } = {}) {
+function getCurrentStepPanelRows() {
+  const rows = getCurrentStepRows({ includeDayPlan: false });
+  const nextRow = rows.find((row) => row.key === "next");
+  return [
+    nextRow,
+    ...rows.filter((row) => row.key !== "next"),
+  ].filter(Boolean);
+}
+
+function getCurrentStepListMarkup({ className = "modal-list", includeDayPlan = true, rows = null } = {}) {
+  const resolvedRows = rows || getCurrentStepRows({ includeDayPlan });
   return `
     <ul class="${className}">
-      ${getCurrentStepRows({ includeDayPlan }).map((row) => `<li><strong>${escapeHtml(row.label)}</strong><span>${escapeHtml(row.detail)}</span></li>`).join("")}
+      ${resolvedRows.map((row) => `<li class="current-step-${row.key || "row"}"><strong>${escapeHtml(row.label)}</strong><span>${escapeHtml(row.detail)}</span></li>`).join("")}
     </ul>
   `;
 }
 
 function getCurrentStepPanelMarkup() {
-  return getCurrentStepListMarkup({ className: "current-step-list", includeDayPlan: false });
+  return getCurrentStepListMarkup({ className: "current-step-list", rows: getCurrentStepPanelRows() });
 }
 
 function getCurrentStepGuidanceText() {

@@ -1692,6 +1692,11 @@ apply field condition pressure. Leaving with low energy or high burnout can add
 travel energy/burnout deltas, and the saved travel result keeps the condition
 detail visible on later route cards.
 
+Current-step priority pass: the right sidebar now puts the next task first and
+styles it as the primary card. This is especially for the second morning, where
+the player should see "check in with Josh" before scanning workday, route, or
+consequence details.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

@@ -297,6 +297,8 @@ async function clickButton(page, name) {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;
       const initialText = document.querySelector("#task-copy")?.textContent || "";
+      const initialFirstLabel = document.querySelector("#task-copy .current-step-list li:first-child strong")?.textContent || "";
+      const initialNextCard = document.querySelector("#task-copy .current-step-next")?.textContent || "";
       state.flags.finished = true;
       state.flags.serviceStarted = true;
       state.flags.routeHistory = { conshohockenService: 1 };
@@ -313,9 +315,10 @@ async function clickButton(page, name) {
       state.burnout = 4;
       window.render();
       const consequenceText = document.querySelector("#task-copy")?.textContent || "";
-      return { initialText, consequenceText };
+      return { initialText, consequenceText, initialFirstLabel, initialNextCard };
     });
-    assert(currentStepBriefing.initialText.includes("Next") && currentStepBriefing.initialText.includes("Nearby cue"), "Current step panel should label the next action and nearby cue");
+    assert(currentStepBriefing.initialText.includes("Next task") && currentStepBriefing.initialText.includes("Nearby cue"), "Current step panel should label the next action and nearby cue");
+    assert(currentStepBriefing.initialFirstLabel === "Next task" && currentStepBriefing.initialNextCard.includes("Find your supervisor"), "Current step panel should make the next task the first prominent card");
     assert(currentStepBriefing.initialText.includes("Workday") && currentStepBriefing.initialText.includes("MON morning") && currentStepBriefing.initialText.includes("Energy 100/100"), "Current step panel should show daily rhythm state");
     assert(currentStepBriefing.initialText.includes("Route") && currentStepBriefing.initialText.includes("Locked: Talk to the supervisor"), "Current step panel should explain the initial locked route");
     assert(currentStepBriefing.initialText.includes("Consequences") && currentStepBriefing.initialText.includes("No open callback debt"), "Current step panel should show clean consequence state");
@@ -831,6 +834,8 @@ async function clickButton(page, name) {
         marker: window.getInteractionMarkerText(interaction),
         state: interaction.taskState?.()?.id || "",
       }));
+      const nextMorningFirstStepLabel = document.querySelector("#task-copy .current-step-list li:first-child strong")?.textContent || "";
+      const nextMorningNextCard = document.querySelector("#task-copy .current-step-next")?.textContent || "";
       window.saveGame();
       window.continueGame();
       const continuedNextMorningModalHidden = document.querySelector("#modal-backdrop")?.classList.contains("hidden") || false;
@@ -859,6 +864,8 @@ async function clickButton(page, name) {
         nextMorningButtons,
         nextMorningObjective,
         nextMorningInteractions,
+        nextMorningFirstStepLabel,
+        nextMorningNextCard,
         continuedNextMorningModalHidden,
         continuedNextMorningObjective,
         continuedNextMorningInteractions,
@@ -881,6 +888,7 @@ async function clickButton(page, name) {
     assert(naturalJoshIntro.nextMorningShiftText.toLowerCase().includes("shift result"), "Clocking out should show the shift result before the next morning");
     assert(!naturalJoshIntro.nextMorningButtons.some((label) => label.includes("Review Dispatch Board Routes")), "Next morning shift result should not offer the board before meeting Josh");
     assert(naturalJoshIntro.nextMorningObjective.includes("Josh") && naturalJoshIntro.nextMorningObjective.includes("next route"), "Next morning objective should require finding Josh before the next route");
+    assert(naturalJoshIntro.nextMorningFirstStepLabel === "Next task" && naturalJoshIntro.nextMorningNextCard.includes("Josh"), "Next morning sidebar should put the Josh task first");
     assert(naturalJoshIntro.nextMorningInteractions.length === 1 && naturalJoshIntro.nextMorningInteractions[0].label.includes("Josh") && naturalJoshIntro.nextMorningInteractions[0].marker === "JOSH", "Next morning shop should only expose the Josh workbench interaction");
     assert(naturalJoshIntro.nextMorningInteractions[0].state === "ready", "Josh intro interaction should present as a ready task");
     assert(naturalJoshIntro.continuedNextMorningModalHidden, "Continue should hide stale shift-result modals before the next-morning Josh gate");

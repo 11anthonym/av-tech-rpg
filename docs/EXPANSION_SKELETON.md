@@ -613,6 +613,10 @@ be easy to verify in the browser.
    preview and apply low-energy, high-burnout, or zero-energy pressure as travel
    deltas. Saved travel results and route cards retain the condition detail so
    field condition affects the route layer, not only task checks.
+97. **Done - Current-step priority pass:** The sidebar now promotes the current
+   next task as the first, highlighted card instead of burying it among workday,
+   route, and consequence context. The next-morning Josh gate is covered so the
+   second-day task stays obvious.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
