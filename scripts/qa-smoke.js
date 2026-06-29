@@ -924,11 +924,22 @@ async function clickButton(page, name) {
       window.showEndShiftModal();
       const laterShiftText = document.querySelector("#modal-backdrop")?.innerText || "";
       const laterShiftButtons = [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent || "");
+      const routineScenarioLabels = ["Smoke Shift A", "Smoke Shift B", "Smoke Shift C", "Smoke Shift D"].map((source, index) => {
+        state.flags.serviceCallbackPending = false;
+        state.flags.serviceCallbackResolved = false;
+        state.flags.endShiftSource = source;
+        state.stats.shiftsCompleted = index;
+        return window.getHelpJoshShiftCopy()?.taskLabel || "";
+      });
+      state.flags.endShiftSource = "One Quick Display Swap";
       state.flags.serviceCallbackPending = true;
       state.flags.serviceCallbackResolved = false;
       window.showEndShiftModal();
       const pendingCallbackText = document.querySelector("#modal-backdrop")?.innerText || "";
       const pendingCallbackButtons = [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent || "");
+      const pendingCallbackHelpLabel = pendingCallbackButtons.find((label) => label.includes("Help Josh")) || "";
+      window.completeShift("help-josh");
+      const callbackHelpResultText = document.querySelector("#modal-backdrop")?.innerText || "";
       return {
         beforeIntroText,
         beforeIntroButtons,
@@ -938,8 +949,17 @@ async function clickButton(page, name) {
         sameShiftIntroButtons,
         laterShiftText,
         laterShiftButtons,
+        routineScenarioLabels,
         pendingCallbackText,
         pendingCallbackButtons,
+        pendingCallbackHelpLabel,
+        callbackHelpResultText,
+        callbackResolved: Boolean(state.flags.serviceCallbackResolved),
+        callbacksResolved: state.stats.callbacksResolved || 0,
+        coworkerReputation: state.reputation.coworkers,
+        shopHelpDays: state.stats.shopHelpDays || 0,
+        lastHelpScenario: state.flags.lastHelpJoshScenario || {},
+        shiftHistory: state.flags.shiftHistory || [],
       };
     });
     assert(!endShiftJoshGate.beforeIntroText.includes("Help Josh"), "First end-shift modal should not offer Josh help before the player has met him");
@@ -948,7 +968,29 @@ async function clickButton(page, name) {
     assert(endShiftJoshGate.afterIntroText.includes("Help Josh") && endShiftJoshGate.afterIntroButtons.some((label) => label.includes("Help Josh")), "End-shift modal should offer Josh help after the player has met him");
     assert(!endShiftJoshGate.sameShiftIntroText.includes("Help Josh") && endShiftJoshGate.sameShiftIntroButtons.every((label) => !/Josh|lead tech/i.test(label)), "Same-shift Josh intro should not immediately unlock Help Josh");
     assert(endShiftJoshGate.laterShiftText.includes("Help Josh") && endShiftJoshGate.laterShiftButtons.some((label) => label.includes("Help Josh")), "Later shifts should offer Josh help after the intro shift has passed");
-    assert(endShiftJoshGate.pendingCallbackText.includes("callback note") && endShiftJoshGate.pendingCallbackButtons.every((label) => !label.includes("Help Josh")), "Pending callback note should suppress generic Josh help until the next-morning debrief");
+    assert(new Set(endShiftJoshGate.routineScenarioLabels.filter(Boolean)).size > 1, "Routine after-hours Josh help should rotate through multiple task labels");
+    assert(endShiftJoshGate.pendingCallbackText.includes("callback note") && endShiftJoshGate.pendingCallbackHelpLabel.includes("callback"), "Pending service callback should offer a callback-specific after-hours Josh help option");
+    assert(endShiftJoshGate.callbackResolved && endShiftJoshGate.callbacksResolved === 1, "After-hours callback help should resolve the pending service callback");
+    assert(endShiftJoshGate.coworkerReputation === 1 && endShiftJoshGate.shopHelpDays === 1, "After-hours Josh help should still improve coworker trust and shop-help stats");
+    assert(endShiftJoshGate.lastHelpScenario.resolvedCallback && endShiftJoshGate.shiftHistory[0]?.helpJoshTask, "Shift memory should record the Josh help scenario");
+    assert(endShiftJoshGate.callbackHelpResultText.includes("Helped Josh") && endShiftJoshGate.callbackHelpResultText.includes("callback note was cleaned up"), "Shift result should explain the after-hours callback cleanup");
+
+    const beforeMeetHelpGuard = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.finished = true;
+      state.flags.endShiftPending = true;
+      state.flags.endShiftSource = "Smoke No Josh";
+      state.flags.metJosh = false;
+      window.completeShift("help-josh");
+      return {
+        shiftsCompleted: state.stats.shiftsCompleted,
+        endShiftPending: Boolean(state.flags.endShiftPending),
+        logText: state.log.join(" "),
+      };
+    });
+    assert(beforeMeetHelpGuard.shiftsCompleted === 0 && beforeMeetHelpGuard.endShiftPending, "Help Josh should not complete a shift before the player has met Josh");
+    assert(beforeMeetHelpGuard.logText.includes("Meet Josh"), "Blocked Help Josh should tell the player to meet Josh first");
 
     const shiftResultDelta = await page.evaluate(() => {
       window.startGame("prototype-tech");

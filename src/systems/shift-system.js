@@ -109,6 +109,7 @@ function normalizeShiftHistoryEntry(entry = {}) {
     nextShiftPrep: Boolean(entry.nextShiftPrep),
     recoveryDay: Boolean(entry.recoveryDay),
     stayedLate: Boolean(entry.stayedLate),
+    helpJoshTask: entry.helpJoshTask || "",
   };
 }
 
@@ -140,6 +141,7 @@ function getLatestShiftMemoryText() {
   if (entry.burnoutRecovered) details.push(`reduced burnout by ${entry.burnoutRecovered}`);
   if (entry.nextShiftPrep) details.push("today starts with prep advantage");
   if (entry.recoveryDay) details.push("the board skipped a day for recovery");
+  if (entry.helpJoshTask) details.push(`Josh help: ${entry.helpJoshTask}`);
   return `Last shift: ${entry.choiceLabel} after ${entry.source}${details.length ? `; ${details.join("; ")}` : ""}.`;
 }
 
@@ -162,6 +164,7 @@ function recordShiftHistory({ choice, source, before, recovery, stayedLate }) {
     nextShiftPrep: after.nextShiftPrep,
     recoveryDay: choice === "recovery-day",
     stayedLate,
+    helpJoshTask: choice === "help-josh" ? state.flags.lastHelpJoshScenario?.taskLabel || "" : "",
   });
   state.flags.shiftHistory = [
     entry,
@@ -261,18 +264,103 @@ function previewShiftChoice(choice) {
 }
 
 function canHelpJoshAfterShift() {
-  if (!state.flags.metJosh) return false;
-  if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) return false;
-  return !state.flags.joshIntroEndShiftSource
-    || state.flags.joshIntroEndShiftSource !== state.flags.endShiftSource;
+  return !getHelpJoshLockedReason();
+}
+
+function getHelpJoshLockedReason() {
+  if (!state.flags.metJosh) return "Meet Josh before making him part of end-shift plans.";
+  if (state.flags.joshIntroEndShiftSource && state.flags.joshIntroEndShiftSource === state.flags.endShiftSource) {
+    return "Josh help unlocks on a later shift after the intro shift closes.";
+  }
+  return "";
+}
+
+function getHelpJoshShiftScenarioPool() {
+  const callbackPending = state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved;
+  if (callbackPending) {
+    return [
+      {
+        id: "callback-notes",
+        taskLabel: "Conshohocken callback notes",
+        previewLabel: "Help Josh with callback notes",
+        actionLabel: `Help Josh rebuild callback notes (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, callback pressure cleaned up)`,
+        log: "Stayed late with Josh to rebuild the Conshohocken callback notes before the next morning could turn them into another stop.",
+        resolvesServiceCallback: true,
+      },
+      {
+        id: "coupler-bag",
+        taskLabel: "the weird coupler bag",
+        previewLabel: "Help Josh label callback parts",
+        actionLabel: `Help Josh label callback parts (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, callback pressure cleaned up)`,
+        log: "Stayed late with Josh to label the odd Conshohocken coupler bag and clean up the callback trail.",
+        resolvesServiceCallback: true,
+      },
+      {
+        id: "room-photo-thread",
+        taskLabel: "the room-photo thread",
+        previewLabel: "Help Josh sort callback photos",
+        actionLabel: `Help Josh sort callback photos (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, callback pressure cleaned up)`,
+        log: "Stayed late with Josh to match Conshohocken room photos to the service note before coordination could muddy it.",
+        resolvesServiceCallback: true,
+      },
+    ];
+  }
+  return [
+    {
+      id: "bench-notes",
+      taskLabel: "bench notes",
+      previewLabel: "Help Josh clean up bench notes",
+      actionLabel: `Help Josh clean up bench notes (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, crew remembers)`,
+      log: "Helped Josh clean up bench notes and labels before clocking out. Coworker reputation improved, and the longer day still took something out of you.",
+    },
+    {
+      id: "adapter-bin",
+      taskLabel: "the adapter bin",
+      previewLabel: "Help Josh sort the adapter bin",
+      actionLabel: `Help Josh sort the adapter bin (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, crew remembers)`,
+      log: "Helped Josh sort the adapter bin that three different tickets had quietly emptied. Coworker reputation improved, and the longer day still took something out of you.",
+    },
+    {
+      id: "van-two-returns",
+      taskLabel: "Van #2 returns",
+      previewLabel: "Help Josh check Van #2 returns",
+      actionLabel: `Help Josh check Van #2 returns (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, crew remembers)`,
+      log: "Helped Josh check Van #2's returned parts before they became tomorrow's mystery. Coworker reputation improved, and the longer day still took something out of you.",
+    },
+  ];
+}
+
+function getStableJoshHelpScenarioIndex(poolLength) {
+  if (poolLength <= 1) return 0;
+  // Keep the shift's Josh task stable across save/reload instead of rerolling UI text.
+  const input = `${state.flags.endShiftSource || "shift"}:${state.stats.shiftsCompleted || 0}:${state.jobsCompleted || 0}:${state.clock}`;
+  let hash = 2166136261;
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) % poolLength;
+}
+
+function getHelpJoshShiftScenario() {
+  const pool = getHelpJoshShiftScenarioPool();
+  return pool[getStableJoshHelpScenarioIndex(pool.length)] || pool[0];
+}
+
+function getHelpJoshPreviewLabel(scenario) {
+  const task = (scenario?.previewLabel || "")
+    .replace(/^Help Josh\s*/i, "")
+    .replace(/^with\s+/i, "")
+    .trim();
+  return task ? `Help Josh: ${task}` : "Help Josh";
 }
 
 function getHelpJoshShiftCopy() {
   if (!canHelpJoshAfterShift()) return null;
+  const scenario = getHelpJoshShiftScenario();
   return {
-    previewLabel: "Help Josh",
-    actionLabel: `Help Josh clean up notes (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, crew remembers)`,
-    log: "Helped Josh clean up notes and labels before clocking out. Coworker reputation improved, and the longer day still took something out of you.",
+    ...scenario,
+    previewLabel: getHelpJoshPreviewLabel(scenario),
   };
 }
 
@@ -383,12 +471,31 @@ function getShiftChoiceResultText(choice, recovery) {
     return `Stayed late to prep the next job. The next shift starts with Fieldcraft and Documentation support, but the longer day still changed energy, burnout, and management pressure. Recovery restored ${recovery.energyRecovered} energy.`;
   }
   if (choice === "help-josh") {
-    return `Helped Josh clean up notes. Crew trust improved, but the favor still cost energy and added late-night fatigue. Recovery restored ${recovery.energyRecovered} energy.`;
+    const task = state.flags.lastHelpJoshScenario?.taskLabel || "after-hours shop cleanup";
+    const callbackText = state.flags.lastHelpJoshScenario?.resolvedCallback
+      ? " The pending callback note was cleaned up before the next morning."
+      : "";
+    return `Helped Josh with ${task}. Crew trust improved, but the favor still cost energy and added late-night fatigue.${callbackText} Recovery restored ${recovery.energyRecovered} energy.`;
   }
   if (choice === "recovery-day") {
     return `Took a recovery day. Condition gets repaired more aggressively, but management sees the schedule gap. Recovery restored ${recovery.energyRecovered} energy.`;
   }
   return `Clocked out clean. You protected tomorrow's workday instead of borrowing more from the same shift. Recovery restored ${recovery.energyRecovered} energy.`;
+}
+
+function resolveServiceCallbackFromAfterHoursHelp(scenario) {
+  if (!scenario?.resolvesServiceCallback) return false;
+  if (!state.flags.serviceCallbackPending || state.flags.serviceCallbackResolved) return false;
+  state.flags.serviceCallbackResolved = true;
+  state.stats.callbacksResolved = (state.stats.callbacksResolved || 0) + 1;
+  if (state.flags.returnTripRisks?.conshohockenServiceRoomPressure) {
+    resolveReturnTripRisk("conshohockenServiceRoomPressure", {
+      source: content.serviceDispatch.title,
+      resolution: `Josh and the player handled ${scenario.taskLabel} after hours, cleaning up the Conshohocken callback pressure before the next morning.`,
+    });
+  }
+  addLog(`After-hours Josh help resolved the Conshohocken callback note: ${scenario.taskLabel}.`);
+  return true;
 }
 
 function showShiftResultModal({ choice, source, before, recovery }) {
@@ -487,7 +594,7 @@ function showEndShiftModal() {
     title: "Close Out The Workday",
     body: `
       <p>${source} is wrapped. The board has more work, but the next job should start after an actual shift reset.</p>
-      ${pendingServiceCallback ? `<p class="muted">A Conshohocken callback note is waiting on Josh's bench. Close out the shift, then talk to Josh before coordination adds another stop.</p>` : ""}
+      ${pendingServiceCallback ? `<p class="muted">A Conshohocken callback note is waiting on Josh's bench. ${helpJoshCopy?.resolvesServiceCallback ? "You can spend after-hours energy helping Josh clean it up now, or close out and talk to him tomorrow." : "Close out the shift, then talk to Josh before coordination adds another stop."}</p>` : ""}
       <div class="results-grid">
         <span>Current time</span><strong>${state.clock}</strong>
         <span>Energy</span><strong>${state.energy}/${getMaxEnergy()}</strong>
@@ -529,9 +636,7 @@ function completeShift(choice) {
   } else if (choice === "help-josh") {
     const helpJoshCopy = getHelpJoshShiftCopy();
     if (!helpJoshCopy) {
-      return notify(state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved
-        ? "Clear the callback note with Josh before making generic end-shift plans."
-        : "Meet Josh before making him part of end-shift plans.");
+      return notify(getHelpJoshLockedReason() || "Josh is not available for after-hours help right now.");
     }
     changeEnergy(-HELP_JOSH_ENERGY_COST);
     state.burnout += STAY_LATE_BURNOUT_GAIN;
@@ -540,6 +645,13 @@ function completeShift(choice) {
     state.flags.metJosh = true;
     state.reputation.coworkers += 1;
     state.stats.shopHelpDays += 1;
+    const resolvedCallback = resolveServiceCallbackFromAfterHoursHelp(helpJoshCopy);
+    state.flags.lastHelpJoshScenario = {
+      id: helpJoshCopy.id,
+      taskLabel: helpJoshCopy.taskLabel,
+      source,
+      resolvedCallback,
+    };
     addLog(helpJoshCopy.log);
   } else if (choice === "recovery-day") {
     days = 2;

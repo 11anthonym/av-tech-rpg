@@ -1697,6 +1697,14 @@ styles it as the primary card. This is especially for the second morning, where
 the player should see "check in with Josh" before scanning workday, route, or
 consequence details.
 
+Josh after-hours safeguard pass: Help-Josh choices remain unavailable before
+the player meets Josh and during the same shift as his intro. On later shifts,
+routine help can rotate between stable shop tasks, while unresolved
+Conshohocken callback pressure turns the end-shift option into a
+callback-specific after-hours cleanup choice. That gives the player a same-day
+way to spend energy and relationship time resolving the pressure instead of
+only waiting for the next morning.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

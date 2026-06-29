@@ -617,6 +617,12 @@ be easy to verify in the browser.
    next task as the first, highlighted card instead of burying it among workday,
    route, and consequence context. The next-morning Josh gate is covered so the
    second-day task stays obvious.
+98. **Done - Josh after-hours safeguard pass:** Help-Josh closeout options stay
+   locked before the player meets Josh and during the same shift as his intro,
+   then return on later shifts. Pending Conshohocken callback pressure now
+   creates callback-specific after-hours help instead of suppressing Josh help
+   entirely, and routine Josh help rotates through stable shop tasks so the
+   relationship choice feels less scripted without adding new jobs.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

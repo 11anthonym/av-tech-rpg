@@ -234,6 +234,9 @@ function getObjective() {
     if (shouldIntroduceJoshBeforeNextDispatch()) return "Check in with Josh at the workbench before taking the next route.";
     if (state.flags.endShiftPending) {
       if (state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved) {
+        if (typeof canHelpJoshAfterShift === "function" && canHelpJoshAfterShift()) {
+          return "Close out the shift; you can help Josh clean up the Conshohocken callback after hours.";
+        }
         return "Close out the shift; Josh has the Conshohocken callback note waiting.";
       }
       return "Close out the shift before taking another job.";
