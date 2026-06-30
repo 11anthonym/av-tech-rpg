@@ -332,6 +332,13 @@ function getActiveCareerSummaryMarkup() {
       detail: `${state.flags.consecutiveLateNights} consecutive late night${state.flags.consecutiveLateNights === 1 ? "" : "s"} will cap recovery until you clock out normally or take a recovery day.`,
     });
   }
+  const latestJoshHelp = typeof getLatestJoshHelpMemoryText === "function" ? getLatestJoshHelpMemoryText() : "";
+  if (latestJoshHelp) {
+    items.push({
+      label: "Josh after-hours help",
+      detail: latestJoshHelp,
+    });
+  }
   if (!items.length) {
     items.push({ label: "No active complications", detail: "Your current build is not carrying callback pressure, return-trip risk, or temporary shift prep." });
   }

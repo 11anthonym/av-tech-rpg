@@ -623,6 +623,11 @@ be easy to verify in the browser.
    creates callback-specific after-hours help instead of suppressing Josh help
    entirely, and routine Josh help rotates through stable shop tasks so the
    relationship choice feels less scripted without adding new jobs.
+99. **Done - Josh help memory pass:** After-hours Josh help now writes a
+   bounded coworker-help history. The career clipboard and active career
+   summary show the latest task and whether callback pressure was cleaned up,
+   turning the relationship choice into visible workday memory instead of a
+   one-modal result.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

@@ -23,6 +23,7 @@ const EXHAUSTION_INCIDENT_CAP_LOSS = 8;
 const MIN_EXHAUSTION_NEXT_MORNING_ENERGY = 20;
 const MAX_EXHAUSTION_SKILL_PENALTY = 3;
 const SHIFT_HISTORY_LIMIT = 5;
+const JOSH_HELP_HISTORY_LIMIT = 5;
 
 function createInitialState() {
   return {

@@ -113,11 +113,40 @@ function migrateSavedGame(savedGame) {
   flags.shiftHistory = Array.isArray(flags.shiftHistory)
     ? flags.shiftHistory.slice(0, SHIFT_HISTORY_LIMIT)
     : [];
+  flags.joshHelpHistory = getMigratedJoshHelpHistory(flags);
   if (!flags.currentAreaId) {
     flags.currentAreaId = getWorldAreaByScene(savedGame.sceneId)?.id || content.world?.homeAreaId || "shop";
   }
   migrateSavedRouteHistory(migrated, flags);
   return migrated;
+}
+
+function getMigratedJoshHelpHistory(flags) {
+  if (Array.isArray(flags.joshHelpHistory)) {
+    return flags.joshHelpHistory.slice(0, JOSH_HELP_HISTORY_LIMIT);
+  }
+  const previousHelpShift = flags.shiftHistory.find((entry) => entry?.helpJoshTask);
+  if (flags.lastHelpJoshScenario?.taskLabel) {
+    return [{
+      scenarioId: flags.lastHelpJoshScenario.id || "",
+      taskLabel: flags.lastHelpJoshScenario.taskLabel,
+      source: flags.lastHelpJoshScenario.source || previousHelpShift?.source || "Shift",
+      shiftNumber: previousHelpShift?.shiftNumber || 0,
+      clock: previousHelpShift?.clockBefore || "",
+      resolvedCallback: Boolean(flags.lastHelpJoshScenario.resolvedCallback),
+    }];
+  }
+  if (previousHelpShift) {
+    return [{
+      scenarioId: "",
+      taskLabel: previousHelpShift.helpJoshTask,
+      source: previousHelpShift.source || "Shift",
+      shiftNumber: previousHelpShift.shiftNumber || 0,
+      clock: previousHelpShift.clockBefore || "",
+      resolvedCallback: false,
+    }];
+  }
+  return [];
 }
 
 function inferSavedCash(savedGame) {

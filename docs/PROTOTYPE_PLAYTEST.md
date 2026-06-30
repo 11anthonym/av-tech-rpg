@@ -1705,6 +1705,12 @@ callback-specific after-hours cleanup choice. That gives the player a same-day
 way to spend energy and relationship time resolving the pressure instead of
 only waiting for the next morning.
 
+Josh help memory pass: after-hours help now writes a small coworker-help
+history, and the career clipboard names the latest task plus whether callback
+pressure was cleaned up. This keeps the relationship consequence visible after
+the shift result modal closes without adding another job or a separate
+relationship screen.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

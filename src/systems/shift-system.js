@@ -173,6 +173,69 @@ function recordShiftHistory({ choice, source, before, recovery, stayedLate }) {
   return entry;
 }
 
+function normalizeJoshHelpHistoryEntry(entry = {}) {
+  return {
+    id: entry.id || `josh-help-${entry.shiftNumber || 0}-${entry.scenarioId || entry.id || "task"}`,
+    scenarioId: entry.scenarioId || entry.id || "",
+    taskLabel: entry.taskLabel || "after-hours shop cleanup",
+    source: entry.source || "Shift",
+    shiftNumber: Number.isFinite(entry.shiftNumber) ? entry.shiftNumber : 0,
+    clock: entry.clock || "",
+    resolvedCallback: Boolean(entry.resolvedCallback),
+  };
+}
+
+function getJoshHelpHistory() {
+  if (!Array.isArray(state.flags.joshHelpHistory)) {
+    state.flags.joshHelpHistory = [];
+  }
+  state.flags.joshHelpHistory = state.flags.joshHelpHistory
+    .slice(0, JOSH_HELP_HISTORY_LIMIT)
+    .map(normalizeJoshHelpHistoryEntry);
+  return state.flags.joshHelpHistory;
+}
+
+function recordJoshHelpHistory({ id, taskLabel, source, resolvedCallback } = {}) {
+  const entry = normalizeJoshHelpHistoryEntry({
+    scenarioId: id,
+    taskLabel,
+    source: source || state.flags.endShiftSource || "Shift",
+    shiftNumber: (state.stats.shiftsCompleted || 0) + 1,
+    clock: state.clock,
+    resolvedCallback,
+  });
+  state.flags.joshHelpHistory = [
+    entry,
+    ...getJoshHelpHistory(),
+  ].slice(0, JOSH_HELP_HISTORY_LIMIT);
+  return entry;
+}
+
+function getLatestJoshHelpMemoryText() {
+  const entry = getJoshHelpHistory()[0];
+  if (!entry) return "";
+  const result = entry.resolvedCallback
+    ? "Callback pressure was cleaned up before the next morning."
+    : "Crew trust improved, but the late night still cost recovery.";
+  return `Last Josh help: ${entry.taskLabel} after ${entry.source}. ${result}`;
+}
+
+function getJoshHelpHistoryDetail(entry) {
+  const timeText = entry.clock ? ` at ${entry.clock}` : "";
+  const resultText = entry.resolvedCallback ? "Resolved callback pressure." : "Built crew trust.";
+  return `${entry.source}${timeText}. ${resultText}`;
+}
+
+function getJoshHelpHistoryMarkup({ emptyText = "No after-hours Josh help recorded yet." } = {}) {
+  const entries = getJoshHelpHistory();
+  if (!entries.length) return `<p class="muted">${escapeHtml(emptyText)}</p>`;
+  return `
+    <ul class="modal-list">
+      ${entries.map((entry) => `<li><strong>${escapeHtml(entry.taskLabel)}</strong><span>${escapeHtml(getJoshHelpHistoryDetail(entry))}</span></li>`).join("")}
+    </ul>
+  `;
+}
+
 function getOvernightRecovery({ stayedLate = false, burnout = state.burnout } = {}) {
   const enduranceBonus = state.training.includes("endurance") ? 10 : 0;
   const burnoutPenalty = burnout * 10;
@@ -652,6 +715,7 @@ function completeShift(choice) {
       source,
       resolvedCallback,
     };
+    recordJoshHelpHistory(state.flags.lastHelpJoshScenario);
     addLog(helpJoshCopy.log);
   } else if (choice === "recovery-day") {
     days = 2;

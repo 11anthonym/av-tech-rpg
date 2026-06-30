@@ -940,6 +940,8 @@ async function clickButton(page, name) {
       const pendingCallbackHelpLabel = pendingCallbackButtons.find((label) => label.includes("Help Josh")) || "";
       window.completeShift("help-josh");
       const callbackHelpResultText = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.showCareerClipboard();
+      const careerClipboardText = document.querySelector("#modal-backdrop")?.innerText || "";
       return {
         beforeIntroText,
         beforeIntroButtons,
@@ -959,7 +961,9 @@ async function clickButton(page, name) {
         coworkerReputation: state.reputation.coworkers,
         shopHelpDays: state.stats.shopHelpDays || 0,
         lastHelpScenario: state.flags.lastHelpJoshScenario || {},
+        joshHelpHistory: state.flags.joshHelpHistory || [],
         shiftHistory: state.flags.shiftHistory || [],
+        careerClipboardText,
       };
     });
     assert(!endShiftJoshGate.beforeIntroText.includes("Help Josh"), "First end-shift modal should not offer Josh help before the player has met him");
@@ -973,6 +977,9 @@ async function clickButton(page, name) {
     assert(endShiftJoshGate.callbackResolved && endShiftJoshGate.callbacksResolved === 1, "After-hours callback help should resolve the pending service callback");
     assert(endShiftJoshGate.coworkerReputation === 1 && endShiftJoshGate.shopHelpDays === 1, "After-hours Josh help should still improve coworker trust and shop-help stats");
     assert(endShiftJoshGate.lastHelpScenario.resolvedCallback && endShiftJoshGate.shiftHistory[0]?.helpJoshTask, "Shift memory should record the Josh help scenario");
+    assert(endShiftJoshGate.joshHelpHistory.length === 1 && endShiftJoshGate.joshHelpHistory[0].resolvedCallback, "Josh help history should record callback-specific after-hours help");
+    assert(endShiftJoshGate.careerClipboardText.includes("Coworker help history") && endShiftJoshGate.careerClipboardText.includes(endShiftJoshGate.joshHelpHistory[0].taskLabel), "Career clipboard should surface recent Josh help history");
+    assert(endShiftJoshGate.careerClipboardText.includes("Josh after-hours help") && endShiftJoshGate.careerClipboardText.includes("Callback pressure was cleaned up"), "Active career summary should describe the Josh help consequence");
     assert(endShiftJoshGate.callbackHelpResultText.includes("Helped Josh") && endShiftJoshGate.callbackHelpResultText.includes("callback note was cleaned up"), "Shift result should explain the after-hours callback cleanup");
 
     const beforeMeetHelpGuard = await page.evaluate(() => {

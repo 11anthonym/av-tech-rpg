@@ -69,6 +69,8 @@ function showCareerClipboard() {
       ${getActiveCareerSummaryMarkup()}
       <p><strong>Consequence ledger:</strong></p>
       ${getConsequenceLedgerMarkup({ includeResolved: true })}
+      <p><strong>Coworker help history:</strong></p>
+      ${getJoshHelpHistoryMarkup()}
       <p><strong>Field task history:</strong></p>
       ${getFieldTaskResultLedgerMarkup()}
       <p><strong>Build identity:</strong></p>
