@@ -634,6 +634,14 @@ be easy to verify in the browser.
    then consumes the support. Route/job prep, action-pressure previews, skill
    check labels, field-task results, and the career summary all surface the
    effect so the relationship choice changes play instead of only adding flavor.
+101. **Done - Task modifier consequence pass:** Field-task checks now resolve
+   through reusable task modifiers with source, skill delta, energy delta,
+   consumption, and result text. Josh crew support, next-shift prep, field
+   condition pressure, zero-energy pressure, callback ledger pressure, prep
+   context, and Conshohocken room conditions can all surface through the same
+   preview/result path. Route prep, route cards, and dispatch cards now include
+   "Why this is different today" when active support or pressure changes the
+   next job.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

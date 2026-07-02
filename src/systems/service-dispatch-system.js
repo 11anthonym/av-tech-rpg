@@ -244,6 +244,7 @@ function getServiceConditionCheckEffects(check) {
     contextBonus: 0,
     knownLabels: [],
     hiddenCount: 0,
+    modifiers: [],
   };
   getActiveServiceRoomConditions().forEach((condition) => {
     if (isServiceConditionControlled(condition)) return;
@@ -255,6 +256,19 @@ function getServiceConditionCheckEffects(check) {
     if (known) effects.contextBonus += modifier.knownBonus || 0;
     if (known) effects.knownLabels.push(condition.label);
     else effects.hiddenCount += 1;
+    effects.modifiers.push({
+      id: `service-room-${condition.id}`,
+      label: known ? `Known room pressure: ${condition.label}` : "Hidden room pressure",
+      source: known
+        ? condition.revealedSummary || condition.summary || condition.label
+        : condition.hiddenSummary || "The room has an unresolved condition affecting this check.",
+      statDelta: (known ? modifier.knownBonus || 0 : 0) - (modifier.difficulty || 0),
+      energyDelta: modifier.energy || 0,
+      consumesOnUse: false,
+      resultText: known
+        ? `${condition.label} was accounted for during the check.`
+        : `${condition.label} affected the check before it was fully understood.`,
+    });
   });
   return effects;
 }
@@ -268,8 +282,7 @@ function getServiceAdjustedCheck(check) {
   ].filter(Boolean);
   return {
     ...check,
-    difficulty: Math.max(0, (check.difficulty || 0) + effects.difficulty),
-    energyCost: Math.max(0, (check.energyCost || 0) + effects.energy),
+    taskModifiers: [...(check.taskModifiers || []), ...effects.modifiers],
     detail: `${check.detail || ""}${conditionNotes.length ? ` Room condition: ${conditionNotes.join("; ")}.` : ""}`,
   };
 }
@@ -996,7 +1009,7 @@ function chooseServiceApproach(approach) {
       checkId: check.id,
       completedChecks: getServiceFieldCheckHistory(),
       flagKey: "service-signal-path",
-      contextBonus: (state.flags.servicePreparation === "review" ? 1 : 0) + (state.flags.servicePreparation === "josh" ? 1 : 0) + (state.flags.servicePreparation === "contact" ? 1 : 0) + getServiceConditionContextBonus(check),
+      contextBonus: (state.flags.servicePreparation === "review" ? 1 : 0) + (state.flags.servicePreparation === "josh" ? 1 : 0) + (state.flags.servicePreparation === "contact" ? 1 : 0),
       baseEnergyCost: getServiceVerificationEnergyCost(check.energyCost),
       failedEnergyPenalty: 2,
       strainedFlag: "serviceVerificationStrained",
@@ -1032,7 +1045,6 @@ function installServicePart() {
     checkId: check.id,
     completedChecks: getServiceFieldCheckHistory(),
     flagKey: `service-install-${items.join("-")}`,
-    contextBonus: getServiceConditionContextBonus(check),
     baseEnergyCost: getAssemblyEnergyCost(check.energyCost),
     failedEnergyPenalty: 2,
     strainedFlag: "serviceInstallStrained",

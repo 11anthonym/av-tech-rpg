@@ -942,6 +942,8 @@ async function clickButton(page, name) {
       const callbackHelpResultText = document.querySelector("#modal-backdrop")?.innerText || "";
       window.showCareerClipboard();
       const careerClipboardText = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.showRoutePrepModal("conshohockenService");
+      const routePrepModifierText = document.querySelector("#modal-backdrop")?.innerText || "";
       const supportAvailableBeforeCheck = Boolean(state.flags.joshCrewSupportAvailable && !state.flags.joshCrewSupportUsed);
       const supportPressureText = window.getActionPressureSummary({
         check: { skillId: "troubleshooting", difficulty: 4, contextId: "service-diagnosis" },
@@ -975,6 +977,7 @@ async function clickButton(page, name) {
         joshHelpHistory: state.flags.joshHelpHistory || [],
         shiftHistory: state.flags.shiftHistory || [],
         careerClipboardText,
+        routePrepModifierText,
         supportAvailableBeforeCheck,
         supportPressureText,
         supportSkillCheck,
@@ -998,10 +1001,55 @@ async function clickButton(page, name) {
     assert(endShiftJoshGate.careerClipboardText.includes("Coworker help history") && endShiftJoshGate.careerClipboardText.includes(endShiftJoshGate.joshHelpHistory[0].taskLabel), "Career clipboard should surface recent Josh help history");
     assert(endShiftJoshGate.careerClipboardText.includes("Josh after-hours help") && endShiftJoshGate.careerClipboardText.includes("Callback pressure was cleaned up"), "Active career summary should describe the Josh help consequence");
     assert(endShiftJoshGate.supportAvailableBeforeCheck && endShiftJoshGate.careerClipboardText.includes("Josh crew support"), "Helping Josh should grant visible crew support before the next eligible check");
+    assert(endShiftJoshGate.routePrepModifierText.includes("Why this is different today") && endShiftJoshGate.routePrepModifierText.includes("Josh crew support ready"), "Route prep should surface active task modifiers before driving");
     assert(endShiftJoshGate.supportPressureText.includes("Josh crew support ready"), "Action pressure should preview Josh crew support on eligible checks");
     assert(endShiftJoshGate.supportSkillCheck.joshCrewSupportBonus === 1 && endShiftJoshGate.supportSkillLabel.includes("Josh +1"), "Eligible checks should apply the Josh crew-support bonus visibly");
+    assert(endShiftJoshGate.supportSkillCheck.modifiersApplied?.some((modifier) => modifier.id === "josh-crew-support" && modifier.consumesOnUse), "Skill result should preserve the Josh modifier data shape");
     assert(!endShiftJoshGate.supportAvailableAfterCheck && endShiftJoshGate.supportLastUsed.contextId === "service-diagnosis", "Josh crew support should be consumed by the eligible check");
     assert(endShiftJoshGate.callbackHelpResultText.includes("Helped Josh") && endShiftJoshGate.callbackHelpResultText.includes("callback note was cleaned up"), "Shift result should explain the after-hours callback cleanup");
+
+    const taskModifierShape = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      const check = {
+        id: "smoke-modifier-check",
+        label: "Smoke Modifier Check",
+        type: "field check",
+        skillId: "troubleshooting",
+        difficulty: 3,
+        contextId: "service-diagnosis",
+        energyCost: 3,
+        taskModifiers: [{
+          id: "smoke-room-pressure",
+          label: "Known room pressure",
+          source: "Smoke room condition",
+          statDelta: -1,
+          energyDelta: 2,
+          consumesOnUse: false,
+          resultText: "Smoke pressure affected the check.",
+        }],
+      };
+      const beforeEnergy = state.energy;
+      const { skillCheck, energyCost } = window.resolveFieldTaskCheck({
+        check,
+        checkId: check.id,
+        completedChecks: [],
+        flagKey: "smoke-modifier-check",
+        cleanEnergyReduction: 0,
+      });
+      return {
+        beforeEnergy,
+        afterEnergy: state.energy,
+        energyCost,
+        skillCheck,
+        ledgerEntry: state.flags.fieldTaskResults["smoke-modifier-check"],
+        preview: window.getTaskModifierPreviewText(check),
+      };
+    });
+    assert(taskModifierShape.preview.includes("Known room pressure") && taskModifierShape.preview.includes("energy +2"), "Task modifier preview should include source and energy delta");
+    assert(taskModifierShape.skillCheck.modifiersApplied.some((modifier) => modifier.id === "smoke-room-pressure" && modifier.statDelta === -1 && modifier.energyDelta === 2), "Skill check should carry generic modifier data");
+    assert(taskModifierShape.ledgerEntry.modifiersApplied.some((modifier) => modifier.id === "smoke-room-pressure"), "Field-task result ledger should persist modifiersApplied");
+    assert(taskModifierShape.beforeEnergy - taskModifierShape.afterEnergy === taskModifierShape.energyCost && taskModifierShape.energyCost >= 5, "Task modifier energy delta should affect resolved energy cost");
 
     const beforeMeetHelpGuard = await page.evaluate(() => {
       window.startGame("prototype-tech");
@@ -1414,15 +1462,19 @@ async function clickButton(page, name) {
         clientText,
         signalDifficulty: adjustedSignal.difficulty,
         resultDifficulty: signalResult?.difficulty || 0,
+        signalModifierIds: (adjustedSignal.taskModifiers || []).map((modifier) => modifier.id),
+        resultModifierIds: (signalResult?.modifiersApplied || []).map((modifier) => modifier.id),
         installDifficulty: adjustedInstall.difficulty,
+        installModifierIds: (adjustedInstall.taskModifiers || []).map((modifier) => modifier.id),
       };
     });
     assert(serviceConditionGameplay.rolledConditions.length === 2, "Service room should roll two saved conditions");
     assert(serviceConditionGameplay.knownFromPrep, "Service prep should reveal a relevant room condition");
     assert(serviceConditionGameplay.clientRevealedSecond, "Client context should reveal another room condition");
     assert(serviceConditionGameplay.clientText.includes("ROOM CONDITIONS"), "Client context should show room condition information");
-    assert(serviceConditionGameplay.signalDifficulty > 4 && serviceConditionGameplay.resultDifficulty > 4, "Service room conditions should adjust signal-path difficulty");
-    assert(serviceConditionGameplay.installDifficulty > 4, "Service room conditions should adjust install difficulty");
+    assert(serviceConditionGameplay.signalDifficulty === 4 && serviceConditionGameplay.resultDifficulty === 4, "Service room base signal-path difficulty should stay readable while modifiers carry pressure");
+    assert(serviceConditionGameplay.signalModifierIds.length && serviceConditionGameplay.resultModifierIds.some((id) => id.startsWith("service-room-")), "Service room conditions should apply signal-path task modifiers");
+    assert(serviceConditionGameplay.installDifficulty === 4 && serviceConditionGameplay.installModifierIds.length, "Service room conditions should apply install task modifiers without hiding the base difficulty");
 
     const serviceConditionChoices = await page.evaluate(() => {
       window.startGame("prototype-tech");
@@ -1435,11 +1487,13 @@ async function clickButton(page, name) {
       const labels = window.getInteractions().map((interaction) => interaction.label);
       const objective = window.getObjective();
       const beforeDifficulty = window.getServiceAdjustedCheck(window.getServiceCheckById("signal-path")).difficulty;
+      const beforeModifierCount = window.getServiceAdjustedCheck(window.getServiceCheckById("signal-path")).taskModifiers.length;
       window.showServiceConditionResponseChoice("mislabeled-input");
       const choiceText = document.querySelector("#modal-backdrop")?.innerText || "";
       const beforeEnergy = state.energy;
       window.resolveServiceConditionResponse("mislabeled-input", "document");
       const afterDifficulty = window.getServiceAdjustedCheck(window.getServiceCheckById("signal-path")).difficulty;
+      const afterModifierCount = window.getServiceAdjustedCheck(window.getServiceCheckById("signal-path")).taskModifiers.length;
       const documentText = document.querySelector("#modal-backdrop")?.innerText || "";
       const documentEnergyChanged = state.energy !== beforeEnergy;
 
@@ -1503,6 +1557,8 @@ async function clickButton(page, name) {
         choiceText,
         beforeDifficulty,
         afterDifficulty,
+        beforeModifierCount,
+        afterModifierCount,
         energyChanged: documentEnergyChanged,
         documentText,
         incidentText,
@@ -1526,7 +1582,7 @@ async function clickButton(page, name) {
     assert(serviceConditionChoices.labels.includes("Handle room pressure"), "Known service pressure should create a visible room decision");
     assert(serviceConditionChoices.objective.includes("known room pressure"), "Objective should point to known service pressure decisions");
     assert(serviceConditionChoices.choiceText.includes("35% incident risk"), "Quick service responses should show incident odds");
-    assert(serviceConditionChoices.afterDifficulty < serviceConditionChoices.beforeDifficulty, "Careful service response should remove controlled condition pressure from later checks");
+    assert(serviceConditionChoices.afterDifficulty === serviceConditionChoices.beforeDifficulty && serviceConditionChoices.afterModifierCount < serviceConditionChoices.beforeModifierCount, "Careful service response should remove controlled condition modifiers from later checks");
     assert(serviceConditionChoices.energyChanged, "Careful service response should spend energy now");
     assert(serviceConditionChoices.documentText.includes("Pressure Controlled"), "Careful service response should show immediate resolution");
     assert(serviceConditionChoices.incidentText.includes("Immediate Problem") && serviceConditionChoices.incidentText.includes("risk happened in the room"), "Failed quick response should create visible immediate pressure");

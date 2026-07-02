@@ -1717,6 +1717,14 @@ documentation/troubleshooting check gets a visible Josh +1, then the support is
 consumed. This is the smallest proof that relationship work can affect field
 work without adding a relationship minigame or another dispatch.
 
+Task modifier consequence pass: field-task checks now record reusable modifiers
+instead of hiding support and pressure inside one-off math. Route prep, route
+cards, dispatch cards, action pressure, skill results, and field-task history
+can all explain why today is different: Josh support, next-shift prep, field
+condition, zero-energy pressure, callback debt, prep context, or Conshohocken
+room pressure. The next non-service proof case should reuse this same layer
+before adding new content.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

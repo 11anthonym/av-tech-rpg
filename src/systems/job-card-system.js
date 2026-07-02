@@ -184,6 +184,17 @@ function getToolPlanText(items = [], options = {}) {
     .join(", ");
 }
 
+function getDispatchFieldTasksForRoute(routeId = "") {
+  const routeJob = content.routeJobs?.[routeId] || {};
+  const dispatch = getDispatchReference(routeJob.dispatchId || routeJob.followup?.dispatchId);
+  return dispatch?.checks || dispatch?.inspections || [];
+}
+
+function getDispatchDifferenceText({ routeId = "", fieldTasks = [] } = {}) {
+  const tasks = fieldTasks.length ? fieldTasks : getDispatchFieldTasksForRoute(routeId);
+  return getWhyDifferentTodayText(tasks);
+}
+
 function getRouteBranchRows(route) {
   if (route?.id !== "burlingtonRetrofitWalkdown") return [];
   if (state.flags.retrofitWalkdownComplete && !state.flags.retrofitInstallComplete) {
@@ -240,6 +251,7 @@ function getRouteJobCardRows(route) {
   const travelResult = getTravelResultText(getLastTravelResult(route));
   const toolPlan = getDispatchToolPlan(job.familyId, route.id);
   const dailyConditionText = getDailyConditionPrepText();
+  const differenceText = getDispatchDifferenceText({ routeId: route.id });
   return [
     { label: "Destination", detail: `${destination?.label || route.toLabel}${region?.name ? `, ${region.name}` : ""}` },
     { label: "Job family", detail: getJobFamilyName(job.familyId) },
@@ -253,6 +265,7 @@ function getRouteJobCardRows(route) {
     { label: "Route status", detail: getRouteStatus(route) },
     { label: "What happens next", detail: getRouteLaunchPreviewText(route) },
     { label: "Travel cost/risk", detail: getRouteTravelCostRisk(route) },
+    differenceText ? { label: "Why this is different today", detail: differenceText } : null,
     dailyConditionText ? { label: "Today's condition", detail: dailyConditionText } : null,
     { label: "Driven before", detail: getRouteDrivenText(route) },
     { label: "Fast travel", detail: `${getRouteFastTravelText(route)}${fastTravelCount ? ` Used ${fastTravelCount} time${fastTravelCount === 1 ? "" : "s"}.` : ""}` },
@@ -302,6 +315,7 @@ function getDispatchJobOverviewRowsMarkup({ type, setup, familyId = "", routeId 
   const toolPlan = getDispatchToolPlan(resolvedFamilyId, route?.id || "");
   const routeCloseoutHistoryText = route ? getRouteCloseoutHistoryText(route) : "";
   const dailyConditionText = getDailyConditionPrepText({ includeClean: true });
+  const differenceText = getDispatchDifferenceText({ routeId: route?.id || "" });
   const routeDetail = route
     ? `${route.fromLabel} -> ${route.toLabel}. ${getRouteTravelCostRisk(route)} ${getRouteFastTravelText(route)}`
     : "Shop-based task; no drive route starts for this board item.";
@@ -316,6 +330,7 @@ function getDispatchJobOverviewRowsMarkup({ type, setup, familyId = "", routeId 
     <li><strong>Recommended tools</strong><span>${escapeHtml(getToolPlanText(toolPlan.recommended))}</span></li>
     <li><strong>Risk tags</strong><span>${escapeHtml(getDispatchRiskTags({ routeId: route?.id || "", familyId: resolvedFamilyId, consequenceHooks }))}</span></li>
     <li><strong>Route</strong><span>${escapeHtml(routeDetail)}</span></li>
+    ${differenceText ? `<li><strong>Why this is different today</strong><span>${escapeHtml(differenceText)}</span></li>` : ""}
     <li><strong>Today's condition</strong><span>${escapeHtml(dailyConditionText)}</span></li>
     <li><strong>Rewards</strong><span>${escapeHtml(routeJob?.rewards || "Cash, XP, reputation, and ledger changes on closeout.")}</span></li>
     <li><strong>Unlock condition</strong><span>${escapeHtml(unlockDetail)}</span></li>
@@ -341,7 +356,7 @@ function getDispatchBoardMarkup({ type, setup, why, stakes = [], note, managemen
       ${getOpenCallbackBoardMarkup()}
       ${getBoardRoutingMarkup()}
       ${prep ? `<li><strong>Prep</strong><span>${prep}</span></li>` : ""}
-      ${state.flags.shiftPrepActive ? `<li><strong>Next-shift prep</strong><span>Stayed late last shift: +1 Fieldcraft and +1 Documentation until this job closes.</span></li>` : ""}
+      ${getDispatchDifferenceText({ routeId: routeId || getCurrentDispatchRouteId(), fieldTasks }) ? `<li><strong>Why this is different today</strong><span>${escapeHtml(getDispatchDifferenceText({ routeId: routeId || getCurrentDispatchRouteId(), fieldTasks }))}</span></li>` : ""}
     </ul>
     ${getDispatchTaskCardsMarkup(taskCards)}
     ${getFieldTaskPreviewMarkup(fieldTasks)}

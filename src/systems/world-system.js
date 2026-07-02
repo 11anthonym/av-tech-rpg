@@ -258,6 +258,7 @@ function getRoutePrepRows(route, { fastTravel = false } = {}) {
   const region = getWorldRegion(destination?.regionId);
   const toolPlan = getDispatchToolPlan(job.familyId, route.id);
   const lockReason = getRouteLockReason(route);
+  const differenceText = getDispatchDifferenceText({ routeId: route.id });
   return [
     { label: "Job", detail: job.title },
     { label: "Destination", detail: `${destination?.label || route.toLabel}${region?.name ? `, ${region.name}` : ""}` },
@@ -268,6 +269,7 @@ function getRoutePrepRows(route, { fastTravel = false } = {}) {
     { label: "Route status", detail: getRouteStatus(route) },
     { label: "What happens next", detail: getRouteLaunchPreviewText(route, { fastTravel }) },
     { label: fastTravel ? "Fast-travel cost" : "Travel cost / risk", detail: fastTravel ? `Known route shortcut, -${getFastTravelEnergyCost(route)} energy.` : getRouteTravelCostRisk(route) },
+    differenceText ? { label: "Why this is different today", detail: differenceText } : null,
     { label: "Today's condition", detail: getDailyConditionPrepText({ includeClean: true }) },
     { label: "Required prep", detail: getToolPlanText(toolPlan.required, { required: true }) },
     { label: "Recommended prep", detail: getToolPlanText(toolPlan.recommended) },

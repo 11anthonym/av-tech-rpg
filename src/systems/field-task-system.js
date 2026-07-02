@@ -30,18 +30,191 @@ function getConditionSkillPressureSummary(details = getConditionSkillPressureDet
   return `${details.map((detail) => detail.label).join(", ")}: -${penalty} to skill checks.`;
 }
 
-function getSkillCheckResult({ skillId, difficulty, contextBonus = 0, contextId = "" }) {
-  const exhaustionPenalty = getExhaustionSkillPenalty();
+function normalizeTaskModifier(modifier = {}) {
+  return {
+    id: modifier.id || modifier.label || "task-modifier",
+    label: modifier.label || "Task modifier",
+    source: modifier.source || "Current workday state",
+    statDelta: Number.isFinite(modifier.statDelta) ? modifier.statDelta : 0,
+    energyDelta: Number.isFinite(modifier.energyDelta) ? modifier.energyDelta : 0,
+    consumesOnUse: Boolean(modifier.consumesOnUse),
+    resultText: modifier.resultText || modifier.detail || "",
+  };
+}
+
+function getTaskBaseSkillValue(skillId) {
+  return getSkillValue(skillId) - getShiftPrepSkillBonus(skillId);
+}
+
+function getTaskModifierStatDelta(modifiers = []) {
+  return modifiers.reduce((total, modifier) => total + (modifier.statDelta || 0), 0);
+}
+
+function getTaskModifierEnergyDelta(modifiers = []) {
+  return modifiers.reduce((total, modifier) => total + (modifier.energyDelta || 0), 0);
+}
+
+function getTaskModifierSummary(modifiers = []) {
+  if (!modifiers.length) return "";
+  return modifiers
+    .map((modifier) => {
+      const deltas = [
+        modifier.statDelta ? `skill ${formatSignedNumber(modifier.statDelta)}` : "",
+        modifier.energyDelta ? `energy ${formatSignedNumber(modifier.energyDelta)}` : "",
+        modifier.consumesOnUse ? "consumes on use" : "",
+      ].filter(Boolean).join(", ");
+      return `${modifier.label}${deltas ? ` (${deltas})` : ""}: ${modifier.source}`;
+    })
+    .join(" ");
+}
+
+function getActiveTaskModifiers(check = {}, base = {}) {
+  const skillId = base.skillId || check.skillId || "";
+  const contextId = base.contextId ?? check.contextId ?? "";
+  const modifiers = [];
+  (check.taskModifiers || []).forEach((modifier) => modifiers.push(normalizeTaskModifier(modifier)));
+  const contextBonus = base.contextBonus || 0;
+  if (contextBonus) {
+    modifiers.push(normalizeTaskModifier({
+      id: "task-context-support",
+      label: "Prep / context",
+      source: "Selected prep, known site context, or job-specific setup is helping this check.",
+      statDelta: contextBonus,
+      resultText: "Prep or site context improved the check.",
+    }));
+  }
+  const shiftPrepBonus = skillId ? getShiftPrepSkillBonus(skillId) : 0;
+  if (shiftPrepBonus) {
+    modifiers.push(normalizeTaskModifier({
+      id: "next-shift-prep",
+      label: "Next-shift prep",
+      source: "Stayed-late prep is still active for this job.",
+      statDelta: shiftPrepBonus,
+      resultText: "Prep from the previous shift supported the check.",
+    }));
+  }
   const conditionPressure = getConditionSkillPressureDetails();
   const conditionPenalty = getConditionSkillPenalty(conditionPressure);
+  if (conditionPenalty) {
+    modifiers.push(normalizeTaskModifier({
+      id: "field-condition-pressure",
+      label: "Field condition",
+      source: getConditionSkillPressureSummary(conditionPressure),
+      statDelta: -conditionPenalty,
+      resultText: "Low energy or burnout made the check less steady.",
+    }));
+  }
+  const exhaustionPenalty = getExhaustionSkillPenalty();
+  if (exhaustionPenalty) {
+    modifiers.push(normalizeTaskModifier({
+      id: "zero-energy-pressure",
+      label: "Zero-energy pressure",
+      source: "Energy has hit zero this shift, so judgment is less reliable.",
+      statDelta: -exhaustionPenalty,
+      resultText: "Exhaustion pressure weakened the check.",
+    }));
+  }
   const joshCrewSupportBonus = typeof getJoshCrewSupportBonus === "function" ? getJoshCrewSupportBonus(skillId, contextId) : 0;
-  const score = getSkillValue(skillId) + contextBonus + getTraitContextBonus(skillId, contextId) + joshCrewSupportBonus - exhaustionPenalty - conditionPenalty;
-  const margin = score - difficulty;
+  if (joshCrewSupportBonus) {
+    modifiers.push(normalizeTaskModifier({
+      id: "josh-crew-support",
+      label: "Josh crew support",
+      source: getJoshCrewSupportText(skillId, contextId),
+      statDelta: joshCrewSupportBonus,
+      consumesOnUse: true,
+      resultText: "Josh's after-hours help carried into this check.",
+    }));
+  }
+  if (typeof getUnresolvedCallbackCount === "function" && getUnresolvedCallbackCount() && /callback|service|handoff|systems/.test(contextId)) {
+    modifiers.push(normalizeTaskModifier({
+      id: "callback-ledger-pressure",
+      label: "Callback ledger pressure",
+      source: `${getUnresolvedCallbackCount()} unresolved callback${getUnresolvedCallbackCount() === 1 ? "" : "s"} can make this work harder to close cleanly.`,
+      resultText: "Open callback pressure stayed visible during the check.",
+    }));
+  }
+  return modifiers;
+}
+
+function applyTaskModifiers(check = {}, base = {}) {
+  const modifiers = getActiveTaskModifiers(check, base);
+  return {
+    ...base,
+    difficulty: base.difficulty ?? check.difficulty ?? 0,
+    baseEnergyCost: Math.max(0, (base.baseEnergyCost ?? check.energyCost ?? 0) + getTaskModifierEnergyDelta(modifiers)),
+    contextBonus: base.contextBonus || 0,
+    statDelta: getTaskModifierStatDelta(modifiers),
+    energyDelta: getTaskModifierEnergyDelta(modifiers),
+    modifiers,
+  };
+}
+
+function consumeTaskModifiers(check = {}, result = {}) {
+  const consumed = [];
+  (result.modifiersApplied || []).forEach((modifier) => {
+    if (modifier.id === "josh-crew-support" && typeof consumeJoshCrewSupport === "function" && consumeJoshCrewSupport(result)) {
+      consumed.push(modifier.id);
+    }
+  });
+  return consumed;
+}
+
+function getTaskModifierPreviewText(check = {}, base = {}) {
+  return getTaskModifierSummary(getActiveTaskModifiers(check, base));
+}
+
+function getTaskModifierBrief(modifiers = []) {
+  if (!modifiers.length) return "";
+  return modifiers.map((modifier) => {
+    if (modifier.id === "field-condition-pressure") return `Condition: ${modifier.source.replace(" to skill checks.", " checks")}`;
+    if (modifier.id === "zero-energy-pressure") return `Exhaustion: skill ${formatSignedNumber(modifier.statDelta)}`;
+    if (modifier.id === "josh-crew-support") return "Josh support: +1 eligible check";
+    if (modifier.id === "next-shift-prep") return `Next-shift prep: skill ${formatSignedNumber(modifier.statDelta)}`;
+    if (modifier.id === "callback-ledger-pressure") return `Callback debt: ${modifier.source.split(" can ")[0]}`;
+    const deltas = [
+      modifier.statDelta ? `skill ${formatSignedNumber(modifier.statDelta)}` : "",
+      modifier.energyDelta ? `energy ${formatSignedNumber(modifier.energyDelta)}` : "",
+    ].filter(Boolean).join(", ");
+    return `${modifier.label}${deltas ? `: ${deltas}` : ""}`;
+  }).join(" ");
+}
+
+function getWhyDifferentTodayText(fieldTasks = []) {
+  const taskList = Array.isArray(fieldTasks) ? fieldTasks : [fieldTasks].filter(Boolean);
+  const taskModifierText = uniqueValues(taskList
+    .map((check) => getTaskModifierPreviewText(check))
+    .filter(Boolean))
+    .join(" ");
+  if (taskModifierText) return taskModifierText;
+  const notes = [];
+  const conditionText = getConditionSkillPressureSummary();
+  const exhaustionPenalty = getExhaustionSkillPenalty();
+  const joshSupport = typeof getJoshCrewSupportText === "function" ? getJoshCrewSupportText() : "";
+  if (conditionText) notes.push(`Field condition: ${conditionText}`);
+  if (exhaustionPenalty) notes.push(`Zero-energy pressure: -${exhaustionPenalty} to skill checks.`);
+  if (state.flags.shiftPrepActive) notes.push("Next-shift prep: Fieldcraft and Documentation checks are supported until this job closes.");
+  if (joshSupport) notes.push(joshSupport);
+  if (typeof getUnresolvedCallbackCount === "function" && getUnresolvedCallbackCount()) {
+    notes.push(`${getUnresolvedCallbackCount()} unresolved callback${getUnresolvedCallbackCount() === 1 ? "" : "s"} can make closeout and routing more fragile.`);
+  }
+  return notes.join(" ");
+}
+
+function getSkillCheckResult({ skillId, difficulty, contextBonus = 0, contextId = "", check = null }) {
+  const resolvedCheck = check || { skillId, difficulty, contextId };
+  const modified = applyTaskModifiers(resolvedCheck, { skillId, difficulty, contextBonus, contextId });
+  const modifiersApplied = modified.modifiers;
+  const conditionPressure = getConditionSkillPressureDetails();
+  const exhaustionPenalty = Math.abs(modifiersApplied.find((modifier) => modifier.id === "zero-energy-pressure")?.statDelta || 0);
+  const conditionPenalty = Math.abs(modifiersApplied.find((modifier) => modifier.id === "field-condition-pressure")?.statDelta || 0);
+  const joshCrewSupportBonus = modifiersApplied.find((modifier) => modifier.id === "josh-crew-support")?.statDelta || 0;
+  const score = getTaskBaseSkillValue(skillId) + getTraitContextBonus(skillId, contextId) + modified.statDelta;
+  const margin = score - modified.difficulty;
   const tier = margin >= 2 ? "clean" : margin >= 0 ? "solid" : margin === -1 ? "strained" : "miss";
   return {
     skillId,
     contextId,
-    difficulty,
+    difficulty: modified.difficulty,
     score,
     margin,
     tier,
@@ -49,6 +222,7 @@ function getSkillCheckResult({ skillId, difficulty, contextBonus = 0, contextId 
     conditionPenalty,
     joshCrewSupportBonus,
     joshCrewSupportText: joshCrewSupportBonus ? getJoshCrewSupportText(skillId, contextId) : "",
+    modifiersApplied,
     conditionPressure: conditionPressure.map((detail) => detail.label),
     conditionPressureText: getConditionSkillPressureSummary(conditionPressure),
     successful: margin >= 0,
@@ -62,7 +236,7 @@ function resolveSkillCheck(flagKey, options) {
   state.flags.skillChecks[flagKey] = result;
   if (result.successful) state.stats.skillChecksPassed += 1;
   else state.stats.skillChecksStrained += 1;
-  if (typeof consumeJoshCrewSupport === "function") consumeJoshCrewSupport(result);
+  consumeTaskModifiers(options.check || {}, result);
   return result;
 }
 
@@ -93,10 +267,11 @@ function getFieldTaskOutcomeText(check, skillCheck, successful = skillCheck?.suc
 
 function getFieldTaskResultMarkup({ check, skillCheck = null, energyCost, successful }) {
   const resolvedSuccessful = successful ?? skillCheck?.successful ?? true;
+  const modifierText = getTaskModifierSummary(skillCheck?.modifiersApplied || []);
   const rows = [
     ["Task type", check.type || "field check"],
     ["Skill check", skillCheck ? getSkillCheckLabel(skillCheck) : "No skill roll"],
-    ...(skillCheck?.joshCrewSupportBonus ? [["Crew support", skillCheck.joshCrewSupportText || `Josh +${skillCheck.joshCrewSupportBonus}`]] : []),
+    ...(modifierText ? [["Modifiers applied", modifierText]] : []),
     ...(skillCheck?.conditionPenalty ? [["Condition pressure", skillCheck.conditionPressureText || `-${skillCheck.conditionPenalty} to skill checks`]] : []),
     ["Energy spent", energyCost ? `-${energyCost} energy` : "0 energy"],
     ...(check.requiredTool ? [["Required tool", getFieldTaskToolText(check.requiredTool)]] : []),
@@ -131,6 +306,7 @@ function recordFieldTaskResult({ flagKey, check, checkId = check?.id || flagKey,
     conditionPressureText: skillCheck?.conditionPressureText || "",
     joshCrewSupportBonus: skillCheck?.joshCrewSupportBonus || 0,
     joshCrewSupportText: skillCheck?.joshCrewSupportText || "",
+    modifiersApplied: skillCheck?.modifiersApplied || [],
     riskFlag: check.riskFlag || "",
     riskLabel,
     outcomeText: getFieldTaskOutcomeText(check, skillCheck, resolvedSuccessful),
@@ -141,7 +317,11 @@ function recordFieldTaskResult({ flagKey, check, checkId = check?.id || flagKey,
 
 function getFieldTaskResultEntries() {
   return Object.entries(state.flags.fieldTaskResults || {})
-    .map(([id, result]) => ({ id, ...result }));
+    .map(([id, result]) => ({
+      id,
+      ...result,
+      modifiersApplied: Array.isArray(result.modifiersApplied) ? result.modifiersApplied : [],
+    }));
 }
 
 function getFieldTaskResultForCheck(check) {
@@ -252,10 +432,11 @@ function getFieldTaskResultEntryMarkup(entry) {
   const outcomeText = entry.outcomeText || (entry.successful ? "Task resolved." : "Task left visible risk.");
   const conditionText = entry.conditionPressureText ? ` | condition: ${entry.conditionPressureText}` : "";
   const crewSupportText = entry.joshCrewSupportBonus ? ` | crew support: Josh +${entry.joshCrewSupportBonus}` : "";
+  const modifierText = entry.modifiersApplied?.length ? ` | modifiers: ${getTaskModifierSummary(entry.modifiersApplied)}` : "";
   return `
     <li>
       <strong>${escapeHtml(`${entry.successful ? "Resolved" : "Risk"} - ${entry.label}`)}</strong>
-      <span>${escapeHtml(`${entry.type || "field check"} | ${skillName}${entry.difficulty ? ` ${entry.difficulty}` : ""} | energy ${entry.energyCost || 0} | ${entry.tier || "recorded"}${conditionText}${crewSupportText} | risk: ${riskText}${toolText ? ` | tools: ${toolText}` : ""}. ${outcomeText}`)}</span>
+      <span>${escapeHtml(`${entry.type || "field check"} | ${skillName}${entry.difficulty ? ` ${entry.difficulty}` : ""} | energy ${entry.energyCost || 0} | ${entry.tier || "recorded"}${conditionText}${crewSupportText}${modifierText} | risk: ${riskText}${toolText ? ` | tools: ${toolText}` : ""}. ${outcomeText}`)}</span>
     </li>
   `;
 }
@@ -294,13 +475,21 @@ function resolveFieldTaskCheck({
   const resolvedCleanEnergyReduction = cleanEnergyReduction ?? check.cleanEnergyReduction ?? 1;
   const resolvedStrainedFlag = strainedFlag || check.strainedFlag || "";
   completedChecks.push(checkId);
+  const modifiedTask = applyTaskModifiers(check, {
+    skillId: resolvedSkillId,
+    difficulty: resolvedDifficulty,
+    contextBonus,
+    contextId: resolvedContextId,
+    baseEnergyCost: resolvedBaseEnergyCost,
+  });
   const skillCheck = resolveSkillCheck(flagKey, {
     skillId: resolvedSkillId,
     difficulty: resolvedDifficulty,
     contextBonus,
     contextId: resolvedContextId,
+    check,
   });
-  const energyCost = Math.max(0, resolvedBaseEnergyCost + (skillCheck.successful ? 0 : resolvedFailedEnergyPenalty) - (skillCheck.tier === "clean" ? resolvedCleanEnergyReduction : 0));
+  const energyCost = Math.max(0, modifiedTask.baseEnergyCost + (skillCheck.successful ? 0 : resolvedFailedEnergyPenalty) - (skillCheck.tier === "clean" ? resolvedCleanEnergyReduction : 0));
   changeEnergy(-energyCost);
   if (!skillCheck.successful && resolvedStrainedFlag) state.flags[resolvedStrainedFlag] = true;
   recordFieldTaskResult({
@@ -336,14 +525,14 @@ function getActionPressureDetails({
   }
   if (includeSkill) {
     const conditionPressure = getConditionSkillPressureSummary();
-    if (conditionPressure) {
+    if (conditionPressure && !check) {
       details.push({
         label: "Field condition",
         detail: conditionPressure,
       });
     }
     const exhaustionPenalty = getExhaustionSkillPenalty();
-    if (exhaustionPenalty) {
+    if (exhaustionPenalty && !check) {
       details.push({
         label: "Exhaustion",
         detail: `Zero-energy pressure is applying -${exhaustionPenalty} to skill checks.`,
@@ -351,15 +540,13 @@ function getActionPressureDetails({
     }
     if (check?.skillId || check?.difficulty != null) {
       const skillName = getSkillDefinition(check.skillId)?.name || check.skill || check.skillId || "Field skill";
-      const skillValue = check.skillId ? getSkillValue(check.skillId) : null;
+      const skillValue = check.skillId ? getTaskBaseSkillValue(check.skillId) : null;
       const difficulty = check.difficulty != null ? `difficulty ${check.difficulty}` : check.difficultyHint || "variable difficulty";
-      const supportText = typeof getJoshCrewSupportText === "function"
-        ? getJoshCrewSupportText(check.skillId, check.contextId || "")
-        : "";
-      if (supportText) {
+      const modifierText = getTaskModifierPreviewText(check);
+      if (modifierText) {
         details.push({
-          label: "Josh support",
-          detail: supportText,
+          label: "Task modifiers",
+          detail: modifierText,
         });
       }
       details.push({
@@ -426,7 +613,7 @@ function getActionPressureBrief(options = {}) {
     }
     if (detail.label === "Field condition") return `Condition: ${detail.detail.replace(" to skill checks.", " checks")}`;
     if (detail.label === "Exhaustion") return detail.detail.replace("Zero-energy pressure is applying ", "Exhaustion: ");
-    if (detail.label === "Josh support") return "Josh support: +1 eligible check";
+    if (detail.label === "Task modifiers") return getTaskModifierBrief(getActiveTaskModifiers(options.check || {}));
     if (detail.label === "Skill fit") return detail.detail.replace(" against ", " vs ").replace(/\.$/, "");
     if (detail.label === "Movement condition") return `Movement: ${detail.detail}`;
     if (detail.label === "Helpful tool missing") return `Missing tool: ${detail.detail.split(" would ")[0]}`;
