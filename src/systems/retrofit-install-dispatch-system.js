@@ -174,11 +174,11 @@ function showRetrofitInstallChoice() {
     body: `
       <p>The display pathway is installed. The closeout can turn the real route into record/as-built notes, or it can leave the next person with a clean-looking install and a thinner map.</p>
       ${state.flags.retrofitInstallCheckStrained ? `<p class="muted">The install check was strained. A record/as-built closeout can still protect future service, but the upside is smaller.</p>` : ""}
-      ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits reduce the record/as-built closeout cost by 1 energy.</p>` : ""}
+      ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits make the record/as-built closeout less draining.</p>` : ""}
       ${getChoicePressureMarkup([
         {
           label: "Record actual pathway",
-          detail: riskBranch ? "Costs energy, resolves the inherited pathway risk, and gives future service usable record/as-built notes." : "Costs energy and turns the protected pathway into useful closeout documentation.",
+          detail: riskBranch ? "Takes steady effort, resolves the inherited pathway risk, and gives future service usable record/as-built notes." : "Takes steady effort and turns the protected pathway into useful closeout documentation.",
         },
         {
           label: "Quick install note",
@@ -187,7 +187,7 @@ function showRetrofitInstallChoice() {
       ])}
     `,
     actions: [
-      { label: `Record actual pathway (-${getRetrofitInstallCloseoutEnergyCost()} energy)`, onClick: () => finishRetrofitInstall("record") },
+      { label: "Record actual pathway", onClick: () => finishRetrofitInstall("record") },
       { label: "Close with quick install note", className: "secondary-button", onClick: () => finishRetrofitInstall("quick") },
     ],
   });

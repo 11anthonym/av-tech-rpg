@@ -213,7 +213,7 @@ async function clickButton(page, name) {
     });
     assert(tutorialPressureGameplay.labels.includes("Handle cart pressure"), "First-day pressure should create a visible room decision");
     assert(tutorialPressureGameplay.objective.includes("first-day cart pressure"), "Current objective should point to first-day pressure");
-    assert(tutorialPressureGameplay.choiceText.includes("30% incident risk"), "First-day quick pressure option should show incident odds");
+    assert(tutorialPressureGameplay.choiceText.includes("bad guess will show up"), "First-day quick pressure option should show qualitative incident risk");
     assert(tutorialPressureGameplay.beforeDifficulty > tutorialPressureGameplay.afterDifficulty, "Careful first-day pressure response should remove adjusted task pressure");
     assert(tutorialPressureGameplay.carefulEnergyChanged, "Careful first-day pressure response should spend energy now");
     assert(tutorialPressureGameplay.carefulText.includes("Pressure Controlled") && tutorialPressureGameplay.carefulResolution?.controlled, "Careful first-day pressure response should save controlled state");
@@ -1046,7 +1046,7 @@ async function clickButton(page, name) {
         preview: window.getTaskModifierPreviewText(check),
       };
     });
-    assert(taskModifierShape.preview.includes("Known room pressure") && taskModifierShape.preview.includes("energy +2"), "Task modifier preview should include source and energy delta");
+    assert(taskModifierShape.preview.includes("Known room pressure") && taskModifierShape.preview.includes("adds effort"), "Task modifier preview should include source and qualitative effort impact");
     assert(taskModifierShape.skillCheck.modifiersApplied.some((modifier) => modifier.id === "smoke-room-pressure" && modifier.statDelta === -1 && modifier.energyDelta === 2), "Skill check should carry generic modifier data");
     assert(taskModifierShape.ledgerEntry.modifiersApplied.some((modifier) => modifier.id === "smoke-room-pressure"), "Field-task result ledger should persist modifiersApplied");
     assert(taskModifierShape.beforeEnergy - taskModifierShape.afterEnergy === taskModifierShape.energyCost && taskModifierShape.energyCost >= 5, "Task modifier energy delta should affect resolved energy cost");
@@ -1216,7 +1216,7 @@ async function clickButton(page, name) {
         burnout: state.burnout,
       };
     });
-    assert(conditionedRouteChoice.choiceText.includes("Today's condition") && conditionedRouteChoice.choiceText.includes("condition -1 energy, +1 burnout"), "Route choice modal should preview condition pressure before travel");
+    assert(conditionedRouteChoice.choiceText.includes("Today's condition") && conditionedRouteChoice.choiceText.includes("condition pressure"), "Route choice modal should preview qualitative condition pressure before travel");
     assert(conditionedRouteChoice.energyDelta === -1 && conditionedRouteChoice.burnoutDelta === 1, "Route condition pressure should change travel result deltas");
     assert(conditionedRouteChoice.conditionPressureText.includes("low energy") && conditionedRouteChoice.conditionPressureText.includes("high burnout"), "Travel result should save readable route condition pressure");
     assert(conditionedRouteChoice.resultText.includes("Condition:") && conditionedRouteChoice.energy === 17 && conditionedRouteChoice.burnout === 5, "Travel result text and state should reflect route condition pressure");
@@ -1581,7 +1581,7 @@ async function clickButton(page, name) {
     });
     assert(serviceConditionChoices.labels.includes("Handle room pressure"), "Known service pressure should create a visible room decision");
     assert(serviceConditionChoices.objective.includes("known room pressure"), "Objective should point to known service pressure decisions");
-    assert(serviceConditionChoices.choiceText.includes("35% incident risk"), "Quick service responses should show incident odds");
+    assert(serviceConditionChoices.choiceText.includes("risky shortcut"), "Quick service responses should show qualitative incident risk");
     assert(serviceConditionChoices.afterDifficulty === serviceConditionChoices.beforeDifficulty && serviceConditionChoices.afterModifierCount < serviceConditionChoices.beforeModifierCount, "Careful service response should remove controlled condition modifiers from later checks");
     assert(serviceConditionChoices.energyChanged, "Careful service response should spend energy now");
     assert(serviceConditionChoices.documentText.includes("Pressure Controlled"), "Careful service response should show immediate resolution");
@@ -2249,7 +2249,7 @@ async function clickButton(page, name) {
       state.flags.currentAreaId = "shop";
       window.showRetrofitWalkdownDispatchPreview();
     });
-    await assertModalIncludes(page, ["Field Task Checks", "Existing pathway", "Base energy 3", "Risk: pathway assumption"], "field task preview");
+    await assertModalIncludes(page, ["Field Task Checks", "Existing pathway", "Effort: steady effort", "Risk: pathway assumption"], "field task preview");
 
     await page.evaluate(() => {
       window.AV_TECH_RPG_DEBUG.jump("service-ready");
@@ -2264,7 +2264,7 @@ async function clickButton(page, name) {
       window.render();
       window.showRegionalMap();
     });
-    await assertModalIncludes(page, ["Fast Travel to CONSHOHOCKEN", "Available now for 1 energy"], "fast travel unlock");
+    await assertModalIncludes(page, ["Fast Travel to CONSHOHOCKEN", "Available now with light effort"], "fast travel unlock");
 
     const consequenceLedger = await page.evaluate(() => {
       window.startGame("prototype-tech");

@@ -26,8 +26,8 @@ function getFieldTaskPreviewSkillText(check) {
 
 function getFieldTaskPreviewEnergyText(check) {
   if (check.energyHint) return check.energyHint;
-  if (check.energyCost != null) return `Base energy ${check.energyCost}`;
-  return "Energy varies by route, prep, or branch";
+  if (check.energyCost != null) return `Effort: ${getEnergyEffortText(check.energyCost)}`;
+  return "Effort varies by route, prep, or branch";
 }
 
 function getFieldTaskPreviewMarkup(fieldTasks = []) {

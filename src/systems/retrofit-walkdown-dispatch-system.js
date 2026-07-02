@@ -160,11 +160,11 @@ function showRetrofitWalkdownChoice() {
     body: `
       <p>The new display wall can work, but the existing pathway does not reach it cleanly. The install can be protected now, or the crew can discover the missing pathway while holding cable.</p>
       ${state.flags.retrofitWalkdownChecksStrained ? `<p class="muted">One walkdown check was strained. A scope pushback can keep the weak note from being buried.</p>` : ""}
-      ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits reduce the closeout cost by 1 energy.</p>` : ""}
+      ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits make the closeout less draining.</p>` : ""}
       ${getChoicePressureMarkup([
         {
           label: "Document blockers",
-          detail: "Costs energy to leave photos, pathway blockers, and install notes. Lowers future install risk, unless the strained check makes the note too soft.",
+          detail: "Takes steady effort to leave photos, pathway blockers, and install notes. Lowers future install risk, unless the strained check makes the note too soft.",
         },
         ...(getSkillValue("commercialProcess") >= 3 || canUsePressureChoice() ? [{
           label: "Push scope change",
@@ -177,9 +177,9 @@ function showRetrofitWalkdownChoice() {
       ])}
     `,
     actions: [
-      { label: `Document pathway blockers (-${getRetrofitWalkdownCloseoutEnergyCost(4)} energy)`, onClick: () => finishRetrofitWalkdown("document") },
+      { label: "Document pathway blockers", onClick: () => finishRetrofitWalkdown("document") },
       ...(getSkillValue("commercialProcess") >= 3 || canUsePressureChoice() ? [{
-        label: `Push scope change with photos (-${getRetrofitWalkdownCloseoutEnergyCost(3)} energy)`,
+        label: "Push scope change with photos",
         className: "secondary-button",
         onClick: () => finishRetrofitWalkdown("scope"),
       }] : []),

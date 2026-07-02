@@ -106,9 +106,9 @@ function showHandoffChoice() {
       ])}
     `,
     actions: [
-      { label: `Patient walkthrough of the daily path (-${getHandoffEnergyCost(5)} energy)`, onClick: () => finishHandoff("patient") },
+      { label: "Patient walkthrough of the daily path", onClick: () => finishHandoff("patient") },
       ...(canUsePressureChoice() ? [{
-        label: `Rewrite the cheat sheet in client language (-${getHandoffEnergyCost(4)} energy)`,
+        label: "Rewrite the cheat sheet in client language",
         className: "secondary-button",
         onClick: () => finishHandoff("cheat"),
       }] : []),

@@ -92,7 +92,7 @@ function showCallbackCleanupChoice() {
     title: "The Callback Has A Cause",
     body: `
       <p>The issue came back because the previous closeout skipped the boring verification. The room can be fixed, documented, and removed from the callback ledger, or it can be made quiet enough for the ticket to close again.</p>
-      ${getCarefulTaskReduction() ? `<p class="muted">Your careful-work habits reduce the proper fix cost by 1 energy.</p>` : ""}
+      ${getCarefulTaskReduction() ? `<p class="muted">Your careful-work habits make the proper fix less draining.</p>` : ""}
       ${getChoicePressureMarkup([
         {
           label: "Fix the root cause",
@@ -109,9 +109,9 @@ function showCallbackCleanupChoice() {
       ])}
     `,
     actions: [
-      { label: `Fix root cause and update notes (-${getCallbackCleanupRepairEnergyCost(6)} energy)`, onClick: () => finishCallbackCleanup("root") },
+      { label: "Fix root cause and update notes", onClick: () => finishCallbackCleanup("root") },
       ...(getCraftsmanship() >= 3 ? [{
-        label: `Clean repair and teach the client what changed (-${getCallbackCleanupRepairEnergyCost(5)} energy)`,
+        label: "Clean repair and teach the client what changed",
         className: "secondary-button",
         onClick: () => finishCallbackCleanup("craft"),
       }] : []),

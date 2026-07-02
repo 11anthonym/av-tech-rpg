@@ -63,7 +63,7 @@ function chooseSecureAccessPreparation(preparation) {
     title = "Access Email Reviewed";
     body = `
       <p>The email chain confirms the secure escort requirement. It also confirms nobody put your name in the visitor portal.</p>
-      <p class="muted">Each access check will cost 1 less energy.</p>
+      <p class="muted">The access checks should feel less messy.</p>
     `;
     addLog("Reviewed the Navy Yard access email and found the missing visitor-portal step.");
   }
@@ -71,7 +71,7 @@ function chooseSecureAccessPreparation(preparation) {
     title = "Site Contact Reached";
     body = `
       <p>The site contact answers between meetings and confirms Building 13. They cannot add you to the visitor list until security sees the work order.</p>
-      <p class="muted">Documenting the access delay will cost 1 less energy.</p>
+      <p class="muted">Documenting the access delay should feel less draining.</p>
     `;
     addLog("Called the Navy Yard site contact and confirmed the building mismatch.");
   }
@@ -220,9 +220,9 @@ function showSecureAccessChoice() {
       ])}
     `,
     actions: [
-      { label: `Document access delay and rack change (-${getSecureAccessReportEnergyCost(4)} energy)`, onClick: () => finishSecureAccess("document") },
+      { label: "Document access delay and rack change", onClick: () => finishSecureAccess("document") },
       ...(canUsePressureChoice() ? [{
-        label: `Push coordination to own the access miss and update notes (-${getSecureAccessReportEnergyCost(3)} energy)`,
+        label: "Push coordination to own the access miss and update notes",
         className: "secondary-button",
         onClick: () => finishSecureAccess("pushback"),
       }] : []),

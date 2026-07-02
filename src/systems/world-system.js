@@ -129,9 +129,9 @@ function getRouteDrivenText(route) {
 
 function getRouteFastTravelText(route) {
   if (!route.fastTravelEligible) return "Not available for this story route.";
-  if (canFastTravelRoute(route)) return `Available now for ${getFastTravelEnergyCost(route)} energy.`;
+  if (canFastTravelRoute(route)) return `Available now with ${getEnergyEffortText(getFastTravelEnergyCost(route))}.`;
   if (isFastTravelUnlocked(route)) return `Unlocked, but only from ${route.fromLabel} while this route is active on the board.`;
-  return `Locked until this route has been driven once; then costs ${getFastTravelEnergyCost(route)} energy.`;
+  return "Locked until this route has been driven once; then it becomes a low-friction shortcut.";
 }
 
 function getRouteLockReason(route) {
@@ -176,7 +176,7 @@ function getScenePortalInteractions(sceneId = state.sceneId) {
 function getRouteSummaryLaunchPreview(route, { fastTravel = false } = {}) {
   if (!route) return "This route is not mapped yet.";
   if (fastTravel) {
-    return `Review the known-route shortcut, then spend ${getFastTravelEnergyCost(route)} energy to arrive.`;
+    return "Review the known-route shortcut, then take the low-friction drive to arrive.";
   }
   return `Review the ${route.toLabel} drive summary before leaving.`;
 }
@@ -268,7 +268,7 @@ function getRoutePrepRows(route, { fastTravel = false } = {}) {
     { label: "Route", detail: `${route.fromLabel} -> ${route.toLabel}` },
     { label: "Route status", detail: getRouteStatus(route) },
     { label: "What happens next", detail: getRouteLaunchPreviewText(route, { fastTravel }) },
-    { label: fastTravel ? "Fast-travel cost" : "Travel cost / risk", detail: fastTravel ? `Known route shortcut, -${getFastTravelEnergyCost(route)} energy.` : getRouteTravelCostRisk(route) },
+    { label: fastTravel ? "Fast-travel pressure" : "Travel cost / risk", detail: fastTravel ? `Known route shortcut with ${getEnergyEffortText(getFastTravelEnergyCost(route))}.` : getRouteTravelCostRisk(route) },
     differenceText ? { label: "Why this is different today", detail: differenceText } : null,
     { label: "Today's condition", detail: getDailyConditionPrepText({ includeClean: true }) },
     { label: "Required prep", detail: getToolPlanText(toolPlan.required, { required: true }) },
@@ -315,7 +315,7 @@ function getRoutePrepRecoveryActions(route, options = {}) {
   const actions = [];
   if (state.energy < getMaxEnergy()) {
     actions.push({
-      label: "Take 15-Minute Break Before Driving (+10 energy)",
+      label: "Take 15-Minute Break Before Driving",
       className: "secondary-button",
       onClick: () => takeRoutePrepShortBreak(route.id, options),
     });

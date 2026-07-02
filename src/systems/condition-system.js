@@ -10,6 +10,46 @@ function getMaxEnergy() {
   return state.technician.stats.energy + getTrainingModifier("maxEnergy");
 }
 
+function getEnergyEffortText(amount) {
+  const value = Math.max(0, Math.abs(amount || 0));
+  if (!value) return "no real energy strain";
+  if (value <= 2) return "light effort";
+  if (value <= 5) return "steady effort";
+  if (value <= 9) return "heavy effort";
+  return "draining effort";
+}
+
+function getEnergyRecoveryText(amount) {
+  const value = Math.max(0, Math.abs(amount || 0));
+  if (!value) return "little recovery";
+  if (value <= 8) return "a small recovery bump";
+  if (value <= 18) return "noticeable recovery";
+  if (value <= 40) return "strong recovery";
+  return "major recovery";
+}
+
+function getEnergyDeltaPreviewText(amount) {
+  if (!amount) return "";
+  return amount > 0 ? getEnergyRecoveryText(amount) : getEnergyEffortText(amount);
+}
+
+function getBurnoutPressureText(amount) {
+  const value = Math.max(0, Math.abs(amount || 0));
+  if (!value) return "no added burnout pressure";
+  if (value === 1) return "some late-night fatigue";
+  return "serious late-night fatigue";
+}
+
+function getEnergyModifierText(amount) {
+  if (!amount) return "";
+  return amount > 0 ? "adds effort" : "saves effort";
+}
+
+function getSkillModifierText(amount) {
+  if (!amount) return "";
+  return amount > 0 ? "helps the check" : "makes the check harder";
+}
+
 function getCraftsmanship() {
   return state.technician.stats.craftsmanship + getTrainingModifier("craftsmanship");
 }

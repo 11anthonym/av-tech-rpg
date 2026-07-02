@@ -141,15 +141,15 @@ function showSystemsChoice() {
       <p>The room can be rebooted into a temporarily less embarrassing state, but the real issue is the mismatch between the control path, network note, and what the ticket claims is true.</p>
       ${state.flags.systemsChecksStrained ? `<p class="muted">One of the systems checks was strained. Documenting is still useful, but the closeout has less upside because one read needed extra interpretation.</p>` : ""}
       ${getChoicePressureMarkup([
-        { label: "Document mismatch", detail: "Costs energy and likely bothers management, but gives the next tech a usable trail and lowers return-trip risk." },
+        { label: "Document mismatch", detail: "Takes steady effort and likely bothers management, but gives the next tech a usable trail and lowers return-trip risk." },
         { label: "Call out scope miss", detail: "Requires process confidence. Strong client/coworker upside, with sharper management friction possible." },
         { label: "Quick reboot", detail: "Fastest and management-friendly. The room may behave today, but the real mismatch stays loose." },
       ])}
     `,
     actions: [
-      { label: "Document mismatch and reopen notes (-4 energy)", onClick: () => finishSystemsService("document") },
+      { label: "Document mismatch and reopen notes", onClick: () => finishSystemsService("document") },
       ...(getSkillValue("commercialProcess") >= 3 || canUsePressureChoice() ? [{
-        label: "Call out scope miss before closing (-3 energy)",
+        label: "Call out scope miss before closing",
         className: "secondary-button",
         onClick: () => finishSystemsService("scope"),
       }] : []),

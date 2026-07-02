@@ -73,14 +73,14 @@ function chooseServicePreparation(preparation) {
   if (preparation === "review") {
     title = "Read The Small Print";
     body = `<p>The work order is mostly a forwarded email chain. One buried note mentions an inline coupler behind the credenza.</p>
-      <p class="muted">Diagnosis will cost 1 less energy.</p>`;
+      <p class="muted">Diagnosis should feel a little less blind.</p>`;
     addLog("Reviewed the Conshohocken work order and found a buried note about an inline coupler.");
     state.stats.workOrdersReviewed += 1;
   }
   if (preparation === "lunch") {
     title = "Lunch Acquired";
     body = `<p>You pack something from the break area before anybody can schedule through lunch.</p>
-      <p class="muted">Recover 8 energy when you arrive in Conshohocken.</p>`;
+      <p class="muted">You will have a small recovery bump when you arrive in Conshohocken.</p>`;
     state.flags.packedLunchReady = true;
     addLog("Packed lunch before leaving Radnor Rack & Wire.");
     state.stats.lunchesPacked += 1;
@@ -88,7 +88,7 @@ function chooseServicePreparation(preparation) {
   if (preparation === "coffee") {
     title = "Shop Coffee";
     body = `<p>The coffee is hot and technically belongs to the company. The five-dollar jar beside it suggests otherwise.</p>
-      <p class="muted">Recover 12 energy now.</p>`;
+      <p class="muted">It helps now, though nobody should ask what is in it.</p>`;
     state.cash -= 5;
     changeEnergy(12);
     addLog("Bought shop coffee for $5. Energy improved.");
@@ -99,14 +99,14 @@ function chooseServicePreparation(preparation) {
     body = `<p>Josh pauses while sorting adapters into bins.</p>
       <p><strong>Josh:</strong> "If the display is flickering, verify the whole path before you swap anything. Half the mystery boxes in this shop are just couplers nobody documented."</p>
       <p><strong>Manager, from the sales office:</strong> "Josh, do you know why Van #2 has three remotes for displays we do not own?"</p>
-      <p class="muted">Signal-path verification will cost 1 less energy.</p>`;
+      <p class="muted">Signal-path verification should feel less like guesswork.</p>`;
     if (!state.flags.metJosh) addLog("Asked Josh for advice while management investigated the Van #2 remote collection.");
     state.flags.metJosh = true;
   }
   if (preparation === "contact") {
     title = "Somebody Has Seen This Room";
     body = `<p>You text a former coworker who remembers this client. They reply with a blurry photo, a warning about the credenza, and the phrase "check the coupler before blaming the display."</p>
-      <p class="muted">Diagnosis will cost 1 less energy. Management will never understand why this helped.</p>`;
+      <p class="muted">Diagnosis should feel less blind. Management will never understand why this helped.</p>`;
     addLog("Texted someone who had worked the Conshohocken room before. The coupler warning was oddly specific.");
   }
   render();
@@ -427,8 +427,8 @@ function getServiceRoomIncidentMarkup() {
 function getServiceQuickResponseOption(condition, config) {
   return {
     id: config.id,
-    label: `${config.label} (-1 energy, ${formatServiceIncidentChance(config.incidentChance)} incident risk)`,
-    detail: `${config.detail} If the risk roll fails, the client sees the problem immediately and the closeout inherits pressure.`,
+    label: config.label,
+    detail: `${config.detail} This is a risky shortcut: if the room pushes back, the client sees it immediately and the closeout inherits pressure.`,
     result: config.successResult,
     log: config.successLog,
     energyCost: 1,
@@ -459,8 +459,8 @@ function getServiceConditionResponseOptions(condition) {
     return [
       {
         id: "document",
-        label: "Document signal-path discrepancy (-2 energy)",
-        detail: "Costs energy and makes the signal-path problem visible before closeout. Coworkers benefit from the note; management dislikes the delay.",
+        label: "Document signal-path discrepancy",
+        detail: "Spend steady effort making the signal-path problem visible before closeout. Coworkers benefit from the note; management dislikes the delay.",
         result: `${condition.label} is controlled by a clear signal-path note.`,
         log: `Documented ${condition.label.toLowerCase()} before closing the service call.`,
         energyCost: 2,
@@ -487,7 +487,7 @@ function getServiceConditionResponseOptions(condition) {
     return [
       {
         id: "stabilize",
-        label: "Stabilize replacement input board (-3 energy)",
+        label: "Stabilize replacement input board",
         detail: "Spend extra effort on the replacement path before the room gets booked again.",
         result: "Replacement input-board pressure is controlled before closeout.",
         log: "Stabilized the replacement display input board before closeout.",
@@ -515,8 +515,8 @@ function getServiceConditionResponseOptions(condition) {
     return [
       {
         id: "square",
-        label: "Square the mount hardware (-3 energy)",
-        detail: "Costs energy now, but prevents a shaky install from becoming the next tech's problem.",
+        label: "Square the mount hardware",
+        detail: "Spend extra effort now, but prevent a shaky install from becoming the next tech's problem.",
         result: "Loose mount pressure is controlled by extra hardware cleanup.",
         log: "Squared the loose mount hardware before closing the service call.",
         energyCost: 3,
@@ -543,7 +543,7 @@ function getServiceConditionResponseOptions(condition) {
     return [
       {
         id: "expectation",
-        label: "Set client expectation (-1 energy)",
+        label: "Set client expectation",
         detail: "Tell the client the swap may need verification time. It protects the room, but slows the management-friendly path.",
         result: "Client time pressure is controlled by setting expectations before closeout.",
         log: "Set the client's expectation that verification could beat a rushed swap.",
@@ -676,8 +676,8 @@ function getServiceIncidentRecoveryOptions(incident) {
   return [
     {
       id: "stabilize",
-      label: "Stabilize room and own the delay (-3 energy)",
-      detail: "Spend the energy to fix the visible problem, explain the delay, and protect the next visit. Coworkers and clients respect it; management dislikes the time.",
+      label: "Stabilize room and own the delay",
+      detail: "Spend steady effort to fix the visible problem, explain the delay, and protect the next visit. Coworkers and clients respect it; management dislikes the time.",
       result: `${incident.conditionLabel} is recovered before closeout. The immediate problem is no longer callback pressure by itself.`,
       log: `Recovered the ${incident.conditionLabel.toLowerCase()} incident before closeout.`,
       energyCost: 3,
@@ -688,7 +688,7 @@ function getServiceIncidentRecoveryOptions(incident) {
     },
     {
       id: "calm-client",
-      label: "Calm the client and keep moving (-1 energy)",
+      label: "Calm the client and keep moving",
       detail: "Recover some trust in the room, but leave the technical uncertainty for closeout.",
       result: `${incident.conditionLabel} is calmer in the moment, but the technical risk remains open.`,
       log: `Calmed the client after the ${incident.conditionLabel.toLowerCase()} incident, but the technical risk remained.`,

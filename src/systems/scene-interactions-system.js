@@ -276,7 +276,7 @@ function getInteractions() {
         x: 300, y: 185, label: state.flags.serviceBrief && !state.flags.serviceInspected && !state.flags.serviceClientContext ? "Ask client about symptoms" : "Talk to client contact", npc: "CLIENT",
         taskState: () => {
           if (!state.flags.serviceBrief) return getTaskState({ stateId: "ready", detail: "Ask what happened before touching the room." });
-          if (!state.flags.serviceInspected && !state.flags.serviceClientContext) return getTaskState({ stateId: "ready", detail: "Spend a little energy to reveal one room condition before diagnosis." });
+          if (!state.flags.serviceInspected && !state.flags.serviceClientContext) return getTaskState({ stateId: "ready", detail: "Spend a little effort to reveal one room condition before diagnosis." });
           return getTaskState({ completed: true, detail: "Client context is already in your notes." });
         },
         action: () => {
@@ -372,10 +372,10 @@ function getInteractions() {
                   },
                 ])}
               `,
-              actions: [
-                { label: `Verify signal path (-${getServiceVerificationEnergyCost(4)} energy)`, onClick: () => chooseServiceApproach("verify") },
-                { label: "Trust the ticket and swap", className: "secondary-button", onClick: () => chooseServiceApproach("rush") },
-              ],
+            actions: [
+              { label: "Verify signal path", onClick: () => chooseServiceApproach("verify") },
+              { label: "Trust the ticket and swap", className: "secondary-button", onClick: () => chooseServiceApproach("rush") },
+            ],
             });
           }
           installServicePart();

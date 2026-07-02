@@ -65,7 +65,7 @@ function getRouteConditionPressureEffect() {
     }
   }
   if (!pressure.energyDelta && !pressure.burnoutDelta) return null;
-  pressure.detail = `${pressure.reasons.join(", ")} makes route choices cost ${getTravelResultDeltaText(pressure)}.`;
+  pressure.detail = `${pressure.reasons.join(", ")} makes this route feel rougher than usual.`;
   return pressure;
 }
 
@@ -87,18 +87,18 @@ function getRouteTravelCostRisk(route) {
   if (choices.length) {
     const choiceImpacts = choices.map((choice) => {
       const impacts = [];
-      if (choice.energyDelta) impacts.push(`${choice.energyDelta > 0 ? "+" : ""}${choice.energyDelta} energy`);
+      if (choice.energyDelta) impacts.push(getEnergyDeltaPreviewText(choice.energyDelta));
       if (choice.cashDelta) impacts.push(`${choice.cashDelta > 0 ? "+" : "-"}$${Math.abs(choice.cashDelta)}`);
-      if (choice.burnoutDelta) impacts.push(`${choice.burnoutDelta > 0 ? "+" : ""}${choice.burnoutDelta} burnout`);
+      if (choice.burnoutDelta) impacts.push(getBurnoutPressureText(choice.burnoutDelta));
       if (choice.arrivalTime && choice.arrivalTime !== route.arrivalTime) impacts.push(`arrival ${choice.arrivalTime}`);
-      if (choice.riskRoll?.chance) impacts.push(`${formatChance(choice.riskRoll.chance)} ${choice.riskRoll.label || "risk"}`);
+      if (choice.riskRoll?.chance) impacts.push(choice.riskRoll.label || "route risk");
       return `${choice.label}${impacts.length ? ` (${impacts.join(", ")})` : ""}`;
     });
     costs.push(`choices: ${choiceImpacts.join("; ")}`);
   } else {
     costs.push(route.fastTravelEligible ? "standard drive; fast travel can unlock after route history" : "standard drive");
   }
-  if (route.fastTravelEligible) costs.push(`fast travel cost ${getFastTravelEnergyCost(route)} energy`);
+  if (route.fastTravelEligible) costs.push(`fast travel becomes ${getEnergyEffortText(getFastTravelEnergyCost(route))}`);
   return costs.join("; ");
 }
 
@@ -228,11 +228,11 @@ function getRouteChoiceImpactMarkup(choice) {
   const impacts = [];
   const conditionPressure = getRouteConditionPressureEffect();
   if (choice.arrivalTime) impacts.push(`Arrive ${choice.arrivalTime}`);
-  if (choice.energyDelta) impacts.push(`${choice.energyDelta > 0 ? "+" : ""}${choice.energyDelta} energy`);
+  if (choice.energyDelta) impacts.push(getEnergyDeltaPreviewText(choice.energyDelta));
   if (choice.cashDelta) impacts.push(`${choice.cashDelta > 0 ? "+" : "-"}$${Math.abs(choice.cashDelta)}`);
-  if (choice.burnoutDelta) impacts.push(`${choice.burnoutDelta > 0 ? "+" : ""}${choice.burnoutDelta} burnout`);
-  if (choice.riskRoll?.chance) impacts.push(`${formatChance(choice.riskRoll.chance)} ${choice.riskRoll.label || "risk"}`);
-  if (conditionPressure) impacts.push(`condition ${getTravelResultDeltaText(conditionPressure)}`);
+  if (choice.burnoutDelta) impacts.push(getBurnoutPressureText(choice.burnoutDelta));
+  if (choice.riskRoll?.chance) impacts.push(choice.riskRoll.label || "route risk");
+  if (conditionPressure) impacts.push("condition pressure");
   return impacts.length ? ` <em>${escapeHtml(impacts.join(" / "))}</em>` : "";
 }
 
@@ -285,7 +285,7 @@ function showTravelRouteModal({ routeId, dispatchEstimate, extraBody = "", actio
     title: `${route.fromLabel} -> ${route.toLabel}`,
     body: `
       ${dispatchEstimate ? `<p><strong>Work-order estimate:</strong> ${dispatchEstimate}</p>` : ""}
-      ${fastTravel ? `<p class="expense"><strong>Fast travel:</strong> Known route shortcut, -${fastTravelCost} energy.</p>` : ""}
+      ${fastTravel ? `<p class="expense"><strong>Fast travel:</strong> Known route shortcut with ${escapeHtml(getEnergyEffortText(fastTravelCost))}.</p>` : ""}
       ${extraBody}
       ${getRouteLineMarkup(route)}
       <div class="results-grid">

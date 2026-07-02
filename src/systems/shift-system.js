@@ -351,13 +351,13 @@ function previewShiftChoice(choice) {
   const nextEnergy = Math.min(rawNextEnergy, lateEnergyCap, exhaustionEnergyCap);
   const cappedRecovery = recoveryDay ? 0 : Math.max(0, energyAfterChoice + recovery - maxEnergy);
   const lateCapNote = stayedLate && rawNextEnergy > lateEnergyCap
-    ? ` Stayed-late fatigue caps tomorrow at ${lateEnergyCap} energy${lateNightStreak > 1 ? ` after ${lateNightStreak} late nights` : ""}.`
+    ? ` Stayed-late fatigue may cap tomorrow's start${lateNightStreak > 1 ? " because the late nights are stacking" : ""}.`
     : "";
   const exhaustionCapNote = willHitZero && !recoveryDay && rawNextEnergy > exhaustionEnergyCap
-    ? ` Zero-energy crash caps tomorrow at ${exhaustionEnergyCap} energy${exhaustionIncidents ? ` after ${exhaustionIncidents} exhaustion incident${exhaustionIncidents === 1 ? "" : "s"}` : ""}.`
+    ? " A zero-energy crash may leave tomorrow capped unless you take recovery."
     : "";
   const exhaustionIncidentNote = exhaustionIncidentGain
-    ? ` This overrun crosses ${exhaustionIncidentGain} exhaustion incident${exhaustionIncidentGain === 1 ? "" : "s"} before rest.`
+    ? " This overrun risks an exhaustion incident before rest."
     : "";
   const nextBurnout = recoveryDay
     ? Math.max(0, burnoutAfterChoice - 2)
@@ -375,9 +375,16 @@ function previewShiftChoice(choice) {
         : choice === "recovery-day"
           ? "Management may notice the schedule gap."
           : "No obvious reputation pressure.",
-    benefit: choice === "prep" ? "+1 Fieldcraft/Documentation next job" : choice === "help-josh" ? "Josh relationship progress" : choice === "recovery-day" ? "Skips next workday pressure" : "Clean rest",
-    capNote: `${lateCapNote}${exhaustionCapNote}${exhaustionIncidentNote}` || (cappedRecovery ? ` ${cappedRecovery} recovery would be capped at max energy.` : ""),
+    benefit: choice === "prep" ? "Better Fieldcraft and documentation setup next job" : choice === "help-josh" ? "Josh relationship progress" : choice === "recovery-day" ? "Strong condition repair" : "Clean rest",
+    capNote: `${lateCapNote}${exhaustionCapNote}${exhaustionIncidentNote}` || (cappedRecovery ? " Some recovery may be wasted if you are already near full." : ""),
   };
+}
+
+function getShiftChoicePreviewHeadline(choiceId) {
+  if (choiceId === "prep") return "late night, better setup";
+  if (choiceId === "help-josh") return "late night, crew support";
+  if (choiceId === "recovery-day") return "strong recovery, schedule pressure";
+  return "clean rest";
 }
 
 function canHelpJoshAfterShift() {
@@ -400,7 +407,7 @@ function getHelpJoshShiftScenarioPool() {
         id: "callback-notes",
         taskLabel: "Conshohocken callback notes",
         previewLabel: "Help Josh with callback notes",
-        actionLabel: `Help Josh rebuild callback notes (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, callback pressure cleaned up)`,
+        actionLabel: "Help Josh rebuild callback notes",
         log: "Stayed late with Josh to rebuild the Conshohocken callback notes before the next morning could turn them into another stop.",
         resolvesServiceCallback: true,
       },
@@ -408,7 +415,7 @@ function getHelpJoshShiftScenarioPool() {
         id: "coupler-bag",
         taskLabel: "the weird coupler bag",
         previewLabel: "Help Josh label callback parts",
-        actionLabel: `Help Josh label callback parts (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, callback pressure cleaned up)`,
+        actionLabel: "Help Josh label callback parts",
         log: "Stayed late with Josh to label the odd Conshohocken coupler bag and clean up the callback trail.",
         resolvesServiceCallback: true,
       },
@@ -416,7 +423,7 @@ function getHelpJoshShiftScenarioPool() {
         id: "room-photo-thread",
         taskLabel: "the room-photo thread",
         previewLabel: "Help Josh sort callback photos",
-        actionLabel: `Help Josh sort callback photos (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, callback pressure cleaned up)`,
+        actionLabel: "Help Josh sort callback photos",
         log: "Stayed late with Josh to match Conshohocken room photos to the service note before coordination could muddy it.",
         resolvesServiceCallback: true,
       },
@@ -427,21 +434,21 @@ function getHelpJoshShiftScenarioPool() {
       id: "bench-notes",
       taskLabel: "bench notes",
       previewLabel: "Help Josh clean up bench notes",
-      actionLabel: `Help Josh clean up bench notes (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, crew remembers)`,
+      actionLabel: "Help Josh clean up bench notes",
       log: "Helped Josh clean up bench notes and labels before clocking out. Coworker reputation improved, and the longer day still took something out of you.",
     },
     {
       id: "adapter-bin",
       taskLabel: "the adapter bin",
       previewLabel: "Help Josh sort the adapter bin",
-      actionLabel: `Help Josh sort the adapter bin (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, crew remembers)`,
+      actionLabel: "Help Josh sort the adapter bin",
       log: "Helped Josh sort the adapter bin that three different tickets had quietly emptied. Coworker reputation improved, and the longer day still took something out of you.",
     },
     {
       id: "van-two-returns",
       taskLabel: "Van #2 returns",
       previewLabel: "Help Josh check Van #2 returns",
-      actionLabel: `Help Josh check Van #2 returns (-${HELP_JOSH_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, crew remembers)`,
+      actionLabel: "Help Josh check Van #2 returns",
       log: "Helped Josh check Van #2's returned parts before they became tomorrow's mystery. Coworker reputation improved, and the longer day still took something out of you.",
     },
   ];
@@ -493,7 +500,7 @@ function getEndShiftChoicePreviewMarkup() {
     <ul class="modal-list">
       ${choices.map((choice) => {
         const preview = previewShiftChoice(choice.id);
-        return `<li><strong>${choice.label}: ${preview.nextEnergy}/${getMaxEnergy()} energy, burnout ${preview.nextBurnout}</strong><span>${preview.benefit}. ${preview.pressure} Recovery: +${preview.recovery} energy.${preview.capNote}</span></li>`;
+        return `<li><strong>${choice.label}: ${getShiftChoicePreviewHeadline(choice.id)}</strong><span>${preview.benefit}. ${preview.pressure}${preview.capNote}</span></li>`;
       }).join("")}
     </ul>
   `;
@@ -711,26 +718,26 @@ function showEndShiftModal() {
     title: "Close Out The Workday",
     body: `
       <p>${source} is wrapped. The board has more work, but the next job should start after an actual shift reset.</p>
-      ${pendingServiceCallback ? `<p class="muted">A Conshohocken callback note is waiting on Josh's bench. ${helpJoshCopy?.resolvesServiceCallback ? "You can spend after-hours energy helping Josh clean it up now, or close out and talk to him tomorrow." : "Close out the shift, then talk to Josh before coordination adds another stop."}</p>` : ""}
+      ${pendingServiceCallback ? `<p class="muted">A Conshohocken callback note is waiting on Josh's bench. ${helpJoshCopy?.resolvesServiceCallback ? "You can stay late helping Josh clean it up now, or close out and talk to him tomorrow." : "Close out the shift, then talk to Josh before coordination adds another stop."}</p>` : ""}
       <div class="results-grid">
         <span>Current time</span><strong>${state.clock}</strong>
         <span>Energy</span><strong>${state.energy}/${getMaxEnergy()}</strong>
         <span>Burnout</span><strong>${state.burnout}</strong>
-        <span>Overnight recovery</span><strong>+${ordinaryRecovery} energy${state.burnout ? " after burnout penalty" : ""}</strong>
-        <span>Stayed-late recovery</span><strong>+${lateRecovery} energy after new burnout</strong>
-        <span>Stayed-late cap</span><strong>${lateEnergyCap}/${getMaxEnergy()} energy tomorrow</strong>
-        ${exhaustionCap ? `<span>Zero-energy cap</span><strong>${exhaustionCap}/${getMaxEnergy()} energy tomorrow unless recovery day</strong>` : ""}
-        ${exhaustionPenalty ? `<span>Exhaustion penalty</span><strong>-${exhaustionPenalty} on skill checks this shift</strong>` : ""}
+        <span>Overnight outlook</span><strong>${getEnergyRecoveryText(ordinaryRecovery)}${state.burnout ? " after burnout drag" : ""}</strong>
+        <span>Stayed-late outlook</span><strong>${getEnergyRecoveryText(lateRecovery)} after extra fatigue</strong>
+        <span>Late-night risk</span><strong>${lateEnergyCap < getMaxEnergy() ? "Tomorrow may start capped" : "No cap expected"}</strong>
+        ${exhaustionCap ? "<span>Zero-energy risk</span><strong>Tomorrow may start capped unless you take recovery</strong>" : ""}
+        ${exhaustionPenalty ? "<span>Exhaustion pressure</span><strong>Field checks are less reliable until rest</strong>" : ""}
       </div>
       <p class="muted">Burnout reduces ordinary overnight recovery. Staying late helps the work, but it caps tomorrow's energy; consecutive late nights tighten that cap. Hitting zero energy is a push-your-luck state: work can continue, but incidents, weaker skill checks, and a lower next-morning cap can follow. Recovery days restore more, but management notices the schedule gap.</p>
       <p><strong>Next-morning preview:</strong></p>
       ${getEndShiftChoicePreviewMarkup()}
     `,
     actions: [
-      { label: `Clock out and go home (+${ordinaryRecovery} energy overnight)`, onClick: () => completeShift("clock-out") },
-      { label: `Stay late to prep tomorrow (-${STAY_LATE_PREP_ENERGY_COST} energy, +${STAY_LATE_BURNOUT_GAIN} burnout, prep advantage)`, className: "secondary-button", onClick: () => completeShift("prep") },
+      { label: "Clock out and go home", onClick: () => completeShift("clock-out") },
+      { label: "Stay late to prep tomorrow", className: "secondary-button", onClick: () => completeShift("prep") },
       ...(helpJoshCopy ? [{ label: helpJoshCopy.actionLabel, className: "secondary-button", onClick: () => completeShift("help-josh") }] : []),
-      { label: "Take a recovery day (full energy, management may notice)", className: "secondary-button", onClick: () => completeShift("recovery-day") },
+      { label: "Take a recovery day", className: "secondary-button", onClick: () => completeShift("recovery-day") },
       { label: "Not Yet", className: "text-button", onClick: render },
     ],
   });
@@ -816,10 +823,10 @@ function showBreakArea({ backAction = null, backLabel = "Leave Break Area" } = {
       ${getExhaustionPressureMarkup()}
     `,
     actions: [
-      { label: "Take 15-minute break (+10 energy)", onClick: takeShortBreak },
+      { label: "Take 15-minute break", onClick: takeShortBreak },
       ...(!state.flags.packedLunchReady ? [{ label: "Pack lunch for next job", className: "secondary-button", onClick: packLunchForNextDispatch }] : []),
-      ...(state.cash >= 5 ? [{ label: "Buy bad shop coffee - $5 (+12 energy, +1 burnout)", className: "secondary-button", onClick: buyBreakCoffee }] : []),
-      { label: "Take unpaid recovery day (full energy, management may notice)", className: "secondary-button", onClick: takeRecoveryDayFromShop },
+      ...(state.cash >= 5 ? [{ label: "Buy bad shop coffee - $5", className: "secondary-button", onClick: buyBreakCoffee }] : []),
+      { label: "Take unpaid recovery day", className: "secondary-button", onClick: takeRecoveryDayFromShop },
       { label: backLabel, className: "text-button", onClick: backAction || undefined },
     ],
   });

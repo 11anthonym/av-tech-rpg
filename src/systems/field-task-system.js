@@ -59,9 +59,9 @@ function getTaskModifierSummary(modifiers = []) {
   return modifiers
     .map((modifier) => {
       const deltas = [
-        modifier.statDelta ? `skill ${formatSignedNumber(modifier.statDelta)}` : "",
-        modifier.energyDelta ? `energy ${formatSignedNumber(modifier.energyDelta)}` : "",
-        modifier.consumesOnUse ? "consumes on use" : "",
+        getSkillModifierText(modifier.statDelta),
+        getEnergyModifierText(modifier.energyDelta),
+        modifier.consumesOnUse ? "one-time support" : "",
       ].filter(Boolean).join(", ");
       return `${modifier.label}${deltas ? ` (${deltas})` : ""}: ${modifier.source}`;
     })
@@ -167,13 +167,13 @@ function getTaskModifierBrief(modifiers = []) {
   if (!modifiers.length) return "";
   return modifiers.map((modifier) => {
     if (modifier.id === "field-condition-pressure") return `Condition: ${modifier.source.replace(" to skill checks.", " checks")}`;
-    if (modifier.id === "zero-energy-pressure") return `Exhaustion: skill ${formatSignedNumber(modifier.statDelta)}`;
-    if (modifier.id === "josh-crew-support") return "Josh support: +1 eligible check";
-    if (modifier.id === "next-shift-prep") return `Next-shift prep: skill ${formatSignedNumber(modifier.statDelta)}`;
+    if (modifier.id === "zero-energy-pressure") return "Exhaustion: harder check";
+    if (modifier.id === "josh-crew-support") return "Josh support: one-time edge";
+    if (modifier.id === "next-shift-prep") return "Next-shift prep: helpful setup";
     if (modifier.id === "callback-ledger-pressure") return `Callback debt: ${modifier.source.split(" can ")[0]}`;
     const deltas = [
-      modifier.statDelta ? `skill ${formatSignedNumber(modifier.statDelta)}` : "",
-      modifier.energyDelta ? `energy ${formatSignedNumber(modifier.energyDelta)}` : "",
+      getSkillModifierText(modifier.statDelta),
+      getEnergyModifierText(modifier.energyDelta),
     ].filter(Boolean).join(", ");
     return `${modifier.label}${deltas ? `: ${deltas}` : ""}`;
   }).join(" ");
@@ -191,7 +191,7 @@ function getWhyDifferentTodayText(fieldTasks = []) {
   const exhaustionPenalty = getExhaustionSkillPenalty();
   const joshSupport = typeof getJoshCrewSupportText === "function" ? getJoshCrewSupportText() : "";
   if (conditionText) notes.push(`Field condition: ${conditionText}`);
-  if (exhaustionPenalty) notes.push(`Zero-energy pressure: -${exhaustionPenalty} to skill checks.`);
+  if (exhaustionPenalty) notes.push("Zero-energy pressure: field checks are less reliable until you rest.");
   if (state.flags.shiftPrepActive) notes.push("Next-shift prep: Fieldcraft and Documentation checks are supported until this job closes.");
   if (joshSupport) notes.push(joshSupport);
   if (typeof getUnresolvedCallbackCount === "function" && getUnresolvedCallbackCount()) {
@@ -520,7 +520,8 @@ function getActionPressureDetails({
   if (typeof baseEnergyCost === "number" && baseEnergyCost > 0) {
     details.push({
       label: "Energy cost",
-      detail: `Expected to spend about ${baseEnergyCost} energy before any strained-task penalty.`,
+      detail: `Looks like ${getEnergyEffortText(baseEnergyCost)} before any strained-task fallout.`,
+      energyCost: baseEnergyCost,
     });
   }
   if (includeSkill) {
@@ -608,8 +609,7 @@ function getActionPressureBrief(options = {}) {
   if (!details.length) return "";
   return details.map((detail) => {
     if (detail.label === "Energy cost") {
-      const match = detail.detail.match(/about (\d+) energy/);
-      return `Energy: ~${match?.[1] || "?"}`;
+      return `Effort: ${getEnergyEffortText(detail.energyCost)}`;
     }
     if (detail.label === "Field condition") return `Condition: ${detail.detail.replace(" to skill checks.", " checks")}`;
     if (detail.label === "Exhaustion") return detail.detail.replace("Zero-energy pressure is applying ", "Exhaustion: ");

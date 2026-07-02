@@ -72,7 +72,7 @@ function showConshohockenFollowupChoice() {
       ])}
     `,
     actions: [
-      { label: "Label coupler and update note (-2 energy)", onClick: () => finishConshohockenFollowup("label") },
+      { label: "Label coupler and update note", onClick: () => finishConshohockenFollowup("label") },
       { label: "Drop labels and leave", className: "secondary-button", onClick: () => finishConshohockenFollowup("drop") },
     ],
   });

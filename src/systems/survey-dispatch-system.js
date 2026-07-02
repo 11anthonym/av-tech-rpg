@@ -58,7 +58,7 @@ function chooseSurveyPreparation(preparation) {
     title = "Sales Sketch Located";
     body = `
       <p>The sketch shows a 98-inch display on the classroom wall. The delivery path is represented by an arrow entering from the edge of the page.</p>
-      <p class="muted">Filing a careful report will cost 1 less energy.</p>
+      <p class="muted">Filing a careful report should feel less draining.</p>
     `;
     addLog("Reviewed the sales sketch. The proposed 98-inch display arrives by way of a confident arrow.");
   }
@@ -66,7 +66,7 @@ function chooseSurveyPreparation(preparation) {
     title = "Tape Measure Located";
     body = `
       <p>You find the shop tape measure in a box labeled AUDIO. Somebody scratched out another technician's initials and wrote COMPANY.</p>
-      <p class="muted">Each survey inspection will cost 1 less energy.</p>
+      <p class="muted">Survey inspection should feel less messy.</p>
     `;
     addLog("Found the company tape measure in a box labeled AUDIO.");
   }
@@ -176,7 +176,7 @@ function showSurveyReportChoice() {
     body: `
       <p>The 98-inch display fits on the classroom wall. It does not fit through the elevator opening, and the hallway turn offers no useful miracle.</p>
       <p>Sales wants the survey closed today because the quote is "basically approved."</p>
-      ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits make this report cost 1 less energy.</p>` : ""}
+      ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits make this report less draining.</p>` : ""}
       ${state.flags.surveyDocumentationStrained ? `<p class="muted">Your access notes are thin. Documenting still helps, but calling sales directly prevents the weak notes from being buried.</p>` : ""}
       ${getChoicePressureMarkup([
         {
@@ -194,9 +194,9 @@ function showSurveyReportChoice() {
       ])}
     `,
     actions: [
-      { label: `Document the access constraint (-${getSurveyReportEnergyCost(3)} energy)`, onClick: () => finishSurvey("document") },
+      { label: "Document the access constraint", onClick: () => finishSurvey("document") },
       ...(canUsePressureChoice() ? [{
-        label: `Call sales and push back calmly (-${getSurveyReportEnergyCost(2)} energy)`,
+        label: "Call sales and push back calmly",
         className: "secondary-button",
         onClick: () => finishSurvey("pushback"),
       }] : []),

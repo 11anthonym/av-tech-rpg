@@ -105,7 +105,7 @@ function showWarehouseChoice() {
       ])}
     `,
     actions: [
-      { label: `Hand off part and correct the bin label (-${getWarehouseLabelEnergyCost()} energy)`, onClick: () => finishWarehouseRun("label") },
+      { label: "Hand off part and correct the bin label", onClick: () => finishWarehouseRun("label") },
       { label: "Hand off part and leave the pile alone", className: "secondary-button", onClick: () => finishWarehouseRun("handoff") },
     ],
   });

@@ -1355,7 +1355,7 @@ window.GAME_CONTENT = {
         carefulOption: {
           id: "sort-labels",
           label: "Sort and label the cable bag",
-          detail: "Spend a little energy now so the closeout does not turn into cable archaeology.",
+          detail: "Spend a little effort now so the closeout does not turn into cable archaeology.",
           result: "Cable labels are sorted before the second cart is closed up.",
           log: "Sorted the mismatched cart cable labels before closeout.",
           energyCost: 2,
@@ -1386,7 +1386,7 @@ window.GAME_CONTENT = {
         carefulOption: {
           id: "square-caster",
           label: "Square the caster hardware",
-          detail: "Spend energy making the cart feel less like a shopping cart with ambition.",
+          detail: "Spend steady effort making the cart feel less like a shopping cart with ambition.",
           result: "Caster hardware is squared before the second cart gets dressed.",
           log: "Squared the wobbly caster hardware before closeout.",
           energyCost: 2,

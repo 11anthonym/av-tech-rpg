@@ -152,8 +152,8 @@ function getTutorialPressureResponseOptions(pressure) {
   return [
     {
       id: careful.id || "careful",
-      label: `${careful.label || "Handle carefully"} (-${careful.energyCost || 2} energy)`,
-      detail: careful.detail || "Spend energy now to control the issue before closeout.",
+      label: careful.label || "Handle carefully",
+      detail: careful.detail || "Spend effort now to control the issue before closeout.",
       result: careful.result || `${pressure.label} is controlled before closeout.`,
       log: careful.log || `${pressure.label} handled carefully before closeout.`,
       energyCost: careful.energyCost ?? 2,
@@ -163,8 +163,8 @@ function getTutorialPressureResponseOptions(pressure) {
     },
     {
       id: quick.id || "quick",
-      label: `${quick.label || "Try a quick fix"} (-${quick.energyCost || 1} energy, ${formatChance(quick.incidentChance || 0.3)} incident risk)`,
-      detail: quick.detail || "Save energy now, but a bad roll makes the room pressure visible.",
+      label: quick.label || "Try a quick fix",
+      detail: quick.detail || "Save effort now, but a bad roll makes the room pressure visible.",
       result: quick.result || `${pressure.label} holds after a quick fix.`,
       log: quick.log || `${pressure.label} quick fix held during the room test.`,
       energyCost: quick.energyCost ?? 1,
@@ -206,7 +206,7 @@ function showTutorialInstallPressureChoice() {
     body: `
       <p>${escapeHtml(pressure.revealedSummary || "")}</p>
       ${getChoicePressureMarkup(options.map((option) => ({ label: option.label, detail: option.detail })))}
-      <p class="muted">This is the first small version of field pressure: spend energy now, risk a quick fix, or leave the issue for closeout.</p>
+      <p class="muted">This is the first small version of field pressure: spend effort now, risk a quick fix, or leave the issue for closeout.</p>
     `,
     actions: options.map((option) => ({
       label: option.label,
@@ -356,7 +356,7 @@ function showFinishChoice() {
       ])}
     `,
     actions: [
-      { label: `Dress the cables properly (+35 min, -${getCableDressEnergyCost()} energy)`, onClick: () => finishJob("tidy") },
+      { label: "Dress the cables properly", onClick: () => finishJob("tidy") },
       ...(canUseMakeThatWorkShortcut() ? [{
         label: "Use the adapter workaround and leave",
         className: "secondary-button",

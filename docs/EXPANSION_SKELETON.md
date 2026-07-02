@@ -642,6 +642,11 @@ be easy to verify in the browser.
    preview/result path. Route prep, route cards, and dispatch cards now include
    "Why this is different today" when active support or pressure changes the
    next job.
+102. **Done - Qualitative pressure preview pass:** Pre-choice route, task,
+   end-shift, service, callback, and closeout surfaces now describe effort,
+   recovery, fatigue, and risk in plain language instead of exposing exact
+   energy/burnout math everywhere. Result screens, logs, and saved modifier
+   data still reveal the actual consequences after the player commits.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

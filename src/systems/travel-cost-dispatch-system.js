@@ -41,15 +41,15 @@ function showTravelChoice() {
     body: `
       <p>The return stop itself is small. The problem is that coordination treated the bridge like a rumor and the van like it runs on optimism.</p>
       ${getChoicePressureMarkup([
-        { label: "File receipt", detail: "Costs a little energy and protects your cash. Management may grumble about the paper trail." },
+        { label: "File receipt", detail: "Takes a little effort and protects your cash. Management may grumble about the paper trail." },
         { label: "Push coordination", detail: "Best process outcome if you can handle the pressure, but it asks management to notice its own travel planning." },
         { label: "Eat the toll", detail: `Fastest option. You pay $${tollCost}, and the bad process stays invisible for now.` },
       ])}
     `,
     actions: [
-      { label: `File toll receipt and ETA note (-2 energy, $${tollCost} reimbursed)`, onClick: () => finishTravelDispatch("receipt") },
+      { label: `File toll receipt and ETA note ($${tollCost} reimbursed)`, onClick: () => finishTravelDispatch("receipt") },
       ...(getSkillValue("commercialProcess") >= 3 || canUsePressureChoice() ? [{
-        label: "Push coordination to own the return toll (-2 energy)",
+        label: "Push coordination to own the return toll",
         className: "secondary-button",
         onClick: () => finishTravelDispatch("pushback"),
       }] : []),

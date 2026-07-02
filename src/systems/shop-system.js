@@ -122,7 +122,7 @@ function getCareerEffectsMarkup() {
     {
       active: getCarefulTraitReduction() > 0,
       name: "Measure Twice tendency",
-      description: "Careful closeout and repair choices cost 1 less energy before the career-wide rhythm is built.",
+      description: "Careful closeout and repair choices feel less draining before the career-wide rhythm is built.",
     },
     {
       active: getDocumentationHabitReduction() > 0,
@@ -356,7 +356,7 @@ function showJoshCallback() {
       <p><strong>Josh:</strong> "The weird coupler should have been in the ticket. I can close it out. If you have a minute, help me reconstruct the room notes so the next call is cleaner."</p>
     `,
     actions: [
-      { label: "Help Josh reconstruct the notes (-3 energy)", onClick: () => resolveJoshCallback(true) },
+      { label: "Help Josh reconstruct the notes", onClick: () => resolveJoshCallback(true) },
       { label: "Leave Josh to close the callback", className: "secondary-button", onClick: () => resolveJoshCallback(false) },
     ],
   });

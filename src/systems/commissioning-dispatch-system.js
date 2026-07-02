@@ -91,7 +91,7 @@ function getCommissioningTerminationTaskLabel(action = state.flags.commissioning
 
 function getCommissioningTerminationActionLabel(action) {
   const task = getCommissioningTerminationTask(action);
-  return `${task?.label || getCommissioningTerminationTaskLabel(action)} (-${getCommissioningTerminationTaskEnergyCost(action)} energy)`;
+  return task?.label || getCommissioningTerminationTaskLabel(action);
 }
 
 function getCommissioningTerminationQualityLabel(quality = state.flags.commissioningTerminationQuality) {
@@ -390,9 +390,9 @@ function showCommissioningChoice() {
       ])}
     `,
     actions: [
-      { label: `Tell client it is repaired and document discrepancy (-${getCommissioningCloseoutEnergyCost("repair")} energy)`, onClick: () => finishCommissioning("repair") },
+      { label: "Tell client it is repaired and document discrepancy", onClick: () => finishCommissioning("repair") },
       ...(canCleanTerminate ? [{
-        label: `Issue clean punch list and own the mismatch (-${getCommissioningCloseoutEnergyCost("craft")} energy)`,
+        label: "Issue clean punch list and own the mismatch",
         className: "secondary-button",
         onClick: () => finishCommissioning("craft"),
       }] : []),
