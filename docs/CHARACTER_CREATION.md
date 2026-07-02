@@ -123,7 +123,7 @@ The creator data lives in `content.characterCreation`:
 3. Alex keeps the internal `prototype-tech` ID for save compatibility, but the
    player-facing starter profile is now a balanced commercial helper.
 4. The creator modal lets the player:
-   - name the technician
+   - name the technician, including first-and-last names with spaces
    - pick a background
    - pick a work style
    - pick two traits

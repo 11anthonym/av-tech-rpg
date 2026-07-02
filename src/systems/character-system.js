@@ -2,7 +2,7 @@
 // They depend on app.js globals and are loaded before bootstrap starts the game.
 function sanitizeCreatorName(value) {
   const clean = `${value || ""}`.replace(/[<>]/g, "").replace(/\s+/g, " ").trim();
-  return clean.slice(0, 32) || "Custom Tech";
+  return clean.slice(0, 40) || "Custom Tech";
 }
 
 function addNumericMap(target, source = {}) {
@@ -335,7 +335,7 @@ function showCharacterCreator() {
     body: `
       <p>Pick a work background, work style, two traits, and four major skill focuses. The creator stays compact, but the resulting technician is playable and saved like a premade.</p>
       <div class="creator-form">
-        <label>Name <input id="creator-name" maxlength="32" value="Custom Tech" /></label>
+        <label>Tech name <input id="creator-name" type="text" maxlength="40" autocomplete="name" placeholder="First Last" value="Custom Tech" /></label>
         <label>Background ${getCreatorSelectMarkup("creator-background", creator.backgrounds, "green-apprentice")}</label>
         <label>Work style ${getCreatorSelectMarkup("creator-work-style", creator.workStyles, "calm-under-fire")}</label>
         <label>Trait 1 ${getCreatorSelectMarkup("creator-trait-1", creator.traits, "steady-hands")}</label>

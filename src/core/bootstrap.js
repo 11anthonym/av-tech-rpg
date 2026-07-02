@@ -1,11 +1,18 @@
 (() => {
   let started = false;
 
+  function isTypingInFormField(target) {
+    if (!target) return false;
+    const tagName = target.tagName?.toLowerCase();
+    return target.isContentEditable || ["input", "textarea", "select"].includes(tagName);
+  }
+
   function startAvTechRpg() {
     if (started) return;
     started = true;
 
     document.addEventListener("keydown", (event) => {
+      if (isTypingInFormField(event.target)) return;
       const key = event.key.toLowerCase();
       if (["arrowleft", "arrowright", "arrowup", "arrowdown", "w", "a", "s", "d", "e", " "].includes(key)) {
         event.preventDefault();

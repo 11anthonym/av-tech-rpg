@@ -647,6 +647,10 @@ be easy to verify in the browser.
    recovery, fatigue, and risk in plain language instead of exposing exact
    energy/burnout math everywhere. Result screens, logs, and saved modifier
    data still reveal the actual consequences after the player commits.
+103. **Done - Custom full-name input pass:** The global movement/interact
+   keyboard handler now ignores form fields, so custom technician names can use
+   spaces and movement-key letters. The creator UI invites first-and-last names,
+   and smoke QA verifies the full name reaches the HUD and save payload.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

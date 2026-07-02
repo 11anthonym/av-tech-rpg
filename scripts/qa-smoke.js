@@ -78,9 +78,16 @@ async function clickButton(page, name) {
 
     await clickButton(page, "Create Custom Technician");
     await assertModalIncludes(page, ["Build Your First Tech", "Start Custom Career"], "custom creator");
+    await page.locator("#creator-name").click();
+    await page.keyboard.press(process.platform === "darwin" ? "Meta+A" : "Control+A");
+    await page.keyboard.type("Drew Wade");
+    assert(await page.locator("#creator-name").inputValue() === "Drew Wade", "Custom creator should allow spaces and movement-key letters in names");
+    assert((await page.locator("#creator-preview").innerText()).includes("Drew Wade"), "Custom creator preview should show full custom name");
     await clickButton(page, "Start Custom Career");
     await page.waitForSelector("#game-layout:not(.hidden)");
-    assert((await page.locator("#tech-name").innerText()).includes("Custom Tech"), "Custom technician should start");
+    assert((await page.locator("#tech-name").innerText()).includes("Drew Wade"), "Custom technician should start with full custom name");
+    const savedCustomName = await page.evaluate(() => JSON.parse(localStorage.getItem("av-tech-rpg-save-v1"))?.customTechnician?.name || "");
+    assert(savedCustomName === "Drew Wade", "Custom save payload should preserve full custom name");
 
     const premadeStarts = await page.evaluate(() => {
       return window.GAME_CONTENT.technicians.map((technician) => {
