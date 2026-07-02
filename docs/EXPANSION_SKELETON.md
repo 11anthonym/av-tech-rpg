@@ -628,6 +628,12 @@ be easy to verify in the browser.
    summary show the latest task and whether callback pressure was cleaned up,
    turning the relationship choice into visible workday memory instead of a
    one-modal result.
+100. **Done - Josh crew-support consequence pass:** Helping Josh now grants a
+   short-lived crew-support edge: the next eligible service, callback, handoff,
+   or systems documentation/troubleshooting check gets a visible Josh +1 and
+   then consumes the support. Route/job prep, action-pressure previews, skill
+   check labels, field-task results, and the career summary all surface the
+   effect so the relationship choice changes play instead of only adding flavor.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

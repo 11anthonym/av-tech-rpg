@@ -34,17 +34,21 @@ function getSkillCheckResult({ skillId, difficulty, contextBonus = 0, contextId 
   const exhaustionPenalty = getExhaustionSkillPenalty();
   const conditionPressure = getConditionSkillPressureDetails();
   const conditionPenalty = getConditionSkillPenalty(conditionPressure);
-  const score = getSkillValue(skillId) + contextBonus + getTraitContextBonus(skillId, contextId) - exhaustionPenalty - conditionPenalty;
+  const joshCrewSupportBonus = typeof getJoshCrewSupportBonus === "function" ? getJoshCrewSupportBonus(skillId, contextId) : 0;
+  const score = getSkillValue(skillId) + contextBonus + getTraitContextBonus(skillId, contextId) + joshCrewSupportBonus - exhaustionPenalty - conditionPenalty;
   const margin = score - difficulty;
   const tier = margin >= 2 ? "clean" : margin >= 0 ? "solid" : margin === -1 ? "strained" : "miss";
   return {
     skillId,
+    contextId,
     difficulty,
     score,
     margin,
     tier,
     exhaustionPenalty,
     conditionPenalty,
+    joshCrewSupportBonus,
+    joshCrewSupportText: joshCrewSupportBonus ? getJoshCrewSupportText(skillId, contextId) : "",
     conditionPressure: conditionPressure.map((detail) => detail.label),
     conditionPressureText: getConditionSkillPressureSummary(conditionPressure),
     successful: margin >= 0,
@@ -58,13 +62,14 @@ function resolveSkillCheck(flagKey, options) {
   state.flags.skillChecks[flagKey] = result;
   if (result.successful) state.stats.skillChecksPassed += 1;
   else state.stats.skillChecksStrained += 1;
+  if (typeof consumeJoshCrewSupport === "function") consumeJoshCrewSupport(result);
   return result;
 }
 
 function getSkillCheckLabel(result) {
   const skill = getSkillDefinition(result.skillId);
   const status = result.tier === "clean" ? "clean" : result.tier === "solid" ? "solid" : result.tier === "strained" ? "strained" : "messy";
-  return `${skill?.name || result.skillId} ${result.score}/${result.difficulty} (${status}${result.exhaustionPenalty ? `, exhaustion -${result.exhaustionPenalty}` : ""}${result.conditionPenalty ? `, condition -${result.conditionPenalty}` : ""})`;
+  return `${skill?.name || result.skillId} ${result.score}/${result.difficulty} (${status}${result.joshCrewSupportBonus ? `, Josh +${result.joshCrewSupportBonus}` : ""}${result.exhaustionPenalty ? `, exhaustion -${result.exhaustionPenalty}` : ""}${result.conditionPenalty ? `, condition -${result.conditionPenalty}` : ""})`;
 }
 
 function getSkillCheckMarkup(result) {
@@ -91,6 +96,7 @@ function getFieldTaskResultMarkup({ check, skillCheck = null, energyCost, succes
   const rows = [
     ["Task type", check.type || "field check"],
     ["Skill check", skillCheck ? getSkillCheckLabel(skillCheck) : "No skill roll"],
+    ...(skillCheck?.joshCrewSupportBonus ? [["Crew support", skillCheck.joshCrewSupportText || `Josh +${skillCheck.joshCrewSupportBonus}`]] : []),
     ...(skillCheck?.conditionPenalty ? [["Condition pressure", skillCheck.conditionPressureText || `-${skillCheck.conditionPenalty} to skill checks`]] : []),
     ["Energy spent", energyCost ? `-${energyCost} energy` : "0 energy"],
     ...(check.requiredTool ? [["Required tool", getFieldTaskToolText(check.requiredTool)]] : []),
@@ -123,6 +129,8 @@ function recordFieldTaskResult({ flagKey, check, checkId = check?.id || flagKey,
     conditionPenalty: skillCheck?.conditionPenalty || 0,
     conditionPressure: skillCheck?.conditionPressure || [],
     conditionPressureText: skillCheck?.conditionPressureText || "",
+    joshCrewSupportBonus: skillCheck?.joshCrewSupportBonus || 0,
+    joshCrewSupportText: skillCheck?.joshCrewSupportText || "",
     riskFlag: check.riskFlag || "",
     riskLabel,
     outcomeText: getFieldTaskOutcomeText(check, skillCheck, resolvedSuccessful),
@@ -243,10 +251,11 @@ function getFieldTaskResultEntryMarkup(entry) {
   const toolText = [entry.requiredTool, entry.optionalTool].filter(Boolean).map(getFieldTaskToolText).join(" / ");
   const outcomeText = entry.outcomeText || (entry.successful ? "Task resolved." : "Task left visible risk.");
   const conditionText = entry.conditionPressureText ? ` | condition: ${entry.conditionPressureText}` : "";
+  const crewSupportText = entry.joshCrewSupportBonus ? ` | crew support: Josh +${entry.joshCrewSupportBonus}` : "";
   return `
     <li>
       <strong>${escapeHtml(`${entry.successful ? "Resolved" : "Risk"} - ${entry.label}`)}</strong>
-      <span>${escapeHtml(`${entry.type || "field check"} | ${skillName}${entry.difficulty ? ` ${entry.difficulty}` : ""} | energy ${entry.energyCost || 0} | ${entry.tier || "recorded"}${conditionText} | risk: ${riskText}${toolText ? ` | tools: ${toolText}` : ""}. ${outcomeText}`)}</span>
+      <span>${escapeHtml(`${entry.type || "field check"} | ${skillName}${entry.difficulty ? ` ${entry.difficulty}` : ""} | energy ${entry.energyCost || 0} | ${entry.tier || "recorded"}${conditionText}${crewSupportText} | risk: ${riskText}${toolText ? ` | tools: ${toolText}` : ""}. ${outcomeText}`)}</span>
     </li>
   `;
 }
@@ -344,6 +353,15 @@ function getActionPressureDetails({
       const skillName = getSkillDefinition(check.skillId)?.name || check.skill || check.skillId || "Field skill";
       const skillValue = check.skillId ? getSkillValue(check.skillId) : null;
       const difficulty = check.difficulty != null ? `difficulty ${check.difficulty}` : check.difficultyHint || "variable difficulty";
+      const supportText = typeof getJoshCrewSupportText === "function"
+        ? getJoshCrewSupportText(check.skillId, check.contextId || "")
+        : "";
+      if (supportText) {
+        details.push({
+          label: "Josh support",
+          detail: supportText,
+        });
+      }
       details.push({
         label: "Skill fit",
         detail: `${skillName}${skillValue != null ? ` ${skillValue}` : ""} against ${difficulty}.`,
@@ -408,6 +426,7 @@ function getActionPressureBrief(options = {}) {
     }
     if (detail.label === "Field condition") return `Condition: ${detail.detail.replace(" to skill checks.", " checks")}`;
     if (detail.label === "Exhaustion") return detail.detail.replace("Zero-energy pressure is applying ", "Exhaustion: ");
+    if (detail.label === "Josh support") return "Josh support: +1 eligible check";
     if (detail.label === "Skill fit") return detail.detail.replace(" against ", " vs ").replace(/\.$/, "");
     if (detail.label === "Movement condition") return `Movement: ${detail.detail}`;
     if (detail.label === "Helpful tool missing") return `Missing tool: ${detail.detail.split(" would ")[0]}`;

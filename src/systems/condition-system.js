@@ -153,6 +153,8 @@ function getDailyConditionPrepText({ includeClean = false } = {}) {
   if (state.flags.shiftPrepActive) {
     notes.push("Next-shift prep is active: Fieldcraft and Documentation get support until this job closes.");
   }
+  const joshSupport = typeof getJoshCrewSupportText === "function" ? getJoshCrewSupportText() : "";
+  if (joshSupport) notes.push(joshSupport);
   if (!notes.length && includeClean) {
     return "Ready: no active low-energy, burnout, exhaustion, carry, or prep pressure is changing this route.";
   }

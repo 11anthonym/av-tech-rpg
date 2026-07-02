@@ -1711,6 +1711,12 @@ pressure was cleaned up. This keeps the relationship consequence visible after
 the shift result modal closes without adding another job or a separate
 relationship screen.
 
+Josh crew-support consequence pass: helping Josh now grants one short-lived
+crew-support edge. The next eligible service, callback, handoff, or systems
+documentation/troubleshooting check gets a visible Josh +1, then the support is
+consumed. This is the smallest proof that relationship work can affect field
+work without adding a relationship minigame or another dispatch.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

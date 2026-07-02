@@ -332,6 +332,13 @@ function getActiveCareerSummaryMarkup() {
       detail: `${state.flags.consecutiveLateNights} consecutive late night${state.flags.consecutiveLateNights === 1 ? "" : "s"} will cap recovery until you clock out normally or take a recovery day.`,
     });
   }
+  const joshCrewSupport = typeof getJoshCrewSupportText === "function" ? getJoshCrewSupportText() : "";
+  if (joshCrewSupport) {
+    items.push({
+      label: "Josh crew support",
+      detail: joshCrewSupport,
+    });
+  }
   const latestJoshHelp = typeof getLatestJoshHelpMemoryText === "function" ? getLatestJoshHelpMemoryText() : "";
   if (latestJoshHelp) {
     items.push({

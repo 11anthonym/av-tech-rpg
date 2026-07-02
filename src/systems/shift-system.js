@@ -236,6 +236,60 @@ function getJoshHelpHistoryMarkup({ emptyText = "No after-hours Josh help record
   `;
 }
 
+function getJoshCrewSupportContextIds() {
+  return [
+    "service-diagnosis",
+    "callback-documentation",
+    "callback-troubleshooting",
+    "handoff-documentation",
+    "systems-documentation",
+  ];
+}
+
+function hasJoshCrewSupport() {
+  return Boolean(state.flags.joshCrewSupportAvailable && !state.flags.joshCrewSupportUsed);
+}
+
+function canApplyJoshCrewSupport(skillId, contextId = "") {
+  if (!hasJoshCrewSupport()) return false;
+  if (!["documentation", "troubleshooting"].includes(skillId)) return false;
+  return getJoshCrewSupportContextIds().includes(contextId);
+}
+
+function getJoshCrewSupportBonus(skillId, contextId = "") {
+  return canApplyJoshCrewSupport(skillId, contextId) ? 1 : 0;
+}
+
+function getJoshCrewSupportText(skillId = "", contextId = "") {
+  if (!hasJoshCrewSupport()) return "";
+  const source = state.flags.joshCrewSupportSource || "after-hours Josh help";
+  if (!skillId || !contextId || canApplyJoshCrewSupport(skillId, contextId)) {
+    return `Josh crew support ready: +1 on the next service, callback, handoff, or systems documentation/troubleshooting check. Source: ${source}.`;
+  }
+  return "";
+}
+
+function consumeJoshCrewSupport(skillCheck = {}) {
+  if (!skillCheck.joshCrewSupportBonus || !hasJoshCrewSupport()) return false;
+  state.flags.joshCrewSupportAvailable = false;
+  state.flags.joshCrewSupportUsed = true;
+  state.flags.joshCrewSupportLastUsed = {
+    skillId: skillCheck.skillId || "",
+    contextId: skillCheck.contextId || "",
+    source: state.flags.joshCrewSupportSource || "",
+    clock: state.clock,
+  };
+  addLog("Josh crew support helped clean up the next service-style check.");
+  return true;
+}
+
+function grantJoshCrewSupport(source = "after-hours help") {
+  state.flags.joshCrewSupportAvailable = true;
+  state.flags.joshCrewSupportUsed = false;
+  state.flags.joshCrewSupportSource = source;
+  delete state.flags.joshCrewSupportLastUsed;
+}
+
 function getOvernightRecovery({ stayedLate = false, burnout = state.burnout } = {}) {
   const enduranceBonus = state.training.includes("endurance") ? 10 : 0;
   const burnoutPenalty = burnout * 10;
@@ -716,6 +770,7 @@ function completeShift(choice) {
       resolvedCallback,
     };
     recordJoshHelpHistory(state.flags.lastHelpJoshScenario);
+    grantJoshCrewSupport(helpJoshCopy.taskLabel);
     addLog(helpJoshCopy.log);
   } else if (choice === "recovery-day") {
     days = 2;

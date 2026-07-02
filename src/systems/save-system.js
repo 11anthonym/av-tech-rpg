@@ -114,6 +114,10 @@ function migrateSavedGame(savedGame) {
     ? flags.shiftHistory.slice(0, SHIFT_HISTORY_LIMIT)
     : [];
   flags.joshHelpHistory = getMigratedJoshHelpHistory(flags);
+  flags.joshCrewSupportAvailable = Boolean(flags.joshCrewSupportAvailable);
+  flags.joshCrewSupportUsed = Boolean(flags.joshCrewSupportUsed);
+  flags.joshCrewSupportSource = flags.joshCrewSupportSource || "";
+  if (!flags.joshCrewSupportAvailable) delete flags.joshCrewSupportLastUsed;
   if (!flags.currentAreaId) {
     flags.currentAreaId = getWorldAreaByScene(savedGame.sceneId)?.id || content.world?.homeAreaId || "shop";
   }

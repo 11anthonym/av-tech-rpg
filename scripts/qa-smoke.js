@@ -942,6 +942,17 @@ async function clickButton(page, name) {
       const callbackHelpResultText = document.querySelector("#modal-backdrop")?.innerText || "";
       window.showCareerClipboard();
       const careerClipboardText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const supportAvailableBeforeCheck = Boolean(state.flags.joshCrewSupportAvailable && !state.flags.joshCrewSupportUsed);
+      const supportPressureText = window.getActionPressureSummary({
+        check: { skillId: "troubleshooting", difficulty: 4, contextId: "service-diagnosis" },
+      });
+      const supportSkillCheck = window.resolveSkillCheck("smoke-josh-crew-support", {
+        skillId: "troubleshooting",
+        difficulty: 4,
+        contextId: "service-diagnosis",
+      });
+      const supportSkillLabel = window.getSkillCheckLabel(supportSkillCheck);
+      const supportAvailableAfterCheck = Boolean(state.flags.joshCrewSupportAvailable && !state.flags.joshCrewSupportUsed);
       return {
         beforeIntroText,
         beforeIntroButtons,
@@ -964,6 +975,12 @@ async function clickButton(page, name) {
         joshHelpHistory: state.flags.joshHelpHistory || [],
         shiftHistory: state.flags.shiftHistory || [],
         careerClipboardText,
+        supportAvailableBeforeCheck,
+        supportPressureText,
+        supportSkillCheck,
+        supportSkillLabel,
+        supportAvailableAfterCheck,
+        supportLastUsed: state.flags.joshCrewSupportLastUsed || {},
       };
     });
     assert(!endShiftJoshGate.beforeIntroText.includes("Help Josh"), "First end-shift modal should not offer Josh help before the player has met him");
@@ -980,6 +997,10 @@ async function clickButton(page, name) {
     assert(endShiftJoshGate.joshHelpHistory.length === 1 && endShiftJoshGate.joshHelpHistory[0].resolvedCallback, "Josh help history should record callback-specific after-hours help");
     assert(endShiftJoshGate.careerClipboardText.includes("Coworker help history") && endShiftJoshGate.careerClipboardText.includes(endShiftJoshGate.joshHelpHistory[0].taskLabel), "Career clipboard should surface recent Josh help history");
     assert(endShiftJoshGate.careerClipboardText.includes("Josh after-hours help") && endShiftJoshGate.careerClipboardText.includes("Callback pressure was cleaned up"), "Active career summary should describe the Josh help consequence");
+    assert(endShiftJoshGate.supportAvailableBeforeCheck && endShiftJoshGate.careerClipboardText.includes("Josh crew support"), "Helping Josh should grant visible crew support before the next eligible check");
+    assert(endShiftJoshGate.supportPressureText.includes("Josh crew support ready"), "Action pressure should preview Josh crew support on eligible checks");
+    assert(endShiftJoshGate.supportSkillCheck.joshCrewSupportBonus === 1 && endShiftJoshGate.supportSkillLabel.includes("Josh +1"), "Eligible checks should apply the Josh crew-support bonus visibly");
+    assert(!endShiftJoshGate.supportAvailableAfterCheck && endShiftJoshGate.supportLastUsed.contextId === "service-diagnosis", "Josh crew support should be consumed by the eligible check");
     assert(endShiftJoshGate.callbackHelpResultText.includes("Helped Josh") && endShiftJoshGate.callbackHelpResultText.includes("callback note was cleaned up"), "Shift result should explain the after-hours callback cleanup");
 
     const beforeMeetHelpGuard = await page.evaluate(() => {
