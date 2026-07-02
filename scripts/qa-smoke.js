@@ -430,9 +430,9 @@ async function clickButton(page, name) {
         title: marker.title,
       }));
       const checkMarker = [...document.querySelectorAll(".interaction-marker")].find((marker) => marker.textContent === "CHECK");
-      const mysteryReturns = [...document.querySelectorAll(".decor")].find((item) => item.textContent.includes("MYSTERY RETURNS"));
+      const secretSquirrel = [...document.querySelectorAll(".decor")].find((item) => item.textContent.includes("SECRET SQUIRREL"));
       const markerRect = checkMarker?.getBoundingClientRect();
-      const decorRect = mysteryReturns?.getBoundingClientRect();
+      const decorRect = secretSquirrel?.getBoundingClientRect();
       const checkMarkerOverlapsDecor = Boolean(markerRect && decorRect && markerRect.right > decorRect.left
         && markerRect.left < decorRect.right
         && markerRect.bottom > decorRect.top
@@ -481,7 +481,7 @@ async function clickButton(page, name) {
     assert(markerAffordances.shopMarkers.some((marker) => marker.text === "PICKUP" && marker.kind === "task"), "Pickup work should render as a PICKUP marker");
     assert(markerAffordances.shopMarkers.some((marker) => marker.text === "CHECK" && marker.kind === "task"), "Inspection work should render as a CHECK marker");
     assert(markerAffordances.shopMarkers.some((marker) => marker.text === "CHECK" && marker.placement !== "center"), "Inspection marker should move off the object label");
-    assert(!markerAffordances.checkMarkerOverlapsDecor, "Inspection marker should not cover the Mystery Returns label");
+    assert(!markerAffordances.checkMarkerOverlapsDecor, "Inspection marker should not cover the Secret Squirrel label");
     assert(markerAffordances.shopMarkers.some((marker) => marker.text === "VAN" && marker.kind === "van"), "Vehicle interaction should render as a VAN marker");
     assert(markerAffordances.vanNearby.startsWith("VAN - "), "Nearby card should use the VAN marker label");
     assert(markerAffordances.vanInteract.startsWith("Interact: VAN - "), "Interact button should use the marker label");
@@ -2448,7 +2448,7 @@ async function clickButton(page, name) {
       state.flags.currentAreaId = "shop";
       window.showWarehouseDispatchPreview();
     });
-    await assertModalIncludes(page, ["Field Task Checks", "Mystery-return pile", "returns search", "Risk: mystery-return pile"], "warehouse field task preview");
+    await assertModalIncludes(page, ["Field Task Checks", "Secret Squirrel Shelf", "returns search", "Risk: Secret Squirrel mystery shelf"], "warehouse field task preview");
 
     const warehouseTask = await page.evaluate(() => {
       window.startGame("prototype-tech");
@@ -2465,7 +2465,7 @@ async function clickButton(page, name) {
         resultType: result?.type || "",
         resultSkill: result?.skillId || "",
         energyChanged: state.energy !== beforeEnergy,
-        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk tracked") && modalText.includes("mystery-return pile"),
+        showsResultRows: modalText.includes("Task type") && modalText.includes("Risk tracked") && modalText.includes("Secret Squirrel mystery shelf"),
       };
     });
     assert(warehouseTask.checked, "Warehouse search should complete");

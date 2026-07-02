@@ -116,7 +116,7 @@ function getInteractions() {
         },
       },
       {
-        x: 580, y: 400, label: warehouseActive ? "Search mystery-return pile" : "Inspect shop loaner drill",
+        x: 580, y: 400, label: warehouseActive ? "Search Secret Squirrel shelf" : "Inspect shop loaner drill",
         pressure: () => warehouseActive
           ? getActionPressureBrief({
             check: content.warehouseDispatch.checks.find((item) => item.id === "returns"),

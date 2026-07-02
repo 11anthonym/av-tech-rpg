@@ -36,7 +36,7 @@ function startWarehouseRun() {
     kicker: "Radnor Rack & Wire Warehouse Run",
     title: "Check The Obvious Places",
     body: `
-      <p>Search Van #3, the staging shelf, and the mystery-return pile. Coordination has already asked whether you found it.</p>
+      <p>Search Van #3, the staging shelf, and the Secret Squirrel shelf, which is the shop's mystery-return shelf. Coordination has already asked whether you found it.</p>
       <p class="muted">${ownsTool("toolBag") ? "Your tool bag makes it easier to work through the loose stock." : "Loose adapters have achieved a stable ecosystem."}</p>
     `,
     actions: [{ label: "Start Searching", onClick: render }],
@@ -73,7 +73,7 @@ function inspectWarehouseLocation(checkId) {
     body: `
       <p>${check.detail}</p>
       ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
-      ${allChecked ? `<p class="muted">The matching power supply is in the mystery-return pile beneath a handwritten question mark. Decide how much stockroom cleanup the schedule is willing to survive.</p>` : ""}
+      ${allChecked ? `<p class="muted">The matching power supply is on the Secret Squirrel shelf, the mystery-return shelf beneath a handwritten question mark. Decide how much stockroom cleanup the schedule is willing to survive.</p>` : ""}
     `,
     actions: [{ label: allChecked ? "Review Found Power Supply" : "Keep Looking", onClick: allChecked ? showWarehouseChoice : render }],
   });
@@ -91,7 +91,7 @@ function showWarehouseChoice() {
     kicker: "Warehouse Run",
     title: "Power Supply Located Technically",
     body: `
-      <p>The correct power supply was placed in mystery returns beneath a box labeled <strong>HDMI EXTENDERS / DO NOT STOCK / RETURN?</strong></p>
+      <p>The correct power supply was placed on the Secret Squirrel shelf, the shop's mystery-return shelf, beneath a box labeled <strong>HDMI EXTENDERS / DO NOT STOCK / RETURN?</strong></p>
       <p>Coordination wants the part immediately. Correcting the bin label would save the next search, but it would extend a task estimated at one minute.</p>
       ${getChoicePressureMarkup([
         {
@@ -146,8 +146,8 @@ function finishWarehouseRun(approach) {
     state.flags.warehouseStatsRecorded = true;
   }
   addLog(correctedLabel
-    ? "Handed off the replacement power supply and corrected the mystery-return bin label."
-    : "Handed off the replacement power supply. The mystery-return pile remains self-governing.");
+    ? "Handed off the replacement power supply and corrected the Secret Squirrel mystery-shelf label."
+    : "Handed off the replacement power supply. The Secret Squirrel shelf remains self-governing.");
   render();
   showModal({
     kicker: "Warehouse Run Complete",
@@ -157,7 +157,7 @@ function finishWarehouseRun(approach) {
         <span>Warehouse wages</span><strong>+$48</strong>
         <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
         <span>Experience</span><strong>+${correctedLabel ? 50 : 35} XP</strong>
-        <span>Stockroom</span><strong>${correctedLabel ? "Bin label corrected" : "Mystery pile preserved"}</strong>
+        <span>Stockroom</span><strong>${correctedLabel ? "Secret Squirrel label corrected" : "Mystery shelf preserved"}</strong>
       </div>
       ${correctedLabel
         ? `<blockquote>Management note: "Please avoid spending excessive time reorganizing stock during urgent field support."</blockquote>`
