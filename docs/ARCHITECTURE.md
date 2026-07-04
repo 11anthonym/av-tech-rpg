@@ -88,6 +88,27 @@ build step, external dependency, or engine migration.
   portal endpoints, route lock states, field-task schemas, objective resolver
   coverage, and save serialization shape.
 
+## QA Endgame For This Phase
+
+The QA/tooling pass is done for now. The project has a single local command,
+`node scripts/qa-all.js`, plus a fast CI guard, `node scripts/qa-all.js --fast`.
+That covers the current no-build prototype without adding npm metadata, a test
+framework, a bundler, or a dependency install step.
+
+Do not keep expanding QA as its own roadmap lane. Add or adjust tests only when
+one of these is true:
+
+- A gameplay change adds a reusable helper, data contract, save shape, route,
+  portal, task/check pattern, or consequence rule that needs a regression guard.
+- A bug repeats after manual QA, especially around player flow, save migration,
+  route state, portals, field-task results, or callback/return-trip debt.
+- The project intentionally changes architecture, such as adding modules,
+  a build step, a package file, CI browser dependencies, or a future engine.
+
+Otherwise, return effort to the playable RPG loop. The next roadmap work should
+use the current tests as guardrails while improving consequence-driven gameplay,
+not spend another pass broadening the test harness.
+
 ## Research Notes
 
 - MDN describes modules as the browser-native way to split larger JavaScript

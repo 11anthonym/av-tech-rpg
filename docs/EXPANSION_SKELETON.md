@@ -651,6 +651,13 @@ be easy to verify in the browser.
    keyboard handler now ignores form fields, so custom technician names can use
    spaces and movement-key letters. The creator UI invites first-and-last names,
    and smoke QA verifies the full name reaches the HUD and save payload.
+104. **Done - QA guardrail endgame pass:** Added a capped testing boundary for
+   this phase. `scripts/qa-all.js` runs local static, unit/contract, and smoke
+   QA; GitHub Actions runs the fast no-dependency guard on main and pull
+   requests. The test layer now exists to protect route/job, portal, objective,
+   field-task, modifier, roster, and save-shape regressions while gameplay work
+   resumes. Do not keep expanding QA as a standalone lane unless a repeated bug,
+   reusable gameplay system, or architecture change justifies it.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

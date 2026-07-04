@@ -1725,6 +1725,21 @@ condition, zero-energy pressure, callback debt, prep context, or Conshohocken
 room pressure. The next non-service proof case should reuse this same layer
 before adding new content.
 
+QA endgame pass: the testing/tooling work is intentionally capped for now. The
+repo now has `scripts/qa-all.js` for local static/unit/smoke verification,
+`scripts/qa-all.js --fast` for CI, unit/contract coverage for data-backed RPG
+systems, and browser smoke coverage for the main player path. This is enough
+guardrail for the current static prototype. Do not keep adding QA infrastructure
+as a standalone activity unless a repeated regression, architecture change, or
+new reusable gameplay system needs a focused guard.
+
+Next gameplay roadmap handoff: resume with consequence-driven play, not test
+infrastructure. The most useful next pass is to apply the task modifier layer to
+one non-service proof case, preferably University City survey or Burlington
+retrofit install, then make the consequence review easier to filter by active,
+resolved, and inherited pressure. Recovery choices should become more tactical
+only after those consequence cards are readable.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.
