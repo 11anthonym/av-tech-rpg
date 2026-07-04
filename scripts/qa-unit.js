@@ -202,6 +202,97 @@ test("custom technician names allow first and last names", () => {
   assert.ok(result.technician.startingTools.includes("drill"), "trait tools should be preserved");
 });
 
+test("roster, tools, skills, and character creator data stay valid", () => {
+  const failures = readGameJson(`(() => {
+    const failures = [];
+    const hasDuplicate = (items, label) => {
+      const ids = items.map((item) => item.id).filter(Boolean);
+      const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
+      if (duplicates.length) failures.push(label + " has duplicate ids: " + uniqueValues(duplicates).join(", "));
+    };
+    const isNumber = (value) => Number.isFinite(value);
+    const skills = content.career?.skills || [];
+    const skillIds = new Set(skills.map((skill) => skill.id));
+    const toolIds = new Set(Object.keys(content.tools || {}));
+    const technicianIds = new Set((content.technicians || []).map((technician) => technician.id));
+    const validateSkillBonusMap = (map = {}, label) => {
+      Object.entries(map).forEach(([skillId, value]) => {
+        if (!skillIds.has(skillId)) failures.push(label + " references unknown skill " + skillId);
+        if (!isNumber(value)) failures.push(label + "." + skillId + " should be numeric");
+      });
+    };
+    const validateNumericMap = (map = {}, label) => {
+      Object.entries(map).forEach(([key, value]) => {
+        if (!isNumber(value)) failures.push(label + "." + key + " should be numeric");
+      });
+    };
+    const validateToolRefs = (toolRefs = [], label) => {
+      toolRefs.forEach((toolId) => {
+        if (!toolIds.has(toolId)) failures.push(label + " references unknown tool " + toolId);
+      });
+    };
+
+    hasDuplicate(skills, "career.skills");
+    skills.forEach((skill) => {
+      if (!skill.id || !skill.name || !skill.branch || !skill.description) failures.push("career skill " + (skill.id || "?") + " is missing display data");
+    });
+
+    Object.entries(content.tools || {}).forEach(([toolId, tool]) => {
+      if (tool.id !== toolId) failures.push("tool " + toolId + " id does not match its key");
+      if (!tool.name || !tool.description || !tool.effect) failures.push("tool " + toolId + " is missing display copy");
+      if (!isNumber(tool.price ?? 0)) failures.push("tool " + toolId + " price should be numeric");
+      validateSkillBonusMap(tool.skillBonuses || {}, "tool " + toolId + " skillBonuses");
+      validateNumericMap(tool.modifiers || {}, "tool " + toolId + " modifiers");
+    });
+
+    hasDuplicate(content.technicians || [], "technicians");
+    ["prototype-tech", "organized-rookie", "wiley", "jordan", "morgan"].forEach((technicianId) => {
+      if (!technicianIds.has(technicianId)) failures.push("missing premade technician " + technicianId);
+    });
+    (content.technicians || []).forEach((technician) => {
+      if (!technician.name || !technician.role || !technician.tagline) failures.push("technician " + technician.id + " is missing display copy");
+      if (/prototype tech/i.test(technician.name)) failures.push("technician " + technician.id + " exposes old prototype naming");
+      ["energy", "burnout", "craftsmanship", "confidence"].forEach((statId) => {
+        if (!isNumber(technician.stats?.[statId])) failures.push("technician " + technician.id + " missing numeric stat " + statId);
+      });
+      validateToolRefs(technician.startingTools || [], "technician " + technician.id + " startingTools");
+      skills.forEach((skill) => {
+        if (!isNumber(technician.characterStats?.[skill.id])) failures.push("technician " + technician.id + " missing numeric skill " + skill.id);
+      });
+    });
+
+    const creator = content.characterCreation || {};
+    ["backgrounds", "workStyles", "traits"].forEach((collectionKey) => {
+      const collection = creator[collectionKey] || [];
+      hasDuplicate(collection, "characterCreation." + collectionKey);
+      collection.forEach((choice) => {
+        if (!choice.name || !choice.tradeoff) failures.push("creator " + collectionKey + "." + choice.id + " is missing name or tradeoff");
+        validateSkillBonusMap(choice.skillBonuses || {}, "creator " + collectionKey + "." + choice.id + " skillBonuses");
+        validateNumericMap(choice.characterStats || {}, "creator " + collectionKey + "." + choice.id + " characterStats");
+        validateNumericMap(choice.statModifiers || {}, "creator " + collectionKey + "." + choice.id + " statModifiers");
+        validateToolRefs(choice.startingTools || [], "creator " + collectionKey + "." + choice.id + " startingTools");
+      });
+    });
+    (creator.premadeTemplates || []).forEach((template) => {
+      if (!technicianIds.has(template.technicianId)) failures.push("premade template references unknown technician " + template.technicianId);
+      if (!template.formula) failures.push("premade template " + template.technicianId + " is missing formula copy");
+    });
+
+    Object.entries(content.traitContextBonuses || {}).forEach(([traitId, rules]) => {
+      if (!Array.isArray(rules)) failures.push("traitContextBonuses." + traitId + " should be an array");
+      (rules || []).forEach((rule, index) => {
+        if (!skillIds.has(rule.skillId)) failures.push("traitContextBonuses." + traitId + "." + index + " references unknown skill " + rule.skillId);
+        if (!Array.isArray(rule.contextIds) || !rule.contextIds.length) failures.push("traitContextBonuses." + traitId + "." + index + " needs contextIds");
+        if (!isNumber(rule.bonus)) failures.push("traitContextBonuses." + traitId + "." + index + " needs numeric bonus");
+      });
+    });
+
+    return failures;
+  })()`);
+
+  assert.deepEqual(failures, []);
+});
+
 test("energy and route previews use qualitative pressure language", () => {
   resetGameState();
   const result = readGameJson(`(() => {
@@ -333,6 +424,41 @@ test("world routes and job card contracts stay internally consistent", () => {
   assert.deepEqual(failures, []);
 });
 
+test("dispatch board entries resolve to valid content, routes, and actions", () => {
+  resetGameState();
+  const failures = readGameJson(`(() => {
+    const failures = [];
+    const definitions = getDispatchBoardEntryDefinitions();
+    const ids = definitions.map((entry) => entry.id);
+    ids.filter((id, index) => ids.indexOf(id) !== index).forEach((id) => failures.push("duplicate board entry id " + id));
+    definitions.forEach((entry) => {
+      if (!entry.id) failures.push("board entry is missing id");
+      if (!entry.statusLabel) failures.push("board entry " + entry.id + " is missing statusLabel");
+      if (!entry.objective) failures.push("board entry " + entry.id + " is missing objective");
+      if (!entry.availableReason) failures.push("board entry " + entry.id + " is missing availableReason");
+      if (entry.contentKey && !content[entry.contentKey]) failures.push("board entry " + entry.id + " has unknown contentKey " + entry.contentKey);
+      if (entry.routeId && typeof entry.routeId === "string" && !getWorldRoute(entry.routeId)) {
+        failures.push("board entry " + entry.id + " has unknown routeId " + entry.routeId);
+      }
+      ["isAvailable", "isInProgress", "isComplete"].forEach((fnName) => {
+        if (typeof entry[fnName] !== "function") failures.push("board entry " + entry.id + " missing " + fnName + " function");
+      });
+      if (typeof entry.previewAction !== "function") failures.push("board entry " + entry.id + " missing previewAction function");
+    });
+    getDispatchBoardEntries().forEach((entry) => {
+      if (!entry.title) failures.push("resolved board entry " + entry.id + " is missing title");
+      if (!entry.summary) failures.push("resolved board entry " + entry.id + " is missing summary");
+      if (!["In progress", "Active board item", "Blocked", "Complete", "Locked"].includes(entry.boardStatus)) {
+        failures.push("resolved board entry " + entry.id + " has invalid boardStatus " + entry.boardStatus);
+      }
+      if (entry.routeId && !entry.route) failures.push("resolved board entry " + entry.id + " lost route lookup");
+    });
+    return failures;
+  })()`);
+
+  assert.deepEqual(failures, []);
+});
+
 test("portal contracts expose valid spatial movement and lock messaging", () => {
   resetGameState();
   const result = readGameJson(`(() => {
@@ -407,6 +533,68 @@ test("route lock and status helpers change with player state", () => {
   assert.equal(result.ready.lockReason, "");
   assert.doesNotMatch(result.ready.preview, /^Locked:/);
   assert.match(result.completed.lockReason, /already complete/i);
+});
+
+test("field task content has reusable check structure", () => {
+  resetGameState();
+  const failures = readGameJson(`(() => {
+    const failures = [];
+    const skillIds = new Set((content.career?.skills || []).map((skill) => skill.id));
+    const taskCollections = [];
+    const visit = (value, path = []) => {
+      if (Array.isArray(value)) {
+        const key = path[path.length - 1];
+        if (
+          path[0] !== "upcomingDispatches"
+          && ["checks", "inspections", "taskChecks", "assembly"].includes(key)
+          && value.some((item) => item && typeof item === "object" && item.label)
+        ) {
+          taskCollections.push({ path: path.join("."), items: value });
+        }
+        value.forEach((item, index) => visit(item, path.concat(index)));
+        return;
+      }
+      if (value && typeof value === "object") {
+        Object.entries(value).forEach(([key, next]) => visit(next, path.concat(key)));
+      }
+    };
+    visit(content);
+    taskCollections.forEach((collection) => {
+      const ids = collection.items.map((check) => check.id).filter(Boolean);
+      ids.filter((id, index) => ids.indexOf(id) !== index).forEach((id) => failures.push(collection.path + " has duplicate check id " + id));
+      collection.items.forEach((check, index) => {
+        const label = collection.path + "." + (check.id || index);
+        if (!check.id) failures.push(label + " is missing id");
+        if (!check.label) failures.push(label + " is missing label");
+        if (!check.type) failures.push(label + " is missing type");
+        if (!skillIds.has(check.skillId)) failures.push(label + " references unknown skillId " + check.skillId);
+        if (!Number.isFinite(check.difficulty)) failures.push(label + " is missing numeric difficulty");
+        if (!Number.isFinite(check.energyCost)) failures.push(label + " is missing numeric energyCost");
+        if (!check.contextId) failures.push(label + " is missing contextId");
+        if (!check.requiredTool) failures.push(label + " is missing requiredTool/prep");
+        if (!check.successText) failures.push(label + " is missing successText");
+        if (!check.strainedText) failures.push(label + " is missing strainedText");
+        if (!check.log) failures.push(label + " is missing log");
+        if (check.riskFlag && !check.riskLabel) failures.push(label + " has riskFlag without riskLabel");
+        (check.taskModifiers || []).forEach((modifier, modifierIndex) => {
+          const modifierLabel = label + ".taskModifiers." + modifierIndex;
+          if (!modifier.id || !modifier.label || !modifier.source) failures.push(modifierLabel + " is missing id, label, or source");
+          if (modifier.statDelta !== undefined && !Number.isFinite(modifier.statDelta)) failures.push(modifierLabel + " statDelta should be numeric");
+          if (modifier.energyDelta !== undefined && !Number.isFinite(modifier.energyDelta)) failures.push(modifierLabel + " energyDelta should be numeric");
+        });
+      });
+    });
+    const preview = getFieldTaskPreviewMarkup(content.serviceDispatch.checks);
+    return {
+      failures,
+      collectionCount: taskCollections.length,
+      previewHasCards: preview.includes("Field Task Checks") && preview.includes("Verify signal path"),
+    };
+  })()`);
+
+  assert.deepEqual(failures.failures || failures, []);
+  assert.ok(failures.collectionCount >= 10, "expected current dispatch task collections to be covered");
+  assert.equal(failures.previewHasCards, true);
 });
 
 test("field task modifiers preview, apply, and consume one-time support", () => {
