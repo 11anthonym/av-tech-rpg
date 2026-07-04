@@ -160,11 +160,14 @@ python -m http.server 4173 --bind 127.0.0.1
 Then open [http://127.0.0.1:4173](http://127.0.0.1:4173). Use `WASD` or the
 arrow keys to walk and `E`, `Space`, or the on-screen button to interact.
 
-Before pushing structural changes, run the static script guard, the fast unit
-QA script, and the browser smoke test:
+Before pushing structural changes, run the full local QA pass:
 
 ```powershell
-node scripts/qa-static-scripts.js
-node scripts/qa-unit.js
-$env:NODE_PATH="<path-to-playwright-node-modules>"; node scripts/qa-smoke.js
+node scripts/qa-all.js
 ```
+
+The full pass runs the static script guard, unit/contract checks, and the
+browser smoke test. If Playwright is installed outside the repository, set
+`NODE_PATH` before running the command. GitHub Actions runs
+`node scripts/qa-all.js --fast`, which covers the no-dependency static and unit
+checks on every push and pull request.

@@ -1,0 +1,25 @@
+name: QA
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fast-qa:
+    name: Static and unit QA
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Run fast QA
+        run: node scripts/qa-all.js --fast

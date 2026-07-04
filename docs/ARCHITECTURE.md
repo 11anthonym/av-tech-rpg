@@ -60,8 +60,8 @@ server requirement, the safer structure is:
 2. Keep each system file focused on one gameplay surface.
 3. Keep top-level startup in `src/core/bootstrap.js` only.
 4. Keep load order explicit in `index.html`.
-5. Keep `scripts/qa-static-scripts.js` enforcing that all listed runtime files
-   exist, parse, live in the expected folders, and keep `src/core/app.js` lean.
+5. Keep `scripts/qa-all.js --fast` green in CI. It runs static script QA and
+   unit/contract QA without adding a build step or package dependency.
 
 This follows the practical parts of browser guidance without introducing a
 build step, external dependency, or engine migration.
@@ -78,8 +78,9 @@ build step, external dependency, or engine migration.
 - Avoid putting new runtime scripts in the repository root.
 - Avoid adding top-level startup side effects to system files; define helpers
   there and let `src/core/bootstrap.js` start the app.
-- Run `node scripts/qa-static-scripts.js`, `node scripts/qa-unit.js`, and
-  `node scripts/qa-smoke.js` after script organization changes.
+- Run `node scripts/qa-all.js` after script organization changes or larger
+  gameplay changes. Use `node scripts/qa-all.js --fast` for the no-dependency
+  static/unit checks that also run in GitHub Actions.
 - Keep unit QA focused on reusable helper behavior. Browser flow regressions
   belong in `scripts/qa-smoke.js`; content breadth belongs in playtest notes.
 - `scripts/qa-unit.js` also owns fast contract checks for data-driven systems:
