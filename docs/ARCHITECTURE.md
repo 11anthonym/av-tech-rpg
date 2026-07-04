@@ -82,6 +82,9 @@ build step, external dependency, or engine migration.
   `node scripts/qa-smoke.js` after script organization changes.
 - Keep unit QA focused on reusable helper behavior. Browser flow regressions
   belong in `scripts/qa-smoke.js`; content breadth belongs in playtest notes.
+- `scripts/qa-unit.js` also owns fast contract checks for data-driven systems:
+  route/job-card references, portal endpoints, route lock states, objective
+  resolver coverage, and save serialization shape.
 
 ## Research Notes
 

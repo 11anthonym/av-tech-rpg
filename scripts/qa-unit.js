@@ -265,6 +265,150 @@ test("route job cards expose route metadata and dispatch tool plans", () => {
   assert.ok(result.prepRow.length > 0, "job card should describe what happens next");
 });
 
+test("world routes and job card contracts stay internally consistent", () => {
+  resetGameState();
+  const failures = readGameJson(`(() => {
+    const failures = [];
+    const routes = content.world?.routes || {};
+    const areas = content.world?.areas || {};
+    const scenes = content.scenes || {};
+    const jobFamilies = content.jobFamilies || {};
+    const routeJobs = content.routeJobs || {};
+    const dispatchKeys = new Set(Object.keys(content).filter((key) => /Dispatch$/.test(key)));
+    const requiredRows = [
+      "Destination",
+      "Job family",
+      "Purpose",
+      "Summary",
+      "Required tools",
+      "Recommended tools",
+      "Route status",
+      "What happens next",
+      "Travel cost/risk",
+      "Callback / return-trip risk",
+    ];
+    const validateJobNode = (node, label) => {
+      if (node.familyId && !jobFamilies[node.familyId]) failures.push(label + " has unknown familyId " + node.familyId);
+      if (node.dispatchId && !dispatchKeys.has(node.dispatchId)) failures.push(label + " has unknown dispatchId " + node.dispatchId);
+    };
+
+    Object.entries(routes).forEach(([routeId, route]) => {
+      if (route.id !== routeId) failures.push(routeId + " route id does not match its key");
+      if (!areas[route.fromAreaId]) failures.push(routeId + " has unknown fromAreaId " + route.fromAreaId);
+      if (!areas[route.toAreaId]) failures.push(routeId + " has unknown toAreaId " + route.toAreaId);
+      if (!route.fromLabel) failures.push(routeId + " is missing fromLabel");
+      if (!route.toLabel) failures.push(routeId + " is missing toLabel");
+      if (route.destinationSceneId && !scenes[route.destinationSceneId]) failures.push(routeId + " has unknown destinationSceneId " + route.destinationSceneId);
+      if (route.destinationSceneId && areas[route.toAreaId]?.sceneId !== route.destinationSceneId) {
+        failures.push(routeId + " destinationSceneId does not match its destination area scene");
+      }
+      const job = getRouteJobData(routeId);
+      ["title", "familyId", "purpose", "unlockCondition", "rewards"].forEach((field) => {
+        if (!job[field]) failures.push(routeId + " job card is missing " + field);
+      });
+      if (!jobFamilies[job.familyId]) failures.push(routeId + " job card has unknown familyId " + job.familyId);
+      const rowLabels = getRouteJobCardRows(route).map((row) => row.label);
+      requiredRows.forEach((label) => {
+        if (!rowLabels.includes(label)) failures.push(routeId + " job card is missing row " + label);
+      });
+    });
+
+    Object.entries(routeJobs).forEach(([routeId, routeJob]) => {
+      if (!routes[routeId]) failures.push("routeJobs." + routeId + " does not match a route");
+      validateJobNode(routeJob, "routeJobs." + routeId);
+      ["followup", "install"].forEach((variantKey) => {
+        if (routeJob[variantKey]) validateJobNode(routeJob[variantKey], "routeJobs." + routeId + "." + variantKey);
+      });
+    });
+
+    Object.entries(content.dispatchToolPlans?.routeOverrides || {}).forEach(([routeId, override]) => {
+      if (!routes[routeId]) failures.push("dispatchToolPlans.routeOverrides." + routeId + " does not match a route");
+      if (!Array.isArray(override.required || [])) failures.push("dispatchToolPlans.routeOverrides." + routeId + ".required is not an array");
+      if (!Array.isArray(override.recommended || [])) failures.push("dispatchToolPlans.routeOverrides." + routeId + ".recommended is not an array");
+    });
+
+    return failures;
+  })()`);
+
+  assert.deepEqual(failures, []);
+});
+
+test("portal contracts expose valid spatial movement and lock messaging", () => {
+  resetGameState();
+  const result = readGameJson(`(() => {
+    const failures = [];
+    const areas = content.world?.areas || {};
+    const portals = content.world?.portals || {};
+    Object.entries(portals).forEach(([portalId, portal]) => {
+      if (portal.id !== portalId) failures.push(portalId + " portal id does not match its key");
+      if (!portal.fromAreaId || !areas[portal.fromAreaId]) failures.push(portalId + " has unknown fromAreaId " + portal.fromAreaId);
+      if (!portal.toAreaId || !areas[portal.toAreaId]) failures.push(portalId + " has unknown toAreaId " + portal.toAreaId);
+      if (!portal.label) failures.push(portalId + " is missing a player-facing label");
+      if (portal.requiredFlag && !portal.requiredMessage) failures.push(portalId + " has a requiredFlag without a requiredMessage");
+      if (portal.kind === "returnRoute" && (!portal.returnSource || !portal.returnLog)) {
+        failures.push(portalId + " returnRoute is missing returnSource or returnLog");
+      }
+      if (portal.showWhenFlag && portal.hiddenWhenFlag) failures.push(portalId + " should not have both showWhenFlag and hiddenWhenFlag");
+    });
+
+    state.sceneId = "garage";
+    state.flags.currentAreaId = "centerCityGarage";
+    const lockedPortal = getWorldPortal("garageToLobby");
+    const lockedRows = getPortalCardRows(lockedPortal).map((row) => row.label);
+    const lockedReady = isPortalReady(lockedPortal);
+    const lockedRequirement = getPortalRequirementText(lockedPortal);
+    state.flags.centerCityEquipmentDelivered = true;
+    const readyText = getPortalStatusText(lockedPortal);
+    return {
+      failures,
+      lockedReady,
+      lockedRequirement,
+      lockedRows,
+      readyText,
+    };
+  })()`);
+
+  assert.deepEqual(result.failures, []);
+  assert.equal(result.lockedReady, false);
+  assert.match(result.lockedRequirement, /equipment still needs to be carried/i);
+  assert.ok(result.lockedRows.includes("Origin"), "portal cards should show origin");
+  assert.ok(result.lockedRows.includes("Destination"), "portal cards should show destination");
+  assert.ok(result.lockedRows.includes("Requirement"), "portal cards should show the lock requirement");
+  assert.equal(result.readyText, "Ready");
+});
+
+test("route lock and status helpers change with player state", () => {
+  resetGameState();
+  const result = readGameJson(`(() => {
+    const route = getWorldRoute("centerCityTutorial");
+    const fresh = {
+      status: getRouteStatus(route),
+      lockReason: getRouteLockReason(route),
+      preview: getRouteLaunchPreviewText(route),
+    };
+    state.flags.shopBrief = true;
+    state.loaded = [...content.tutorial.shopLoad];
+    const ready = {
+      status: getRouteStatus(route),
+      lockReason: getRouteLockReason(route),
+      preview: getRouteLaunchPreviewText(route),
+    };
+    state.flags.finished = true;
+    const completed = {
+      status: getRouteStatus(route),
+      lockReason: getRouteLockReason(route),
+    };
+    return { fresh, ready, completed };
+  })()`);
+
+  assert.match(result.fresh.lockReason, /supervisor/i);
+  assert.match(result.fresh.preview, /^Locked:/);
+  assert.equal(result.ready.status, "Available");
+  assert.equal(result.ready.lockReason, "");
+  assert.doesNotMatch(result.ready.preview, /^Locked:/);
+  assert.match(result.completed.lockReason, /already complete/i);
+});
+
 test("field task modifiers preview, apply, and consume one-time support", () => {
   resetGameState("jordan");
   const result = readGameJson(`(() => {
@@ -393,6 +537,111 @@ test("save migration fills current route, cargo, support, and ledger defaults", 
   assert.equal(result.joshCrewSupportAvailable, true);
   assert.equal(result.joshCrewSupportUsed, false);
   assert.equal(result.joshCrewSupportSource, "");
+});
+
+test("save serialization round-trips through migration with current state shape", () => {
+  resetGameState("wiley");
+  const result = readGameJson(`(() => {
+    state.sceneId = "serviceOffice";
+    state.flags.currentAreaId = "serviceOffice";
+    state.flags.serviceComplete = true;
+    state.flags.serviceApproach = "verify";
+    state.flags.routeHistory = { conshohockenService: 1 };
+    state.flags.returnTripRisks = {
+      conshohockenServiceRoomPressure: {
+        source: "Unit service check",
+        detail: "Room pressure stayed on the ledger.",
+      },
+    };
+    state.serviceInstalled = content.serviceDispatch.swapItems.map((item) => item.id);
+    const saved = serializeGame();
+    const migrated = migrateSavedGame(JSON.parse(JSON.stringify(saved)));
+    return {
+      technicianId: saved.technicianId,
+      customTechnician: saved.customTechnician,
+      sceneId: migrated.sceneId,
+      vehicleId: migrated.vehicleId,
+      serviceInstalledIsArray: Array.isArray(migrated.serviceInstalled),
+      routeHistory: migrated.flags.routeHistory,
+      returnTripRisks: migrated.flags.returnTripRisks,
+      statsHasEnergyCrashes: Object.prototype.hasOwnProperty.call(migrated.stats, "energyCrashes"),
+      logIsArray: Array.isArray(migrated.log),
+    };
+  })()`);
+
+  assert.equal(result.technicianId, "wiley");
+  assert.equal(result.customTechnician, null);
+  assert.equal(result.sceneId, "serviceOffice");
+  assert.equal(result.vehicleId, "van3");
+  assert.equal(result.serviceInstalledIsArray, true);
+  assert.equal(result.routeHistory.conshohockenService, 1);
+  assert.ok(result.returnTripRisks.conshohockenServiceRoomPressure);
+  assert.equal(result.statsHasEnergyCrashes, true);
+  assert.equal(result.logIsArray, true);
+});
+
+test("current objective resolver covers representative player states", () => {
+  const result = readGameJson(`(() => {
+    const snapshots = [];
+    const capture = (id) => {
+      const resolved = resolveCurrentObjective();
+      const panelRows = getCurrentStepPanelRows();
+      snapshots.push({
+        id,
+        objective: resolved.text,
+        stage: getCurrentStepStage(resolved.text),
+        firstPanelLabel: panelRows[0]?.label || "",
+        firstPanelDetail: panelRows[0]?.detail || "",
+      });
+    };
+
+    Object.assign(state, createInitialState());
+    state.technician = content.technicians.find((technician) => technician.id === "prototype-tech");
+    state.tools = ["screwdriver"];
+    state.sceneId = "shop";
+    state.flags.currentAreaId = "shop";
+    capture("fresh-shop");
+
+    state.flags.shopBrief = true;
+    capture("loadout");
+
+    state.loaded = [...content.tutorial.shopLoad];
+    capture("ready-route");
+
+    Object.assign(state, createInitialState());
+    state.technician = content.technicians.find((technician) => technician.id === "prototype-tech");
+    state.tools = ["screwdriver"];
+    state.sceneId = "serviceOffice";
+    state.flags.currentAreaId = "serviceOffice";
+    state.flags.serviceComplete = true;
+    capture("service-return");
+
+    Object.assign(state, createInitialState());
+    state.technician = content.technicians.find((technician) => technician.id === "prototype-tech");
+    state.tools = ["screwdriver"];
+    state.sceneId = "burlingtonRetrofitWalkdown";
+    state.flags.currentAreaId = "burlingtonRetrofitWalkdown";
+    state.flags.retrofitInstallStarted = true;
+    state.flags.retrofitInstallBrief = true;
+    state.retrofitInstallChecks = [];
+    capture("retrofit-install");
+
+    return snapshots;
+  })()`);
+
+  assert.equal(result.length, 5);
+  result.forEach((snapshot) => {
+    assert.ok(snapshot.objective.length > 8, `${snapshot.id} should have a useful objective`);
+    assert.ok(snapshot.stage.length > 0, `${snapshot.id} should have a current stage`);
+    assert.equal(snapshot.firstPanelLabel, "Next task", `${snapshot.id} should put next task first`);
+    assert.equal(snapshot.firstPanelDetail, snapshot.objective, `${snapshot.id} panel should match resolver objective`);
+    assert.doesNotMatch(snapshot.objective, /prototype|current loop/i, `${snapshot.id} should avoid internal jargon`);
+  });
+  assert.match(result.find((item) => item.id === "fresh-shop").objective, /supervisor/i);
+  assert.match(result.find((item) => item.id === "loadout").objective, /Load staged equipment/i);
+  assert.match(result.find((item) => item.id === "ready-route").objective, /Van #3|Center City East/i);
+  assert.match(result.find((item) => item.id === "service-return").objective, /RETURN marker/i);
+  assert.match(result.find((item) => item.id === "retrofit-install").objective, /Install the retrofit pathway/i);
 });
 
 test("Secret Squirrel copy keeps the mystery shelf joke understandable", () => {

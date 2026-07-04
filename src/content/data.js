@@ -805,7 +805,6 @@ window.GAME_CONTENT = {
           actionLabel: "Return To Shop",
         },
       },
-      jobSiteToShop: { id: "jobSiteToShop", toAreaId: "shop", kind: "returnRoute", label: "Return to Radnor Rack & Wire" },
     },
     routes: {
       centerCityTutorial: {
