@@ -78,8 +78,10 @@ build step, external dependency, or engine migration.
 - Avoid putting new runtime scripts in the repository root.
 - Avoid adding top-level startup side effects to system files; define helpers
   there and let `src/core/bootstrap.js` start the app.
-- Run `node scripts/qa-static-scripts.js` and `node scripts/qa-smoke.js` after
-  script organization changes.
+- Run `node scripts/qa-static-scripts.js`, `node scripts/qa-unit.js`, and
+  `node scripts/qa-smoke.js` after script organization changes.
+- Keep unit QA focused on reusable helper behavior. Browser flow regressions
+  belong in `scripts/qa-smoke.js`; content breadth belongs in playtest notes.
 
 ## Research Notes
 

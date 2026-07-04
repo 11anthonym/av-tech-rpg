@@ -160,10 +160,11 @@ python -m http.server 4173 --bind 127.0.0.1
 Then open [http://127.0.0.1:4173](http://127.0.0.1:4173). Use `WASD` or the
 arrow keys to walk and `E`, `Space`, or the on-screen button to interact.
 
-Before pushing structural changes, run the static script guard and the browser
-smoke test:
+Before pushing structural changes, run the static script guard, the fast unit
+QA script, and the browser smoke test:
 
 ```powershell
 node scripts/qa-static-scripts.js
+node scripts/qa-unit.js
 $env:NODE_PATH="<path-to-playwright-node-modules>"; node scripts/qa-smoke.js
 ```
