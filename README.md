@@ -95,6 +95,9 @@ previews of future dispatches.
 The long-term game vision is captured in
 [docs/NORTH_STAR.md](docs/NORTH_STAR.md).
 
+The current gameplay roadmap after the QA/tooling closeout lives in
+[docs/GAMEPLAY_ROADMAP.md](docs/GAMEPLAY_ROADMAP.md).
+
 The current vertical slice is scoped in
 [docs/VERTICAL_SLICE.md](docs/VERTICAL_SLICE.md).
 

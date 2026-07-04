@@ -1738,7 +1738,8 @@ infrastructure. The most useful next pass is to apply the task modifier layer to
 one non-service proof case, preferably University City survey or Burlington
 retrofit install, then make the consequence review easier to filter by active,
 resolved, and inherited pressure. Recovery choices should become more tactical
-only after those consequence cards are readable.
+only after those consequence cards are readable. The current ordered plan lives
+in `docs/GAMEPLAY_ROADMAP.md`.
 
 ## Prototype Guardrail
 

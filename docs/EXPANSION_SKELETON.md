@@ -658,6 +658,12 @@ be easy to verify in the browser.
    field-task, modifier, roster, and save-shape regressions while gameplay work
    resumes. Do not keep expanding QA as a standalone lane unless a repeated bug,
    reusable gameplay system, or architecture change justifies it.
+105. **Done - Gameplay roadmap alignment pass:** Added `docs/GAMEPLAY_ROADMAP.md`
+   as the post-QA gameplay plan. The next proof case is University City survey,
+   then consequence-review filters, tactical recovery/prep, Burlington's
+   two-step consequence chain, and spatial workday polish. Each phase maps back
+   to the documented Stardew, Pokemon, old-GTA, Elder Scrolls, and Long Dark
+   influences without adding content sprawl.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
