@@ -734,6 +734,74 @@ test("University City trusted quote creates visible route consequence pressure",
   assert.match(result.closeoutDetail, /cleaner-looking quote/);
 });
 
+test("Burlington retrofit install branch uses visible task modifiers", () => {
+  resetGameState();
+  const result = readGameJson(`(() => {
+    state.sceneId = "burlingtonRetrofitWalkdown";
+    state.flags.currentAreaId = "burlingtonRetrofitWalkdown";
+    state.flags.retrofitWalkdownComplete = true;
+    state.flags.retrofitWalkdownApproach = "accept";
+    state.flags.retrofitInstallRisk = true;
+    state.flags.retrofitInstallBranch = "risk";
+    state.flags.retrofitInstallPackageReviewed = true;
+
+    const routeDifference = getDispatchDifferenceText({ routeId: "burlingtonRetrofitWalkdown" });
+    const riskCheck = getRetrofitInstallChecks().find((item) => item.id === "pathway-install");
+    const riskPreview = getTaskModifierPreviewText(riskCheck);
+    const beforeEnergy = state.energy;
+    const { skillCheck, energyCost } = resolveFieldTaskCheck({
+      check: riskCheck,
+      checkId: riskCheck.id,
+      completedChecks: [],
+      flagKey: "unit-retrofit-risk",
+      cleanEnergyReduction: 0,
+      failedEnergyPenalty: 0,
+    });
+    const ledgerIds = (state.flags.fieldTaskResults["unit-retrofit-risk"]?.modifiersApplied || []).map((modifier) => modifier.id);
+    const appliedIds = (skillCheck.modifiersApplied || []).map((modifier) => modifier.id);
+    const resolvedEnergyDelta = beforeEnergy - state.energy;
+
+    state.flags.fieldTaskResults = {};
+    state.flags.skillChecks = {};
+    state.retrofitInstallChecks = [];
+    state.energy = beforeEnergy;
+    state.flags.retrofitWalkdownApproach = "scope";
+    state.flags.retrofitInstallRisk = false;
+    state.flags.retrofitInstallProtected = true;
+    state.flags.retrofitInstallBranch = "protected";
+    const protectedCheck = getRetrofitInstallChecks().find((item) => item.id === "pathway-install");
+    const protectedPreview = getTaskModifierPreviewText(protectedCheck);
+
+    return {
+      routeDifference,
+      riskPreview,
+      riskModifierIds: (riskCheck.taskModifiers || []).map((modifier) => modifier.id),
+      riskEnergyDelta: (riskCheck.taskModifiers || [])[0]?.energyDelta,
+      riskStatDelta: (riskCheck.taskModifiers || [])[0]?.statDelta,
+      appliedIds,
+      ledgerIds,
+      energyCost,
+      energyDelta: resolvedEnergyDelta,
+      protectedPreview,
+      protectedModifier: (protectedCheck.taskModifiers || [])[0] || null,
+    };
+  })()`);
+
+  assert.match(result.routeDifference, /Inherited pathway risk/);
+  assert.match(result.riskPreview, /Inherited pathway risk/);
+  assert.ok(result.riskModifierIds.includes("retrofit-inherited-pathway-risk"), "Risk branch should attach a named install modifier");
+  assert.equal(result.riskEnergyDelta, 2);
+  assert.equal(result.riskStatDelta, -1);
+  assert.ok(result.appliedIds.includes("retrofit-inherited-pathway-risk"), "Skill check should record the risk modifier");
+  assert.ok(result.ledgerIds.includes("retrofit-inherited-pathway-risk"), "Field-task ledger should persist the branch modifier");
+  assert.equal(result.energyDelta, result.energyCost);
+  assert.ok(result.energyCost >= 7, "Inherited pathway risk should add install effort through the modifier layer");
+  assert.match(result.protectedPreview, /Protected walkdown package/);
+  assert.equal(result.protectedModifier.id, "retrofit-protected-pathway");
+  assert.equal(result.protectedModifier.statDelta, 1);
+  assert.equal(result.protectedModifier.energyDelta, -2);
+});
+
 test("consequence review groups active, resolved, and inherited pressure", () => {
   resetGameState();
   const result = readGameJson(`(() => {

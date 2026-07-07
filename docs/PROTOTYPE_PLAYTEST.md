@@ -1748,6 +1748,20 @@ resolved, and inherited pressure. Recovery choices should become more tactical
 only after those consequence cards are readable. The current ordered plan lives
 in `docs/GAMEPLAY_ROADMAP.md`.
 
+Burlington install modifier proof pass: the retrofit install now reads the saved
+walkdown branch through reusable task modifiers. Protected pathway notes help
+the install, partial notes surface as a warning, and accepted pathway risk makes
+the pathway task harder and more effortful. The job card, route prep "why today
+is different" row, task result, and field-task ledger all explain the same
+source, so the second half of the Burlington chain feels caused by the first.
+
+Gameplay roadmap slice closeout: the current consequence-play slice is complete
+after green QA. The prototype now has service and non-service task modifiers,
+prior-choice pressure that changes later work, consequence review filters,
+route-prep recovery pressure, and van/map/job cards that explain active work
+without adding new jobs. The next step should be a fresh planning decision,
+not automatic continuation of this slice.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

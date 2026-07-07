@@ -664,6 +664,17 @@ be easy to verify in the browser.
    two-step consequence chain, and spatial workday polish. Each phase maps back
    to the documented Stardew, Pokemon, old-GTA, Elder Scrolls, and Long Dark
    influences without adding content sprawl.
+106. **Done - Burlington install modifier proof pass:** The saved Burlington
+   walkdown branch now becomes visible task pressure on the follow-up install.
+   Protected notes help the pathway task, partial notes warn the crew, and
+   inherited pathway risk makes the install harder and more effortful through
+   the shared task-modifier/result ledger instead of custom hidden branch math.
+107. **Done - Consequence-play roadmap slice closeout:** The current roadmap
+   slice now proves the targeted feel without adding content breadth: service
+   and non-service modifier pressure, prior choices changing later tasks,
+   consequence review filters, tactical recovery/prep pressure, and van/map/job
+   surfaces that explain current work. Reassess the next investment before
+   starting another broad implementation lane.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

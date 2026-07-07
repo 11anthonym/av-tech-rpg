@@ -9,8 +9,68 @@ function getRetrofitInstallPreview() {
   return job ? getPlannedJobPresentation(job) : null;
 }
 
-function getRetrofitInstallChecks() {
+function getRawRetrofitInstallChecks() {
   return getRetrofitInstallJob()?.checks || [];
+}
+
+function getRetrofitInstallBranchTaskModifiers(check, branchId = getRetrofitInstallPreview()?.branchId || "pending") {
+  if (!check) return [];
+  if (branchId === "protected") {
+    return [{
+      id: "retrofit-protected-pathway",
+      label: "Protected walkdown package",
+      source: "Walkdown photos and scope notes protected the pathway before install day.",
+      statDelta: 1,
+      energyDelta: -2,
+      resultText: "Protected walkdown notes made the pathway install steadier.",
+    }];
+  }
+  if (branchId === "partial") {
+    return [{
+      id: "retrofit-partial-warning",
+      label: "Partial pathway warning",
+      source: state.flags.retrofitInstallPackageReviewed
+        ? "The saved walkdown package warned the crew, but one weak note still needs field judgment."
+        : "The walkdown warning has not been reviewed, so the install starts with a thinner handoff.",
+      statDelta: state.flags.retrofitInstallPackageReviewed ? 1 : 0,
+      energyDelta: 0,
+      resultText: state.flags.retrofitInstallPackageReviewed
+        ? "The partial warning kept the install from starting blind."
+        : "The partial warning was present, but it was not fully turned into prep.",
+    }];
+  }
+  if (branchId === "risk") {
+    return [{
+      id: "retrofit-inherited-pathway-risk",
+      label: "Inherited pathway risk",
+      source: "The walkdown accepted a weak pathway note, so install day owns the ceiling uncertainty.",
+      statDelta: -1,
+      energyDelta: 2,
+      resultText: "Inherited pathway risk made the install harder to close cleanly.",
+    }];
+  }
+  return [];
+}
+
+function getRetrofitAdjustedInstallCheck(check, branchId = getRetrofitInstallPreview()?.branchId || "pending") {
+  if (!check) return null;
+  const branchModifiers = getRetrofitInstallBranchTaskModifiers(check, branchId);
+  return {
+    ...check,
+    difficulty: getRetrofitInstallCheckDifficulty(branchId, check),
+    energyCost: getRetrofitInstallCheckEnergyCost(branchId, check),
+    taskModifiers: [
+      ...(check.taskModifiers || []),
+      ...branchModifiers,
+    ],
+  };
+}
+
+function getRetrofitInstallChecks() {
+  const branchId = getRetrofitInstallPreview()?.branchId || "pending";
+  return getRawRetrofitInstallChecks()
+    .map((check) => getRetrofitAdjustedInstallCheck(check, branchId))
+    .filter(Boolean);
 }
 
 function getRetrofitInstallBranchLabel() {
@@ -92,22 +152,12 @@ function promptRetrofitInstallTravel({ fastTravel = false } = {}) {
   });
 }
 
-function getRetrofitInstallCheckDifficulty(branchId = getRetrofitInstallPreview()?.branchId || "pending") {
-  return {
-    protected: 3,
-    partial: 4,
-    risk: 5,
-    pending: 4,
-  }[branchId] || 4;
+function getRetrofitInstallCheckDifficulty(_branchId = getRetrofitInstallPreview()?.branchId || "pending", check = null) {
+  return check?.difficulty ?? 4;
 }
 
-function getRetrofitInstallCheckEnergyCost(branchId = getRetrofitInstallPreview()?.branchId || "pending") {
-  return {
-    protected: 3,
-    partial: 5,
-    risk: 7,
-    pending: 5,
-  }[branchId] || 5;
+function getRetrofitInstallCheckEnergyCost(_branchId = getRetrofitInstallPreview()?.branchId || "pending", check = null) {
+  return check?.energyCost ?? 5;
 }
 
 function getRetrofitInstallCloseoutEnergyCost() {
@@ -116,9 +166,7 @@ function getRetrofitInstallCloseoutEnergyCost() {
   return Math.max(2, baseCost - getDocumentationSupportReduction());
 }
 
-function getRetrofitInstallCheckContextBonus(branchId = getRetrofitInstallPreview()?.branchId || "pending") {
-  if (branchId === "protected") return 1;
-  if (branchId === "partial" && state.flags.retrofitInstallPackageReviewed) return 1;
+function getRetrofitInstallCheckContextBonus() {
   return 0;
 }
 
@@ -133,10 +181,10 @@ function inspectRetrofitInstallCondition(checkId) {
     completedChecks: state.retrofitInstallChecks,
     flagKey: `retrofit-install-${checkId}-${branchId}`,
     skillId: check.skillId,
-    difficulty: getRetrofitInstallCheckDifficulty(branchId),
-    contextBonus: getRetrofitInstallCheckContextBonus(branchId),
+    difficulty: getRetrofitInstallCheckDifficulty(branchId, check),
+    contextBonus: getRetrofitInstallCheckContextBonus(branchId, check),
     contextId: check.contextId,
-    baseEnergyCost: getRetrofitInstallCheckEnergyCost(branchId),
+    baseEnergyCost: getRetrofitInstallCheckEnergyCost(branchId, check),
     failedEnergyPenalty: 2,
     cleanEnergyReduction: 1,
     strainedFlag: "retrofitInstallCheckStrained",

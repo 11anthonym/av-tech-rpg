@@ -1357,7 +1357,8 @@ async function clickButton(page, name) {
       return document.querySelector("#modal-backdrop")?.innerText || "";
     });
     assert(retrofitRoutePrep.toLowerCase().includes("route prep") && retrofitRoutePrep.includes("Saved walkdown result") && retrofitRoutePrep.includes("Install branch"), "Retrofit route prep should show saved walkdown branch rows");
-    assert(retrofitRoutePrep.includes("Inherited pathway risk") && retrofitRoutePrep.includes("Required prep") && retrofitRoutePrep.includes("Recommended prep"), "Retrofit route prep should show branch risk and prep");
+    assert(retrofitRoutePrep.includes("Why this is different today") && retrofitRoutePrep.includes("Inherited pathway risk"), "Retrofit route prep should show branch task modifiers before driving");
+    assert(retrofitRoutePrep.includes("Required prep") && retrofitRoutePrep.includes("Recommended prep"), "Retrofit route prep should show branch prep");
 
     await page.evaluate(() => {
       window.startGame("prototype-tech");

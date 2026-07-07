@@ -188,6 +188,14 @@ function getDispatchFieldTasksForRoute(routeId = "") {
   if (routeId === "universitySurvey" && typeof getSurveyAdjustedInspections === "function") {
     return getSurveyAdjustedInspections();
   }
+  if (
+    routeId === "burlingtonRetrofitWalkdown"
+    && state.flags.retrofitWalkdownComplete
+    && !state.flags.retrofitInstallComplete
+    && typeof getRetrofitInstallChecks === "function"
+  ) {
+    return getRetrofitInstallChecks();
+  }
   const routeJob = content.routeJobs?.[routeId] || {};
   const dispatch = getDispatchReference(routeJob.dispatchId || routeJob.followup?.dispatchId);
   return dispatch?.checks || dispatch?.inspections || [];

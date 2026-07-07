@@ -122,6 +122,12 @@ Dark. Recovery should not just refill a meter; it should change today's risk.
 - Low energy, burnout, and zero-energy pressure have readable consequences.
 - Recovery choices do not become free optimal clicks.
 
+**Progress note:** Implemented for this slice. Route prep, dispatch cards, and
+regional route cards surface daily condition pressure; pressured route prep can
+offer a short break or break-area recovery before driving; and route choices can
+carry condition pressure into saved route results. Pre-choice copy stays
+qualitative, while result/ledger surfaces preserve the actual outcome.
+
 ## Phase 4: Burlington Retrofit As The Two-Step Consequence Model
 
 **Why this is next:** Burlington already has the right shape for future larger
@@ -140,6 +146,13 @@ jobs: walkdown choice, saved branch, install consequence, closeout record.
 - The player can explain how the walkdown changed the install.
 - The install does not feel like a detached second scene.
 - Future multi-step jobs have a model to copy.
+
+**Progress note:** Implemented for this slice. The saved walkdown branch now
+feeds Burlington install task modifiers: protected notes help the pathway
+install, partial notes warn the crew, and accepted pathway risk makes the task
+harder and more effortful. Dispatch cards, route prep, task results, and the
+field-task ledger all read from the same modifier data, so the install is the
+payoff or cost of the earlier walkdown instead of a detached second scene.
 
 ## Phase 5: Spatial Workday Polish
 
@@ -162,6 +175,12 @@ after the consequence cards and task decisions are readable.
 - The player cannot farm completed clients/tasks.
 - The shop, van, route, site, exit, and end-shift rhythm feels connected.
 
+**Progress note:** Enough for this roadmap slice. Return markers and portal
+closeout reviews have been tightened in earlier stabilization passes, completed
+closeouts have single-use guards, and van/map route prep remains the main travel
+surface. Deeper spatial work should be reassessed separately instead of folded
+into this consequence-proof roadmap.
+
 ## Done For This Roadmap Slice
 
 This roadmap is not complete when every phase is implemented. It is complete
@@ -173,6 +192,12 @@ when the current prototype proves the feel:
 - Recovery/prep choices can change today's risk.
 - The van/map/job card surfaces explain current work without adding content
   sprawl.
+
+**Completion note:** This slice is complete once the Burlington modifier pass
+and smoke QA are green. The prototype now has service and non-service modifier
+proofs, visible prior-choice consequences, consequence review filters,
+tactical prep/recovery pressure, and route/job surfaces that explain current
+work without adding content sprawl.
 
 After that, reassess whether the next investment should be richer spatial
 navigation, another proof-case job, or a small engine/map-authoring spike.
