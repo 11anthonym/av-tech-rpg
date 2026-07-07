@@ -789,3 +789,8 @@ Current-step briefing is now a reusable state-derived helper shared by the HUD,
 van menu, and regional map. Keep future objective, route, fast-travel, callback,
 return-risk, and condition-pressure copy flowing through that helper instead of
 adding separate one-off "what now?" text in each scene.
+
+University City survey is now the non-service proof case for field-task
+modifiers. Future survey-style jobs should prefer adjusted check helpers that
+derive modifiers from prep, inspection order, and saved consequence state rather
+than adding separate bespoke closeout math for every hotspot.

@@ -659,6 +659,105 @@ test("field task modifiers preview, apply, and consume one-time support", () => 
   assert.equal(result.joshCrewSupportLastUsed.contextId, "callback-documentation");
 });
 
+test("University City survey task modifiers respond to prep and inspection order", () => {
+  resetGameState();
+  const result = readGameJson(`(() => {
+    state.sceneId = "universitySurvey";
+    state.flags.currentAreaId = "universitySurvey";
+    state.flags.surveyBrief = true;
+    state.flags.surveyPreparation = "none";
+
+    const elevatorNoPrep = getSurveyAdjustedInspection("elevator");
+    const wallBeforePath = getSurveyAdjustedInspection("wall");
+    const routeDifferenceBefore = getDispatchDifferenceText({ routeId: "universitySurvey" });
+    inspectSurveyConstraint("wall");
+    const wallResult = state.flags.fieldTaskResults?.["survey-wall"];
+    const objectiveAfterWall = resolveCurrentObjective().text;
+
+    state.surveyInspections = ["elevator", "hallway"];
+    state.flags.surveyPreparation = "measure";
+    const wallAfterPath = getSurveyAdjustedInspection("wall");
+    const surveyTaskMarkup = getFieldTaskPreviewMarkup(getSurveyAdjustedInspections());
+
+    return {
+      elevatorModifierIds: (elevatorNoPrep.taskModifiers || []).map((modifier) => modifier.id),
+      wallBeforeIds: (wallBeforePath.taskModifiers || []).map((modifier) => modifier.id),
+      wallBeforePreview: getTaskModifierPreviewText(wallBeforePath),
+      routeDifferenceBefore,
+      wallResultIds: (wallResult?.modifiersApplied || []).map((modifier) => modifier.id),
+      wallFirstFlag: Boolean(state.flags.surveyWallCheckedBeforeAccessPath),
+      objectiveAfterWall,
+      wallAfterIds: (wallAfterPath.taskModifiers || []).map((modifier) => modifier.id),
+      wallAfterPreview: getTaskModifierPreviewText(wallAfterPath),
+      surveyTaskMarkup,
+    };
+  })()`);
+
+  assert.ok(result.elevatorModifierIds.includes("survey-forwarded-email"), "No-prep survey should carry thin-note pressure");
+  assert.ok(result.wallBeforeIds.includes("survey-wall-before-path"), "Wall check before access path should carry order pressure");
+  assert.match(result.wallBeforePreview, /Access path unresolved/);
+  assert.match(result.routeDifferenceBefore, /Thin starting notes|Access path unresolved/);
+  assert.ok(result.wallResultIds.includes("survey-wall-before-path"), "Resolved wall-first check should save the applied modifier");
+  assert.equal(result.wallFirstFlag, true, "Wall-first choice should become saved survey state");
+  assert.match(result.objectiveAfterWall, /Measure the elevator and hallway/);
+  assert.ok(result.wallAfterIds.includes("survey-access-path-measured"), "Wall check after access path should carry access-path support");
+  assert.match(result.wallAfterPreview, /Access path measured/);
+  assert.match(result.surveyTaskMarkup, /Pressure on this action/);
+});
+
+test("University City trusted quote creates visible route consequence pressure", () => {
+  resetGameState();
+  const result = readGameJson(`(() => {
+    state.sceneId = "universitySurvey";
+    state.flags.currentAreaId = "universitySurvey";
+    state.flags.surveyBrief = true;
+    state.flags.surveyPreparation = "sketch";
+    state.surveyInspections = ["elevator", "hallway", "wall"];
+    finishSurvey("trust");
+    const route = getWorldRoute("universitySurvey");
+    const risk = state.flags.returnTripRisks?.universitySurveyAccessPressure || null;
+    return {
+      risk,
+      ledgerEntry: getConsequenceLedgerEntries().find((entry) => entry.id === "universitySurveyAccessPressure") || null,
+      pressureText: getRouteConsequencePressureText(route),
+      routeCard: getRouteCardMarkup(route),
+      closeoutDetail: state.flags.lastJobSiteCloseoutSummary?.consequences?.[0]?.detail || "",
+    };
+  })()`);
+
+  assert.ok(result.risk, "Trusting the survey quote should save named University City pressure");
+  assert.match(result.risk.detail, /access pressure is still open/i);
+  assert.equal(result.ledgerEntry.status, "open");
+  assert.match(result.ledgerEntry.affects, /University City install/);
+  assert.match(result.pressureText, /University City access pressure/);
+  assert.match(result.routeCard, /Mapped consequence pressure/);
+  assert.match(result.closeoutDetail, /cleaner-looking quote/);
+});
+
+test("save migration maps trusted University City survey into access pressure", () => {
+  const result = readGameJson(`(() => {
+    const migrated = migrateSavedGame({
+      version: 1,
+      technicianId: "prototype-tech",
+      sceneId: "shop",
+      flags: {
+        surveyComplete: true,
+        surveyApproach: "trust",
+      },
+    });
+    const risk = migrated.flags.returnTripRisks?.universitySurveyAccessPressure || null;
+    return {
+      risk,
+      inherited: Boolean(migrated.flags.surveyAccessPressureInherited),
+    };
+  })()`);
+
+  assert.ok(result.risk, "Older trusted survey saves should migrate into University City access pressure");
+  assert.equal(result.risk.status, "open");
+  assert.match(result.risk.affects, /University City install/);
+  assert.equal(result.inherited, true);
+});
+
 test("pressure rolls are deterministic or overridable for unit scenarios", () => {
   const result = readGameJson(`(() => {
     const conditions = [

@@ -111,7 +111,7 @@ function resolveCurrentObjective() {
       context,
     };
   }
-  if (context.lockedPortalCount && /door|entrance|elevator|exit|lobby|client floor|return/i.test(baseObjective)) {
+  if (context.lockedPortalCount && /door|entrance|take .*elevator|exit|lobby|client floor|return to Radnor|use .*return/i.test(baseObjective)) {
     return {
       text: `${context.firstLockedPortalMessage} (${context.firstLockedPortalLabel})`,
       context,
@@ -278,6 +278,9 @@ function getObjective() {
   if (state.sceneId === "universitySurvey") {
     if (state.flags.surveyComplete) return "Use the site exit to return to Radnor Rack & Wire.";
     if (!state.flags.surveyBrief) return "Check in with the facilities contact.";
+    if (state.flags.surveyWallCheckedBeforeAccessPath && !hasSurveyMeasuredAccessPath()) {
+      return "Measure the elevator and hallway so the wall-first survey note can be cleaned up.";
+    }
     if (state.surveyInspections.length < content.surveyDispatch.inspections.length) {
       return `Inspect the campus access path (${state.surveyInspections.length}/${content.surveyDispatch.inspections.length}).`;
     }

@@ -52,6 +52,21 @@ function normalizeRetrofitInstallFlags(flags = {}) {
   flags.retrofitInstallRisk = branchId === "partial" || branchId === "risk";
 }
 
+function migrateSurveyConsequenceFlags(flags = {}) {
+  if (!flags.surveyComplete || flags.surveyApproach !== "trust") return;
+  flags.returnTripRisks ||= {};
+  flags.resolvedReturnTripRisks ||= {};
+  if (flags.returnTripRisks.universitySurveyAccessPressure || flags.resolvedReturnTripRisks.universitySurveyAccessPressure) return;
+  flags.surveyAccessPressureInherited = true;
+  flags.returnTripRisks.universitySurveyAccessPressure = {
+    status: "open",
+    source: content.surveyDispatch?.title || "University City Site Survey",
+    cause: "The quote was trusted even though the elevator and hallway path did not match the display size.",
+    detail: "University City access pressure is still open. Future install planning may inherit a cleaner-looking quote than the site deserves.",
+    affects: "future University City install planning and classroom display delivery",
+  };
+}
+
 function migrateSavedGame(savedGame) {
   if (!savedGame || typeof savedGame !== "object") return null;
   const flags = { ...(savedGame.flags || {}) };
@@ -99,6 +114,7 @@ function migrateSavedGame(savedGame) {
     flags.retrofitInstallDebriefed = true;
   }
   normalizeRetrofitInstallFlags(flags);
+  migrateSurveyConsequenceFlags(flags);
   if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
     flags.serviceCallbackPending = true;
   }

@@ -11,13 +11,15 @@ function showSurveyDispatchPreview() {
       why: "Unlocked after the service call and Josh debrief. The game is testing whether field judgment matters before install day.",
       stakes: [
         "Preparation lowers inspection or report costs.",
+        "Inspection order can make the wall note cleaner or messier.",
         "Confidence can unlock a direct sales pushback.",
         "Trusting the quote helps management and may create future pain.",
       ],
       note: "The facilities contact asked whether the quoted display will fit through the building.",
       managementNote: "Should be straightforward. Same basic idea as a display we installed somewhere else.",
       prep: state.flags.surveyPreparation ? `Preparation selected: ${getSurveyPreparationLabel()}` : "",
-      fieldTasks: content.surveyDispatch.inspections,
+      fieldTasks: getSurveyAdjustedInspections(),
+      routeId: "universitySurvey",
     }),
     actions: [
       getDispatchRoutePrepAction("universitySurvey", showSurveyDispatchPreview),
@@ -99,8 +101,117 @@ function getSurveyReportEnergyCost(baseCost) {
   return Math.max(2, baseCost - (state.flags.surveyPreparation === "sketch" ? 1 : 0) - getDocumentationSupportReduction());
 }
 
+function getSurveyInspectionById(inspectionId) {
+  return content.surveyDispatch.inspections.find((item) => item.id === inspectionId);
+}
+
 function isSurveyInspectionComplete() {
   return content.surveyDispatch.inspections.every((item) => state.surveyInspections.includes(item.id));
+}
+
+function hasSurveyMeasuredAccessPath(completedChecks = state.surveyInspections) {
+  return ["elevator", "hallway"].every((inspectionId) => completedChecks.includes(inspectionId));
+}
+
+function getSurveyPreparationTaskModifiers(inspection) {
+  const preparation = state.flags.surveyPreparation;
+  if (!preparation) return [];
+  if (preparation === "measure") {
+    return [{
+      id: "survey-tape-measure",
+      label: "Tape measure ready",
+      source: "You found the shop tape measure before leaving, so site measurements are less hand-wavy.",
+      statDelta: 1,
+      resultText: "The tape measure made the survey note cleaner.",
+    }];
+  }
+  if (preparation === "sketch" && inspection.skillId === "documentation") {
+    return [{
+      id: "survey-sales-sketch",
+      label: "Sales sketch reviewed",
+      source: "The sketch gives you a starting point, even though it skipped the delivery path.",
+      statDelta: 1,
+      resultText: "The sales sketch helped anchor the access note.",
+    }];
+  }
+  if (preparation === "none" && inspection.skillId === "documentation") {
+    return [{
+      id: "survey-forwarded-email",
+      label: "Thin starting notes",
+      source: "The forwarded email did not define the access path, so the survey note has less backup.",
+      statDelta: -1,
+      resultText: "Thin starting notes made the access documentation less forgiving.",
+    }];
+  }
+  return [];
+}
+
+function getSurveyInspectionOrderModifiers(inspection, completedChecks = state.surveyInspections) {
+  const surveySiteActive = state.sceneId === "universitySurvey" && state.flags.surveyBrief;
+  if (!surveySiteActive && !completedChecks.length) return [];
+  if (inspection.id === "hallway" && completedChecks.includes("elevator")) {
+    return [{
+      id: "survey-elevator-measured",
+      label: "Elevator opening measured",
+      source: "The freight opening is already in your notes, so the hallway turn is easier to judge honestly.",
+      statDelta: 1,
+      resultText: "The elevator measurement made the hallway note clearer.",
+    }];
+  }
+  if (inspection.id !== "wall") return [];
+  if (hasSurveyMeasuredAccessPath(completedChecks)) {
+    return [{
+      id: "survey-access-path-measured",
+      label: "Access path measured",
+      source: "Elevator and hallway notes are already recorded before judging the display wall.",
+      statDelta: 1,
+      resultText: "The wall check was cleaner because the access path had already been measured.",
+    }];
+  }
+  return [{
+    id: "survey-wall-before-path",
+    label: "Access path unresolved",
+    source: "The wall is being checked before the elevator and hallway are fully measured.",
+    statDelta: -1,
+    energyDelta: 1,
+    resultText: "The wall fit note had to carry unresolved delivery-path context.",
+  }];
+}
+
+function getSurveyAdjustedInspection(inspectionOrId) {
+  const inspection = typeof inspectionOrId === "string" ? getSurveyInspectionById(inspectionOrId) : inspectionOrId;
+  if (!inspection) return null;
+  const modifiers = [
+    ...getSurveyPreparationTaskModifiers(inspection),
+    ...getSurveyInspectionOrderModifiers(inspection),
+  ];
+  const modifierNote = modifiers.length
+    ? ` Current pressure: ${modifiers.map((modifier) => modifier.label).join("; ")}.`
+    : "";
+  return {
+    ...inspection,
+    taskModifiers: [...(inspection.taskModifiers || []), ...modifiers],
+    detail: `${inspection.detail || ""}${modifierNote}`,
+  };
+}
+
+function getSurveyAdjustedInspections() {
+  return content.surveyDispatch.inspections
+    .map(getSurveyAdjustedInspection)
+    .filter(Boolean);
+}
+
+function getSurveyInspectionResultNote(inspectionId, wallBeforeAccessPath) {
+  if (inspectionId === "wall" && wallBeforeAccessPath) {
+    return "The wall works, but checking it before the access path made the survey record carry extra uncertainty.";
+  }
+  if (inspectionId === "wall" && hasSurveyMeasuredAccessPath()) {
+    return "Because the access path was already measured, the wall note now reads like part of a complete survey instead of an isolated yes.";
+  }
+  if (inspectionId === "hallway" && state.surveyInspections.includes("elevator")) {
+    return "The elevator measurement gives the hallway note a stronger reason, not just a vibe.";
+  }
+  return "";
 }
 
 function getSurveyReportTitle(approach = state.flags.surveyApproach) {
@@ -121,27 +232,31 @@ function getSurveyReportLabel(approach = state.flags.surveyApproach) {
 
 function inspectSurveyConstraint(inspectionId) {
   if (state.flags.surveyComplete) return showSurveyCompleteReview();
-  const inspection = content.surveyDispatch.inspections.find((item) => item.id === inspectionId);
+  const inspection = getSurveyAdjustedInspection(inspectionId);
   if (!inspection || state.surveyInspections.includes(inspectionId)) return notify(`${inspection?.label || "That condition"} is already in your notes.`);
+  const wallBeforeAccessPath = inspectionId === "wall" && !hasSurveyMeasuredAccessPath();
   const { skillCheck, energyCost } = resolveFieldTaskCheck({
     check: inspection,
     checkId: inspectionId,
     completedChecks: state.surveyInspections,
     flagKey: `survey-${inspectionId}`,
-    contextBonus: state.flags.surveyPreparation === "measure" ? 1 : 0,
     baseEnergyCost: getSurveyInspectionEnergyCost(),
     strainedFlag: inspectionId === "wall" ? "" : "surveyDocumentationStrained",
     logText: `${inspection.label} checked: ${inspection.log}`,
     strainedLogText: `Survey skill check strained on ${inspection.label}; the report will need a clearer closeout choice.`,
   });
+  if (wallBeforeAccessPath) state.flags.surveyWallCheckedBeforeAccessPath = true;
+  if (hasSurveyMeasuredAccessPath()) state.flags.surveyAccessPathMeasured = true;
   render();
   const allChecked = isSurveyInspectionComplete();
+  const surveyResultNote = getSurveyInspectionResultNote(inspectionId, wallBeforeAccessPath);
   showModal({
     kicker: "Survey Note",
     title: inspection.label,
     body: `
       <p>${inspection.detail}</p>
       ${getFieldTaskResultMarkup({ check: inspection, skillCheck, energyCost })}
+      ${surveyResultNote ? `<p class="muted">${escapeHtml(surveyResultNote)}</p>` : ""}
       ${inspection.id === "wall" && getCharacterLine("surveyWall") ? `<p class="muted">${getCharacterLine("surveyWall")}</p>` : ""}
       ${allChecked ? `<p class="muted">You have enough information. Return to the facilities contact and file the survey report.</p>` : ""}
     `,
@@ -178,6 +293,7 @@ function showSurveyReportChoice() {
       <p>Sales wants the survey closed today because the quote is "basically approved."</p>
       ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits make this report less draining.</p>` : ""}
       ${state.flags.surveyDocumentationStrained ? `<p class="muted">Your access notes are thin. Documenting still helps, but calling sales directly prevents the weak notes from being buried.</p>` : ""}
+      ${state.flags.surveyWallCheckedBeforeAccessPath ? `<p class="muted">The wall was checked before the access path was fully measured. A careful report can still protect the future crew; a quick closeout makes that uncertainty easier to ignore.</p>` : ""}
       ${getChoicePressureMarkup([
         {
           label: "Document the constraint",
@@ -214,6 +330,9 @@ function finishSurvey(approach) {
   if (careful) changeEnergy(-getSurveyReportEnergyCost(approach === "pushback" ? 2 : 3));
   state.flags.surveyComplete = true;
   state.flags.surveyApproach = approach;
+  state.flags.surveyAccessPressureInherited = approach === "trust";
+  state.flags.surveyAccessPressureDocumented = careful;
+  state.flags.surveySalesPushbackFriction = approach === "pushback";
   markCareerSnapshotStale();
   setClock(`${state.clock.slice(0, 3)} ${approach === "trust" ? "2:06" : "2:21"} PM`);
   if (!state.flags.surveyPaid) {
@@ -239,6 +358,20 @@ function finishSurvey(approach) {
   addLog(careful
     ? "Documented the University City access problem before it became an install-day problem."
     : "Marked the University City survey complete without adding the access problem to the quote.");
+  if (approach === "pushback") addLog("Sales and management felt the University City pushback immediately, even though it protected install day.");
+  if (approach === "trust") {
+    recordReturnTripRisk("universitySurveyAccessPressure", {
+      source: content.surveyDispatch.title,
+      cause: "The quote was trusted even though the elevator and hallway path did not match the display size.",
+      detail: "University City access pressure is still open. Future install planning may inherit a cleaner-looking quote than the site deserves.",
+      affects: "future University City install planning and classroom display delivery",
+    });
+  } else if (state.flags.returnTripRisks?.universitySurveyAccessPressure) {
+    resolveReturnTripRisk("universitySurveyAccessPressure", {
+      source: content.surveyDispatch.title,
+      resolution: "The access constraint was documented before it could become hidden install pressure.",
+    });
+  }
   const closeoutConsequences = [{
     source: content.surveyDispatch.title,
     status: careful ? "documented" : "inherited",
@@ -247,7 +380,9 @@ function finishSurvey(approach) {
       : "The quote was trusted even though the access path still looked constrained.",
     affects: "future install planning and access expectations",
     detail: careful
-      ? "Future work starts with the access issue visible."
+      ? state.flags.surveyWallCheckedBeforeAccessPath
+        ? "Wall-first uncertainty was called out in the report before the future crew inherited it."
+        : "Future work starts with the access issue visible."
       : "Future work may inherit a cleaner-looking quote than the site deserves.",
   }];
   recordJobSiteCloseoutSummary({
@@ -267,6 +402,8 @@ function finishSurvey(approach) {
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Preparation</span><strong>${getSurveyPreparationLabel()}</strong>
         <span>Report</span><strong>${getSurveyReportLabel(approach)}</strong>
+        ${approach === "pushback" ? `<span>Immediate friction</span><strong>Sales and management challenged today</strong>` : ""}
+        ${approach === "trust" ? `<span>Future pressure</span><strong>University City access pressure remains open</strong>` : ""}
         ${strainedDocument ? `<span>Skill consequence</span><strong>Thin notes softened the coworker/client gain</strong>` : ""}
       </div>
       ${approach === "trust"

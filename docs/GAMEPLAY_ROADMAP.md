@@ -68,6 +68,13 @@ protect the future crew or keep the current ticket clean.
 - The consequence is visible outside the result modal.
 - No new region, job, or character is added.
 
+**Progress note:** The first proof pass is implemented. University City survey
+prep and inspection order now feed task modifiers, wall-first inspection changes
+the current objective and saved task result, and trusting the quote records
+University City access pressure on the shared consequence/route surfaces. The
+remaining Phase 1 tuning question is playfeel: whether those choices are obvious
+enough in a normal playthrough without over-explaining the math.
+
 ## Phase 2: Consequence Review Filters
 
 **Why this is next:** callback and return-trip debt are core to the AV Tech RPG

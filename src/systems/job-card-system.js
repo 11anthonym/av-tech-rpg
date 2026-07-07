@@ -185,6 +185,9 @@ function getToolPlanText(items = [], options = {}) {
 }
 
 function getDispatchFieldTasksForRoute(routeId = "") {
+  if (routeId === "universitySurvey" && typeof getSurveyAdjustedInspections === "function") {
+    return getSurveyAdjustedInspections();
+  }
   const routeJob = content.routeJobs?.[routeId] || {};
   const dispatch = getDispatchReference(routeJob.dispatchId || routeJob.followup?.dispatchId);
   return dispatch?.checks || dispatch?.inspections || [];

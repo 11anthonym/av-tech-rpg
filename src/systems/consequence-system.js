@@ -38,6 +38,7 @@ function getReturnTripRiskAffectedWork(riskId) {
   if (riskId === "conshohockenServiceRoomPressure") return "future Conshohocken service and Josh callback cleanup";
   if (riskId === "navyYardRackUpdate") return "future Navy Yard support and warranty routing";
   if (riskId === "southPhillySpeakerTermination") return "commissioning follow-up and warranty return pressure";
+  if (riskId === "universitySurveyAccessPressure") return "future University City install planning and classroom display delivery";
   if (riskId === "systemsQuickReboot") return "future systems service or warranty return pressure";
   if (riskId === "burlington-retrofit-install") return "Burlington retrofit install and future service";
   if (riskId?.startsWith("exhaustion-")) return "the next return trip tied to this tired closeout";
@@ -476,6 +477,7 @@ function getConsequenceRouteIds(entry) {
     usedTemporaryAdapterPermanently: ["centerCityTutorial"],
     centerCityCartPressure: ["centerCityTutorial"],
     conshohockenServiceRoomPressure: ["conshohockenService"],
+    universitySurveyAccessPressure: ["universitySurvey"],
     navyYardRackUpdate: ["navyYardAccess"],
     southPhillySpeakerTermination: ["southPhillyCommissioning", "warrantyReturn"],
     systemsQuickReboot: ["systemsService", "warrantyReturn"],

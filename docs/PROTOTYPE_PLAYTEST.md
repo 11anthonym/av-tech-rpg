@@ -147,6 +147,10 @@ The playable slice now has:
 57. Closeout functions across the current board are now single-use, so stale
    modals or resume prompts cannot re-spend energy, re-award rewards, or
    rewrite branch consequences after completion.
+58. University City survey checks now use prep and inspection order as visible
+   task modifiers. Checking the wall before the access path creates immediate
+   survey pressure, while trusting the quote saves work now but records open
+   University City access pressure on route/consequence surfaces.
 
 ## Playtest Questions
 
