@@ -151,6 +151,9 @@ The playable slice now has:
    task modifiers. Checking the wall before the access path creates immediate
    survey pressure, while trusting the quote saves work now but records open
    University City access pressure on route/consequence surfaces.
+59. Consequence review now groups existing ledger and closeout records into
+   Active today, Resolved, and Inherited sections, with the same compact summary
+   visible near the top of the career clipboard.
 
 ## Playtest Questions
 

@@ -148,14 +148,21 @@ function hasConsequenceReviewInfo() {
 }
 
 function getConsequenceReviewMenuText() {
-  const openEntries = getConsequenceLedgerEntries();
+  const groups = getConsequenceReviewGroups();
+  const openEntries = groups.active;
   const history = getJobSiteCloseoutHistory();
   const summary = history[0];
+  const groupCount = openEntries.length + groups.inherited.length + groups.resolved.length;
+  const groupText = [
+    openEntries.length ? `${openEntries.length} active` : "",
+    groups.inherited.length ? `${groups.inherited.length} inherited` : "",
+    groups.resolved.length ? `${groups.resolved.length} resolved` : "",
+  ].filter(Boolean).join(", ");
   if (openEntries.length && summary) {
-    return `${openEntries.length} open consequence${openEntries.length === 1 ? "" : "s"} plus ${history.length} recent closeout record${history.length === 1 ? "" : "s"}.`;
+    return `${groupText} consequence${groupCount === 1 ? "" : "s"} plus ${history.length} recent closeout record${history.length === 1 ? "" : "s"}.`;
   }
-  if (openEntries.length) {
-    return `${openEntries.length} open callback or return-trip consequence${openEntries.length === 1 ? "" : "s"} affecting routes or prep.`;
+  if (groupText) {
+    return `${groupText} consequence${groupCount === 1 ? "" : "s"} affecting routes, prep, or future field work.`;
   }
   if (summary) {
     return `${history.length} recent closeout record${history.length === 1 ? "" : "s"} saved. Last: ${summary.source || "current job"}.`;
@@ -567,16 +574,118 @@ function getConsequenceRouteImpactMarkup() {
   `;
 }
 
+function getCloseoutConsequenceReviewEntries() {
+  return getJobSiteCloseoutHistory().flatMap((summary, summaryIndex) => (
+    (summary.consequences || []).map((entry, entryIndex) => {
+      const normalized = normalizeCloseoutSummaryEntry(entry);
+      return {
+        ...normalized,
+        id: normalized.id || `closeout-${summaryIndex}-${entryIndex}`,
+        source: normalized.source || summary.source || "Saved closeout",
+        clock: summary.clock || "",
+        closeoutSource: summary.source || "",
+        routeIds: getCloseoutSummaryRouteIds(summary),
+        recordType: "closeout",
+      };
+    })
+  ));
+}
+
+function dedupeConsequenceReviewEntries(entries = []) {
+  const seen = new Set();
+  return entries.filter((entry) => {
+    const key = getConsequenceEntryKey(entry);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function getConsequenceReviewEntries() {
+  const ledgerEntries = getConsequenceLedgerEntries({ includeResolved: true }).map((entry) => ({
+    ...entry,
+    routeIds: getConsequenceRouteIds(entry),
+    recordType: "ledger",
+  }));
+  return dedupeConsequenceReviewEntries([
+    ...ledgerEntries,
+    ...getCloseoutConsequenceReviewEntries(),
+  ]);
+}
+
+function getConsequenceReviewGroups() {
+  const activeKeys = new Set(getConsequenceLedgerEntries().map(getConsequenceEntryKey));
+  const resolvedStatuses = new Set(["resolved", "controlled", "documented", "protected"]);
+  const groups = {
+    active: [],
+    resolved: [],
+    inherited: [],
+  };
+  getConsequenceReviewEntries().forEach((entry) => {
+    if (entry.recordType === "ledger" && (activeKeys.has(getConsequenceEntryKey(entry)) || entry.status === "open")) groups.active.push(entry);
+    if (resolvedStatuses.has(entry.status)) groups.resolved.push(entry);
+    if (entry.status === "inherited") groups.inherited.push(entry);
+  });
+  return groups;
+}
+
+function getConsequenceReviewCountText(count, label) {
+  if (!count) return "None";
+  return `${count} ${label}${count === 1 ? "" : "s"}`;
+}
+
+function getConsequenceReviewFilterSummaryMarkup() {
+  const groups = getConsequenceReviewGroups();
+  return `
+    <div class="results-grid">
+      <span>Active today</span><strong>${escapeHtml(getConsequenceReviewCountText(groups.active.length, "open pressure"))}</strong>
+      <span>Resolved</span><strong>${escapeHtml(getConsequenceReviewCountText(groups.resolved.length, "saved resolution"))}</strong>
+      <span>Inherited</span><strong>${escapeHtml(getConsequenceReviewCountText(groups.inherited.length, "inherited risk"))}</strong>
+    </div>
+  `;
+}
+
+function getConsequenceReviewRouteText(entry) {
+  const routeIds = entry.routeIds || getConsequenceRouteIds(entry);
+  const routeLabels = uniqueValues(routeIds
+    .map((routeId) => getWorldRoute(routeId)?.toLabel || "")
+    .filter(Boolean));
+  return routeLabels.length ? ` Routes: ${routeLabels.join(", ")}.` : "";
+}
+
+function getConsequenceReviewGroupMarkup(entries = [], emptyMessage = "No entries in this group.") {
+  if (!entries.length) return `<p class="muted">${escapeHtml(emptyMessage)}</p>`;
+  return `
+    <ul class="modal-list">
+      ${entries.map((entry) => `
+        <li>
+          <strong>${escapeHtml(`${getConsequenceStatusLabel(entry.status)} - ${entry.source}`)}</strong>
+          <span>${escapeHtml(`Cause: ${entry.cause} Affects: ${entry.affects}.${getConsequenceReviewRouteText(entry)} Result: ${entry.detail}`)}</span>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
 function showConsequenceReview() {
+  const groups = getConsequenceReviewGroups();
   showModal({
     kicker: "Consequence Ledger",
     title: "Callback And Return-Trip Pressure",
     body: `
+      <h3>Review Filters</h3>
+      ${getConsequenceReviewFilterSummaryMarkup()}
       <h3>Last Job-Site Closeout</h3>
       ${getLastJobSiteCloseoutReviewMarkup()}
+      <h3>Active Today</h3>
+      ${getConsequenceReviewGroupMarkup(groups.active, "No open callback or return-trip pressure is active today.")}
+      <h3>Resolved</h3>
+      ${getConsequenceReviewGroupMarkup(groups.resolved, "No resolved consequence records are saved yet.")}
+      <h3>Inherited</h3>
+      ${getConsequenceReviewGroupMarkup(groups.inherited, "No inherited risk records are saved yet.")}
       <h3>Recent Closeout History</h3>
       ${getRecentJobSiteCloseoutHistoryMarkup()}
-      <h3>Active Consequences</h3>
+      <h3>Full Active Ledger</h3>
       ${getConsequenceLedgerMarkup()}
       <h3>Affected Routes</h3>
       ${getConsequenceRouteImpactMarkup()}

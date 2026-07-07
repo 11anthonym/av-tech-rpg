@@ -65,6 +65,8 @@ function showCareerClipboard() {
         <span>Coworker reputation</span><strong>${formatReputation(state.reputation.coworkers)}</strong>
         <span>Management reputation</span><strong>${formatReputation(state.reputation.management)}</strong>
       </div>
+      <p><strong>Consequence review:</strong></p>
+      ${getConsequenceReviewFilterSummaryMarkup()}
       <p><strong>Active consequences:</strong></p>
       ${getActiveCareerSummaryMarkup()}
       <p><strong>Consequence ledger:</strong></p>

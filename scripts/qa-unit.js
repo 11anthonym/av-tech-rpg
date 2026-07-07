@@ -734,6 +734,76 @@ test("University City trusted quote creates visible route consequence pressure",
   assert.match(result.closeoutDetail, /cleaner-looking quote/);
 });
 
+test("consequence review groups active, resolved, and inherited pressure", () => {
+  resetGameState();
+  const result = readGameJson(`(() => {
+    state.stats.callbacks = 1;
+    state.stats.callbacksResolved = 0;
+    state.flags.returnTripRisks = {
+      systemsQuickReboot: {
+        status: "open",
+        source: "King of Prussia Room Offline",
+        cause: "The room was closed with a reboot instead of mismatch notes.",
+        detail: "Systems quick-reboot debt is still open.",
+        affects: "future systems service or warranty return pressure",
+      },
+    };
+    state.flags.resolvedReturnTripRisks = {
+      conshohockenServiceRoomPressure: {
+        source: "One Quick Display Swap",
+        detail: "Room pressure stayed on the ledger.",
+        resolution: "Josh and the player rebuilt the callback notes.",
+        status: "resolved",
+      },
+    };
+    state.flags.lastJobSiteCloseoutSummary = {
+      source: "Burlington County Retrofit Install",
+      result: "Install risk inherited",
+      sceneId: "burlingtonRetrofitWalkdown",
+      areaId: "burlingtonRetrofitWalkdown",
+      clock: "FRI 3:18 PM",
+      consequences: [{
+        status: "inherited",
+        source: "Burlington County Retrofit Install",
+        cause: "Install closeout left the pathway record weak.",
+        affects: "Burlington future service",
+        detail: "Future service inherits a thinner record of the actual pathway.",
+      }],
+    };
+    const groups = getConsequenceReviewGroups();
+    const summaryMarkup = getConsequenceReviewFilterSummaryMarkup();
+    const activeMarkup = getConsequenceReviewGroupMarkup(groups.active);
+    const resolvedMarkup = getConsequenceReviewGroupMarkup(groups.resolved);
+    const inheritedMarkup = getConsequenceReviewGroupMarkup(groups.inherited);
+    showCareerClipboard();
+    const clipboardMarkup = elements.modalBody.innerHTML;
+    return {
+      activeCount: groups.active.length,
+      resolvedCount: groups.resolved.length,
+      inheritedCount: groups.inherited.length,
+      summaryMarkup,
+      activeMarkup,
+      resolvedMarkup,
+      inheritedMarkup,
+      menuText: getConsequenceReviewMenuText(),
+      clipboardMarkup,
+    };
+  })()`);
+
+  assert.equal(result.activeCount, 2, "Callback debt and systems risk should both count as active pressure");
+  assert.equal(result.resolvedCount, 1, "Resolved return-trip risk should appear in the resolved group");
+  assert.equal(result.inheritedCount, 1, "Saved inherited closeout should appear in the inherited group");
+  assert.match(result.summaryMarkup, /Active today/);
+  assert.match(result.summaryMarkup, /Resolved/);
+  assert.match(result.summaryMarkup, /Inherited/);
+  assert.match(result.activeMarkup, /KING OF PRUSSIA|King of Prussia/);
+  assert.match(result.resolvedMarkup, /Josh and the player rebuilt/);
+  assert.match(result.inheritedMarkup, /Burlington County Retrofit Install/);
+  assert.match(result.menuText, /active/);
+  assert.match(result.clipboardMarkup, /Consequence review/);
+  assert.match(result.clipboardMarkup, /Active today/);
+});
+
 test("save migration maps trusted University City survey into access pressure", () => {
   const result = readGameJson(`(() => {
     const migrated = migrateSavedGame({

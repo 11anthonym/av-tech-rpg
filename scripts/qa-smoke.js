@@ -2301,7 +2301,9 @@ async function clickButton(page, name) {
         departureShowsRisk: departureText.includes("Systems quick-reboot debt") && departureText.includes("Open return-trip risks"),
         mapShowsPressureRoute: mapText.toLowerCase().includes("callback / return-trip pressure") && mapText.includes("Mapped consequence pressure") && mapText.includes("King of Prussia Room Offline"),
         reviewShowsAffectedRoute: reviewText.toLowerCase().includes("affected routes") && reviewText.includes("KING OF PRUSSIA") && reviewText.includes("King of Prussia Room Offline"),
+        reviewShowsFilters: reviewText.toLowerCase().includes("review filters") && reviewText.toLowerCase().includes("active today") && reviewText.toLowerCase().includes("resolved") && reviewText.toLowerCase().includes("inherited"),
         clipboardShowsLedger: clipboardText.includes("Consequence ledger") && clipboardText.includes("King of Prussia Room Offline"),
+        clipboardShowsReviewSummary: clipboardText.includes("Consequence review") && clipboardText.includes("Active today"),
         resolvedRiskSaved,
         cleanupShowsResolved: cleanupText.includes("Closeout consequence") && cleanupText.includes("Callback pressure drops"),
       };
@@ -2312,7 +2314,9 @@ async function clickButton(page, name) {
     assert(consequenceLedger.departureShowsRisk, "Return marker should show systems risk carried back to the shop");
     assert(consequenceLedger.mapShowsPressureRoute, "Regional map should group routes carrying consequence pressure");
     assert(consequenceLedger.reviewShowsAffectedRoute, "Consequence review should list affected routes");
+    assert(consequenceLedger.reviewShowsFilters, "Consequence review should group active, resolved, and inherited pressure");
     assert(consequenceLedger.clipboardShowsLedger, "Career clipboard should show the open consequence ledger");
+    assert(consequenceLedger.clipboardShowsReviewSummary, "Career clipboard should show the consequence review summary");
     assert(consequenceLedger.resolvedRiskSaved, "Warranty cleanup should save resolved return-trip risk history");
     assert(consequenceLedger.cleanupShowsResolved, "Warranty cleanup should show resolved consequence language");
 

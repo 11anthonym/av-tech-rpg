@@ -97,6 +97,12 @@ identity, but the player needs to inspect them without reading a wall of text.
 - A player can tell what they resolved versus inherited.
 - Route/job cards and the career clipboard still agree.
 
+**Progress note:** The first review-filter pass is implemented. The consequence
+review and career clipboard now summarize existing ledger and closeout records
+as Active today, Resolved, and Inherited without creating a second consequence
+system. The remaining Phase 2 tuning question is whether the grouped review is
+short enough to scan during normal van/map use.
+
 ## Phase 3: Recovery And Prep Become Tactical
 
 **Why this is next:** the day rhythm should feel closer to Stardew and The Long

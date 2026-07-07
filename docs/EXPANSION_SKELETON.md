@@ -794,3 +794,7 @@ University City survey is now the non-service proof case for field-task
 modifiers. Future survey-style jobs should prefer adjusted check helpers that
 derive modifiers from prep, inspection order, and saved consequence state rather
 than adding separate bespoke closeout math for every hotspot.
+
+Consequence review filters are derived from existing ledger and closeout
+records. Future consequence UI should reuse those active/resolved/inherited
+groups instead of storing a separate review-specific state list.
