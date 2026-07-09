@@ -716,6 +716,29 @@ async function clickButton(page, name) {
       };
     });
     assert(vanPrepEmphasis.next && vanPrepEmphasis.prep && vanPrepEmphasis.route, "Route prep should visually emphasize next step, prep, and route status rows");
+    const routePrepActionClasses = await page.evaluate(() => [...document.querySelectorAll("#modal-actions button")]
+      .map((button) => ({ label: button.textContent || "", className: button.className || "" })));
+    assert(
+      routePrepActionClasses.some((button) => button.label.includes("Drive to Center City") && button.className.includes("primary-button")),
+      "Route prep launch should keep the primary go-forward treatment",
+    );
+
+    const closeoutChoiceClasses = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      window.showFinishChoice();
+      return [...document.querySelectorAll("#modal-actions button")]
+        .map((button) => ({ label: button.textContent || "", className: button.className || "" }));
+    });
+    const closeoutTradeoffs = closeoutChoiceClasses.filter((button) => /Dress the cables|adapter workaround|three zip ties/.test(button.label));
+    assert(closeoutTradeoffs.length >= 2, "First closeout should expose multiple tradeoff choices");
+    assert(
+      closeoutTradeoffs.every((button) => !button.className.includes("primary-button")),
+      "Closeout tradeoff choices should not be gold-coded as primary actions",
+    );
+    assert(
+      closeoutTradeoffs.some((button) => button.className.includes("choice-button")),
+      "The unclassified closeout tradeoff should receive the neutral choice-button style",
+    );
 
     await page.evaluate(() => {
       window.startGame("prototype-tech");

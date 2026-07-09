@@ -104,6 +104,27 @@ function makeButton(label, onClick, className = "primary-button") {
   return button;
 }
 
+function isModalUtilityAction(action = {}) {
+  const label = String(action.label || "").trim().toLowerCase();
+  if (action.className === "text-button") return true;
+  return /^(back\b|back to\b|close$|not yet$|return to\b|keep current career$)/.test(label);
+}
+
+function hasCompetingModalChoices(actions = []) {
+  return actions.filter((action = {}) => {
+    if (action.primary || isModalUtilityAction(action)) return false;
+    if (action.className && !["secondary-button", "choice-button"].includes(action.className)) return false;
+    return Boolean(action.label);
+  }).length > 1;
+}
+
+function getModalActionClass(action = {}, actions = []) {
+  if (action.className) return action.className;
+  if (action.primary) return "primary-button";
+  // Gold means commit/continue. Equal-weight tradeoffs stay neutral so the UI does not imply a correct answer.
+  return hasCompetingModalChoices(actions) ? "choice-button" : "primary-button";
+}
+
 function getModalListRowClass(label = "", detail = "") {
   const normalizedLabel = label.toLowerCase();
   const normalizedDetail = detail.toLowerCase();
@@ -133,11 +154,12 @@ function showModal({ kicker = "Field Update", title, body, actions }) {
   elements.modalKicker.textContent = kicker;
   elements.modalTitle.textContent = title;
   elements.modalBody.innerHTML = body;
+  const modalActions = Array.isArray(actions) ? actions : [];
   elements.modalActions.replaceChildren(
-    ...actions.map((action) => makeButton(action.label, () => {
+    ...modalActions.map((action) => makeButton(action.label, () => {
       if (action.close !== false) closeModal();
       action.onClick?.();
-    }, action.className)),
+    }, getModalActionClass(action, modalActions))),
   );
   elements.modalBackdrop.classList.remove("hidden");
   saveGame();

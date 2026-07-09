@@ -346,6 +346,7 @@ function showRoutePrepModal(routeId, { fastTravel = false, backAction = showVehi
     actions: [
       ...(!lockReason ? [{
         label: launchLabel,
+        primary: true,
         onClick: () => launchRouteFromBoard(route.id, { fastTravel }),
       }] : []),
       ...getRoutePrepRecoveryActions(route, routePrepOptions),
@@ -366,6 +367,7 @@ function getDispatchRoutePrepAction(routeId, backAction, options = {}) {
   return {
     label: options.label || "Review Route & Prep",
     className: options.className,
+    primary: options.primary ?? !options.className,
     onClick: () => showDispatchRoutePrep(routeId, backAction),
   };
 }

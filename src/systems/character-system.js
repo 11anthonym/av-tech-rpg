@@ -350,7 +350,7 @@ function showCharacterCreator() {
       <div id="creator-preview"></div>
     `,
     actions: [
-      { label: "Start Custom Career", close: false, onClick: () => {
+      { label: "Start Custom Career", primary: true, close: false, onClick: () => {
         const { error, technician } = getCreatorBuildFromForm();
         const errorNode = document.querySelector("#creator-error");
         if (error) {
