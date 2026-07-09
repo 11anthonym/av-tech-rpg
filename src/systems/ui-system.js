@@ -104,6 +104,30 @@ function makeButton(label, onClick, className = "primary-button") {
   return button;
 }
 
+function getModalListRowClass(label = "", detail = "") {
+  const normalizedLabel = label.toLowerCase();
+  const normalizedDetail = detail.toLowerCase();
+  const text = `${label} ${detail}`.toLowerCase();
+  const classes = ["modal-row"];
+  const noActivePressure = /no open|ready: no active|no daily pressure|no mapped routes are carrying/.test(normalizedDetail);
+  if (/next task|next step|what happens next|current work|current area/.test(text)) classes.push("modal-row-priority");
+  if (/why this is different today|task modifiers|pressure on this action|condition pressure/.test(text)) classes.push("modal-row-pressure");
+  if (normalizedLabel === "today's condition" && !noActivePressure) classes.push("modal-row-pressure");
+  if (/callback|return-trip|consequence|risk|inherited/.test(text) && !noActivePressure) classes.push("modal-row-risk");
+  if (/locked|missing/.test(text) || (/required/.test(normalizedLabel) && /missing/.test(normalizedDetail))) classes.push("modal-row-warning");
+  if (/required prep|required tools|recommended prep|recommended tools|prep\b|tools/.test(text)) classes.push("modal-row-prep");
+  if (/route status|fast travel|driven before|travel cost|route memory/.test(text)) classes.push("modal-row-route");
+  return classes.join(" ");
+}
+
+function getModalListRowMarkup(row = {}) {
+  return `<li class="${getModalListRowClass(row.label, row.detail)}"><strong>${escapeHtml(row.label || "")}</strong><span>${escapeHtml(row.detail || "")}</span></li>`;
+}
+
+function getModalListRowsMarkup(rows = []) {
+  return rows.map(getModalListRowMarkup).join("");
+}
+
 function showModal({ kicker = "Field Update", title, body, actions }) {
   state.modalOpen = true;
   elements.modalKicker.textContent = kicker;

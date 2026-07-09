@@ -681,6 +681,11 @@ be easy to verify in the browser.
    modal cards, two-column modal list rows, responsive action/task-card grids,
    and viewport-capped side panels so the game reads as a horizontal workday
    interface instead of a tall document.
+109. **Done - Important-text emphasis pass:** Current objectives, route-prep
+   next-step rows, pressure/risk rows, prep rows, and regional route cards now
+   carry reusable emphasis classes. Clean "no open risk" rows stay calm, while
+   actual locked, risky, launchable, or changed-today information gets stronger
+   visual treatment.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.

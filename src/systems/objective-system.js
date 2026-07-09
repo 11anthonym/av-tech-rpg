@@ -210,7 +210,7 @@ function getCurrentStepListMarkup({ className = "modal-list", includeDayPlan = t
   const resolvedRows = rows || getCurrentStepRows({ includeDayPlan });
   return `
     <ul class="${className}">
-      ${resolvedRows.map((row) => `<li class="current-step-${row.key || "row"}"><strong>${escapeHtml(row.label)}</strong><span>${escapeHtml(row.detail)}</span></li>`).join("")}
+      ${resolvedRows.map((row) => `<li class="${getModalListRowClass(row.label, row.detail)} current-step-${row.key || "row"}"><strong>${escapeHtml(row.label)}</strong><span>${escapeHtml(row.detail)}</span></li>`).join("")}
     </ul>
   `;
 }

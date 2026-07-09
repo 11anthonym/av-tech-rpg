@@ -1768,6 +1768,12 @@ modal cards. Modal list rows become two-column information rows, task/action
 cards can flow into responsive grids, and desktop side panels scroll internally
 instead of making the whole app feel like a tall document.
 
+Important-text emphasis pass: route prep, regional map, dispatch job cards, and
+action-pressure modals now use shared emphasis classes for next action,
+pressure/risk, locked, prep, and route rows. The scene objective also reads as
+an active prompt instead of muted helper text. Clean-state rows such as no open
+callback risk stay quiet so the player is not trained to ignore the highlight.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

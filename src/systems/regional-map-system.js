@@ -4,8 +4,15 @@ function getRouteCardMarkup(route) {
   const job = getRouteJobData(route.id);
   const details = getRouteJobCardRows(route)
     .map((row) => `${row.label}: ${row.detail}`);
+  const classes = ["route-card"];
+  if (isCurrentBoardRoute(route)) classes.push("route-card-active");
+  if (isRouteAvailableOnMap(route)) classes.push("route-card-available");
+  if (routeHasConsequencePressure(route)) classes.push("route-card-pressure");
+  if (canFastTravelRoute(route)) classes.push("route-card-fast-travel");
+  if (getRouteLockReason(route)) classes.push("route-card-locked");
+  if (getRouteTravelCount(route.id) > 0) classes.push("route-card-driven");
   return `
-    <li>
+    <li class="${classes.join(" ")}">
       <strong>${escapeHtml(`[${getRouteStatus(route)}] ${route.toLabel} - ${job.title}`)}</strong>
       <span>${escapeHtml(details.join(" "))}</span>
     </li>

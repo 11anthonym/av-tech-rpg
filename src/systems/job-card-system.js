@@ -333,21 +333,21 @@ function getDispatchJobOverviewRowsMarkup({ type, setup, familyId = "", routeId 
   const unlockDetail = routeJob?.unlockCondition
     ? `${routeJob.unlockCondition}${route ? ` ${getRouteLockReason(route) || "Launchable when this card is accepted."}` : ""}`
     : "Unlocked by the current dispatch-board progression.";
-  return `
-    <li><strong>Title</strong><span>${escapeHtml(routeJob?.title || type)}</span></li>
-    <li><strong>Location / region</strong><span>${escapeHtml(getDispatchLocationSummary(route))}</span></li>
-    <li><strong>Summary</strong><span>${escapeHtml(routeJob?.summary || setup)}</span></li>
-    <li><strong>Required / expected tools</strong><span>${escapeHtml(getToolPlanText(toolPlan.required, { required: true }))}</span></li>
-    <li><strong>Recommended tools</strong><span>${escapeHtml(getToolPlanText(toolPlan.recommended))}</span></li>
-    <li><strong>Risk tags</strong><span>${escapeHtml(getDispatchRiskTags({ routeId: route?.id || "", familyId: resolvedFamilyId, consequenceHooks }))}</span></li>
-    <li><strong>Route</strong><span>${escapeHtml(routeDetail)}</span></li>
-    ${differenceText ? `<li><strong>Why this is different today</strong><span>${escapeHtml(differenceText)}</span></li>` : ""}
-    <li><strong>Today's condition</strong><span>${escapeHtml(dailyConditionText)}</span></li>
-    <li><strong>Rewards</strong><span>${escapeHtml(routeJob?.rewards || "Cash, XP, reputation, and ledger changes on closeout.")}</span></li>
-    <li><strong>Unlock condition</strong><span>${escapeHtml(unlockDetail)}</span></li>
-    <li><strong>Callback / return-trip effects</strong><span>${escapeHtml(getDispatchCallbackEffectsText(consequenceHooks))}</span></li>
-    ${routeCloseoutHistoryText ? `<li><strong>Recent route closeout</strong><span>${escapeHtml(routeCloseoutHistoryText)}</span></li>` : ""}
-  `;
+  return getModalListRowsMarkup([
+    { label: "Title", detail: routeJob?.title || type },
+    { label: "Location / region", detail: getDispatchLocationSummary(route) },
+    { label: "Summary", detail: routeJob?.summary || setup },
+    { label: "Required / expected tools", detail: getToolPlanText(toolPlan.required, { required: true }) },
+    { label: "Recommended tools", detail: getToolPlanText(toolPlan.recommended) },
+    { label: "Risk tags", detail: getDispatchRiskTags({ routeId: route?.id || "", familyId: resolvedFamilyId, consequenceHooks }) },
+    { label: "Route", detail: routeDetail },
+    differenceText ? { label: "Why this is different today", detail: differenceText } : null,
+    { label: "Today's condition", detail: dailyConditionText },
+    { label: "Rewards", detail: routeJob?.rewards || "Cash, XP, reputation, and ledger changes on closeout." },
+    { label: "Unlock condition", detail: unlockDetail },
+    { label: "Callback / return-trip effects", detail: getDispatchCallbackEffectsText(consequenceHooks) },
+    routeCloseoutHistoryText ? { label: "Recent route closeout", detail: routeCloseoutHistoryText } : null,
+  ].filter(Boolean));
 }
 
 function getDispatchBoardMarkup({ type, setup, why, stakes = [], note, managementNote, prep = "", taskCards = [], fieldTasks = [], familyId = "", routeId = "", consequenceHooks = [], showBoardState = true }) {
@@ -357,17 +357,17 @@ function getDispatchBoardMarkup({ type, setup, why, stakes = [], note, managemen
     <ul class="modal-list">
       ${showBoardState ? getDispatchBoardStateMarkup() : ""}
       ${getDispatchJobOverviewRowsMarkup({ type, setup, familyId, routeId, consequenceHooks })}
-      <li><strong>Why this is on the board</strong><span>${why}</span></li>
+      ${getModalListRowMarkup({ label: "Why this is on the board", detail: why })}
       ${getJobFamilyMarkup(familyId)}
       ${getCompanyDispatchPressureMarkup()}
       ${getBoardBuildEdgeMarkup(familyId)}
       ${getBoardRouteMemoryMarkup(routeId || getCurrentDispatchRouteId())}
-      <li><strong>Stakes</strong><span>${stakes.join(" ")}</span></li>
+      ${getModalListRowMarkup({ label: "Stakes", detail: stakes.join(" ") })}
       ${getBoardConsequenceHooksMarkup(consequenceHooks)}
       ${getOpenCallbackBoardMarkup()}
       ${getBoardRoutingMarkup()}
-      ${prep ? `<li><strong>Prep</strong><span>${prep}</span></li>` : ""}
-      ${getDispatchDifferenceText({ routeId: routeId || getCurrentDispatchRouteId(), fieldTasks }) ? `<li><strong>Why this is different today</strong><span>${escapeHtml(getDispatchDifferenceText({ routeId: routeId || getCurrentDispatchRouteId(), fieldTasks }))}</span></li>` : ""}
+      ${prep ? getModalListRowMarkup({ label: "Prep", detail: prep }) : ""}
+      ${getDispatchDifferenceText({ routeId: routeId || getCurrentDispatchRouteId(), fieldTasks }) ? getModalListRowMarkup({ label: "Why this is different today", detail: getDispatchDifferenceText({ routeId: routeId || getCurrentDispatchRouteId(), fieldTasks }) }) : ""}
     </ul>
     ${getDispatchTaskCardsMarkup(taskCards)}
     ${getFieldTaskPreviewMarkup(fieldTasks)}

@@ -631,7 +631,7 @@ function getActionPressureMarkup(options = {}) {
   return `
     <p><strong>Pressure on this action:</strong></p>
     <ul class="modal-list">
-      ${details.map((detail) => `<li><strong>${escapeHtml(detail.label)}</strong><span>${escapeHtml(detail.detail)}</span></li>`).join("")}
+      ${getModalListRowsMarkup(details)}
     </ul>
   `;
 }
@@ -642,7 +642,7 @@ function getChoicePressureMarkup(hints = [], actionPressureOptions = { includeSk
     ${getActionPressureMarkup(actionPressureOptions)}
     <p><strong>Choice pressure:</strong></p>
     <ul class="modal-list">
-      ${hints.map((hint) => `<li><strong>${escapeHtml(hint.label)}</strong><span>${escapeHtml(hint.detail)}</span></li>`).join("")}
+      ${getModalListRowsMarkup(hints)}
     </ul>
   `;
 }

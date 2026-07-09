@@ -285,9 +285,7 @@ function getRoutePrepRows(route, { fastTravel = false } = {}) {
 function getRoutePrepMarkup(route, options = {}) {
   return `
     <ul class="modal-list">
-      ${getRoutePrepRows(route, options).map((row) => `
-        <li><strong>${escapeHtml(row.label)}</strong><span>${escapeHtml(row.detail)}</span></li>
-      `).join("")}
+      ${getModalListRowsMarkup(getRoutePrepRows(route, options))}
     </ul>
   `;
 }

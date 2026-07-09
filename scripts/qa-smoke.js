@@ -109,6 +109,10 @@ async function clickButton(page, name) {
       await page.setViewportSize(viewport);
       return page.evaluate(() => {
         window.startGame("prototype-tech");
+        const state = window.AV_TECH_RPG_DEBUG.state;
+        state.flags.shopBrief = true;
+        state.loaded = [...window.GAME_CONTENT.tutorial.shopLoad];
+        window.render();
         const rect = (selector) => {
           const box = document.querySelector(selector)?.getBoundingClientRect();
           return box ? { width: Math.round(box.width), height: Math.round(box.height) } : { width: 0, height: 0 };
@@ -119,11 +123,18 @@ async function clickButton(page, name) {
           rightPanel: rect(".task-panel"),
           scrollHeight: document.documentElement.scrollHeight,
           viewportHeight: window.innerHeight,
+          objectiveFontWeight: Number.parseInt(getComputedStyle(document.querySelector("#objective")).fontWeight, 10),
+          objectiveBorderLeft: Number.parseInt(getComputedStyle(document.querySelector("#objective")).borderLeftWidth, 10),
         };
         window.showRegionalMap();
         const modal = rect(".modal-card");
+        const emphasized = {
+          currentStep: Boolean(document.querySelector(".modal-list .current-step-next.modal-row-priority")),
+          launchableRoute: Boolean(document.querySelector(".modal-list .route-card-active, .modal-list .route-card-available")),
+          importantRows: document.querySelectorAll(".modal-list .modal-row-priority, .modal-list .modal-row-pressure, .modal-list .modal-row-risk, .modal-list .modal-row-warning").length,
+        };
         window.closeModal();
-        return { shell, modal };
+        return { shell, modal, emphasized };
       });
     }
 
@@ -136,6 +147,8 @@ async function clickButton(page, name) {
     assert(wideLayout.shell.leftPanel.width >= 240 && wideLayout.shell.rightPanel.width >= 320, "Wide desktop layout should widen both side panels");
     assert(wideLayout.modal.width >= 1000, "Wide desktop modal should use more horizontal space");
     assert(wideLayout.shell.scrollHeight <= wideLayout.shell.viewportHeight + 1, "Wide desktop layout should fit inside the viewport height");
+    assert(compactLayout.shell.objectiveFontWeight >= 700 && compactLayout.shell.objectiveBorderLeft >= 3, "Current objective should be visually emphasized in the scene header");
+    assert(compactLayout.emphasized.currentStep && compactLayout.emphasized.launchableRoute && compactLayout.emphasized.importantRows >= 2, "Regional map should emphasize current step, launchable route, and important rows");
 
     const energyMeterReset = await page.evaluate(() => {
       window.startGame("prototype-tech");
@@ -694,6 +707,15 @@ async function clickButton(page, name) {
       "Travel cost / risk",
       "Drive to Center City",
     ], "van route prep");
+    const vanPrepEmphasis = await page.evaluate(() => {
+      const rows = [...document.querySelectorAll("#modal-backdrop .modal-list li")];
+      return {
+        next: rows.some((row) => row.classList.contains("modal-row-priority") && row.textContent.includes("What happens next")),
+        prep: rows.some((row) => row.classList.contains("modal-row-prep") && row.textContent.includes("Required prep")),
+        route: rows.some((row) => row.classList.contains("modal-row-route") && row.textContent.includes("Route status")),
+      };
+    });
+    assert(vanPrepEmphasis.next && vanPrepEmphasis.prep && vanPrepEmphasis.route, "Route prep should visually emphasize next step, prep, and route status rows");
 
     await page.evaluate(() => {
       window.startGame("prototype-tech");
