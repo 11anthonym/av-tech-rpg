@@ -105,6 +105,38 @@ async function clickButton(page, name) {
       assert(start.objective.trim().length > 0, `${start.expectedName} should have a current objective`);
     }
 
+    async function captureLayout(viewport) {
+      await page.setViewportSize(viewport);
+      return page.evaluate(() => {
+        window.startGame("prototype-tech");
+        const rect = (selector) => {
+          const box = document.querySelector(selector)?.getBoundingClientRect();
+          return box ? { width: Math.round(box.width), height: Math.round(box.height) } : { width: 0, height: 0 };
+        };
+        const shell = {
+          scene: rect("#scene"),
+          leftPanel: rect(".hud-panel"),
+          rightPanel: rect(".task-panel"),
+          scrollHeight: document.documentElement.scrollHeight,
+          viewportHeight: window.innerHeight,
+        };
+        window.showRegionalMap();
+        const modal = rect(".modal-card");
+        window.closeModal();
+        return { shell, modal };
+      });
+    }
+
+    const compactLayout = await captureLayout({ width: 1366, height: 900 });
+    const wideLayout = await captureLayout({ width: 1920, height: 1080 });
+    await page.setViewportSize({ width: 1366, height: 900 });
+    assert(compactLayout.shell.scene.width === 780 && compactLayout.modal.width >= 860, "Compact desktop layout should keep the playable scene stable and widen modals");
+    assert(compactLayout.shell.scrollHeight <= compactLayout.shell.viewportHeight + 1, "Compact desktop layout should not create a tall document page");
+    assert(wideLayout.shell.scene.width === 960, "Wide desktop layout should show the full 960px map view");
+    assert(wideLayout.shell.leftPanel.width >= 240 && wideLayout.shell.rightPanel.width >= 320, "Wide desktop layout should widen both side panels");
+    assert(wideLayout.modal.width >= 1000, "Wide desktop modal should use more horizontal space");
+    assert(wideLayout.shell.scrollHeight <= wideLayout.shell.viewportHeight + 1, "Wide desktop layout should fit inside the viewport height");
+
     const energyMeterReset = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;

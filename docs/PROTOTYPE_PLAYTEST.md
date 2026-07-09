@@ -1762,6 +1762,12 @@ route-prep recovery pressure, and van/map/job cards that explain active work
 without adding new jobs. The next step should be a fresh planning decision,
 not automatic continuation of this slice.
 
+Widescreen UI readability pass: the game shell now makes better use of desktop
+width. Wider screens show the full 960px map view, larger side panels, and wider
+modal cards. Modal list rows become two-column information rows, task/action
+cards can flow into responsive grids, and desktop side panels scroll internally
+instead of making the whole app feel like a tall document.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

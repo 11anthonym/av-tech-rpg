@@ -675,6 +675,12 @@ be easy to verify in the browser.
    consequence review filters, tactical recovery/prep pressure, and van/map/job
    surfaces that explain current work. Reassess the next investment before
    starting another broad implementation lane.
+108. **Done - Widescreen UI readability pass:** The browser shell now scales up
+   on wider desktop displays instead of staying locked to the narrow 780px map
+   view. Large screens get the full 960px world view, wider side panels, wider
+   modal cards, two-column modal list rows, responsive action/task-card grids,
+   and viewport-capped side panels so the game reads as a horizontal workday
+   interface instead of a tall document.
 
 Stop after each pass and play through the affected area. The prototype should
 grow by proving a loop, not by accumulating menus.
