@@ -1535,6 +1535,8 @@ async function clickButton(page, name) {
       const clientText = document.querySelector("#modal-backdrop")?.innerText || "";
       const knownAfterClient = [...state.flags.serviceKnownRoomConditions];
       state.flags.serviceInspected = true;
+      window.inspectServiceReplacementGearFinding();
+      const knownAfterReplacement = [...state.flags.serviceKnownRoomConditions];
       const adjustedSignal = window.getServiceAdjustedCheck(window.getServiceCheckById("signal-path"));
       window.chooseServiceApproach("verify");
       const signalResult = state.flags.fieldTaskResults?.["service-signal-path"];
@@ -1543,7 +1545,9 @@ async function clickButton(page, name) {
       return {
         rolledConditions,
         knownFromPrep,
-        clientRevealedSecond: knownAfterClient.length === 2,
+        clientFindingRecorded: state.flags.serviceDiagnosticEvidence.some((entry) => entry.id === "client-symptom-timeline"),
+        clientKeptHardwareHidden: knownAfterClient.length === 1,
+        replacementRevealedSecond: knownAfterReplacement.length === 2,
         clientText,
         signalDifficulty: adjustedSignal.difficulty,
         resultDifficulty: signalResult?.difficulty || 0,
@@ -1555,11 +1559,56 @@ async function clickButton(page, name) {
     });
     assert(serviceConditionGameplay.rolledConditions.length === 2, "Service room should roll two saved conditions");
     assert(serviceConditionGameplay.knownFromPrep, "Service prep should reveal a relevant room condition");
-    assert(serviceConditionGameplay.clientRevealedSecond, "Client context should reveal another room condition");
+    assert(serviceConditionGameplay.clientFindingRecorded, "Client context should record the symptom-timeline finding");
+    assert(serviceConditionGameplay.clientKeptHardwareHidden, "Client context should not reveal unrelated replacement-hardware pressure");
+    assert(serviceConditionGameplay.replacementRevealedSecond, "Replacement-gear inspection should reveal relevant hardware pressure");
     assert(serviceConditionGameplay.clientText.includes("ROOM CONDITIONS"), "Client context should show room condition information");
     assert(serviceConditionGameplay.signalDifficulty === 4 && serviceConditionGameplay.resultDifficulty === 4, "Service room base signal-path difficulty should stay readable while modifiers carry pressure");
     assert(serviceConditionGameplay.signalModifierIds.length && serviceConditionGameplay.resultModifierIds.some((id) => id.startsWith("service-room-")), "Service room conditions should apply signal-path task modifiers");
     assert(serviceConditionGameplay.installDifficulty === 4 && serviceConditionGameplay.installModifierIds.length, "Service room conditions should apply install task modifiers without hiding the base difficulty");
+
+    const serviceInvestigationWindow = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("serviceOffice");
+      state.flags.serviceBrief = true;
+      state.flags.serviceRoomConditions = ["mislabeled-input", "loose-mount-hardware"];
+      state.flags.serviceKnownRoomConditions = [];
+      window.getInteractions().find((interaction) => interaction.id === "service-display")?.action();
+      const diagnosisText = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.closeModal();
+      window.render();
+      const investigationLabels = window.getInteractions().map((interaction) => interaction.label);
+      const objectiveBefore = window.resolveCurrentObjective().text;
+      window.getInteractions().find((interaction) => interaction.id === "service-signal-path-finding")?.action();
+      window.closeModal();
+      window.getInteractions().find((interaction) => interaction.id === "service-client")?.action();
+      window.closeModal();
+      window.getInteractions().find((interaction) => interaction.id === "service-pickup")?.action();
+      window.closeModal();
+      window.render();
+      const completedMarkers = [...document.querySelectorAll(".interaction-marker.task-state-completed")]
+        .map((marker) => marker.textContent);
+      return {
+        diagnosisText,
+        investigationLabels,
+        objectiveBefore,
+        evidenceIds: state.flags.serviceDiagnosticEvidence.map((entry) => entry.id),
+        approach: state.flags.serviceApproach || "",
+        completedMarkers,
+        objectiveAfter: window.resolveCurrentObjective().text,
+      };
+    });
+    assert(/review the room first/i.test(serviceInvestigationWindow.diagnosisText), "Display diagnosis should allow the player to return to room investigation");
+    assert(serviceInvestigationWindow.investigationLabels.includes("Ask client about symptoms"), "Investigation window should keep client symptoms available");
+    assert(serviceInvestigationWindow.investigationLabels.includes("Inspect signal path"), "Investigation window should expose the signal-path finding");
+    assert(serviceInvestigationWindow.investigationLabels.includes("Inspect replacement gear"), "Investigation window should expose the replacement-gear finding");
+    assert(serviceInvestigationWindow.investigationLabels.includes("Choose service approach"), "Investigation window should keep the existing approach decision available");
+    assert(/room finding|service approach/i.test(serviceInvestigationWindow.objectiveBefore), "Investigation objective should describe agency instead of one mandatory marker");
+    assert(serviceInvestigationWindow.evidenceIds.includes("display-failure-pattern") && serviceInvestigationWindow.evidenceIds.includes("inline-coupler-path") && serviceInvestigationWindow.evidenceIds.includes("client-symptom-timeline") && serviceInvestigationWindow.evidenceIds.includes("replacement-kit-fit"), "Room interactions should record their findings in player-selected order");
+    assert(serviceInvestigationWindow.approach === "", "Gathering findings should not silently choose a repair approach");
+    assert(serviceInvestigationWindow.completedMarkers.includes("CLIENT") && serviceInvestigationWindow.completedMarkers.includes("TRACE"), "Completed room findings should remain visible on their markers");
+    assert(/room finding|service approach/i.test(serviceInvestigationWindow.objectiveAfter), "Findings should remain optional before the approach is selected");
 
     const serviceConditionChoices = await page.evaluate(() => {
       window.startGame("prototype-tech");
@@ -1665,7 +1714,7 @@ async function clickButton(page, name) {
       };
     });
     assert(serviceConditionChoices.labels.includes("Handle room pressure"), "Known service pressure should create a visible room decision");
-    assert(serviceConditionChoices.objective.includes("known room pressure"), "Objective should point to known service pressure decisions");
+    assert(/room finding|service approach/i.test(serviceConditionChoices.objective), "Objective should preserve investigation choice before the service approach is selected");
     assert(serviceConditionChoices.choiceText.includes("risky shortcut"), "Quick service responses should show qualitative incident risk");
     assert(serviceConditionChoices.afterDifficulty === serviceConditionChoices.beforeDifficulty && serviceConditionChoices.afterModifierCount < serviceConditionChoices.beforeModifierCount, "Careful service response should remove controlled condition modifiers from later checks");
     assert(serviceConditionChoices.energyChanged, "Careful service response should spend energy now");

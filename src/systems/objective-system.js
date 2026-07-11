@@ -287,6 +287,7 @@ function getObjective() {
     if (!state.flags.serviceBrief) return "Check in with the client contact.";
     if (!state.flags.serviceInspected) return "Inspect the failed display.";
     if (getRecoverableServiceRoomIncidents().length) return "Recover the visible room incident or carry it into closeout.";
+    if (!state.flags.serviceApproach) return "Gather another room finding or return to CHOOSE and select a service approach.";
     if (getActionableServiceRoomConditions().length) return "Decide how to handle the known room pressure or continue the display swap.";
     if (isServiceInstallComplete()) return "Return to the client contact and close out the service call.";
     return `Install replacement gear (${state.serviceInstalled.length}/${content.serviceDispatch.swapItems.length}).`;

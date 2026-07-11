@@ -1783,6 +1783,14 @@ closeout modal automatically, including after save/continue. Incident recovery
 choices are single-use, so carrying pressure into closeout cannot be repeated
 for extra stats.
 
+Conshohocken findings pass: after identifying the failed display, the player is
+no longer forced to choose verify or trust immediately. They can return to the
+room, ask the client for a symptom timeline, trace the inline coupler path, or
+inspect replacement gear in different orders. The objective explicitly allows
+another finding or a return to CHOOSE, completed markers remember inspected
+sources, and only related findings expose related room conditions. This step
+does not yet add new repair methods or a service timer.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

@@ -87,7 +87,17 @@ function normalizeServiceDiagnosticEvidenceEntries(entries = []) {
 }
 
 function migrateServiceDiagnosticEvidence(flags = {}) {
-  flags.serviceDiagnosticEvidence = normalizeServiceDiagnosticEvidenceEntries(flags.serviceDiagnosticEvidence);
+  const entries = normalizeServiceDiagnosticEvidenceEntries(flags.serviceDiagnosticEvidence);
+  if (flags.serviceClientContext && !entries.some((entry) => entry.id === "client-symptom-timeline")) {
+    entries.push({ id: "client-symptom-timeline", source: "Saved client context", clock: "" });
+  }
+  if (flags.serviceInspected && !entries.some((entry) => entry.id === "display-failure-pattern")) {
+    entries.push({ id: "display-failure-pattern", source: "Saved display inspection", clock: "" });
+  }
+  if (flags.serviceApproach === "verify" && !entries.some((entry) => entry.id === "inline-coupler-path")) {
+    entries.push({ id: "inline-coupler-path", source: "Saved signal-path verification", clock: "" });
+  }
+  flags.serviceDiagnosticEvidence = entries;
 }
 
 function migrateSavedGame(savedGame) {

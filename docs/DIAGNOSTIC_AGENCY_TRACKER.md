@@ -27,7 +27,7 @@ green.
 
 ## Step 2: Evidence-Gathering Interactions
 
-**Status:** Not started.
+**Status:** Complete.
 
 - Connect existing client, display, signal-path, and replacement-gear objects to
   findings.
@@ -104,3 +104,9 @@ same existing dispatch.
 - 2026-07-10: Tracker created. Step 1 added the findings data contract,
   save-version 25 migration, save-safe discovery state, and focused unit
   coverage without changing the playable service call.
+- 2026-07-10: Step 2 connected findings to the client, failed display,
+  signal path, and replacement gear. After display inspection, the player may
+  gather findings in different orders or return to the display and choose the
+  existing verify/trust approach. Finding markers retain completed state,
+  related findings reveal related room pressure, and no repair outcome or
+  hidden probability changed. Full static, unit, and browser QA passed.

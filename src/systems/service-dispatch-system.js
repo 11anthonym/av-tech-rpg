@@ -204,6 +204,105 @@ function getServiceDiagnosticEvidenceState(evidenceId) {
   };
 }
 
+function revealServiceConditionFromDiagnosticEvidence(evidenceId, source = "Room finding") {
+  const evidence = getServiceDiagnosticEvidenceById(evidenceId);
+  if (!evidence) return null;
+  const activeIds = ensureServiceRoomConditions({ applyPreparation: false });
+  const conditionId = (evidence.conditionIds || [])
+    .find((id) => activeIds.includes(id) && !isServiceRoomConditionKnown(id));
+  return conditionId ? revealServiceRoomCondition(conditionId, source) : null;
+}
+
+function getServiceDiagnosticEvidenceMarkup() {
+  const entries = getServiceDiagnosticEvidenceEntries();
+  const definitions = getServiceDiagnosticEvidenceDefinitions();
+  return `
+    <h3>Room Findings</h3>
+    ${entries.length ? `
+      <ul class="modal-list">
+        ${entries.map((entry) => {
+          const evidence = getServiceDiagnosticEvidenceById(entry.id);
+          return `
+            <li>
+              <strong>${escapeHtml(evidence?.label || entry.id)}</strong>
+              <span>${escapeHtml(evidence?.summary || "Room finding recorded.")}</span>
+              <span>Source: ${escapeHtml(entry.source)}${entry.clock ? ` at ${escapeHtml(entry.clock)}` : ""}</span>
+            </li>
+          `;
+        }).join("")}
+      </ul>
+    ` : `<p class="muted">No room findings have been recorded yet.</p>`}
+    <p class="muted">${entries.length}/${definitions.length} possible room findings recorded. You do not need every finding before choosing an approach.</p>
+  `;
+}
+
+function showServiceDiagnosticEvidenceReview() {
+  showModal({
+    kicker: "Service Notes",
+    title: "Current Room Findings",
+    body: `${getServiceDiagnosticEvidenceMarkup()}${getServiceRoomConditionMarkup()}`,
+    actions: [{ label: "Back To Room", onClick: render }],
+  });
+}
+
+function showServiceDiagnosticFinding(evidenceId, {
+  kicker = "Room Finding",
+  title = "Finding Recorded",
+  intro = "",
+  source = "",
+  actions = [],
+} = {}) {
+  const wasDiscovered = hasServiceDiagnosticEvidence(evidenceId);
+  const entry = discoverServiceDiagnosticEvidence(evidenceId, source);
+  const evidence = getServiceDiagnosticEvidenceById(evidenceId);
+  if (!entry || !evidence) return notify("That room finding is not available.");
+  const revealedCondition = wasDiscovered ? null : revealServiceConditionFromDiagnosticEvidence(evidenceId, evidence.sourceLabel);
+  showModal({
+    kicker,
+    title,
+    body: `
+      ${intro ? `<p>${escapeHtml(intro)}</p>` : ""}
+      <p><strong>${escapeHtml(evidence.label)}:</strong> ${escapeHtml(evidence.summary)}</p>
+      ${revealedCondition ? `<p class="muted">This finding exposes room pressure: ${escapeHtml(revealedCondition.label)}.</p>` : ""}
+      ${getServiceDiagnosticEvidenceMarkup()}
+      ${getServiceRoomConditionMarkup()}
+    `,
+    actions: actions.length ? actions : [{ label: "Back To Room", onClick: render }],
+  });
+}
+
+function showServiceDiagnosisChoice() {
+  if (!state.flags.serviceBrief) return notify("Check in with the client contact first.");
+  if (!state.flags.serviceInspected) return notify("Inspect the failed display first.");
+  if (state.flags.serviceApproach) return notify("The service approach is already set.");
+  showModal({
+    kicker: "Diagnosis",
+    title: "Choose The Next Service Move",
+    body: `
+      <p>The display is failing, but the room may contain a second problem. You can commit now or return to the room and gather more findings first.</p>
+      ${getCharacterLine("serviceInspect") ? `<p class="muted">${getCharacterLine("serviceInspect")}</p>` : ""}
+      ${state.flags.servicePreparation === "review" ? `<p class="muted">Reviewing the forwarded email chain made one part of the room less mysterious.</p>` : ""}
+      ${getServiceDiagnosticEvidenceMarkup()}
+      ${getServiceRoomConditionMarkup()}
+      ${getChoicePressureMarkup([
+        {
+          label: "Verify signal path",
+          detail: "Troubleshoot the path before treating the visible display as the whole fault.",
+        },
+        {
+          label: "Trust the ticket",
+          detail: "Start the faster display swap with the uncertainty still in the room.",
+        },
+      ])}
+    `,
+    actions: [
+      { label: "Verify signal path", onClick: () => chooseServiceApproach("verify") },
+      { label: "Trust the ticket and swap", className: "secondary-button", onClick: () => chooseServiceApproach("rush") },
+      { label: "Review The Room First", className: "text-button", onClick: render },
+    ],
+  });
+}
+
 function getServiceRoomConditionDefinitions() {
   return content.serviceDispatch.roomConditions || [];
 }
@@ -372,20 +471,56 @@ function getServiceRoomConditionMarkup({ revealAll = false } = {}) {
 
 function showServiceClientContext() {
   if (!state.flags.serviceBrief) return notify("Check in with the client contact first.");
-  if (state.flags.serviceInspected) return notify('Client: "The afternoon meeting starts at one. No pressure."');
-  if (state.flags.serviceClientContext) return notify("The client's symptom context is already in your notes.");
+  if (hasServiceDiagnosticEvidence("client-symptom-timeline")) {
+    return showServiceDiagnosticEvidenceReview();
+  }
   state.flags.serviceClientContext = true;
   changeEnergy(-1);
-  const revealed = revealNextServiceRoomCondition("Client context");
-  showModal({
+  showServiceDiagnosticFinding("client-symptom-timeline", {
     kicker: "Client Context",
-    title: revealed ? revealed.label : "No New Symptom",
-    body: `
-      <p>${escapeHtml(revealed?.revealedSummary || "The client repeats the same symptom: flicker, dropout, and a meeting getting closer.")}</p>
-      ${getServiceRoomConditionMarkup()}
-      <p class="muted">Asking costs a little time and energy, but known room conditions can offset service-check pressure.</p>
-    `,
-    actions: [{ label: "Inspect Display", onClick: render }],
+    title: "The Failure Has A Timeline",
+    intro: "The client remembers that the room began dropping after somebody changed inputs, not when the display first powered on.",
+    source: "Client conversation",
+    actions: [{ label: state.flags.serviceInspected ? "Back To Room" : "Inspect Display", onClick: render }],
+  });
+}
+
+function inspectServiceSignalPathFinding() {
+  if (!state.flags.serviceInspected) return notify("Inspect the failed display before tracing the room path.");
+  if (hasServiceDiagnosticEvidence("inline-coupler-path")) return showServiceDiagnosticEvidenceReview();
+  showServiceDiagnosticFinding("inline-coupler-path", {
+    kicker: "Signal Path",
+    title: "The Labels Disagree",
+    intro: "The wall plate, credenza lead, and inline coupler do not describe the same input path.",
+    source: "Signal-path inspection",
+  });
+}
+
+function pickUpServiceReplacementGear() {
+  if (!state.flags.serviceInspected) return notify("Inspect the failed display before opening replacement gear.");
+  if (hasCarriedItems()) return notify("Your hands are already full.");
+  const nextItems = content.serviceDispatch.swapItems
+    .filter((item) => !state.serviceDelivered.includes(item.id) && !state.serviceInstalled.includes(item.id))
+    .slice(0, getCarryCapacity("serviceOffice"));
+  if (!nextItems.length) return notify("All replacement gear is beside the failed display.");
+  state.carry = nextItems.map((item) => item.id);
+  changeEnergy(-getEquipmentEnergyCost(3));
+  addLog(`Picked up ${nextItems.map((item) => item.label).join(" and ")}.`);
+  render();
+}
+
+function inspectServiceReplacementGearFinding() {
+  if (!state.flags.serviceInspected) return notify("Inspect the failed display before opening replacement gear.");
+  if (hasServiceDiagnosticEvidence("replacement-kit-fit")) return pickUpServiceReplacementGear();
+  showServiceDiagnosticFinding("replacement-kit-fit", {
+    kicker: "Replacement Gear",
+    title: "Present Does Not Mean Proven",
+    intro: "The panel and mount kit are onsite. Their labels and packaging still leave the actual fit for the technician to prove.",
+    source: "Replacement gear",
+    actions: [
+      { label: "Pick Up Next Gear Group", onClick: pickUpServiceReplacementGear },
+      { label: "Back To Room", className: "secondary-button", onClick: render },
+    ],
   });
 }
 
@@ -1058,6 +1193,8 @@ function chooseServiceApproach(approach) {
   ensureServiceRoomConditions();
   state.flags.serviceApproach = approach;
   if (approach === "verify") {
+    discoverServiceDiagnosticEvidence("inline-coupler-path", "Signal-path verification");
+    revealServiceConditionFromDiagnosticEvidence("inline-coupler-path", "Signal-path verification");
     const check = getServiceAdjustedCheck(getServiceCheckById("signal-path"));
     const { skillCheck, energyCost } = resolveFieldTaskCheck({
       check,

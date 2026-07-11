@@ -41,6 +41,7 @@ function getServiceSwapTaskState() {
   if (state.flags.serviceComplete) return getTaskState({ completed: true, detail: "The service swap is complete." });
   if (!state.flags.serviceInspected) return getTaskState({ stateId: "ready", detail: "Diagnose the failed display before opening replacement gear." });
   if (isServiceInstallComplete()) return getTaskState({ completed: true, detail: "Replacement gear is installed. Close out with the client." });
+  if (!state.flags.serviceApproach) return getTaskState({ stateId: "ready", detail: "Review current findings and choose the service approach." });
   if (!hasCarriedItems()) return getTaskState({ lockedReason: "Pick up replacement gear before installing." });
   const check = getServiceAdjustedCheck(getServiceInstallCheck(state.carry));
   const resultState = getFieldTaskState(check);
@@ -54,6 +55,7 @@ function getServicePickupTaskState() {
   const nextItems = content.serviceDispatch.swapItems
     .filter((item) => !state.serviceDelivered.includes(item.id) && !state.serviceInstalled.includes(item.id));
   if (!nextItems.length) return getTaskState({ completed: true, detail: "All replacement gear has been installed." });
+  if (!hasServiceDiagnosticEvidence("replacement-kit-fit")) return getTaskState({ stateId: "ready", detail: "Inspect the replacement panel and mount kit before carrying them." });
   return getTaskState({ stateId: "ready", detail: "Pick up the next replacement gear group." });
 }
 

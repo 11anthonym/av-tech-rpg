@@ -1094,8 +1094,9 @@ test("Conshohocken primary interactions guide the physical service-room sequence
     state.flags.serviceInspected = true;
     state.flags.serviceRoomConditions = [];
     state.flags.serviceKnownRoomConditions = [];
-    snapshots.push(capture("pickup"));
+    snapshots.push(capture("investigate"));
     state.carry = ["replacement-display"];
+    state.flags.serviceApproach = "verify";
     snapshots.push(capture("install"));
     state.flags.serviceRoomIncidents = [{
       id: "unit-room-incident",
@@ -1118,15 +1119,72 @@ test("Conshohocken primary interactions guide the physical service-room sequence
   assert.match(byId["check-in"].objective, /check in/i);
   assert.equal(byId.inspect.interactionId, "service-display");
   assert.match(byId.inspect.objective, /inspect the failed display/i);
-  assert.equal(byId.pickup.interactionId, "service-pickup");
-  assert.match(byId.pickup.objective, /collect the next replacement gear/i);
+  assert.equal(byId.investigate.interactionId, "");
+  assert.match(byId.investigate.objective, /Gather another room finding|select a service approach/i);
   assert.equal(byId.install.interactionId, "service-display");
   assert.match(byId.install.objective, /fit the carried replacement gear/i);
   assert.equal(byId.recover.interactionId, "service-incident-recovery");
   assert.match(byId.recover.objective, /recover the visible room incident/i);
   assert.equal(byId.closeout.interactionId, "service-client");
   assert.match(byId.closeout.objective, /close out the service call/i);
-  result.forEach((entry) => assert.match(entry.markerClass, /primary-objective-marker/, `${entry.id} should visibly mark the primary interaction`));
+  result.filter((entry) => entry.interactionId).forEach((entry) => {
+    assert.match(entry.markerClass, /primary-objective-marker/, `${entry.id} should visibly mark the primary interaction`);
+  });
+});
+
+test("Conshohocken findings can be gathered in different room orders before choosing an approach", () => {
+  const result = readGameJson(`(() => {
+    Object.assign(state, createInitialState());
+    state.technician = content.technicians.find((technician) => technician.id === "prototype-tech");
+    state.tools = ["screwdriver"];
+    state.sceneId = "serviceOffice";
+    state.flags.currentAreaId = "serviceOffice";
+    state.flags.serviceBrief = true;
+    state.flags.serviceInspected = true;
+    state.flags.serviceRoomConditions = ["mislabeled-input", "loose-mount-hardware"];
+    state.flags.serviceKnownRoomConditions = [];
+
+    const initialInteractions = getInteractions();
+    const initialLabels = initialInteractions.map((interaction) => interaction.label);
+    initialInteractions.find((interaction) => interaction.id === "service-signal-path-finding").action();
+    closeModal();
+    getInteractions().find((interaction) => interaction.id === "service-pickup").action();
+    closeModal();
+    getInteractions().find((interaction) => interaction.id === "service-client").action();
+    closeModal();
+    const afterInteractions = getInteractions();
+    const display = afterInteractions.find((interaction) => interaction.id === "service-display");
+    display.action();
+    const diagnosisMarkup = elements.modalBody.innerHTML || "";
+    return {
+      initialLabels,
+      evidenceIds: getDiscoveredServiceDiagnosticEvidenceIds(),
+      knownConditionIds: getKnownServiceRoomConditionIds(),
+      objective: resolveCurrentObjective().text,
+      primaryId: getPrimaryInteraction()?.id || "",
+      clientTaskState: getInteractionTaskState(afterInteractions.find((interaction) => interaction.id === "service-client")),
+      signalTaskState: getInteractionTaskState(afterInteractions.find((interaction) => interaction.id === "service-signal-path-finding")),
+      pickupLabel: afterInteractions.find((interaction) => interaction.id === "service-pickup")?.label || "",
+      displayLabel: display.label,
+      diagnosisMarkup,
+    };
+  })()`);
+
+  assert.ok(result.initialLabels.includes("Ask client about symptoms"));
+  assert.ok(result.initialLabels.includes("Inspect signal path"));
+  assert.ok(result.initialLabels.includes("Inspect replacement gear"));
+  assert.ok(result.initialLabels.includes("Choose service approach"));
+  assert.deepEqual(result.evidenceIds, ["inline-coupler-path", "replacement-kit-fit", "client-symptom-timeline"]);
+  assert.ok(result.knownConditionIds.includes("mislabeled-input"));
+  assert.ok(result.knownConditionIds.includes("loose-mount-hardware"));
+  assert.doesNotMatch(result.evidenceIds.join(" "), /display-failure-pattern/);
+  assert.match(result.objective, /Gather another room finding|select a service approach/i);
+  assert.equal(result.primaryId, "");
+  assert.equal(result.clientTaskState.id, "completed");
+  assert.equal(result.signalTaskState.id, "completed");
+  assert.equal(result.pickupLabel, "Pick up replacement gear");
+  assert.equal(result.displayLabel, "Choose service approach");
+  assert.match(result.diagnosisMarkup, /Room Findings/i);
 });
 
 test("Conshohocken diagnostic evidence is data-backed, idempotent, and save-safe", () => {
@@ -1161,6 +1219,16 @@ test("Conshohocken diagnostic evidence is data-backed, idempotent, and save-safe
         ],
       },
     });
+    const legacyProgress = migrateSavedGame({
+      version: 24,
+      technicianId: "prototype-tech",
+      sceneId: "serviceOffice",
+      flags: {
+        serviceClientContext: true,
+        serviceInspected: true,
+        serviceApproach: "verify",
+      },
+    });
     return {
       definitions,
       allConditionReferencesValid: definitions.every((evidence) => evidence.conditionIds.every((conditionId) => conditionIds.has(conditionId))),
@@ -1174,6 +1242,7 @@ test("Conshohocken diagnostic evidence is data-backed, idempotent, and save-safe
       savedEntries: saved.flags.serviceDiagnosticEvidence,
       missingEntries: missing.flags.serviceDiagnosticEvidence,
       dirtyEntries: dirty.flags.serviceDiagnosticEvidence,
+      legacyEntries: legacyProgress.flags.serviceDiagnosticEvidence,
     };
   })()`);
 
@@ -1196,6 +1265,11 @@ test("Conshohocken diagnostic evidence is data-backed, idempotent, and save-safe
   assert.deepEqual(result.savedEntries, result.liveEntries);
   assert.deepEqual(result.missingEntries, []);
   assert.deepEqual(result.dirtyEntries.map((entry) => entry.id), ["display-failure-pattern"]);
+  assert.deepEqual(result.legacyEntries.map((entry) => entry.id), [
+    "client-symptom-timeline",
+    "display-failure-pattern",
+    "inline-coupler-path",
+  ]);
 });
 
 test("Secret Squirrel copy keeps the mystery shelf joke understandable", () => {
