@@ -1413,6 +1413,66 @@ window.GAME_CONTENT = {
   serviceDispatch: {
     title: "One Quick Display Swap",
     summary: "Replace a conference-room display at a Conshohocken office.",
+    appointment: {
+      deadlineMinutes: 13 * 60,
+      tightWindowMinutes: 150,
+      phases: [
+        {
+          id: "calm",
+          label: "Room Available",
+          summary: "There is still room to investigate without the client hovering over every step.",
+        },
+        {
+          id: "tight",
+          label: "Schedule Tightening",
+          summary: "The next meeting is getting close. Extra certainty now competes with a clean handoff.",
+        },
+        {
+          id: "late",
+          label: "Meeting In Progress",
+          summary: "The handoff window has passed. Technical work now happens in front of a waiting client.",
+        },
+      ],
+      actionMinutes: {
+        "client-check-in": 5,
+        "client-symptom-timeline": 15,
+        "display-failure-pattern": 25,
+        "inline-coupler-path": 35,
+        "replacement-kit-fit": 15,
+        "condition-careful": 15,
+        "condition-quick": 6,
+        "incident-stabilize": 20,
+        "incident-calm-client": 8,
+        "install-item": 25,
+      },
+      repairMinutes: {
+        "verify-path": 45,
+        "ticket-swap": 10,
+        "isolate-coupler": 35,
+        "stage-clean-swap": 15,
+        "negotiate-verification-window": 25,
+        "label-and-prove-path": 40,
+      },
+      taskModifiers: {
+        tight: {
+          energyDelta: 1,
+          resultText: "The tightening client schedule made the room work more draining.",
+        },
+        late: {
+          statDelta: -1,
+          energyDelta: 1,
+          resultText: "Working through the meeting handoff made both diagnosis and installation less forgiving.",
+        },
+      },
+      riskyRepairIncident: {
+        chanceByPhase: { calm: 0, tight: 0.35, late: 0.65 },
+        resultByPhase: {
+          tight: "The quick swap drops signal during the client handoff check. The client sees the room fail before the repair is settled.",
+          late: "The waiting meeting walks into a visible dropout. The rushed repair now has to be recovered with the client in the room.",
+        },
+        log: "Immediate service pressure: a rushed repair collided with the client meeting window.",
+      },
+    },
     diagnosticEvidence: [
       {
         id: "client-symptom-timeline",
@@ -1515,6 +1575,7 @@ window.GAME_CONTENT = {
         ],
         verificationSkillId: "clientCommunication",
         controlsConditionId: "client-time-pressure",
+        appointmentExtensionMinutes: 30,
         checkModifiers: {
           "signal-path": {
             statDelta: 1,

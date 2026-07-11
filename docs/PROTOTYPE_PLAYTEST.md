@@ -1799,6 +1799,18 @@ a client verification window. Universal verify and ticket-swap paths remain
 available. Locked methods state the missing finding or build requirement, and
 the result identifies the skill or task modifier that actually changed.
 
+Conshohocken appointment-pressure pass: service-room actions now advance the
+visible workday clock instead of happening outside the daily rhythm. The client
+handoff moves from room available to schedule tightening and then meeting in
+progress. Investigating more of the room can protect the technical repair while
+squeezing the handoff; tight and late work reaches field checks through the
+existing modifier layer. A rushed repair under pressure can fail visibly in
+front of the client and create an immediate recovery objective. Negotiating a
+verification window can buy time for communication-focused technicians.
+Pre-action copy remains qualitative, while resolved actions show the actual
+clock movement and incident roll. Save version 27 keeps each timed action
+single-use and migrates malformed timing history defensively.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

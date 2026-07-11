@@ -240,109 +240,9 @@ function showServiceDiagnosticEvidenceReview() {
   showModal({
     kicker: "Service Notes",
     title: "Current Room Findings",
-    body: `${getServiceDiagnosticEvidenceMarkup()}${getServiceRoomConditionMarkup()}`,
+    body: `${getServiceAppointmentMarkup()}${getServiceDiagnosticEvidenceMarkup()}${getServiceRoomConditionMarkup()}`,
     actions: [{ label: "Back To Room", onClick: render }],
   });
-}
-
-function getServiceRepairApproachDefinitions() {
-  return content.serviceDispatch.repairApproaches || [];
-}
-
-function getServiceRepairApproachById(approachId) {
-  return getServiceRepairApproachDefinitions().find((approach) => approach.id === approachId) || null;
-}
-
-function getServiceRepairMethodLabel() {
-  return getServiceRepairApproachById(state.flags.serviceRepairMethod)?.label
-    || (state.flags.serviceApproach === "verify" ? "Verify the signal path" : state.flags.serviceApproach === "rush" ? "Trust the ticket and swap" : "Not selected");
-}
-
-function getServiceTraitRequirementLabel(traitId) {
-  const creator = content.characterCreator || {};
-  const pieces = [
-    ...(creator.backgrounds || []),
-    ...(creator.workStyles || []),
-    ...(creator.traits || []),
-  ];
-  return pieces.find((piece) => piece.traits?.includes(traitId))?.name
-    || traitId.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (letter) => letter.toUpperCase());
-}
-
-function getServiceBuildRequirementLabel(requirement = {}) {
-  if (requirement.skillId) return `${getSkillDefinition(requirement.skillId)?.name || requirement.skillId} ${requirement.minimum || 1}`;
-  if (requirement.toolId) return getToolDisplayName(requirement.toolId);
-  if (requirement.traitId) return getServiceTraitRequirementLabel(requirement.traitId);
-  return "Unknown build requirement";
-}
-
-function meetsServiceBuildRequirement(requirement = {}) {
-  if (requirement.skillId) return getSkillValue(requirement.skillId) >= (requirement.minimum || 1);
-  if (requirement.toolId) return ownsTool(requirement.toolId);
-  if (requirement.traitId) return hasCharacterTrait(requirement.traitId);
-  return false;
-}
-
-function getServiceRepairApproachStatus(approach) {
-  if (!approach) return null;
-  const missingEvidence = (approach.requiredEvidenceIds || [])
-    .filter((evidenceId) => !hasServiceDiagnosticEvidence(evidenceId))
-    .map(getServiceDiagnosticEvidenceById)
-    .filter(Boolean);
-  const requirements = approach.unlockAny || [];
-  const matchedRequirement = requirements.find(meetsServiceBuildRequirement) || null;
-  const buildUnlocked = !requirements.length || Boolean(matchedRequirement);
-  const lockedReasons = [
-    missingEvidence.length ? `Find: ${missingEvidence.map((evidence) => evidence.label).join(" and ")}` : "",
-    !buildUnlocked ? `Build: ${requirements.map(getServiceBuildRequirementLabel).join(" or ")}` : "",
-  ].filter(Boolean);
-  return {
-    approach,
-    available: !missingEvidence.length && buildUnlocked,
-    missingEvidence,
-    buildUnlocked,
-    matchedRequirement,
-    unlockText: matchedRequirement
-      ? `Unlocked by ${getServiceBuildRequirementLabel(matchedRequirement)}.`
-      : requirements.length
-      ? `Requires ${requirements.map(getServiceBuildRequirementLabel).join(" or ")}.`
-      : "Available to every technician.",
-    lockedReason: lockedReasons.join(" "),
-  };
-}
-
-function getServiceRepairApproachStatuses() {
-  return getServiceRepairApproachDefinitions().map(getServiceRepairApproachStatus);
-}
-
-function getServiceRepairApproachMarkup(statuses = getServiceRepairApproachStatuses()) {
-  return `
-    <h3>Repair Approaches</h3>
-    <ul class="modal-list">
-      ${statuses.map((status) => `
-        <li class="${status.available ? "emphasis-next" : "emphasis-locked"}">
-          <strong>${status.available ? "AVAILABLE" : "LOCKED"} - ${escapeHtml(status.approach.label)} (${escapeHtml(status.approach.branchLabel)})</strong>
-          <span>${escapeHtml(status.approach.summary)}</span>
-          <span>${escapeHtml(status.available ? status.unlockText : status.lockedReason)}</span>
-        </li>
-      `).join("")}
-    </ul>
-  `;
-}
-
-function getServiceRepairMethodCheckModifiers(check) {
-  const method = getServiceRepairApproachById(state.flags.serviceRepairMethod);
-  const modifier = method?.checkModifiers?.[check?.id] || method?.checkModifiers?.[check?.contextId];
-  if (!modifier) return [];
-  return [normalizeTaskModifier({
-    id: `service-repair-${method.id}`,
-    label: method.label,
-    source: `${method.branchLabel} approach: ${method.summary}`,
-    statDelta: modifier.statDelta || 0,
-    energyDelta: modifier.energyDelta || 0,
-    consumesOnUse: false,
-    resultText: modifier.resultText || `${method.label} changed this field check.`,
-  })];
 }
 
 function showServiceDiagnosticFinding(evidenceId, {
@@ -364,6 +264,7 @@ function showServiceDiagnosticFinding(evidenceId, {
       ${intro ? `<p>${escapeHtml(intro)}</p>` : ""}
       <p><strong>${escapeHtml(evidence.label)}:</strong> ${escapeHtml(evidence.summary)}</p>
       ${revealedCondition ? `<p class="muted">This finding exposes room pressure: ${escapeHtml(revealedCondition.label)}.</p>` : ""}
+      ${getServiceAppointmentMarkup()}
       ${getServiceDiagnosticEvidenceMarkup()}
       ${getServiceRoomConditionMarkup()}
     `,
@@ -386,6 +287,7 @@ function showServiceDiagnosisChoice() {
       <p>The display is failing, but the room may contain a second problem. You can commit now or return to the room and gather more findings first.</p>
       ${getCharacterLine("serviceInspect") ? `<p class="muted">${getCharacterLine("serviceInspect")}</p>` : ""}
       ${state.flags.servicePreparation === "review" ? `<p class="muted">Reviewing the forwarded email chain made one part of the room less mysterious.</p>` : ""}
+      ${getServiceAppointmentMarkup()}
       ${getServiceDiagnosticEvidenceMarkup()}
       ${getServiceRoomConditionMarkup()}
       ${getServiceRepairApproachMarkup(statuses)}
@@ -527,13 +429,14 @@ function getServiceAdjustedCheck(check) {
   if (!check) return check;
   const effects = getServiceConditionCheckEffects(check);
   const repairMethodModifiers = getServiceRepairMethodCheckModifiers(check);
+  const appointmentModifiers = getServiceAppointmentTaskModifiers(check);
   const conditionNotes = [
     ...effects.knownLabels.map((label) => `Known pressure: ${label}`),
     effects.hiddenCount ? `${effects.hiddenCount} hidden room pressure${effects.hiddenCount === 1 ? "" : "s"}` : "",
   ].filter(Boolean);
   return {
     ...check,
-    taskModifiers: [...(check.taskModifiers || []), ...effects.modifiers, ...repairMethodModifiers],
+    taskModifiers: [...(check.taskModifiers || []), ...effects.modifiers, ...repairMethodModifiers, ...appointmentModifiers],
     detail: `${check.detail || ""}${conditionNotes.length ? ` Room condition: ${conditionNotes.join("; ")}.` : ""}`,
   };
 }
@@ -577,6 +480,7 @@ function showServiceClientContext() {
     return showServiceDiagnosticEvidenceReview();
   }
   state.flags.serviceClientContext = true;
+  spendServiceActionTime("client-symptom-timeline", getServiceActionMinutes("client-symptom-timeline"), "Asked the client for the symptom timeline");
   changeEnergy(-1);
   showServiceDiagnosticFinding("client-symptom-timeline", {
     kicker: "Client Context",
@@ -590,6 +494,7 @@ function showServiceClientContext() {
 function inspectServiceSignalPathFinding() {
   if (!state.flags.serviceInspected) return notify("Inspect the failed display before tracing the room path.");
   if (hasServiceDiagnosticEvidence("inline-coupler-path")) return showServiceDiagnosticEvidenceReview();
+  spendServiceActionTime("inline-coupler-path", getServiceActionMinutes("inline-coupler-path"), "Traced the room signal path");
   showServiceDiagnosticFinding("inline-coupler-path", {
     kicker: "Signal Path",
     title: "The Labels Disagree",
@@ -614,6 +519,7 @@ function pickUpServiceReplacementGear() {
 function inspectServiceReplacementGearFinding() {
   if (!state.flags.serviceInspected) return notify("Inspect the failed display before opening replacement gear.");
   if (hasServiceDiagnosticEvidence("replacement-kit-fit")) return pickUpServiceReplacementGear();
+  spendServiceActionTime("replacement-kit-fit", getServiceActionMinutes("replacement-kit-fit"), "Inspected the replacement package");
   showServiceDiagnosticFinding("replacement-kit-fit", {
     kicker: "Replacement Gear",
     title: "Present Does Not Mean Proven",
@@ -902,6 +808,7 @@ function showServiceConditionResponseChoice(conditionId) {
     title: condition.label,
     body: `
       <p>${escapeHtml(condition.revealedSummary || condition.summary || condition.hiddenSummary || "")}</p>
+      ${getServiceAppointmentMarkup()}
       ${getServiceConditionChoicePressureMarkup(condition, options)}
       <p class="muted">Handling a room condition can prevent callback pressure. Leaving it saves energy but keeps the risk alive.</p>
     `,
@@ -921,7 +828,18 @@ function resolveServiceConditionResponse(conditionId, optionId, rollOverride = n
   if (state.flags.serviceComplete) return notify("The service call is already closed out.");
   if (getServiceConditionResolution(conditionId)) return notify("That room pressure already has a response.");
 
-  const { rollResult, incidentHappened, controlled } = resolvePressureResponseOutcome(option, rollOverride);
+  const timeKind = option.incidentChance ? "condition-quick" : option.controlled ? "condition-careful" : "";
+  spendServiceActionTime(
+    `condition:${conditionId}:${option.id}`,
+    getServiceActionMinutes(timeKind),
+    `${option.label} response`,
+  );
+  const appointmentPhase = getServiceAppointmentPhase();
+  const pressureAdded = option.incidentChance ? (appointmentPhase.id === "late" ? 0.2 : appointmentPhase.id === "tight" ? 0.1 : 0) : 0;
+  const adjustedOption = pressureAdded
+    ? { ...option, incidentChance: Math.min(0.9, option.incidentChance + pressureAdded) }
+    : option;
+  const { rollResult, incidentHappened, controlled } = resolvePressureResponseOutcome(adjustedOption, rollOverride);
   const resultDetail = incidentHappened
     ? recordServiceRoomIncident(condition, option, rollResult)
     : option.result;
@@ -946,6 +864,7 @@ function resolveServiceConditionResponse(conditionId, optionId, rollOverride = n
     title: incidentHappened ? "Immediate Problem" : controlled ? "Pressure Controlled" : "Risk Carried Forward",
     body: `
       <p>${escapeHtml(resultDetail)}</p>
+      ${getServiceAppointmentMarkup()}
       ${rollResult ? `<p class="muted"><strong>Incident roll:</strong> ${formatServiceIncidentChance(rollResult.chance)} chance, rolled ${Math.round(rollResult.roll * 100)}%. ${incidentHappened ? "The risk happened in the room." : "The quick action held this time."}</p>` : ""}
       ${getServiceRoomConditionMarkup()}
       <p class="muted">${controlled ? "This condition will not add callback pressure at closeout unless another problem remains." : "This condition can still become a return-trip risk when the room is closed out."}</p>
@@ -1025,6 +944,7 @@ function showServiceIncidentRecoveryOptions(incidentId) {
     title: incident.conditionLabel,
     body: `
       <p>${escapeHtml(incident.detail)}</p>
+      ${getServiceAppointmentMarkup()}
       ${getChoicePressureMarkup(options.map((option) => ({ label: option.label, detail: option.detail })))}
       <p class="muted">A recovery choice changes the current room state before closeout.</p>
     `,
@@ -1044,6 +964,12 @@ function resolveServiceIncidentRecovery(incidentId, optionId) {
   if (incident.recovered) return notify("That room incident is already recovered.");
   if (incident.recoveryAction) return notify("That room incident already has a recovery decision.");
 
+  const timeKind = option.id === "stabilize" ? "incident-stabilize" : option.id === "calm-client" ? "incident-calm-client" : "";
+  spendServiceActionTime(
+    `incident:${incidentId}:${option.id}`,
+    getServiceActionMinutes(timeKind),
+    `${option.label} recovery`,
+  );
   if (option.energyCost) changeEnergy(-option.energyCost);
   applyReputationDelta(option.reputation || {});
   if (option.stat) state.stats[option.stat] = (state.stats[option.stat] || 0) + 1;
@@ -1186,6 +1112,7 @@ function showServiceResults() {
   const strainedVerification = verifiedSignalPath && state.flags.serviceVerificationStrained;
   const unresolvedConditions = getUnresolvedServiceRoomConditions();
   const immediateIncidents = getOpenServiceRoomIncidents();
+  const appointmentPhase = getServiceAppointmentPhase();
   const serviceReturnRisk = Boolean(state.flags.serviceInstallStrained) || unresolvedConditions.length > 0 || immediateIncidents.length > 0;
   const openPressureLabels = [
     ...unresolvedConditions.map((condition) => condition.label),
@@ -1275,10 +1202,11 @@ function showServiceResults() {
         <span>Diagnosis</span><strong>${diagnosisLabel}</strong>
         <span>Return-trip risk</span><strong>${serviceReturnRisk ? "Possible" : "Controlled"}</strong>
       </div>
+      ${getServiceAppointmentMarkup()}
       ${getServiceRoomConditionMarkup({ revealAll: true })}
       <p class="muted">${serviceRiskDetail}</p>
       ${getCloseoutConsequenceMarkup(closeoutConsequences)}
-      <blockquote>Client note: "Thank you for fixing the display before the afternoon meeting.${checkedSignalPath ? " The cable notes are helpful." : strainedVerification ? " The room is working, though the notes are light." : ""}"</blockquote>
+      <blockquote>Client note: "${appointmentPhase.id === "late" ? "The room came back after our meeting window had already started." : appointmentPhase.id === "tight" ? "Thank you for getting the room back as the next meeting arrived." : "Thank you for fixing the display before the afternoon meeting."}${checkedSignalPath ? " The cable notes are helpful." : strainedVerification ? " The room is working, though the notes are light." : ""}"</blockquote>
       ${getReturnPortalCloseoutNoteMarkup()}
     `,
     actions: [getCloseoutReturnAction(content.serviceDispatch.title, "Returned to Radnor Rack & Wire after the Conshohocken service call.", {
@@ -1293,7 +1221,15 @@ function showServiceResults() {
 }
 
 function applyServiceRepairMethodImmediateEffects(method) {
-  if (!method?.controlsConditionId) return;
+  if (!method) return;
+  if (method.appointmentExtensionMinutes && !state.flags.serviceAppointmentExtensionMinutes) {
+    const beforePhase = getServiceAppointmentPhase();
+    state.flags.serviceAppointmentExtensionMinutes = method.appointmentExtensionMinutes;
+    const afterPhase = getServiceAppointmentPhase();
+    addLog(`${method.label} created a more workable room handoff window.`);
+    if (beforePhase.id !== afterPhase.id) addLog(`Client schedule changed: ${afterPhase.label}. ${afterPhase.summary}`);
+  }
+  if (!method.controlsConditionId) return;
   const activeCondition = getActiveServiceRoomConditions({ applyPreparation: false })
     .find((condition) => condition.id === method.controlsConditionId);
   if (activeCondition) {
@@ -1338,6 +1274,7 @@ function resolveServiceVerificationMethod(method) {
       <p>${escapeHtml(method.summary)}</p>
       <p>${check.detail}</p>
       ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
+      ${getServiceAppointmentMarkup()}
       ${getServiceRoomConditionMarkup()}
       <p class="muted">The replacement display and hardware still need to be installed before closeout.</p>
     `,
@@ -1354,8 +1291,27 @@ function chooseServiceRepairMethod(methodId) {
   ensureServiceRoomConditions();
   state.flags.serviceRepairMethod = method.id;
   state.flags.serviceApproach = method.canonicalApproach;
+  spendServiceActionTime(`repair:${method.id}`, getServiceRepairMinutes(method.id), method.label);
   applyServiceRepairMethodImmediateEffects(method);
+  const appointmentIncident = getServiceRiskyRepairIncident(method);
   addLog(`Service method selected: ${method.label} (${method.branchLabel}).`);
+  if (appointmentIncident?.happened) {
+    render();
+    return showModal({
+      kicker: "Immediate Room Pressure",
+      title: "The Quick Repair Collided With The Schedule",
+      body: `
+        <p>${escapeHtml(appointmentIncident.detail)}</p>
+        ${getServiceAppointmentMarkup()}
+        ${getServiceRoomIncidentMarkup()}
+        <p class="muted">The repair can continue, but the visible problem can also be recovered before closeout.</p>
+      `,
+      actions: [
+        { label: "Recover The Room", onClick: showServiceIncidentRecoveryChoice },
+        { label: "Continue The Swap", className: "secondary-button", onClick: render },
+      ],
+    });
+  }
   if (method.canonicalApproach === "verify") return resolveServiceVerificationMethod(method);
   if (method.id === "ticket-swap") {
     addLog("Trusted the service ticket and started the display swap immediately.");
@@ -1382,6 +1338,12 @@ function installServicePart() {
   if (!hasCarriedItems()) return notify("Pick up replacement gear from the boxes.");
   ensureServiceRoomConditions();
   const items = [...state.carry];
+  const installActionId = `install:${items.slice().sort().join("-")}`;
+  spendServiceActionTime(
+    installActionId,
+    getServiceActionMinutes("install-item") * items.length,
+    `Installed ${getServiceItemLabels(items).join(" and ")}`,
+  );
   const check = getServiceAdjustedCheck(getServiceInstallCheck(items));
   const { skillCheck, energyCost } = resolveFieldTaskCheck({
     check,
@@ -1412,6 +1374,7 @@ function installServicePart() {
       body: `
         <p>${check.detail}</p>
         ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
+        ${getServiceAppointmentMarkup()}
         ${getServiceRoomConditionMarkup()}
         <p class="muted">The replacement is installed. Review any visible room pressure, then walk back to the client to close out the call.</p>
       `,
@@ -1425,6 +1388,7 @@ function installServicePart() {
     body: `
       <p>${check.detail}</p>
       ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
+      ${getServiceAppointmentMarkup()}
       ${getServiceRoomConditionMarkup()}
     `,
     actions: [{ label: "Keep Working", onClick: render }],

@@ -1657,6 +1657,48 @@ async function clickButton(page, name) {
     assert(serviceBuildApproaches.clientPressureControlled, "The social method should control known client-time pressure");
     assert(/Client Communication|Negotiate a verification window/i.test(serviceBuildApproaches.socialResultText), "Specialized result UI should explain which build method changed the check");
 
+    const serviceAppointmentFlow = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("serviceOffice");
+      state.clock = "TUE 10:20 AM";
+      state.flags.serviceRoomConditions = ["mislabeled-input", "loose-mount-hardware"];
+      state.flags.serviceKnownRoomConditions = [];
+      window.getInteractions().find((interaction) => interaction.id === "service-client")?.action();
+      window.closeModal();
+      window.render();
+      window.getInteractions().find((interaction) => interaction.id === "service-display")?.action();
+      const diagnosisText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const phaseAfterInspection = window.getServiceAppointmentPhase();
+      let incidentSeed = 1;
+      while (window.getSeededUnit(incidentSeed, "appointment:ticket-swap:tight") >= 0.35) incidentSeed += 1;
+      state.flags.serviceRoomSeed = incidentSeed;
+      window.chooseServiceRepairMethod("ticket-swap");
+      const incidentText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const installCheck = window.getServiceAdjustedCheck(window.getServiceInstallCheck(["replacement-display"]));
+      const migrated = window.migrateSavedGame(JSON.parse(JSON.stringify(window.serializeGame())));
+      return {
+        clock: state.clock,
+        phase: phaseAfterInspection.id,
+        diagnosisText,
+        incidentText,
+        incidentCount: state.flags.serviceRoomIncidents?.length || 0,
+        recoverableCount: window.getRecoverableServiceRoomIncidents().length,
+        objective: window.getObjective(),
+        timedActionIds: state.flags.serviceTimedActions.map((entry) => entry.id),
+        migratedTimedActionIds: migrated.flags.serviceTimedActions.map((entry) => entry.id),
+        appointmentModifier: installCheck.taskModifiers.find((modifier) => modifier.id === "service-appointment-tight") || null,
+      };
+    });
+    assert(serviceAppointmentFlow.phase === "tight" && serviceAppointmentFlow.diagnosisText.includes("Schedule Tightening"), "Investigation time should visibly move the service call into a tighter client schedule");
+    assert(!/% chance|rolled \d+%/i.test(serviceAppointmentFlow.diagnosisText), "Repair selection should keep hidden incident odds out of the pre-action UI");
+    assert(serviceAppointmentFlow.incidentCount === 1 && serviceAppointmentFlow.recoverableCount === 1, "A rushed repair under schedule pressure should be able to create one recoverable room incident");
+    assert(/quick repair collided|visible dropout|client handoff/i.test(serviceAppointmentFlow.incidentText), "Immediate repair pressure should be explained in the room result modal");
+    assert(serviceAppointmentFlow.objective.includes("Recover the visible room incident"), "Immediate schedule pressure should take over the current objective");
+    assert(serviceAppointmentFlow.appointmentModifier?.energyDelta === 1, "Tight appointment pressure should reach the existing field-task modifier layer");
+    assert(serviceAppointmentFlow.timedActionIds.includes("client-check-in") && serviceAppointmentFlow.timedActionIds.includes("display-failure-pattern") && serviceAppointmentFlow.timedActionIds.includes("repair:ticket-swap"), "Service timing should record each resolved room action once");
+    assert(JSON.stringify(serviceAppointmentFlow.migratedTimedActionIds) === JSON.stringify(serviceAppointmentFlow.timedActionIds), "Service timing history should survive save migration");
+
     const serviceConditionChoices = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;

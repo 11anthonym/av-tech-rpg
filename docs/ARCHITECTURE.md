@@ -38,6 +38,9 @@ app.
   helpers stay in their matching system files.
 - Job-pressure helpers hold small reusable pieces for seeded condition rolls,
   readable odds, immediate incident rolls, and stable incident IDs.
+- Service-diagnostic helpers own the Conshohocken repair presentation and
+  appointment-pressure rules; the service dispatch file still orchestrates
+  the job-specific room sequence, incidents, install, and closeout.
 - Job-specific field flows stay in their dispatch system files until they share
   enough behavior to justify a deeper extraction.
 

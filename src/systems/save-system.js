@@ -86,6 +86,26 @@ function normalizeServiceDiagnosticEvidenceEntries(entries = []) {
     : [];
 }
 
+function normalizeServiceTimedActionEntries(entries = []) {
+  const seen = new Set();
+  return Array.isArray(entries)
+    ? entries
+      .filter((entry) => {
+        if (!entry || typeof entry.id !== "string" || !entry.id || seen.has(entry.id)) return false;
+        seen.add(entry.id);
+        return true;
+      })
+      .map((entry) => ({
+        id: entry.id,
+        minutes: Math.max(0, Math.min(240, Number(entry.minutes) || 0)),
+        label: entry.label || "Saved service work",
+        clockBefore: entry.clockBefore || "",
+        clockAfter: entry.clockAfter || "",
+      }))
+      .slice(0, 50)
+    : [];
+}
+
 function migrateServiceDiagnosticEvidence(flags = {}) {
   const entries = normalizeServiceDiagnosticEvidenceEntries(flags.serviceDiagnosticEvidence);
   const validRepairMethodIds = new Set((content.serviceDispatch?.repairApproaches || []).map((approach) => approach.id));
@@ -102,6 +122,11 @@ function migrateServiceDiagnosticEvidence(flags = {}) {
   if (!flags.serviceRepairMethod && flags.serviceApproach === "verify") flags.serviceRepairMethod = "verify-path";
   if (!flags.serviceRepairMethod && flags.serviceApproach === "rush") flags.serviceRepairMethod = "ticket-swap";
   flags.serviceDiagnosticEvidence = entries;
+  flags.serviceTimedActions = normalizeServiceTimedActionEntries(flags.serviceTimedActions);
+  const extension = Number(flags.serviceAppointmentExtensionMinutes) || 0;
+  if (flags.serviceRepairMethod === "negotiate-verification-window" && extension > 0) {
+    flags.serviceAppointmentExtensionMinutes = Math.min(60, extension);
+  } else delete flags.serviceAppointmentExtensionMinutes;
 }
 
 function migrateSavedGame(savedGame) {

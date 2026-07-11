@@ -229,7 +229,10 @@ steps connect those findings to investigation order, repair approaches, time
 pressure, verification, and adaptive closeout. Do not begin another roadmap
 lane until Step 6 closes this proof case.
 
-**Current status:** Steps 1 through 3 are complete. The service room supports an
-optional findings phase, then offers universal and build-specific repair
-methods. Step 4 is the next boundary: make investigation and repair actions
-consume time and change client pressure in the room.
+**Current status:** Steps 1 through 4 are complete. The service room supports an
+optional findings phase, universal and build-specific repair methods, and a
+saved appointment-pressure path driven by the visible workday clock. Careful
+investigation can squeeze the client handoff, rushed work can create a
+recoverable problem in the room, and negotiation can buy time. Step 5 is the
+next boundary: make verification expose weak diagnosis before closeout and
+make the final handoff summarize the actual path through the room.

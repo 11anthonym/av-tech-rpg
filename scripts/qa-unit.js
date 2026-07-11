@@ -1299,6 +1299,96 @@ test("Conshohocken repair approaches unlock different verbs for different techni
   assert.equal(result.socialState.clientPressureControlled, true);
 });
 
+test("Conshohocken appointment pressure trades diagnostic certainty for client time", () => {
+  const result = readGameJson(`(() => {
+    Object.assign(state, createInitialState());
+    state.technician = content.technicians.find((technician) => technician.id === "prototype-tech");
+    state.sceneId = "serviceOffice";
+    state.flags.currentAreaId = "serviceOffice";
+    state.clock = "TUE 9:14 AM";
+    const calm = getServiceAppointmentPhase();
+    const firstSpend = spendServiceActionTime("unit-display", 25, "Unit display inspection");
+    const repeatedSpend = spendServiceActionTime("unit-display", 25, "Repeated unit display inspection");
+    const clockAfterRepeat = state.clock;
+
+    state.clock = "TUE 11:15 AM";
+    const tight = getServiceAppointmentPhase();
+    const tightCheck = getServiceAdjustedCheck(getServiceCheckById("signal-path"));
+    state.clock = "TUE 1:05 PM";
+    const late = getServiceAppointmentPhase();
+    const lateCheck = getServiceAdjustedCheck(getServiceCheckById("signal-path"));
+    state.flags.serviceRoomConditions = ["client-time-pressure"];
+    state.flags.serviceKnownRoomConditions = ["client-time-pressure"];
+    const incident = getServiceRiskyRepairIncident(getServiceRepairApproachById("ticket-swap"), 0);
+
+    Object.assign(state, createInitialState());
+    state.technician = content.technicians.find((technician) => technician.id === "morgan");
+    state.sceneId = "serviceOffice";
+    state.flags.currentAreaId = "serviceOffice";
+    state.clock = "TUE 10:45 AM";
+    state.flags.serviceRoomConditions = ["client-time-pressure"];
+    state.flags.serviceKnownRoomConditions = ["client-time-pressure"];
+    const beforeNegotiation = getServiceAppointmentPhase();
+    applyServiceRepairMethodImmediateEffects(getServiceRepairApproachById("negotiate-verification-window"));
+    const afterNegotiation = getServiceAppointmentPhase();
+
+    const migrated = migrateSavedGame({
+      version: 26,
+      technicianId: "prototype-tech",
+      sceneId: "serviceOffice",
+      flags: {
+        serviceRepairMethod: "negotiate-verification-window",
+        serviceAppointmentExtensionMinutes: 500,
+        serviceTimedActions: [
+          { id: "display", minutes: 25, label: "Display", clockBefore: "TUE 9:14 AM", clockAfter: "TUE 9:39 AM" },
+          { id: "display", minutes: 999 },
+          null,
+          { id: "signal", minutes: -4 },
+        ],
+      },
+    });
+    const staleExtension = migrateSavedGame({
+      version: 26,
+      technicianId: "prototype-tech",
+      sceneId: "serviceOffice",
+      flags: { serviceRepairMethod: "ticket-swap", serviceAppointmentExtensionMinutes: 30 },
+    });
+
+    return {
+      phaseIds: [calm.id, tight.id, late.id],
+      firstSpend,
+      repeatedSpend,
+      clockAfterRepeat,
+      timedActionCount: getServiceTimedActionEntries().length,
+      tightModifier: tightCheck.taskModifiers.find((modifier) => modifier.id === "service-appointment-tight"),
+      lateModifier: lateCheck.taskModifiers.find((modifier) => modifier.id === "service-appointment-late"),
+      incident,
+      beforeNegotiation: beforeNegotiation.id,
+      afterNegotiation: afterNegotiation.id,
+      extension: state.flags.serviceAppointmentExtensionMinutes,
+      migratedActions: migrated.flags.serviceTimedActions,
+      migratedExtension: migrated.flags.serviceAppointmentExtensionMinutes,
+      staleExtension: staleExtension.flags.serviceAppointmentExtensionMinutes || 0,
+    };
+  })()`);
+
+  assert.deepEqual(result.phaseIds, ["calm", "tight", "late"]);
+  assert.equal(result.firstSpend.clockAfter, "TUE 9:39 AM");
+  assert.deepEqual(result.repeatedSpend, result.firstSpend);
+  assert.equal(result.clockAfterRepeat, "TUE 9:39 AM");
+  assert.equal(result.tightModifier.energyDelta, 1);
+  assert.equal(result.lateModifier.statDelta, -1);
+  assert.equal(result.incident.happened, true);
+  assert.equal(result.incident.phase.id, "late");
+  assert.match(result.incident.detail, /waiting meeting|visible dropout/i);
+  assert.equal(result.beforeNegotiation, "tight");
+  assert.equal(result.afterNegotiation, "calm");
+  assert.equal(result.extension, 30);
+  assert.deepEqual(result.migratedActions.map((entry) => [entry.id, entry.minutes]), [["display", 25], ["signal", 0]]);
+  assert.equal(result.migratedExtension, 60);
+  assert.equal(result.staleExtension, 0);
+});
+
 test("Conshohocken diagnostic evidence is data-backed, idempotent, and save-safe", () => {
   const result = readGameJson(`(() => {
     Object.assign(state, createInitialState());

@@ -327,6 +327,7 @@ function getInteractions() {
           if (state.flags.serviceBrief) return showServiceClientContext();
           state.flags.serviceBrief = true;
           ensureServiceRoomConditions();
+          spendServiceActionTime("client-check-in", getServiceActionMinutes("client-check-in"), "Checked in with the client");
           addLog("Client confirmed the display failed during the morning meeting.");
           showModal({
             kicker: "Client Contact",
@@ -432,6 +433,7 @@ function getInteractions() {
           if (!state.flags.serviceInspected) {
             state.flags.serviceInspected = true;
             ensureServiceRoomConditions();
+            spendServiceActionTime("display-failure-pattern", getServiceActionMinutes("display-failure-pattern"), "Inspected the failed display");
             discoverServiceDiagnosticEvidence("display-failure-pattern", "Failed display");
             revealServiceConditionFromDiagnosticEvidence("display-failure-pattern", "Display inspection");
             const diagnosisCost = getServiceDiagnosisEnergyCost(3);

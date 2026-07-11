@@ -53,7 +53,7 @@ meaningfully different methods, not only different numeric bonuses.
 
 ## Step 4: Time And Immediate Pressure
 
-**Status:** Not started.
+**Status:** Complete.
 
 - Begin with a behavior-preserving extraction of the now-proven diagnostic and
   repair-presentation helpers if adding time logic would keep growing the
@@ -120,3 +120,13 @@ same existing dispatch.
   hardware method modifies the install task, locked methods explain their
   evidence/build requirements, and save-version 26 preserves canonical
   verify/rush behavior for older careers. Full QA passed.
+- 2026-07-11: Step 4 extracted repair presentation and appointment-pressure
+  helpers into `service-diagnostic-system.js`. Diagnostic, repair, pressure,
+  recovery, and install actions now advance the visible workday clock once.
+  The one-o'clock handoff moves through room-available, schedule-tightening,
+  and meeting-in-progress states; tight and late states use the existing task
+  modifier layer. Rushed repair methods can create a seeded, recoverable
+  client-facing incident, while the client-communication method can negotiate
+  a more workable handoff window. Save version 27 normalizes timing history and
+  preserves valid extensions. Pre-action timing and odds stay qualitative;
+  resolved actions record exact clock and incident results. Full QA passed.
