@@ -1791,6 +1791,14 @@ another finding or a return to CHOOSE, completed markers remember inspected
 sources, and only related findings expose related room conditions. This step
 does not yet add new repair methods or a service timer.
 
+Conshohocken build-method pass: room findings can now unlock repair verbs based
+on the technician rather than only changing a hidden score. Wiley can trace the
+coupler or stage a hands-on swap, Casey and Jordan can build a labeled path
+note, Jordan and Wiley can isolate the coupler, and Alex or Morgan can negotiate
+a client verification window. Universal verify and ticket-swap paths remain
+available. Locked methods state the missing finding or build requirement, and
+the result identifies the skill or task modifier that actually changed.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

@@ -1451,6 +1451,98 @@ window.GAME_CONTENT = {
         conditionIds: ["flaky-replacement-display", "loose-mount-hardware"],
       },
     ],
+    repairApproaches: [
+      {
+        id: "verify-path",
+        label: "Verify the signal path",
+        branchLabel: "Universal",
+        canonicalApproach: "verify",
+        summary: "Use the standard troubleshooting process before treating the display as the whole fault.",
+      },
+      {
+        id: "ticket-swap",
+        label: "Trust the ticket and swap",
+        branchLabel: "Universal",
+        canonicalApproach: "rush",
+        summary: "Take the faster management-friendly path while accepting the room uncertainty.",
+      },
+      {
+        id: "isolate-coupler",
+        label: "Trace and isolate the coupler",
+        branchLabel: "Troubleshooting",
+        canonicalApproach: "verify",
+        summary: "Use the conflicting path evidence to isolate the coupler before replacing hardware.",
+        requiredEvidenceIds: ["display-failure-pattern", "inline-coupler-path"],
+        unlockAny: [{ skillId: "troubleshooting", minimum: 4 }],
+        verificationSkillId: "troubleshooting",
+        checkModifiers: {
+          "signal-path": {
+            statDelta: 2,
+            resultText: "The coupler finding narrowed the signal-path check before hardware moved.",
+          },
+        },
+      },
+      {
+        id: "stage-clean-swap",
+        label: "Stage a clean hardware swap",
+        branchLabel: "Install",
+        canonicalApproach: "rush",
+        summary: "Organize and fit the known replacement package instead of spending the first effort on signal verification.",
+        requiredEvidenceIds: ["display-failure-pattern", "replacement-kit-fit"],
+        unlockAny: [
+          { skillId: "install", minimum: 4 },
+          { toolId: "drill" },
+          { traitId: "residentialInstinct" },
+        ],
+        checkModifiers: {
+          "service-install": {
+            statDelta: 2,
+            energyDelta: -2,
+            resultText: "The staged hardware finding made the replacement package easier to land cleanly.",
+          },
+        },
+      },
+      {
+        id: "negotiate-verification-window",
+        label: "Negotiate a verification window",
+        branchLabel: "Client Communication",
+        canonicalApproach: "verify",
+        summary: "Set a calm expectation with the client, then prove the room without pretending the meeting pressure disappeared.",
+        requiredEvidenceIds: ["client-symptom-timeline", "display-failure-pattern"],
+        unlockAny: [
+          { skillId: "clientCommunication", minimum: 4 },
+          { traitId: "calmUnderFire" },
+        ],
+        verificationSkillId: "clientCommunication",
+        controlsConditionId: "client-time-pressure",
+        checkModifiers: {
+          "signal-path": {
+            statDelta: 1,
+            resultText: "The client-approved verification window reduced social pressure during the room check.",
+          },
+        },
+      },
+      {
+        id: "label-and-prove-path",
+        label: "Build a labeled path note",
+        branchLabel: "Documentation",
+        canonicalApproach: "verify",
+        summary: "Turn the conflicting labels into a usable path record while proving what actually reaches the display.",
+        requiredEvidenceIds: ["display-failure-pattern", "inline-coupler-path"],
+        unlockAny: [
+          { skillId: "documentation", minimum: 3 },
+          { toolId: "labeler" },
+          { traitId: "notebookHabit" },
+        ],
+        verificationSkillId: "documentation",
+        checkModifiers: {
+          "signal-path": {
+            statDelta: 1,
+            resultText: "The labeled path note turned conflicting room labels into usable verification evidence.",
+          },
+        },
+      },
+    ],
     taskCards: [
       {
         title: "Signal Path",

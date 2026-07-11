@@ -1610,6 +1610,53 @@ async function clickButton(page, name) {
     assert(serviceInvestigationWindow.completedMarkers.includes("CLIENT") && serviceInvestigationWindow.completedMarkers.includes("TRACE"), "Completed room findings should remain visible on their markers");
     assert(/room finding|service approach/i.test(serviceInvestigationWindow.objectiveAfter), "Findings should remain optional before the approach is selected");
 
+    const serviceBuildApproaches = await page.evaluate(() => {
+      const prepare = (technicianId) => {
+        window.startGame(technicianId);
+        const state = window.AV_TECH_RPG_DEBUG.state;
+        window.enterScene("serviceOffice");
+        state.flags.serviceBrief = true;
+        state.flags.serviceInspected = true;
+        state.flags.serviceRoomConditions = ["client-time-pressure", "loose-mount-hardware"];
+        state.flags.serviceKnownRoomConditions = ["client-time-pressure", "loose-mount-hardware"];
+        state.flags.serviceDiagnosticEvidence = window.GAME_CONTENT.serviceDispatch.diagnosticEvidence
+          .map((evidence) => ({ id: evidence.id, source: "Smoke findings", clock: "" }));
+        window.showServiceDiagnosisChoice();
+        return {
+          state,
+          text: document.querySelector("#modal-backdrop")?.innerText || "",
+          buttons: [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent),
+        };
+      };
+
+      const wiley = prepare("wiley");
+      const wileyResult = { text: wiley.text, buttons: wiley.buttons };
+      const casey = prepare("organized-rookie");
+      const caseyResult = { text: casey.text, buttons: casey.buttons };
+      const morgan = prepare("morgan");
+      const morganResult = { text: morgan.text, buttons: morgan.buttons };
+      window.closeModal();
+      window.chooseServiceRepairMethod("negotiate-verification-window");
+      const socialResultText = document.querySelector("#modal-backdrop")?.innerText || "";
+      return {
+        wiley: wileyResult,
+        casey: caseyResult,
+        morgan: morganResult,
+        socialResultText,
+        socialMethod: morgan.state.flags.serviceRepairMethod,
+        socialSkill: morgan.state.flags.fieldTaskResults?.["service-signal-path"]?.skillId || "",
+        clientPressureControlled: Boolean(morgan.state.flags.serviceConditionResolutions?.["client-time-pressure"]?.controlled),
+      };
+    });
+    assert(serviceBuildApproaches.wiley.buttons.includes("Trace and isolate the coupler") && serviceBuildApproaches.wiley.buttons.includes("Stage a clean hardware swap"), "Wiley should receive troubleshooting and hands-on service methods");
+    assert(serviceBuildApproaches.casey.buttons.includes("Build a labeled path note") && !serviceBuildApproaches.casey.buttons.includes("Stage a clean hardware swap"), "Casey should receive the documentation method without an unearned install method");
+    assert(serviceBuildApproaches.morgan.buttons.includes("Negotiate a verification window"), "Morgan should receive the client-communication method");
+    assert(serviceBuildApproaches.morgan.buttons.includes("Verify the signal path") && serviceBuildApproaches.morgan.buttons.includes("Trust the ticket and swap"), "Universal service methods should remain available to every build");
+    assert(/LOCKED - Trace and isolate the coupler/i.test(serviceBuildApproaches.morgan.text), "Unavailable specialized methods should remain readable with locked reasons");
+    assert(serviceBuildApproaches.socialMethod === "negotiate-verification-window" && serviceBuildApproaches.socialSkill === "clientCommunication", "The social method should resolve through Client Communication rather than a renamed troubleshooting bonus");
+    assert(serviceBuildApproaches.clientPressureControlled, "The social method should control known client-time pressure");
+    assert(/Client Communication|Negotiate a verification window/i.test(serviceBuildApproaches.socialResultText), "Specialized result UI should explain which build method changed the check");
+
     const serviceConditionChoices = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;

@@ -88,6 +88,7 @@ function normalizeServiceDiagnosticEvidenceEntries(entries = []) {
 
 function migrateServiceDiagnosticEvidence(flags = {}) {
   const entries = normalizeServiceDiagnosticEvidenceEntries(flags.serviceDiagnosticEvidence);
+  const validRepairMethodIds = new Set((content.serviceDispatch?.repairApproaches || []).map((approach) => approach.id));
   if (flags.serviceClientContext && !entries.some((entry) => entry.id === "client-symptom-timeline")) {
     entries.push({ id: "client-symptom-timeline", source: "Saved client context", clock: "" });
   }
@@ -97,6 +98,9 @@ function migrateServiceDiagnosticEvidence(flags = {}) {
   if (flags.serviceApproach === "verify" && !entries.some((entry) => entry.id === "inline-coupler-path")) {
     entries.push({ id: "inline-coupler-path", source: "Saved signal-path verification", clock: "" });
   }
+  if (flags.serviceRepairMethod && !validRepairMethodIds.has(flags.serviceRepairMethod)) delete flags.serviceRepairMethod;
+  if (!flags.serviceRepairMethod && flags.serviceApproach === "verify") flags.serviceRepairMethod = "verify-path";
+  if (!flags.serviceRepairMethod && flags.serviceApproach === "rush") flags.serviceRepairMethod = "ticket-swap";
   flags.serviceDiagnosticEvidence = entries;
 }
 

@@ -41,7 +41,7 @@ and the room visibly remembers what they inspected.
 
 ## Step 3: Repair Approaches And Build Identity
 
-**Status:** Not started.
+**Status:** Complete.
 
 - Add a small repair-approach set driven by current findings.
 - Let tools, skills, traits, prep, or Josh support unlock distinct approaches.
@@ -55,6 +55,9 @@ meaningfully different methods, not only different numeric bonuses.
 
 **Status:** Not started.
 
+- Begin with a behavior-preserving extraction of the now-proven diagnostic and
+  repair-presentation helpers if adding time logic would keep growing the
+  service dispatch controller.
 - Give diagnostic and repair actions internal time costs.
 - Let the approaching client meeting move through calm, tight, and late states.
 - Make premature or risky actions capable of changing the room immediately.
@@ -110,3 +113,10 @@ same existing dispatch.
   existing verify/trust approach. Finding markers retain completed state,
   related findings reveal related room pressure, and no repair outcome or
   hidden probability changed. Full static, unit, and browser QA passed.
+- 2026-07-10: Step 3 added six data-backed repair methods. Every technician
+  retains universal verify and ticket-swap paths; specialized findings can
+  unlock troubleshooting, install, client-communication, or documentation
+  methods. Specialized verification uses the named build skill, the staged
+  hardware method modifies the install task, locked methods explain their
+  evidence/build requirements, and save-version 26 preserves canonical
+  verify/rush behavior for older careers. Full QA passed.

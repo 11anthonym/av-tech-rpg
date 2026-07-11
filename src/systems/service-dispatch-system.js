@@ -245,6 +245,106 @@ function showServiceDiagnosticEvidenceReview() {
   });
 }
 
+function getServiceRepairApproachDefinitions() {
+  return content.serviceDispatch.repairApproaches || [];
+}
+
+function getServiceRepairApproachById(approachId) {
+  return getServiceRepairApproachDefinitions().find((approach) => approach.id === approachId) || null;
+}
+
+function getServiceRepairMethodLabel() {
+  return getServiceRepairApproachById(state.flags.serviceRepairMethod)?.label
+    || (state.flags.serviceApproach === "verify" ? "Verify the signal path" : state.flags.serviceApproach === "rush" ? "Trust the ticket and swap" : "Not selected");
+}
+
+function getServiceTraitRequirementLabel(traitId) {
+  const creator = content.characterCreator || {};
+  const pieces = [
+    ...(creator.backgrounds || []),
+    ...(creator.workStyles || []),
+    ...(creator.traits || []),
+  ];
+  return pieces.find((piece) => piece.traits?.includes(traitId))?.name
+    || traitId.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function getServiceBuildRequirementLabel(requirement = {}) {
+  if (requirement.skillId) return `${getSkillDefinition(requirement.skillId)?.name || requirement.skillId} ${requirement.minimum || 1}`;
+  if (requirement.toolId) return getToolDisplayName(requirement.toolId);
+  if (requirement.traitId) return getServiceTraitRequirementLabel(requirement.traitId);
+  return "Unknown build requirement";
+}
+
+function meetsServiceBuildRequirement(requirement = {}) {
+  if (requirement.skillId) return getSkillValue(requirement.skillId) >= (requirement.minimum || 1);
+  if (requirement.toolId) return ownsTool(requirement.toolId);
+  if (requirement.traitId) return hasCharacterTrait(requirement.traitId);
+  return false;
+}
+
+function getServiceRepairApproachStatus(approach) {
+  if (!approach) return null;
+  const missingEvidence = (approach.requiredEvidenceIds || [])
+    .filter((evidenceId) => !hasServiceDiagnosticEvidence(evidenceId))
+    .map(getServiceDiagnosticEvidenceById)
+    .filter(Boolean);
+  const requirements = approach.unlockAny || [];
+  const matchedRequirement = requirements.find(meetsServiceBuildRequirement) || null;
+  const buildUnlocked = !requirements.length || Boolean(matchedRequirement);
+  const lockedReasons = [
+    missingEvidence.length ? `Find: ${missingEvidence.map((evidence) => evidence.label).join(" and ")}` : "",
+    !buildUnlocked ? `Build: ${requirements.map(getServiceBuildRequirementLabel).join(" or ")}` : "",
+  ].filter(Boolean);
+  return {
+    approach,
+    available: !missingEvidence.length && buildUnlocked,
+    missingEvidence,
+    buildUnlocked,
+    matchedRequirement,
+    unlockText: matchedRequirement
+      ? `Unlocked by ${getServiceBuildRequirementLabel(matchedRequirement)}.`
+      : requirements.length
+      ? `Requires ${requirements.map(getServiceBuildRequirementLabel).join(" or ")}.`
+      : "Available to every technician.",
+    lockedReason: lockedReasons.join(" "),
+  };
+}
+
+function getServiceRepairApproachStatuses() {
+  return getServiceRepairApproachDefinitions().map(getServiceRepairApproachStatus);
+}
+
+function getServiceRepairApproachMarkup(statuses = getServiceRepairApproachStatuses()) {
+  return `
+    <h3>Repair Approaches</h3>
+    <ul class="modal-list">
+      ${statuses.map((status) => `
+        <li class="${status.available ? "emphasis-next" : "emphasis-locked"}">
+          <strong>${status.available ? "AVAILABLE" : "LOCKED"} - ${escapeHtml(status.approach.label)} (${escapeHtml(status.approach.branchLabel)})</strong>
+          <span>${escapeHtml(status.approach.summary)}</span>
+          <span>${escapeHtml(status.available ? status.unlockText : status.lockedReason)}</span>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function getServiceRepairMethodCheckModifiers(check) {
+  const method = getServiceRepairApproachById(state.flags.serviceRepairMethod);
+  const modifier = method?.checkModifiers?.[check?.id] || method?.checkModifiers?.[check?.contextId];
+  if (!modifier) return [];
+  return [normalizeTaskModifier({
+    id: `service-repair-${method.id}`,
+    label: method.label,
+    source: `${method.branchLabel} approach: ${method.summary}`,
+    statDelta: modifier.statDelta || 0,
+    energyDelta: modifier.energyDelta || 0,
+    consumesOnUse: false,
+    resultText: modifier.resultText || `${method.label} changed this field check.`,
+  })];
+}
+
 function showServiceDiagnosticFinding(evidenceId, {
   kicker = "Room Finding",
   title = "Finding Recorded",
@@ -275,6 +375,10 @@ function showServiceDiagnosisChoice() {
   if (!state.flags.serviceBrief) return notify("Check in with the client contact first.");
   if (!state.flags.serviceInspected) return notify("Inspect the failed display first.");
   if (state.flags.serviceApproach) return notify("The service approach is already set.");
+  const statuses = getServiceRepairApproachStatuses();
+  const availableStatuses = statuses
+    .filter((status) => status.available)
+    .sort((first, second) => Number(first.approach.branchLabel === "Universal") - Number(second.approach.branchLabel === "Universal"));
   showModal({
     kicker: "Diagnosis",
     title: "Choose The Next Service Move",
@@ -284,20 +388,17 @@ function showServiceDiagnosisChoice() {
       ${state.flags.servicePreparation === "review" ? `<p class="muted">Reviewing the forwarded email chain made one part of the room less mysterious.</p>` : ""}
       ${getServiceDiagnosticEvidenceMarkup()}
       ${getServiceRoomConditionMarkup()}
-      ${getChoicePressureMarkup([
-        {
-          label: "Verify signal path",
-          detail: "Troubleshoot the path before treating the visible display as the whole fault.",
-        },
-        {
-          label: "Trust the ticket",
-          detail: "Start the faster display swap with the uncertainty still in the room.",
-        },
-      ])}
+      ${getServiceRepairApproachMarkup(statuses)}
+      ${getChoicePressureMarkup(availableStatuses.map((status) => ({
+        label: status.approach.label,
+        detail: status.approach.summary,
+      })))}
     `,
     actions: [
-      { label: "Verify signal path", onClick: () => chooseServiceApproach("verify") },
-      { label: "Trust the ticket and swap", className: "secondary-button", onClick: () => chooseServiceApproach("rush") },
+      ...availableStatuses.map((status) => ({
+        label: status.approach.label,
+        onClick: () => chooseServiceRepairMethod(status.approach.id),
+      })),
       { label: "Review The Room First", className: "text-button", onClick: render },
     ],
   });
@@ -425,13 +526,14 @@ function getServiceConditionCheckEffects(check) {
 function getServiceAdjustedCheck(check) {
   if (!check) return check;
   const effects = getServiceConditionCheckEffects(check);
+  const repairMethodModifiers = getServiceRepairMethodCheckModifiers(check);
   const conditionNotes = [
     ...effects.knownLabels.map((label) => `Known pressure: ${label}`),
     effects.hiddenCount ? `${effects.hiddenCount} hidden room pressure${effects.hiddenCount === 1 ? "" : "s"}` : "",
   ].filter(Boolean);
   return {
     ...check,
-    taskModifiers: [...(check.taskModifiers || []), ...effects.modifiers],
+    taskModifiers: [...(check.taskModifiers || []), ...effects.modifiers, ...repairMethodModifiers],
     detail: `${check.detail || ""}${conditionNotes.length ? ` Room condition: ${conditionNotes.join("; ")}.` : ""}`,
   };
 }
@@ -1169,6 +1271,7 @@ function showServiceResults() {
         <span>Burnout</span><strong>${state.burnout}</strong>
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Preparation</span><strong>${getServicePreparationLabel()}</strong>
+        <span>Repair method</span><strong>${escapeHtml(getServiceRepairMethodLabel())}</strong>
         <span>Diagnosis</span><strong>${diagnosisLabel}</strong>
         <span>Return-trip risk</span><strong>${serviceReturnRisk ? "Possible" : "Controlled"}</strong>
       </div>
@@ -1189,42 +1292,90 @@ function showServiceResults() {
   });
 }
 
-function chooseServiceApproach(approach) {
+function applyServiceRepairMethodImmediateEffects(method) {
+  if (!method?.controlsConditionId) return;
+  const activeCondition = getActiveServiceRoomConditions({ applyPreparation: false })
+    .find((condition) => condition.id === method.controlsConditionId);
+  if (activeCondition) {
+    revealServiceRoomCondition(activeCondition.id, method.label);
+    if (!getServiceConditionResolution(activeCondition.id)) {
+      recordServiceConditionResolution(activeCondition.id, {
+        actionId: method.id,
+        label: method.label,
+        detail: `${method.label} controlled ${activeCondition.label.toLowerCase()} before technical work continued.`,
+        controlled: true,
+      });
+    }
+  }
+  state.flags.serviceClientExpectationSet = true;
+  addLog(`${method.label} created enough client room to verify the system honestly.`);
+}
+
+function resolveServiceVerificationMethod(method) {
+  discoverServiceDiagnosticEvidence("inline-coupler-path", "Signal-path verification");
+  revealServiceConditionFromDiagnosticEvidence("inline-coupler-path", "Signal-path verification");
+  const check = getServiceAdjustedCheck(getServiceCheckById("signal-path"));
+  const verificationSkillId = method.verificationSkillId || check.skillId;
+  const { skillCheck, energyCost } = resolveFieldTaskCheck({
+    check,
+    checkId: check.id,
+    completedChecks: getServiceFieldCheckHistory(),
+    flagKey: "service-signal-path",
+    skillId: verificationSkillId,
+    contextBonus: (state.flags.servicePreparation === "review" ? 1 : 0) + (state.flags.servicePreparation === "josh" ? 1 : 0) + (state.flags.servicePreparation === "contact" ? 1 : 0),
+    baseEnergyCost: getServiceVerificationEnergyCost(check.energyCost),
+    failedEnergyPenalty: 2,
+    strainedFlag: "serviceVerificationStrained",
+    logText: `${method.label}: ${check.log}.`,
+    strainedLogText: "Signal-path verification strained; the coupler note may still leave return-trip risk.",
+  });
+  revealServiceConditionsForCheck(check);
+  render();
+  showModal({
+    kicker: method.branchLabel === "Universal" ? "Signal Path" : `${method.branchLabel} Approach`,
+    title: method.branchLabel === "Universal" ? check.label : method.label,
+    body: `
+      <p>${escapeHtml(method.summary)}</p>
+      <p>${check.detail}</p>
+      ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
+      ${getServiceRoomConditionMarkup()}
+      <p class="muted">The replacement display and hardware still need to be installed before closeout.</p>
+    `,
+    actions: [{ label: "Start Display Swap", onClick: render }],
+  });
+}
+
+function chooseServiceRepairMethod(methodId) {
+  if (state.flags.serviceApproach) return notify("The service approach is already set.");
+  const status = getServiceRepairApproachStatus(getServiceRepairApproachById(methodId));
+  if (!status) return notify("That service approach is not mapped.");
+  if (!status.available) return notify(status.lockedReason || "That service approach is not available yet.");
+  const method = status.approach;
   ensureServiceRoomConditions();
-  state.flags.serviceApproach = approach;
-  if (approach === "verify") {
-    discoverServiceDiagnosticEvidence("inline-coupler-path", "Signal-path verification");
-    revealServiceConditionFromDiagnosticEvidence("inline-coupler-path", "Signal-path verification");
-    const check = getServiceAdjustedCheck(getServiceCheckById("signal-path"));
-    const { skillCheck, energyCost } = resolveFieldTaskCheck({
-      check,
-      checkId: check.id,
-      completedChecks: getServiceFieldCheckHistory(),
-      flagKey: "service-signal-path",
-      contextBonus: (state.flags.servicePreparation === "review" ? 1 : 0) + (state.flags.servicePreparation === "josh" ? 1 : 0) + (state.flags.servicePreparation === "contact" ? 1 : 0),
-      baseEnergyCost: getServiceVerificationEnergyCost(check.energyCost),
-      failedEnergyPenalty: 2,
-      strainedFlag: "serviceVerificationStrained",
-      logText: `${check.label}: ${check.log}.`,
-      strainedLogText: "Signal-path verification strained; the coupler note may still leave return-trip risk.",
-    });
-    revealServiceConditionsForCheck(check);
-    render();
-    return showModal({
-      kicker: "Signal Path",
-      title: check.label,
-      body: `
-        <p>${check.detail}</p>
-        ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
-        ${getServiceRoomConditionMarkup()}
-        <p class="muted">The replacement display and hardware still need to be installed before closeout.</p>
-      `,
-      actions: [{ label: "Start Display Swap", onClick: render }],
-    });
-  } else {
+  state.flags.serviceRepairMethod = method.id;
+  state.flags.serviceApproach = method.canonicalApproach;
+  applyServiceRepairMethodImmediateEffects(method);
+  addLog(`Service method selected: ${method.label} (${method.branchLabel}).`);
+  if (method.canonicalApproach === "verify") return resolveServiceVerificationMethod(method);
+  if (method.id === "ticket-swap") {
     addLog("Trusted the service ticket and started the display swap immediately.");
+    return render();
   }
   render();
+  showModal({
+    kicker: `${method.branchLabel} Approach`,
+    title: method.label,
+    body: `
+      <p>${escapeHtml(method.summary)}</p>
+      ${getServiceDiagnosticEvidenceMarkup()}
+      <p class="muted">This method supports the replacement install, but it does not prove the full signal path.</p>
+    `,
+    actions: [{ label: "Start Display Swap", onClick: render }],
+  });
+}
+
+function chooseServiceApproach(approach) {
+  return chooseServiceRepairMethod(approach === "verify" ? "verify-path" : "ticket-swap");
 }
 
 function installServicePart() {

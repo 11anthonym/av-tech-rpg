@@ -1187,6 +1187,118 @@ test("Conshohocken findings can be gathered in different room orders before choo
   assert.match(result.diagnosisMarkup, /Room Findings/i);
 });
 
+test("Conshohocken repair approaches unlock different verbs for different technician builds", () => {
+  const result = readGameJson(`(() => {
+    const definitions = getServiceRepairApproachDefinitions();
+    const evidenceIds = new Set(getServiceDiagnosticEvidenceDefinitions().map((evidence) => evidence.id));
+    const skillIds = new Set(getSkillDefinitions().map((skill) => skill.id));
+    const traitIds = new Set(content.technicians.flatMap((technician) => technician.traits || []));
+    [
+      ...(content.characterCreator?.backgrounds || []),
+      ...(content.characterCreator?.workStyles || []),
+      ...(content.characterCreator?.traits || []),
+    ].forEach((piece) => (piece.traits || []).forEach((traitId) => traitIds.add(traitId)));
+
+    const buildMethods = {};
+    content.technicians.forEach((technician) => {
+      Object.assign(state, createInitialState());
+      state.technician = technician;
+      state.tools = uniqueValues(["screwdriver", ...(technician.startingTools || [])]);
+      state.sceneId = "serviceOffice";
+      state.flags.currentAreaId = "serviceOffice";
+      state.flags.serviceDiagnosticEvidence = getServiceDiagnosticEvidenceDefinitions()
+        .map((evidence) => ({ id: evidence.id, source: "Unit findings", clock: "" }));
+      buildMethods[technician.id] = getServiceRepairApproachStatuses()
+        .filter((status) => status.available && status.approach.branchLabel !== "Universal")
+        .map((status) => status.approach.id);
+    });
+
+    Object.assign(state, createInitialState());
+    state.technician = content.technicians.find((technician) => technician.id === "wiley");
+    state.tools = uniqueValues(["screwdriver", ...(state.technician.startingTools || [])]);
+    state.sceneId = "serviceOffice";
+    state.flags.currentAreaId = "serviceOffice";
+    state.flags.serviceBrief = true;
+    state.flags.serviceInspected = true;
+    state.flags.serviceRoomConditions = ["loose-mount-hardware"];
+    state.flags.serviceKnownRoomConditions = ["loose-mount-hardware"];
+    state.flags.serviceDiagnosticEvidence = [
+      { id: "display-failure-pattern", source: "Display", clock: "" },
+      { id: "replacement-kit-fit", source: "Gear", clock: "" },
+    ];
+    chooseServiceRepairMethod("stage-clean-swap");
+    const stagedCheck = getServiceAdjustedCheck(getServiceInstallCheck(["replacement-display"]));
+    const stagedModifier = stagedCheck.taskModifiers.find((modifier) => modifier.id === "service-repair-stage-clean-swap");
+    const stagedState = {
+      method: state.flags.serviceRepairMethod,
+      canonical: state.flags.serviceApproach,
+      modifier: stagedModifier,
+    };
+
+    Object.assign(state, createInitialState());
+    state.technician = content.technicians.find((technician) => technician.id === "morgan");
+    state.tools = uniqueValues(["screwdriver", ...(state.technician.startingTools || [])]);
+    state.sceneId = "serviceOffice";
+    state.flags.currentAreaId = "serviceOffice";
+    state.flags.serviceBrief = true;
+    state.flags.serviceInspected = true;
+    state.flags.serviceRoomConditions = ["client-time-pressure"];
+    state.flags.serviceKnownRoomConditions = ["client-time-pressure"];
+    state.flags.serviceDiagnosticEvidence = [
+      { id: "client-symptom-timeline", source: "Client", clock: "" },
+      { id: "display-failure-pattern", source: "Display", clock: "" },
+    ];
+    chooseServiceRepairMethod("negotiate-verification-window");
+    const socialResult = state.flags.fieldTaskResults?.["service-signal-path"];
+    const socialState = {
+      method: state.flags.serviceRepairMethod,
+      canonical: state.flags.serviceApproach,
+      skillId: socialResult?.skillId || "",
+      modifierIds: (socialResult?.modifiersApplied || []).map((modifier) => modifier.id),
+      clientPressureControlled: Boolean(state.flags.serviceConditionResolutions?.["client-time-pressure"]?.controlled),
+    };
+
+    return {
+      definitionCount: definitions.length,
+      uniqueCount: new Set(definitions.map((approach) => approach.id)).size,
+      referencesValid: definitions.every((approach) => (
+        ["verify", "rush"].includes(approach.canonicalApproach)
+        && (approach.requiredEvidenceIds || []).every((id) => evidenceIds.has(id))
+        && (approach.unlockAny || []).every((requirement) => (
+          !requirement.skillId || skillIds.has(requirement.skillId)
+        ) && (
+          !requirement.toolId || Boolean(content.tools[requirement.toolId])
+        ) && (
+          !requirement.traitId || traitIds.has(requirement.traitId)
+        ))
+      )),
+      buildMethods,
+      stagedState,
+      socialState,
+    };
+  })()`);
+
+  assert.equal(result.definitionCount, 6);
+  assert.equal(result.uniqueCount, result.definitionCount);
+  assert.equal(result.referencesValid, true);
+  assert.ok(result.buildMethods["prototype-tech"].includes("negotiate-verification-window"));
+  assert.ok(result.buildMethods["organized-rookie"].includes("label-and-prove-path"));
+  assert.ok(result.buildMethods.wiley.includes("isolate-coupler"));
+  assert.ok(result.buildMethods.wiley.includes("stage-clean-swap"));
+  assert.ok(result.buildMethods.jordan.includes("isolate-coupler"));
+  assert.ok(result.buildMethods.jordan.includes("label-and-prove-path"));
+  assert.deepEqual(result.buildMethods.morgan, ["negotiate-verification-window"]);
+  assert.equal(result.stagedState.method, "stage-clean-swap");
+  assert.equal(result.stagedState.canonical, "rush");
+  assert.equal(result.stagedState.modifier.statDelta, 2);
+  assert.equal(result.stagedState.modifier.energyDelta, -2);
+  assert.equal(result.socialState.method, "negotiate-verification-window");
+  assert.equal(result.socialState.canonical, "verify");
+  assert.equal(result.socialState.skillId, "clientCommunication");
+  assert.ok(result.socialState.modifierIds.includes("service-repair-negotiate-verification-window"));
+  assert.equal(result.socialState.clientPressureControlled, true);
+});
+
 test("Conshohocken diagnostic evidence is data-backed, idempotent, and save-safe", () => {
   const result = readGameJson(`(() => {
     Object.assign(state, createInitialState());
@@ -1211,6 +1323,7 @@ test("Conshohocken diagnostic evidence is data-backed, idempotent, and save-safe
       technicianId: "prototype-tech",
       sceneId: "serviceOffice",
       flags: {
+        serviceRepairMethod: "removed-method",
         serviceDiagnosticEvidence: [
           "display-failure-pattern",
           { id: "display-failure-pattern", source: "Duplicate" },
@@ -1242,7 +1355,9 @@ test("Conshohocken diagnostic evidence is data-backed, idempotent, and save-safe
       savedEntries: saved.flags.serviceDiagnosticEvidence,
       missingEntries: missing.flags.serviceDiagnosticEvidence,
       dirtyEntries: dirty.flags.serviceDiagnosticEvidence,
+      dirtyRepairMethod: dirty.flags.serviceRepairMethod || "",
       legacyEntries: legacyProgress.flags.serviceDiagnosticEvidence,
+      legacyRepairMethod: legacyProgress.flags.serviceRepairMethod,
     };
   })()`);
 
@@ -1265,11 +1380,13 @@ test("Conshohocken diagnostic evidence is data-backed, idempotent, and save-safe
   assert.deepEqual(result.savedEntries, result.liveEntries);
   assert.deepEqual(result.missingEntries, []);
   assert.deepEqual(result.dirtyEntries.map((entry) => entry.id), ["display-failure-pattern"]);
+  assert.equal(result.dirtyRepairMethod, "");
   assert.deepEqual(result.legacyEntries.map((entry) => entry.id), [
     "client-symptom-timeline",
     "display-failure-pattern",
     "inline-coupler-path",
   ]);
+  assert.equal(result.legacyRepairMethod, "verify-path");
 });
 
 test("Secret Squirrel copy keeps the mystery shelf joke understandable", () => {

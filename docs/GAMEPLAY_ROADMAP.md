@@ -229,7 +229,7 @@ steps connect those findings to investigation order, repair approaches, time
 pressure, verification, and adaptive closeout. Do not begin another roadmap
 lane until Step 6 closes this proof case.
 
-**Current status:** Steps 1 and 2 are complete. The service room now supports an
-optional findings phase without changing its existing repair outcomes. Step 3
-is the next boundary: make findings and character builds unlock meaningfully
-different repair approaches.
+**Current status:** Steps 1 through 3 are complete. The service room supports an
+optional findings phase, then offers universal and build-specific repair
+methods. Step 4 is the next boundary: make investigation and repair actions
+consume time and change client pressure in the room.
