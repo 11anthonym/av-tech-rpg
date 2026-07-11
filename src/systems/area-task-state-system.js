@@ -40,6 +40,7 @@ function getServiceSwapTaskState() {
   if (!state.flags.serviceBrief) return getTaskState({ lockedReason: "Check in with the client contact first." });
   if (state.flags.serviceComplete) return getTaskState({ completed: true, detail: "The service swap is complete." });
   if (!state.flags.serviceInspected) return getTaskState({ stateId: "ready", detail: "Diagnose the failed display before opening replacement gear." });
+  if (isServiceInstallComplete()) return getTaskState({ completed: true, detail: "Replacement gear is installed. Close out with the client." });
   if (!hasCarriedItems()) return getTaskState({ lockedReason: "Pick up replacement gear before installing." });
   const check = getServiceAdjustedCheck(getServiceInstallCheck(state.carry));
   const resultState = getFieldTaskState(check);

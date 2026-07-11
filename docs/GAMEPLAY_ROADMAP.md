@@ -201,3 +201,21 @@ work without adding content sprawl.
 
 After that, reassess whether the next investment should be richer spatial
 navigation, another proof-case job, or a small engine/map-authoring spike.
+
+## Fresh Lane: Conshohocken Room Agency
+
+**Proof question:** Can one existing job room feel like a small RPG space instead
+of a sequence of modal prompts?
+
+**Completion note:** Implemented. Explicit interaction priorities now connect the
+current objective to one highlighted physical object. The Conshohocken room
+guides the player through client check-in, diagnosis, replacement pickup,
+installation, optional pressure handling, incident recovery, client closeout,
+and the return portal. The final install returns control to the room instead of
+opening closeout automatically, and incident recovery decisions are single-use.
+Pre-action pressure remains qualitative; exact results remain in result and
+ledger surfaces.
+
+This is the pattern to reuse when another existing job room needs spatial depth:
+first clarify which object matters, then let room state and consequences change
+that object. Do not add another dispatch to prove the same point.

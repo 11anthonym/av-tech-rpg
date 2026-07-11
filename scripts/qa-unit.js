@@ -1069,6 +1069,66 @@ test("current objective resolver covers representative player states", () => {
   assert.match(result.find((item) => item.id === "retrofit-install").objective, /Install the retrofit pathway/i);
 });
 
+test("Conshohocken primary interactions guide the physical service-room sequence", () => {
+  const result = readGameJson(`(() => {
+    Object.assign(state, createInitialState());
+    state.technician = content.technicians.find((technician) => technician.id === "prototype-tech");
+    state.tools = ["screwdriver"];
+    state.sceneId = "serviceOffice";
+    state.flags.currentAreaId = "serviceOffice";
+
+    const capture = (id) => {
+      const interaction = getPrimaryInteraction();
+      return {
+        id,
+        interactionId: interaction?.id || "",
+        marker: interaction ? getInteractionMarkerText(interaction) : "",
+        objective: resolveCurrentObjective().text,
+        markerClass: interaction ? getInteractionMarkerClass(interaction) : "",
+      };
+    };
+
+    const snapshots = [capture("check-in")];
+    state.flags.serviceBrief = true;
+    snapshots.push(capture("inspect"));
+    state.flags.serviceInspected = true;
+    state.flags.serviceRoomConditions = [];
+    state.flags.serviceKnownRoomConditions = [];
+    snapshots.push(capture("pickup"));
+    state.carry = ["replacement-display"];
+    snapshots.push(capture("install"));
+    state.flags.serviceRoomIncidents = [{
+      id: "unit-room-incident",
+      conditionId: "client-time-pressure",
+      conditionLabel: "Client time pressure",
+      detail: "The client saw the rushed result.",
+      incidentFlags: ["serviceClientAngry"],
+      status: "open",
+    }];
+    snapshots.push(capture("recover"));
+    state.flags.serviceRoomIncidents[0].recoveryAction = "carry";
+    state.serviceInstalled = content.serviceDispatch.swapItems.map((item) => item.id);
+    state.carry = [];
+    snapshots.push(capture("closeout"));
+    return snapshots;
+  })()`);
+
+  const byId = Object.fromEntries(result.map((entry) => [entry.id, entry]));
+  assert.equal(byId["check-in"].interactionId, "service-client");
+  assert.match(byId["check-in"].objective, /check in/i);
+  assert.equal(byId.inspect.interactionId, "service-display");
+  assert.match(byId.inspect.objective, /inspect the failed display/i);
+  assert.equal(byId.pickup.interactionId, "service-pickup");
+  assert.match(byId.pickup.objective, /collect the next replacement gear/i);
+  assert.equal(byId.install.interactionId, "service-display");
+  assert.match(byId.install.objective, /fit the carried replacement gear/i);
+  assert.equal(byId.recover.interactionId, "service-incident-recovery");
+  assert.match(byId.recover.objective, /recover the visible room incident/i);
+  assert.equal(byId.closeout.interactionId, "service-client");
+  assert.match(byId.closeout.objective, /close out the service call/i);
+  result.forEach((entry) => assert.match(entry.markerClass, /primary-objective-marker/, `${entry.id} should visibly mark the primary interaction`));
+});
+
 test("Secret Squirrel copy keeps the mystery shelf joke understandable", () => {
   const result = readGameJson(`(() => {
     const returns = content.warehouseDispatch.checks.find((check) => check.id === "returns");

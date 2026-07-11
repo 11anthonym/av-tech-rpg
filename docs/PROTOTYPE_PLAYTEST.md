@@ -1774,6 +1774,15 @@ pressure/risk, locked, prep, and route rows. The scene objective also reads as
 an active prompt instead of muted helper text. Clean-state rows such as no open
 callback risk stay quiet so the player is not trained to ignore the highlight.
 
+Conshohocken room-agency pass: the current objective now selects one explicit
+primary interaction and the matching marker gets a stronger outline. The
+service room changes its next physical target as the player checks in,
+diagnoses, picks up gear, installs, handles immediate pressure, closes out with
+the client, and walks to RETURN. Installing the final part no longer opens the
+closeout modal automatically, including after save/continue. Incident recovery
+choices are single-use, so carrying pressure into closeout cannot be repeated
+for extra stats.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

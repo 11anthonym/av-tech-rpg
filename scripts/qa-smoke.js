@@ -1733,6 +1733,85 @@ async function clickButton(page, name) {
     assert(serviceInstallTask.energyChanged, "Service install should affect energy");
     assert(serviceInstallTask.showsResultRows, "Service install should show structured result rows");
 
+    const serviceRoomSequence = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.finished = true;
+      state.flags.reward = "toolBag";
+      window.enterScene("serviceOffice");
+      state.flags.serviceBrief = true;
+      state.flags.serviceInspected = true;
+      state.flags.serviceApproach = "verify";
+      state.flags.serviceRoomConditions = ["mislabeled-input"];
+      state.flags.serviceKnownRoomConditions = ["mislabeled-input"];
+      state.flags.serviceConditionResolutions = {
+        "mislabeled-input": { conditionId: "mislabeled-input", controlled: true },
+      };
+      state.carry = window.GAME_CONTENT.serviceDispatch.swapItems.map((item) => item.id);
+      window.installServicePart();
+      const installModalText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const completeAfterInstall = Boolean(state.flags.serviceComplete);
+      window.closeModal();
+      window.render();
+      const primary = window.getPrimaryInteraction();
+      const primaryMarker = [...document.querySelectorAll(".interaction-marker")]
+        .find((marker) => marker.classList.contains("primary-objective-marker"));
+      const objective = window.resolveCurrentObjective().text;
+      window.resumeRequiredPrompt();
+      const modalAfterResume = document.querySelector("#modal-backdrop")?.classList.contains("hidden") === false;
+      window.getInteractions().find((interaction) => interaction.id === "service-client")?.action();
+      const closeoutText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const completeAfterClient = Boolean(state.flags.serviceComplete);
+
+      window.startGame("prototype-tech");
+      const guardState = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("serviceOffice");
+      guardState.flags.serviceBrief = true;
+      guardState.flags.serviceInspected = true;
+      guardState.flags.serviceRoomIncidents = [{
+        id: "single-use-incident",
+        conditionId: "client-time-pressure",
+        conditionLabel: "Client time pressure",
+        detail: "The client is waiting.",
+        incidentFlags: ["serviceClientAngry"],
+        status: "open",
+      }];
+      window.resolveServiceIncidentRecovery("single-use-incident", "carry");
+      const afterFirst = {
+        energy: guardState.energy,
+        choices: guardState.stats.fieldTaskChoicesMade,
+        action: guardState.flags.serviceRoomIncidents[0].recoveryAction,
+        recoverable: window.getRecoverableServiceRoomIncidents().length,
+      };
+      window.resolveServiceIncidentRecovery("single-use-incident", "stabilize");
+      return {
+        installModalText,
+        completeAfterInstall,
+        primaryId: primary?.id || "",
+        primaryMarkerText: primaryMarker?.textContent || "",
+        objective,
+        modalAfterResume,
+        completeAfterClient,
+        closeoutText,
+        afterFirst,
+        afterSecond: {
+          energy: guardState.energy,
+          choices: guardState.stats.fieldTaskChoicesMade,
+          action: guardState.flags.serviceRoomIncidents[0].recoveryAction,
+        },
+      };
+    });
+    assert(serviceRoomSequence.installModalText.includes("Review The Room") && !serviceRoomSequence.completeAfterInstall, "Final service install should return control to the room before closeout");
+    assert(serviceRoomSequence.primaryId === "service-client" && serviceRoomSequence.primaryMarkerText === "CLIENT", "Client should become the highlighted closeout interaction after install");
+    assert(serviceRoomSequence.objective.includes("close out the service call"), "Current objective should direct the player to physical client closeout");
+    assert(!serviceRoomSequence.modalAfterResume, "Reloading the completed install state should not auto-open service closeout");
+    assert(
+      serviceRoomSequence.completeAfterClient && /service call complete/i.test(serviceRoomSequence.closeoutText),
+      `Client interaction should complete the service closeout (complete=${serviceRoomSequence.completeAfterClient}, modal=${serviceRoomSequence.closeoutText.slice(0, 120)})`,
+    );
+    assert(serviceRoomSequence.afterFirst.recoverable === 0 && serviceRoomSequence.afterFirst.action === "carry", "Carried room pressure should remove the recovery marker after one decision");
+    assert(serviceRoomSequence.afterSecond.energy === serviceRoomSequence.afterFirst.energy && serviceRoomSequence.afterSecond.choices === serviceRoomSequence.afterFirst.choices && serviceRoomSequence.afterSecond.action === "carry", "Room incident recovery decisions should be single use");
+
     const serviceConditionCloseout = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;

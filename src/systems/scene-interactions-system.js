@@ -266,20 +266,57 @@ function getInteractions() {
   if (state.sceneId === "serviceOffice") {
     if (state.flags.conshohockenFollowupStarted && !state.flags.conshohockenFollowupComplete) {
       return [{
+        id: "service-followup",
         x: 760, y: 300, label: "Review coupler label follow-up",
+        objectivePriority: "required",
+        objectiveHint: "Walk to REVIEW and inspect the coupler label follow-up.",
         action: showConshohockenFollowupChoice,
       }, ...getScenePortalInteractions("serviceOffice")];
     }
     if (state.flags.serviceComplete) return getScenePortalInteractions("serviceOffice");
+    const installComplete = isServiceInstallComplete();
+    const actionableClientIncident = getRecoverableServiceRoomIncidents()
+      .find((incident) => incident.incidentFlags?.includes("serviceClientAngry"));
+    const openClientPressure = getOpenServiceRoomIncidents()
+      .some((incident) => incident.incidentFlags?.includes("serviceClientAngry"));
     return [
       {
-        x: 300, y: 185, label: state.flags.serviceBrief && !state.flags.serviceInspected && !state.flags.serviceClientContext ? "Ask client about symptoms" : "Talk to client contact", npc: "CLIENT",
+        id: "service-client",
+        x: 300, y: 185,
+        label: installComplete
+          ? "Close out service call"
+          : actionableClientIncident
+          ? "Address client concern"
+          : state.flags.serviceBrief && !state.flags.serviceInspected && !state.flags.serviceClientContext
+          ? "Ask client about symptoms"
+          : "Talk to client contact",
+        npc: "CLIENT",
+        objectivePriority: () => installComplete || !state.flags.serviceBrief ? "required" : openClientPressure ? "pressure" : "optional",
+        objectiveHint: () => installComplete
+          ? "Walk to CLIENT and close out the service call."
+          : !state.flags.serviceBrief
+          ? "Walk to CLIENT and check in before touching the room."
+          : actionableClientIncident
+          ? "The client is visibly upset. Recover the room incident before closeout, or accept the pressure it creates."
+          : "Ask CLIENT about symptoms if you want more context before diagnosis.",
+        pressureKind: openClientPressure ? "client" : "",
         taskState: () => {
+          if (installComplete) {
+            return getTaskState({
+              stateId: openClientPressure ? "strained" : "ready",
+              detail: openClientPressure
+                ? "The replacement is installed, but visible client pressure will follow this closeout if left unresolved."
+                : "The replacement is installed and ready for client closeout.",
+            });
+          }
+          if (actionableClientIncident) return getTaskState({ stateId: "strained", detail: "The client saw the rushed result and needs an in-room response." });
           if (!state.flags.serviceBrief) return getTaskState({ stateId: "ready", detail: "Ask what happened before touching the room." });
           if (!state.flags.serviceInspected && !state.flags.serviceClientContext) return getTaskState({ stateId: "ready", detail: "Spend a little effort to reveal one room condition before diagnosis." });
           return getTaskState({ completed: true, detail: "Client context is already in your notes." });
         },
         action: () => {
+          if (installComplete) return showServiceResults();
+          if (actionableClientIncident) return showServiceIncidentRecoveryChoice();
           if (state.flags.serviceBrief) return showServiceClientContext();
           state.flags.serviceBrief = true;
           ensureServiceRoomConditions();
@@ -293,8 +330,12 @@ function getInteractions() {
         },
       },
       ...(getRecoverableServiceRoomIncidents().length ? [{
+        id: "service-incident-recovery",
         x: 610, y: 385, label: "Recover room incident",
         markerText: "FIX",
+        objectivePriority: "recovery",
+        objectiveHint: "Walk to FIX and recover the visible room incident, or leave it for closeout.",
+        pressureKind: "incident",
         taskState: () => getTaskState({
           stateId: "strained",
           detail: `${getRecoverableServiceRoomIncidents().length} visible room incident${getRecoverableServiceRoomIncidents().length === 1 ? "" : "s"} can still be recovered before closeout.`,
@@ -307,8 +348,12 @@ function getInteractions() {
         action: showServiceIncidentRecoveryChoice,
       }] : []),
       ...(getActionableServiceRoomConditions().length ? [{
+        id: "service-room-pressure",
         x: 520, y: 342, label: "Handle room pressure",
         markerText: "RISK",
+        objectivePriority: "pressure",
+        objectiveHint: "Use RISK if you want to control known room pressure before closeout.",
+        pressureKind: "room",
         taskState: () => getTaskState({
           stateId: state.flags.serviceImmediatePressure ? "strained" : "ready",
           detail: `${getActionableServiceRoomConditions().length} known room pressure decision${getActionableServiceRoomConditions().length === 1 ? "" : "s"} can change the service outcome now.`,
@@ -321,7 +366,18 @@ function getInteractions() {
         action: showServiceRoomConditionChoice,
       }] : []),
       {
-        x: 760, y: 305, label: state.flags.serviceInspected ? "Install replacement parts" : "Inspect failed display",
+        id: "service-display",
+        x: 760, y: 305,
+        label: installComplete ? "Review installed display" : state.flags.serviceInspected ? "Install replacement parts" : "Inspect failed display",
+        objectivePriority: installComplete ? "optional" : "required",
+        objectiveHint: () => !state.flags.serviceBrief
+          ? "Check in with CLIENT before inspecting the room."
+          : !state.flags.serviceInspected
+          ? "Walk to CHECK and inspect the failed display."
+          : hasCarriedItems()
+          ? "Walk to INSTALL and fit the carried replacement gear."
+          : "Pick up the replacement gear before continuing the install.",
+        pressureKind: "technical",
         pressure: () => {
           if (!state.flags.serviceBrief) return "";
           if (!state.flags.serviceInspected) {
@@ -344,6 +400,7 @@ function getInteractions() {
         taskState: getServiceSwapTaskState,
         action: () => {
           if (!state.flags.serviceBrief) return notify("Check in with the client contact first.");
+          if (installComplete) return notify("The replacement display is installed. Close out with the client.");
           if (!state.flags.serviceInspected) {
             state.flags.serviceInspected = true;
             ensureServiceRoomConditions();
@@ -382,7 +439,15 @@ function getInteractions() {
         },
       },
       {
+        id: "service-pickup",
         x: 178, y: 350, label: "Pick up replacement gear",
+        objectivePriority: "required",
+        objectiveHint: () => !state.flags.serviceInspected
+          ? "Inspect the failed display before opening replacement gear."
+          : hasCarriedItems()
+          ? "Install the replacement gear already in your hands."
+          : "Walk to PICKUP and collect the next replacement gear group.",
+        pressureKind: "movement",
         pressure: () => getActionPressureBrief({
           baseEnergyCost: getEquipmentEnergyCost(3),
           includeSkill: false,

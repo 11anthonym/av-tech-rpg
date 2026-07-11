@@ -137,6 +137,7 @@ kbd { padding: 2px 5px; border: 1px solid #53615e; border-radius: 3px; color: va
 .interaction-marker.task-state-strained,
 .interaction-marker.task-state-risk-inherited { border-color: #df8a7e; color: #2b1412; background: rgba(223, 138, 126, .9); box-shadow: 0 0 0 4px rgba(223, 138, 126, .18); }
 .interaction-marker.task-state-in-progress { border-color: #7bb6d8; color: #102332; background: rgba(123, 182, 216, .9); box-shadow: 0 0 0 4px rgba(123, 182, 216, .18); }
+.interaction-marker.primary-objective-marker { z-index: 4; outline: 3px solid #f8f1dc; outline-offset: 3px; box-shadow: 0 0 0 7px rgba(239, 182, 78, .24); }
 .player { position: absolute; z-index: 6; width: 30px; height: 40px; transition: left 45ms linear, top 45ms linear; }
 .player i { display: block; width: 25px; height: 27px; margin: 0 auto; border: 3px solid #17211f; border-radius: 11px 11px 4px 4px; background: var(--accent); box-shadow: 0 3px 0 rgba(0, 0, 0, .18); }
 .player b { display: block; margin-top: 2px; color: #31423d; font-size: 8px; letter-spacing: .06em; text-align: center; }

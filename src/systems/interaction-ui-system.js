@@ -12,6 +12,60 @@ function getNearestInteraction() {
     .sort((a, b) => a.distance - b.distance)[0] || null;
 }
 
+const INTERACTION_OBJECTIVE_PRIORITY = {
+  critical: 600,
+  recovery: 500,
+  required: 400,
+  pressure: 300,
+  optional: 200,
+  return: 100,
+};
+
+function getInteractionIdentity(interaction) {
+  if (!interaction) return "";
+  return interaction.id || interaction.portalId || `${interaction.label || "interaction"}:${interaction.x}:${interaction.y}`;
+}
+
+function getInteractionObjectivePriority(interaction) {
+  const value = typeof interaction?.objectivePriority === "function"
+    ? interaction.objectivePriority()
+    : interaction?.objectivePriority;
+  if (typeof value === "number") return value;
+  return INTERACTION_OBJECTIVE_PRIORITY[value] || 0;
+}
+
+// Explicit scene metadata identifies the next physical object without making every nearby object compete for attention.
+function getPrimaryInteraction() {
+  if (!state.sceneId) return null;
+  return getInteractions()
+    .map((interaction) => {
+      const taskState = getInteractionTaskState(interaction);
+      const basePriority = getInteractionObjectivePriority(interaction);
+      const stateAdjustment = {
+        strained: 40,
+        ready: 30,
+        "in-progress": 20,
+        locked: -50,
+        completed: -200,
+      }[taskState?.id] || 0;
+      return {
+        ...interaction,
+        taskState,
+        objectiveScore: basePriority + stateAdjustment,
+      };
+    })
+    .filter((interaction) => getInteractionObjectivePriority(interaction) > 0 && interaction.taskState?.id !== "completed")
+    .sort((a, b) => b.objectiveScore - a.objectiveScore || distanceTo(a) - distanceTo(b))[0] || null;
+}
+
+function getPrimaryInteractionObjectiveText(interaction = getPrimaryInteraction()) {
+  if (!interaction) return "";
+  const hint = typeof interaction.objectiveHint === "function"
+    ? interaction.objectiveHint()
+    : interaction.objectiveHint;
+  return hint || interaction.taskState?.detail || interaction.label || "";
+}
+
 function getInteractionMarkerKind(interaction) {
   if (!interaction) return "task";
   if (interaction.markerKind) return interaction.markerKind;
@@ -176,7 +230,7 @@ function getInteractionMarkerPosition(interaction, kind) {
     .sort((a, b) => a.overlapCount - b.overlapCount || a.distance - b.distance)[0] || base;
 }
 
-function getInteractionMarkerClass(interaction) {
+function getInteractionMarkerClass(interaction, primaryInteraction = getPrimaryInteraction()) {
   const kind = getInteractionMarkerKind(interaction);
   return [
     "interaction-marker",
@@ -184,6 +238,7 @@ function getInteractionMarkerClass(interaction) {
     interaction?.npc ? "npc-marker" : "",
     interaction?.portalId ? "portal-marker" : "",
     kind === "return" ? "return-portal-marker" : "",
+    primaryInteraction && getInteractionIdentity(primaryInteraction) === getInteractionIdentity(interaction) ? "primary-objective-marker" : "",
   ].filter(Boolean).join(" ");
 }
 

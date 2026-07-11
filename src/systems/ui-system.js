@@ -58,9 +58,6 @@ function resumeRequiredPrompt() {
   if (state.sceneId === "client" && state.assembled.length === content.tutorial.assembly.length && !state.flags.finished) {
     return showFinishChoice();
   }
-  if (state.sceneId === "serviceOffice" && state.serviceInstalled.length === content.serviceDispatch.swapItems.length && !state.flags.serviceComplete) {
-    return showServiceResults();
-  }
   if (state.flags.conshohockenFollowupStarted && !state.flags.conshohockenFollowupComplete) {
     return showConshohockenFollowupChoice();
   }

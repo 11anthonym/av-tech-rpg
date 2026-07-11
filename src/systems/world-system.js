@@ -169,6 +169,14 @@ function getScenePortalInteractions(sceneId = state.sceneId) {
       portalKind: portal.kind,
       markerKind: portal.kind === "returnRoute" ? "return" : "door",
       markerText: portal.kind === "returnRoute" ? "RETURN" : "DOOR",
+      objectivePriority: portal.kind === "returnRoute"
+        ? () => isPortalReady(portal) ? "return" : ""
+        : "",
+      objectiveHint: portal.kind === "returnRoute"
+        ? () => isPortalReady(portal)
+          ? `Walk to the RETURN marker and leave ${getWorldAreaByScene(sceneId)?.label || "the job site"}.`
+          : getPortalRequirementText(portal)
+        : "",
       action: () => usePortal(portal.id),
     }));
 }

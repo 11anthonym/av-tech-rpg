@@ -2,6 +2,7 @@
 // Gameplay systems update state; this layer reflects that state into the static DOM.
 function renderDecor() {
   const scene = content.scenes[state.sceneId];
+  const primaryInteraction = getPrimaryInteraction();
   const decor = scene.decor.map((item) => {
     const node = document.createElement("div");
     node.className = `decor ${item.type}`;
@@ -19,12 +20,13 @@ function renderDecor() {
     const taskState = getInteractionTaskState(item);
     const markerPosition = getInteractionMarkerPosition(item, kind);
     marker.className = [
-      getInteractionMarkerClass(item),
+      getInteractionMarkerClass(item, primaryInteraction),
       taskState ? `task-state-${taskState.id}` : "",
     ].filter(Boolean).join(" ");
     marker.dataset.markerKind = kind;
     marker.dataset.markerPlacement = markerPosition.placement;
     marker.dataset.taskState = taskState?.id || "";
+    marker.dataset.pressureKind = item.pressureKind || "";
     marker.style.left = `${markerPosition.x}px`;
     marker.style.top = `${markerPosition.y}px`;
     marker.title = `${markerText}: ${item.label}${taskState ? ` (${getTaskStateText(taskState)})` : ""}`;

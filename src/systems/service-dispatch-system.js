@@ -398,7 +398,7 @@ function getOpenServiceRoomIncidents() {
 
 function getRecoverableServiceRoomIncidents() {
   if (state.flags.serviceComplete) return [];
-  return getOpenServiceRoomIncidents();
+  return getOpenServiceRoomIncidents().filter((incident) => !incident.recoveryAction);
 }
 
 function getServiceRoomIncidentById(incidentId) {
@@ -755,6 +755,7 @@ function resolveServiceIncidentRecovery(incidentId, optionId) {
   if (!incident || !option) return notify("That incident recovery is not available.");
   if (state.flags.serviceComplete) return notify("The service call is already closed out.");
   if (incident.recovered) return notify("That room incident is already recovered.");
+  if (incident.recoveryAction) return notify("That room incident already has a recovery decision.");
 
   if (option.energyCost) changeEnergy(-option.energyCost);
   applyReputationDelta(option.reputation || {});
@@ -818,6 +819,10 @@ function isServiceConditionControlled(condition) {
   if (["flaky-replacement-display", "loose-mount-hardware"].includes(condition.id)) return installClean;
   if (condition.id === "client-time-pressure") return verifiedClean || state.flags.serviceClientContext;
   return verifiedClean || installClean;
+}
+
+function isServiceInstallComplete() {
+  return state.serviceInstalled.length === content.serviceDispatch.swapItems.length;
 }
 
 function getUnresolvedServiceRoomConditions() {
@@ -1055,14 +1060,25 @@ function installServicePart() {
   state.serviceDelivered.push(...items);
   state.serviceInstalled.push(...items);
   state.carry = [];
-  if (state.serviceInstalled.length === content.serviceDispatch.swapItems.length) {
+  if (isServiceInstallComplete()) {
     if (state.flags.serviceApproach !== "verify" || state.flags.serviceInstallStrained) {
       changeEnergy(-6);
       addLog(state.flags.serviceInstallStrained
         ? "Reopened the connection panel after the display install tested flaky under load."
         : "Reopened the connection panel after the unlabeled coupler caused a dropout.");
     }
-    return showServiceResults();
+    render();
+    return showModal({
+      kicker: "Replacement Install",
+      title: check.label,
+      body: `
+        <p>${check.detail}</p>
+        ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
+        ${getServiceRoomConditionMarkup()}
+        <p class="muted">The replacement is installed. Review any visible room pressure, then walk back to the client to close out the call.</p>
+      `,
+      actions: [{ label: "Review The Room", onClick: render }],
+    });
   }
   render();
   showModal({

@@ -820,3 +820,10 @@ than adding separate bespoke closeout math for every hotspot.
 Consequence review filters are derived from existing ledger and closeout
 records. Future consequence UI should reuse those active/resolved/inherited
 groups instead of storing a separate review-specific state list.
+
+Primary scene interactions use optional `objectivePriority`, `objectiveHint`,
+and `pressureKind` metadata. Add these only where the scene has a meaningful
+physical sequence; ordinary flavor objects should not compete for the current
+objective. Conshohocken is the reference: required work outranks optional room
+pressure, immediate incident recovery outranks normal work, completed objects
+drop out, and a ready return portal becomes primary only after closeout.

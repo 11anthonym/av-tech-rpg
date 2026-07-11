@@ -22,6 +22,10 @@ function getCurrentStepStage(objective = "") {
 }
 
 function getCurrentStepCue(objective = "") {
+  const primaryInteraction = typeof getPrimaryInteraction === "function" ? getPrimaryInteraction() : null;
+  if (primaryInteraction) {
+    return `Walk to ${getInteractionMarkerText(primaryInteraction)}: ${primaryInteraction.label}.`;
+  }
   if (/dispatch board/i.test(objective)) return "Open the dispatch board or review the route from the van.";
   if (/van|load staged equipment|center city east/i.test(objective)) return "Use Van #3 for cargo, map, and route choices.";
   if (/exit|return to radnor/i.test(objective)) return "Use the marked exit or RETURN point.";
@@ -72,7 +76,7 @@ function getCurrentStepRoute() {
   return getInProgressDispatchBoardEntry()?.route || getCurrentDispatchBoardEntry()?.route || null;
 }
 
-function getCurrentObjectiveContext() {
+function getCurrentObjectiveContext(primaryInteraction = typeof getPrimaryInteraction === "function" ? getPrimaryInteraction() : null) {
   const area = getCurrentWorldArea();
   const route = getCurrentStepRoute();
   const returnPortal = getCurrentReturnPortal();
@@ -99,12 +103,23 @@ function getCurrentObjectiveContext() {
     openCallbacks: getUnresolvedCallbackCount(),
     openReturnTripRisks: getReturnTripRiskEntries().length,
     retrofitBranch: state.flags.retrofitInstallBranch || getRetrofitInstallBranchIdFromFlags(state.flags),
+    primaryInteractionId: primaryInteraction ? getInteractionIdentity(primaryInteraction) : "",
+    primaryInteractionLabel: primaryInteraction?.label || "",
+    primaryInteractionMarker: primaryInteraction ? getInteractionMarkerText(primaryInteraction) : "",
   };
 }
 
 function resolveCurrentObjective() {
-  const context = getCurrentObjectiveContext();
+  const primaryInteraction = typeof getPrimaryInteraction === "function" ? getPrimaryInteraction() : null;
+  const context = getCurrentObjectiveContext(primaryInteraction);
   const baseObjective = getObjective();
+  const primaryObjective = primaryInteraction ? getPrimaryInteractionObjectiveText(primaryInteraction) : "";
+  if (primaryObjective) {
+    return {
+      text: primaryObjective,
+      context,
+    };
+  }
   if (context.returnPortalReady && /return to Radnor Rack & Wire/i.test(baseObjective)) {
     return {
       text: `Use the RETURN marker to leave ${context.areaLabel}.`,
@@ -273,6 +288,7 @@ function getObjective() {
     if (!state.flags.serviceInspected) return "Inspect the failed display.";
     if (getRecoverableServiceRoomIncidents().length) return "Recover the visible room incident or carry it into closeout.";
     if (getActionableServiceRoomConditions().length) return "Decide how to handle the known room pressure or continue the display swap.";
+    if (isServiceInstallComplete()) return "Return to the client contact and close out the service call.";
     return `Install replacement gear (${state.serviceInstalled.length}/${content.serviceDispatch.swapItems.length}).`;
   }
   if (state.sceneId === "universitySurvey") {
