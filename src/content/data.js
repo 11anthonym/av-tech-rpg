@@ -1413,6 +1413,44 @@ window.GAME_CONTENT = {
   serviceDispatch: {
     title: "One Quick Display Swap",
     summary: "Replace a conference-room display at a Conshohocken office.",
+    diagnosticEvidence: [
+      {
+        id: "client-symptom-timeline",
+        label: "Client symptom timeline",
+        sourceLabel: "Client conversation",
+        interactionId: "service-client",
+        skillId: "clientCommunication",
+        summary: "The display powers on before it flickers and drops, and the failure became worse after somebody changed inputs.",
+        conditionIds: ["bad-ticket-notes", "mislabeled-input", "client-time-pressure"],
+      },
+      {
+        id: "display-failure-pattern",
+        label: "Display failure pattern",
+        sourceLabel: "Failed display",
+        interactionId: "service-display",
+        skillId: "troubleshooting",
+        summary: "The display can produce an image, but the dropout pattern does not prove the panel is the only fault.",
+        conditionIds: ["bad-ticket-notes", "flaky-replacement-display"],
+      },
+      {
+        id: "inline-coupler-path",
+        label: "Inline coupler path",
+        sourceLabel: "Signal-path inspection",
+        interactionId: "service-room-pressure",
+        skillId: "troubleshooting",
+        summary: "An inline coupler and conflicting input labels make the signal path a credible second fault.",
+        conditionIds: ["bad-ticket-notes", "mislabeled-input"],
+      },
+      {
+        id: "replacement-kit-fit",
+        label: "Replacement kit condition",
+        sourceLabel: "Replacement gear",
+        interactionId: "service-pickup",
+        skillId: "install",
+        summary: "The replacement panel and mount hardware are present, but their fit and condition still need to be proven during installation.",
+        conditionIds: ["flaky-replacement-display", "loose-mount-hardware"],
+      },
+    ],
     taskCards: [
       {
         title: "Signal Path",

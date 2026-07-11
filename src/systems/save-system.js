@@ -67,6 +67,29 @@ function migrateSurveyConsequenceFlags(flags = {}) {
   };
 }
 
+function normalizeServiceDiagnosticEvidenceEntries(entries = []) {
+  const validIds = new Set((content.serviceDispatch?.diagnosticEvidence || []).map((evidence) => evidence.id));
+  const seen = new Set();
+  return Array.isArray(entries)
+    ? entries
+      .map((entry) => typeof entry === "string" ? { id: entry, source: "Saved room finding", clock: "" } : entry)
+      .filter((entry) => {
+        if (!entry || !validIds.has(entry.id) || seen.has(entry.id)) return false;
+        seen.add(entry.id);
+        return true;
+      })
+      .map((entry) => ({
+        id: entry.id,
+        source: entry.source || "Saved room finding",
+        clock: entry.clock || "",
+      }))
+    : [];
+}
+
+function migrateServiceDiagnosticEvidence(flags = {}) {
+  flags.serviceDiagnosticEvidence = normalizeServiceDiagnosticEvidenceEntries(flags.serviceDiagnosticEvidence);
+}
+
 function migrateSavedGame(savedGame) {
   if (!savedGame || typeof savedGame !== "object") return null;
   const flags = { ...(savedGame.flags || {}) };
@@ -115,6 +138,7 @@ function migrateSavedGame(savedGame) {
   }
   normalizeRetrofitInstallFlags(flags);
   migrateSurveyConsequenceFlags(flags);
+  migrateServiceDiagnosticEvidence(flags);
   if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
     flags.serviceCallbackPending = true;
   }

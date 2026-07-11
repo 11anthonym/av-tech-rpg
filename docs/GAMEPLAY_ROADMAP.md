@@ -219,3 +219,12 @@ ledger surfaces.
 This is the pattern to reuse when another existing job room needs spatial depth:
 first clarify which object matters, then let room state and consequences change
 that object. Do not add another dispatch to prove the same point.
+
+## Active Implementation Lane
+
+The next finite lane is tracked in
+[`DIAGNOSTIC_AGENCY_TRACKER.md`](DIAGNOSTIC_AGENCY_TRACKER.md). Work through its
+six numbered steps in order. Step 1 establishes findings and save safety; later
+steps connect those findings to investigation order, repair approaches, time
+pressure, verification, and adaptive closeout. Do not begin another roadmap
+lane until Step 6 closes this proof case.

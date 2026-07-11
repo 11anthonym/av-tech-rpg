@@ -154,6 +154,56 @@ function getServiceCheckById(checkId) {
   return content.serviceDispatch.checks.find((item) => item.id === checkId);
 }
 
+// Diagnostic evidence is save-backed room knowledge. Later steps attach these findings to interactions and repair options.
+function getServiceDiagnosticEvidenceDefinitions() {
+  return content.serviceDispatch.diagnosticEvidence || [];
+}
+
+function getServiceDiagnosticEvidenceById(evidenceId) {
+  return getServiceDiagnosticEvidenceDefinitions().find((evidence) => evidence.id === evidenceId) || null;
+}
+
+function getServiceDiagnosticEvidenceEntries() {
+  const entries = normalizeServiceDiagnosticEvidenceEntries(state.flags.serviceDiagnosticEvidence);
+  state.flags.serviceDiagnosticEvidence = entries;
+  return entries;
+}
+
+function getDiscoveredServiceDiagnosticEvidenceIds() {
+  return getServiceDiagnosticEvidenceEntries().map((entry) => entry.id);
+}
+
+function hasServiceDiagnosticEvidence(evidenceId) {
+  return getDiscoveredServiceDiagnosticEvidenceIds().includes(evidenceId);
+}
+
+function discoverServiceDiagnosticEvidence(evidenceId, source = "") {
+  const evidence = getServiceDiagnosticEvidenceById(evidenceId);
+  if (!evidence) return null;
+  const entries = getServiceDiagnosticEvidenceEntries();
+  const existing = entries.find((entry) => entry.id === evidenceId);
+  if (existing) return existing;
+  const entry = {
+    id: evidenceId,
+    source: source || evidence.sourceLabel || "Room inspection",
+    clock: state.clock || "",
+  };
+  entries.push(entry);
+  addLog(`${entry.source}: ${evidence.label} added to the room findings.`);
+  return entry;
+}
+
+function getServiceDiagnosticEvidenceState(evidenceId) {
+  const definition = getServiceDiagnosticEvidenceById(evidenceId);
+  if (!definition) return null;
+  const entry = getServiceDiagnosticEvidenceEntries().find((item) => item.id === evidenceId) || null;
+  return {
+    definition,
+    entry,
+    discovered: Boolean(entry),
+  };
+}
+
 function getServiceRoomConditionDefinitions() {
   return content.serviceDispatch.roomConditions || [];
 }

@@ -1129,6 +1129,75 @@ test("Conshohocken primary interactions guide the physical service-room sequence
   result.forEach((entry) => assert.match(entry.markerClass, /primary-objective-marker/, `${entry.id} should visibly mark the primary interaction`));
 });
 
+test("Conshohocken diagnostic evidence is data-backed, idempotent, and save-safe", () => {
+  const result = readGameJson(`(() => {
+    Object.assign(state, createInitialState());
+    state.technician = content.technicians.find((technician) => technician.id === "prototype-tech");
+    state.sceneId = "serviceOffice";
+    state.flags.currentAreaId = "serviceOffice";
+    state.clock = "TUE 10:14 AM";
+    const definitions = getServiceDiagnosticEvidenceDefinitions();
+    const conditionIds = new Set(content.serviceDispatch.roomConditions.map((condition) => condition.id));
+    const first = discoverServiceDiagnosticEvidence("client-symptom-timeline", "Client conversation");
+    const repeated = discoverServiceDiagnosticEvidence("client-symptom-timeline", "Repeated conversation");
+    const invalid = discoverServiceDiagnosticEvidence("not-a-real-finding", "Invalid source");
+    const saved = migrateSavedGame(JSON.parse(JSON.stringify(serializeGame())));
+    const missing = migrateSavedGame({
+      version: 1,
+      technicianId: "prototype-tech",
+      sceneId: "shop",
+      flags: {},
+    });
+    const dirty = migrateSavedGame({
+      version: 1,
+      technicianId: "prototype-tech",
+      sceneId: "serviceOffice",
+      flags: {
+        serviceDiagnosticEvidence: [
+          "display-failure-pattern",
+          { id: "display-failure-pattern", source: "Duplicate" },
+          { id: "stale-finding", source: "Old build" },
+          null,
+        ],
+      },
+    });
+    return {
+      definitions,
+      allConditionReferencesValid: definitions.every((evidence) => evidence.conditionIds.every((conditionId) => conditionIds.has(conditionId))),
+      allSkillsValid: definitions.every((evidence) => Boolean(getSkillDefinition(evidence.skillId))),
+      uniqueDefinitionCount: new Set(definitions.map((evidence) => evidence.id)).size,
+      first,
+      repeated,
+      invalid,
+      liveEntries: getServiceDiagnosticEvidenceEntries(),
+      state: getServiceDiagnosticEvidenceState("client-symptom-timeline"),
+      savedEntries: saved.flags.serviceDiagnosticEvidence,
+      missingEntries: missing.flags.serviceDiagnosticEvidence,
+      dirtyEntries: dirty.flags.serviceDiagnosticEvidence,
+    };
+  })()`);
+
+  assert.equal(result.definitions.length, 4);
+  assert.equal(result.uniqueDefinitionCount, result.definitions.length);
+  assert.equal(result.allConditionReferencesValid, true);
+  assert.equal(result.allSkillsValid, true);
+  result.definitions.forEach((definition) => {
+    assert.ok(definition.label.length > 4);
+    assert.ok(definition.summary.length > 20);
+    assert.match(definition.interactionId, /^service-/);
+  });
+  assert.equal(result.first.id, "client-symptom-timeline");
+  assert.deepEqual(result.repeated, result.first);
+  assert.equal(result.invalid, null);
+  assert.equal(result.liveEntries.length, 1);
+  assert.equal(result.state.discovered, true);
+  assert.equal(result.state.entry.source, "Client conversation");
+  assert.equal(result.state.entry.clock, "TUE 10:14 AM");
+  assert.deepEqual(result.savedEntries, result.liveEntries);
+  assert.deepEqual(result.missingEntries, []);
+  assert.deepEqual(result.dirtyEntries.map((entry) => entry.id), ["display-failure-pattern"]);
+});
+
 test("Secret Squirrel copy keeps the mystery shelf joke understandable", () => {
   const result = readGameJson(`(() => {
     const returns = content.warehouseDispatch.checks.find((check) => check.id === "returns");
