@@ -1811,6 +1811,18 @@ Pre-action copy remains qualitative, while resolved actions show the actual
 clock movement and incident roll. Save version 27 keeps each timed action
 single-use and migrates malformed timing history defensively.
 
+Conshohocken adaptive-verification pass: installing the final replacement part
+now returns control to the room and makes the installed display the required
+`TEST` object. The player can run a full room test, make a quicker confidence
+check, or explicitly hand the room back unverified. Full verification uses the
+technician's actual troubleshooting build plus the saved diagnosis, install,
+findings, and schedule modifiers. A weak result appears before closeout and can
+be stabilized, honestly documented for a return visit, or knowingly carried
+forward. The client handoff unlocks only after that decision. Closeout names
+the repair and test path together, keeps the real clock moving forward, and
+cannot repeat rewards when reopened. Save version 28 supplies a defensive
+legacy result for careers completed before final room testing existed.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

@@ -430,13 +430,14 @@ function getServiceAdjustedCheck(check) {
   const effects = getServiceConditionCheckEffects(check);
   const repairMethodModifiers = getServiceRepairMethodCheckModifiers(check);
   const appointmentModifiers = getServiceAppointmentTaskModifiers(check);
+  const finalVerificationModifiers = getServiceFinalVerificationTaskModifiers(check);
   const conditionNotes = [
     ...effects.knownLabels.map((label) => `Known pressure: ${label}`),
     effects.hiddenCount ? `${effects.hiddenCount} hidden room pressure${effects.hiddenCount === 1 ? "" : "s"}` : "",
   ].filter(Boolean);
   return {
     ...check,
-    taskModifiers: [...(check.taskModifiers || []), ...effects.modifiers, ...repairMethodModifiers, ...appointmentModifiers],
+    taskModifiers: [...(check.taskModifiers || []), ...effects.modifiers, ...repairMethodModifiers, ...appointmentModifiers, ...finalVerificationModifiers],
     detail: `${check.detail || ""}${conditionNotes.length ? ` Room condition: ${conditionNotes.join("; ")}.` : ""}`,
   };
 }
@@ -570,8 +571,8 @@ function recordServiceRoomIncident(condition, option, rollResult) {
     actionId: option.id,
     actionLabel: option.label,
     detail,
-    chance: rollResult.chance,
-    roll: rollResult.roll,
+    chance: Number.isFinite(rollResult?.chance) ? rollResult.chance : null,
+    roll: Number.isFinite(rollResult?.roll) ? rollResult.roll : null,
     clock: state.clock,
     incidentFlags: Object.keys(option.incidentFlags || {}),
     status: "open",
@@ -610,7 +611,7 @@ function getServiceRoomIncidentMarkup() {
           <span>${escapeHtml(incident.detail)}</span>
           <span>Status: ${escapeHtml(incident.recovered ? "Recovered" : incident.mitigated ? "Mitigated, technical risk remains" : "Open")}</span>
           ${incident.recoveryDetail ? `<span>Recovery: ${escapeHtml(incident.recoveryDetail)}</span>` : ""}
-          <span>Risk roll: ${formatServiceIncidentChance(incident.chance)} chance, rolled ${Math.round((incident.roll || 0) * 100)}%.</span>
+          ${Number.isFinite(incident.chance) && Number.isFinite(incident.roll) ? `<span>Risk roll: ${formatServiceIncidentChance(incident.chance)} chance, rolled ${Math.round(incident.roll * 100)}%.</span>` : ""}
         </li>
       `).join("")}
     </ul>
@@ -879,6 +880,42 @@ function resolveServiceConditionResponse(conditionId, optionId, rollOverride = n
 
 function getServiceIncidentRecoveryOptions(incident) {
   if (!incident) return [];
+  if (incident.conditionId === "final-verification") {
+    return [
+      {
+        id: "stabilize",
+        label: "Reopen the path and stabilize it",
+        detail: "Spend the time to isolate the dropout, rerun the room test, and own the delay before client handoff.",
+        result: "The final-test dropout is recovered and the repaired room survives the repeated path test.",
+        log: "Recovered the failed final room test before client closeout.",
+        energyCost: 3,
+        reputation: { clients: 1, coworkers: 1, management: -1 },
+        stat: "carefulFinishes",
+        recovered: true,
+        controlled: true,
+      },
+      {
+        id: "document",
+        label: "Document the failed handoff honestly",
+        detail: "Protect the next technician with an exact failure note. The client still inherits an unresolved room, but the diagnosis will not be hidden.",
+        result: "The weak final test is documented for the return visit instead of being presented as a completed repair.",
+        log: "Documented the failed Conshohocken handoff and left the technical risk visible.",
+        energyCost: 1,
+        reputation: { coworkers: 1, clients: -1 },
+        stat: "documentedTaskRisks",
+        mitigated: true,
+        controlled: false,
+      },
+      {
+        id: "carry",
+        label: "Hand the room back anyway",
+        detail: "Spend nothing else. The client gets a working-looking room and the return trip inherits the exposed dropout.",
+        result: "The known final-test dropout is carried into closeout without recovery or a stronger note.",
+        log: "Carried a known final-test dropout into client closeout.",
+        controlled: false,
+      },
+    ];
+  }
   return [
     {
       id: "stabilize",
@@ -964,7 +1001,13 @@ function resolveServiceIncidentRecovery(incidentId, optionId) {
   if (incident.recovered) return notify("That room incident is already recovered.");
   if (incident.recoveryAction) return notify("That room incident already has a recovery decision.");
 
-  const timeKind = option.id === "stabilize" ? "incident-stabilize" : option.id === "calm-client" ? "incident-calm-client" : "";
+  const timeKind = option.id === "stabilize"
+    ? "incident-stabilize"
+    : option.id === "calm-client"
+    ? "incident-calm-client"
+    : option.id === "document"
+    ? "incident-document"
+    : "";
   spendServiceActionTime(
     `incident:${incidentId}:${option.id}`,
     getServiceActionMinutes(timeKind),
@@ -997,10 +1040,20 @@ function resolveServiceIncidentRecovery(incidentId, optionId) {
       });
     }
     (incident.incidentFlags || []).forEach((flagKey) => {
-      if (["serviceVerificationStrained", "serviceInstallStrained", "serviceClientAngry"].includes(flagKey)) {
+      if (["serviceVerificationStrained", "serviceInstallStrained", "serviceClientAngry", "serviceFinalVerificationWeak"].includes(flagKey)) {
         state.flags[flagKey] = false;
       }
     });
+  }
+
+  if (incident.conditionId === "final-verification") {
+    const finalVerification = getServiceFinalVerification();
+    if (finalVerification) {
+      finalVerification.status = option.recovered ? "recovered" : option.id === "document" ? "documented" : "weak";
+      finalVerification.detail = option.result;
+      finalVerification.recoveryAction = option.id;
+      finalVerification.recoveryClock = state.clock;
+    }
   }
 
   state.flags.serviceImmediatePressure = getOpenServiceRoomIncidents().length > 0;
@@ -1034,6 +1087,186 @@ function isServiceConditionControlled(condition) {
   return verifiedClean || installClean;
 }
 
+function getServiceFinalVerificationCheck() {
+  return getServiceCheckById("final-verification");
+}
+
+function recordServiceFinalVerificationIncident({ actionId, actionLabel, detail, rollResult = null } = {}) {
+  const condition = { id: "final-verification", label: "Final room verification" };
+  const option = {
+    id: actionId || "final-test",
+    label: actionLabel || "Final room test",
+    incidentResult: detail || "The repaired room drops signal during final verification.",
+    incidentLog: "Final room verification exposed a weak diagnosis before client closeout.",
+    incidentFlags: {
+      serviceClientAngry: true,
+      serviceFinalVerificationWeak: true,
+      ...(state.flags.serviceInstallStrained ? { serviceInstallStrained: true } : {}),
+    },
+  };
+  state.flags.serviceClientAngry = true;
+  state.flags.serviceFinalVerificationWeak = true;
+  applyReputationDelta({ clients: -1 });
+  return recordServiceRoomIncident(condition, option, rollResult);
+}
+
+function getServiceFinalVerificationChoiceMarkup() {
+  const choices = getServiceFinalVerificationConfig().choices || [];
+  return getChoicePressureMarkup(choices.map((choice) => ({
+    label: choice.label,
+    detail: choice.detail,
+  })));
+}
+
+function showServiceFinalVerificationChoice() {
+  if (!isServiceInstallComplete()) return notify("Install the replacement gear before testing the repaired room.");
+  if (getServiceFinalVerification()) return showServiceFinalVerificationReview();
+  showModal({
+    kicker: "Installed Display",
+    title: "How Do You Prove The Room?",
+    body: `
+      <p>The display is mounted and producing an image. The client handoff depends on what you prove next.</p>
+      ${getServiceAppointmentMarkup()}
+      ${getServiceDiagnosticEvidenceMarkup()}
+      ${getServiceFinalVerificationChoiceMarkup()}
+      <p class="muted">A test can expose a problem while you are still in the room. Skipping it carries that uncertainty directly into closeout.</p>
+    `,
+    actions: (getServiceFinalVerificationConfig().choices || []).map((choice) => ({
+      label: choice.label,
+      className: "secondary-button",
+      onClick: () => resolveServiceFinalVerification(choice.id),
+    })),
+  });
+}
+
+function showServiceFinalVerificationReview() {
+  const result = getServiceFinalVerification();
+  if (!result) return showServiceFinalVerificationChoice();
+  showModal({
+    kicker: "Final Room Test",
+    title: getServiceFinalVerificationLabel(result),
+    body: `
+      ${getServiceAppointmentMarkup()}
+      ${getServiceFinalVerificationMarkup()}
+      ${getServiceRoomIncidentMarkup()}
+      <p class="muted">The recorded test result is locked. Recoverable room pressure can still be handled before client closeout.</p>
+    `,
+    actions: [
+      ...(getRecoverableServiceRoomIncidents().length ? [{ label: "Recover Room Pressure", onClick: showServiceIncidentRecoveryChoice }] : []),
+      { label: "Back To Room", className: "secondary-button", onClick: render },
+    ],
+  });
+}
+
+function resolveServiceFinalVerification(choiceId, rollOverride = null) {
+  if (!isServiceInstallComplete()) return notify("Install the replacement gear before testing the repaired room.");
+  if (getServiceFinalVerification()) return notify("The final room test is already recorded.");
+  const choice = getServiceFinalVerificationChoice(choiceId);
+  if (!choice) return notify("That final-test choice is not available.");
+  spendServiceActionTime(`verification:${choice.id}`, getServiceActionMinutes(`verification-${choice.id}`), choice.label);
+
+  if (choice.id === "skip") {
+    const result = recordServiceFinalVerification({
+      id: choice.id,
+      label: choice.label,
+      status: "skipped",
+      detail: "The room was handed back without a post-repair signal test. The unproven path is now explicit return-trip pressure.",
+    });
+    addLog("Handed the Conshohocken room back without a final signal-path test.");
+    markCareerSnapshotStale();
+    render();
+    return showServiceFinalVerificationReview(result);
+  }
+
+  if (choice.id === "quick") {
+    const config = getServiceFinalVerificationConfig().quickIncident || {};
+    const chance = getServiceQuickVerificationChance();
+    const roll = Number.isFinite(rollOverride)
+      ? rollOverride
+      : getSeededUnit(getServiceRoomSeed(), `final-verification:${state.flags.serviceRepairMethod || state.flags.serviceApproach || "unknown"}`);
+    const rollResult = rollImmediatePressureIncident({ incidentChance: chance }, roll);
+    const detail = rollResult.happened
+      ? recordServiceFinalVerificationIncident({
+        actionId: choice.id,
+        actionLabel: choice.label,
+        detail: config.result,
+        rollResult,
+      })
+      : "The visible source and display path hold through a quick confidence check. No dropout appears this time.";
+    recordServiceFinalVerification({
+      id: choice.id,
+      label: choice.label,
+      status: rollResult.happened ? "weak" : "quick",
+      detail,
+    });
+    if (!rollResult.happened) addLog("Quick final confidence check held through client handoff.");
+    markCareerSnapshotStale();
+    render();
+    return showModal({
+      kicker: "Final Room Test",
+      title: rollResult.happened ? "The Dropout Is Still Here" : "Quick Test Held",
+      body: `
+        <p>${escapeHtml(detail)}</p>
+        ${getServiceAppointmentMarkup()}
+        ${getServiceFinalVerificationMarkup()}
+        ${!rollResult.happened ? `<p class="muted"><strong>Incident roll:</strong> ${formatServiceIncidentChance(rollResult.chance)} chance, rolled ${Math.round(rollResult.roll * 100)}%. The quick handoff held this time.</p>` : ""}
+        ${getServiceRoomIncidentMarkup()}
+      `,
+      actions: [
+        ...(rollResult.happened ? [{ label: "Recover The Room", onClick: showServiceIncidentRecoveryChoice }] : []),
+        { label: "Back To Room", className: "secondary-button", onClick: render },
+      ],
+    });
+  }
+
+  const check = getServiceAdjustedCheck(getServiceFinalVerificationCheck());
+  const { skillCheck, energyCost } = resolveFieldTaskCheck({
+    check,
+    checkId: check.id,
+    completedChecks: getServiceFieldCheckHistory(),
+    flagKey: "service-final-verification",
+    baseEnergyCost: check.energyCost,
+    failedEnergyPenalty: 2,
+    strainedFlag: "serviceFinalVerificationWeak",
+    logText: "Ran a full source, path, and display test before client handoff.",
+    strainedLogText: "Full room verification exposed a dropout before closeout.",
+  });
+  if (skillCheck.successful && state.flags.serviceInstallStrained) {
+    state.flags.serviceInstallStrained = false;
+    addLog("The full room test proved the strained replacement install under load.");
+  }
+  const detail = skillCheck.successful
+    ? check.successText
+    : recordServiceFinalVerificationIncident({
+      actionId: choice.id,
+      actionLabel: choice.label,
+      detail: check.strainedText,
+    });
+  recordServiceFinalVerification({
+    id: choice.id,
+    label: choice.label,
+    status: skillCheck.successful ? "confirmed" : "weak",
+    detail,
+  });
+  markCareerSnapshotStale();
+  render();
+  showModal({
+    kicker: "Final Room Test",
+    title: skillCheck.successful ? "Repair Confirmed" : "Weak Diagnosis Exposed",
+    body: `
+      <p>${escapeHtml(check.detail)}</p>
+      ${getFieldTaskResultMarkup({ check, skillCheck, energyCost })}
+      ${getServiceAppointmentMarkup()}
+      ${getServiceFinalVerificationMarkup()}
+      ${getServiceRoomIncidentMarkup()}
+    `,
+    actions: [
+      ...(!skillCheck.successful ? [{ label: "Recover The Room", onClick: showServiceIncidentRecoveryChoice }] : []),
+      { label: "Back To Room", className: "secondary-button", onClick: render },
+    ],
+  });
+}
+
 function isServiceInstallComplete() {
   return state.serviceInstalled.length === content.serviceDispatch.swapItems.length;
 }
@@ -1051,8 +1284,21 @@ function getServiceRoomConditionCloseoutEntry({ checkedSignalPath = false, strai
   const labels = activeConditions.map((condition) => condition.label).join(", ") || "ordinary service pressure";
   const unresolvedLabels = unresolved.map((condition) => condition.label).join(", ");
   const incidentLabels = incidents.map((incident) => incident.conditionLabel).join(", ");
-  const openPressure = unresolved.length || incidents.length;
-  const verifiedText = checkedSignalPath
+  const finalVerification = getServiceFinalVerification();
+  const finalVerificationRisk = !isServiceFinalVerificationSafe(finalVerification);
+  const installRisk = Boolean(state.flags.serviceInstallStrained);
+  const openPressure = unresolved.length || incidents.length || finalVerificationRisk || installRisk;
+  const verifiedText = finalVerification?.status === "confirmed"
+    ? "A full post-repair room test confirmed the repair before client handoff."
+    : finalVerification?.status === "quick"
+    ? "The quick confidence check held, though it did not provide the same proof as a full room test."
+    : finalVerification?.status === "recovered"
+    ? "Final verification exposed a weak result, and the problem was recovered before client handoff."
+    : finalVerification?.status === "documented"
+    ? "Final verification exposed a weak result. The return visit inherits honest notes instead of a hidden failure."
+    : finalVerification?.status === "skipped"
+    ? "The room was handed back without a post-repair test, so the return visit inherits unproven work."
+    : checkedSignalPath
     ? "Signal path and room pressure were controlled well enough to protect the next visit."
     : strainedVerification
     ? "Verification happened, but the room pressure still left thin notes."
@@ -1062,11 +1308,13 @@ function getServiceRoomConditionCloseoutEntry({ checkedSignalPath = false, strai
   return {
     source: content.serviceDispatch.title,
     status: openPressure ? "open" : "controlled",
-    cause: unresolved.length
-      ? `Unresolved room pressure: ${unresolvedLabels}.`
-      : incidents.length
-      ? `Immediate site pressure: ${incidentLabels}.`
-      : `Room pressure controlled: ${labels}.`,
+    cause: [
+      finalVerificationRisk ? `Final room test: ${getServiceFinalVerificationLabel(finalVerification)}.` : "",
+      installRisk ? "Replacement install remained strained after handoff testing." : "",
+      unresolved.length ? `Unresolved room pressure: ${unresolvedLabels}.` : "",
+      incidents.length ? `Immediate site pressure: ${incidentLabels}.` : "",
+      !openPressure ? `Room pressure controlled: ${labels}.` : "",
+    ].filter(Boolean).join(" "),
     affects: "Conshohocken callback routing and future display service",
     detail: openPressure
       ? `${verifiedText} ${unresolved.map((condition) => condition.closeoutRisk).filter(Boolean).join(" ")} ${incidents.map((incident) => incident.detail).join(" ")}`.trim()
@@ -1102,9 +1350,12 @@ function showServiceResults() {
     return showCompletedDispatchReturnReview({
       title: "Service Call Already Complete",
       source: content.serviceDispatch.title,
-      result: getCompletedCloseoutPathResult("serviceApproach"),
+      result: getServiceCloseoutPathResult(),
     });
   }
+  if (!getServiceFinalVerification()) return notify("Test the installed room before closing out with the client.");
+  if (getRecoverableServiceRoomIncidents().length) return showServiceIncidentRecoveryChoice();
+  spendServiceActionTime("client-closeout", getServiceActionMinutes("client-closeout"), "Closed out the service call with the client");
   const before = getTrackedStateSnapshot();
   ensureServiceRoomConditions();
   const verifiedSignalPath = state.flags.serviceApproach === "verify";
@@ -1113,13 +1364,21 @@ function showServiceResults() {
   const unresolvedConditions = getUnresolvedServiceRoomConditions();
   const immediateIncidents = getOpenServiceRoomIncidents();
   const appointmentPhase = getServiceAppointmentPhase();
-  const serviceReturnRisk = Boolean(state.flags.serviceInstallStrained) || unresolvedConditions.length > 0 || immediateIncidents.length > 0;
+  const finalVerification = getServiceFinalVerification();
+  const finalVerificationRisk = !isServiceFinalVerificationSafe(finalVerification);
+  const serviceReturnRisk = Boolean(state.flags.serviceInstallStrained) || unresolvedConditions.length > 0 || immediateIncidents.length > 0 || finalVerificationRisk;
   const openPressureLabels = [
+    finalVerificationRisk ? getServiceFinalVerificationLabel(finalVerification) : "",
+    state.flags.serviceInstallStrained ? "Strained replacement install" : "",
     ...unresolvedConditions.map((condition) => condition.label),
     ...immediateIncidents.map((incident) => incident.conditionLabel),
   ].filter(Boolean).join(", ");
-  const xp = checkedSignalPath && !serviceReturnRisk ? 55 : !verifiedSignalPath && !serviceReturnRisk ? 48 : checkedSignalPath ? 50 : strainedVerification ? 45 : 40;
-  const diagnosisLabel = checkedSignalPath && !serviceReturnRisk
+  const xp = finalVerification?.status === "confirmed" && !serviceReturnRisk ? 58 : checkedSignalPath && !serviceReturnRisk ? 55 : !verifiedSignalPath && !serviceReturnRisk ? 48 : checkedSignalPath ? 50 : strainedVerification ? 45 : 40;
+  const diagnosisLabel = finalVerification?.status === "confirmed" && !serviceReturnRisk
+    ? "Repair proven under final test"
+    : finalVerification?.status === "recovered" && !serviceReturnRisk
+    ? "Weak result found and recovered"
+    : checkedSignalPath && !serviceReturnRisk
     ? "Room pressure controlled"
     : !verifiedSignalPath && !serviceReturnRisk
     ? "Quick choices held"
@@ -1130,7 +1389,9 @@ function showServiceResults() {
     : strainedVerification
     ? "Verification strained"
     : "Ticket trusted";
-  const serviceRiskDetail = checkedSignalPath
+  const serviceRiskDetail = finalVerificationRisk
+    ? `${getServiceFinalVerificationLabel(finalVerification)}. ${finalVerification.detail}`
+    : checkedSignalPath
     ? serviceReturnRisk
       ? `Signal path notes helped, but open room pressure remains: ${openPressureLabels || "site pressure"}.`
       : "Signal path notes and room conditions are clean enough to protect the room."
@@ -1143,7 +1404,6 @@ function showServiceResults() {
       : "You skipped full verification, but the known room pressure was handled before closeout.";
   state.flags.serviceComplete = true;
   state.carry = [];
-  setClock(`${state.clock.slice(0, 3)} ${checkedSignalPath ? "11:26" : "11:44"} AM`);
   if (!state.flags.servicePaid) {
     state.cash += 96;
     state.flags.servicePaid = true;
@@ -1169,7 +1429,7 @@ function showServiceResults() {
     recordReturnTripRisk("conshohockenServiceRoomPressure", {
       source: content.serviceDispatch.title,
       cause: serviceRiskDetail,
-      detail: `Unresolved service pressure: ${unresolvedConditions.map((condition) => condition.label).join(", ") || "thin signal-path closeout"}.`,
+      detail: `Unresolved service pressure: ${openPressureLabels || "thin signal-path closeout"}.`,
       affects: getReturnTripRiskAffectedWork("conshohockenServiceRoomPressure"),
     });
   } else if (state.flags.returnTripRisks?.conshohockenServiceRoomPressure) {
@@ -1182,7 +1442,7 @@ function showServiceResults() {
   const closeoutConsequences = [getServiceRoomConditionCloseoutEntry({ checkedSignalPath, strainedVerification })];
   recordJobSiteCloseoutSummary({
     source: content.serviceDispatch.title,
-    result: getCompletedCloseoutPathResult("serviceApproach"),
+    result: getServiceCloseoutPathResult(),
     before,
     consequences: closeoutConsequences,
   });
@@ -1199,14 +1459,16 @@ function showServiceResults() {
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Preparation</span><strong>${getServicePreparationLabel()}</strong>
         <span>Repair method</span><strong>${escapeHtml(getServiceRepairMethodLabel())}</strong>
+        <span>Final room test</span><strong>${escapeHtml(getServiceFinalVerificationLabel(finalVerification))}</strong>
         <span>Diagnosis</span><strong>${diagnosisLabel}</strong>
         <span>Return-trip risk</span><strong>${serviceReturnRisk ? "Possible" : "Controlled"}</strong>
       </div>
       ${getServiceAppointmentMarkup()}
+      ${getServiceFinalVerificationMarkup()}
       ${getServiceRoomConditionMarkup({ revealAll: true })}
       <p class="muted">${serviceRiskDetail}</p>
       ${getCloseoutConsequenceMarkup(closeoutConsequences)}
-      <blockquote>Client note: "${appointmentPhase.id === "late" ? "The room came back after our meeting window had already started." : appointmentPhase.id === "tight" ? "Thank you for getting the room back as the next meeting arrived." : "Thank you for fixing the display before the afternoon meeting."}${checkedSignalPath ? " The cable notes are helpful." : strainedVerification ? " The room is working, though the notes are light." : ""}"</blockquote>
+      <blockquote>Client note: "${appointmentPhase.id === "late" ? "The room came back after our meeting window had already started." : appointmentPhase.id === "tight" ? "Thank you for getting the room back as the next meeting arrived." : "Thank you for fixing the display before the afternoon meeting."}${finalVerification?.status === "confirmed" ? " The final room test was reassuring." : finalVerification?.status === "recovered" ? " Thank you for catching the dropout before we took the room back." : finalVerificationRisk ? " We understand the room still needs follow-up." : checkedSignalPath ? " The cable notes are helpful." : ""}"</blockquote>
       ${getReturnPortalCloseoutNoteMarkup()}
     `,
     actions: [getCloseoutReturnAction(content.serviceDispatch.title, "Returned to Radnor Rack & Wire after the Conshohocken service call.", {

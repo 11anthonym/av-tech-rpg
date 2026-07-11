@@ -100,6 +100,130 @@ function getServiceRepairMethodCheckModifiers(check) {
   })];
 }
 
+function getServiceFinalVerificationConfig() {
+  return content.serviceDispatch.finalVerification || {};
+}
+
+function getServiceFinalVerificationChoice(choiceId) {
+  return (getServiceFinalVerificationConfig().choices || []).find((choice) => choice.id === choiceId) || null;
+}
+
+function getServiceFinalVerification() {
+  const result = state.flags.serviceFinalVerification;
+  return result && typeof result === "object" ? result : null;
+}
+
+function recordServiceFinalVerification(result) {
+  if (getServiceFinalVerification()) return getServiceFinalVerification();
+  state.flags.serviceFinalVerification = {
+    id: result.id || "unknown",
+    label: result.label || "Final room test",
+    status: result.status || "weak",
+    detail: result.detail || "Final verification was recorded.",
+    clock: state.clock,
+  };
+  return state.flags.serviceFinalVerification;
+}
+
+function getServiceFinalVerificationLabel(result = getServiceFinalVerification()) {
+  if (!result) return "Not completed";
+  return {
+    confirmed: "Repair confirmed",
+    quick: "Quick test held",
+    recovered: "Weak result recovered",
+    documented: "Weak result documented",
+    weak: "Weak diagnosis exposed",
+    skipped: "Room handed back unverified",
+  }[result.status] || result.label || "Final verification recorded";
+}
+
+function isServiceFinalVerificationSafe(result = getServiceFinalVerification()) {
+  return ["confirmed", "quick", "recovered"].includes(result?.status);
+}
+
+function getServiceCloseoutPathResult() {
+  const method = getServiceRepairMethodLabel();
+  const verification = getServiceFinalVerificationLabel();
+  return `Repair: ${method}. Final test: ${verification}.`;
+}
+
+function getServiceFinalVerificationMarkup() {
+  const result = getServiceFinalVerification();
+  if (!result) return `<p class="muted">The installed room has not been tested for client handoff yet.</p>`;
+  return `
+    <h3>Final Room Test</h3>
+    <ul class="modal-list">
+      <li class="route-card ${isServiceFinalVerificationSafe(result) ? "" : "route-card-pressure"}">
+        <strong>${escapeHtml(getServiceFinalVerificationLabel(result))}</strong>
+        <span>${escapeHtml(result.detail)}</span>
+      </li>
+    </ul>
+  `;
+}
+
+function getServiceFinalVerificationTaskModifiers(check) {
+  if (check?.id !== "final-verification") return [];
+  const modifiers = [];
+  const addModifier = (modifier) => modifiers.push(normalizeTaskModifier({ consumesOnUse: false, energyDelta: 0, ...modifier }));
+  const findings = getDiscoveredServiceDiagnosticEvidenceIds();
+  if (state.flags.serviceApproach === "verify" && !state.flags.serviceVerificationStrained) {
+    addModifier({
+      id: "service-final-signal-proof",
+      label: "Signal path already proven",
+      source: "The selected repair method established a usable signal-path baseline before hardware moved.",
+      statDelta: 1,
+      resultText: "Earlier signal-path work gave the final room test a reliable baseline.",
+    });
+  } else if (state.flags.serviceApproach === "rush") {
+    addModifier({
+      id: "service-final-unproven-path",
+      label: "Signal path not proven",
+      source: "The repair began from the ticket instead of a complete path diagnosis.",
+      statDelta: -1,
+      resultText: "The unproven signal path made the final room test less forgiving.",
+    });
+  }
+  if (!state.flags.serviceInstallStrained) {
+    addModifier({
+      id: "service-final-clean-install",
+      label: "Clean replacement install",
+      source: "The replacement hardware landed without a named install problem.",
+      statDelta: 1,
+      resultText: "The clean hardware install kept final verification focused on diagnosis.",
+    });
+  } else {
+    addModifier({
+      id: "service-final-strained-install",
+      label: "Strained replacement install",
+      source: "The replacement hardware fought the install and still needs proof under load.",
+      statDelta: -1,
+      resultText: "The strained install added uncertainty to the final room test.",
+    });
+  }
+  if (findings.length >= 3) {
+    addModifier({
+      id: "service-final-room-findings",
+      label: "Room findings connected",
+      source: `${findings.length} room findings give the final test a clearer failure pattern to watch for.`,
+      statDelta: 1,
+      resultText: "The accumulated room findings made the final test more diagnostic.",
+    });
+  }
+  return modifiers;
+}
+
+function getServiceQuickVerificationChance() {
+  const config = getServiceFinalVerificationConfig().quickIncident || {};
+  const phase = getServiceAppointmentPhase();
+  let chance = config.baseChance || 0;
+  if (state.flags.serviceApproach === "rush") chance += config.rushedApproachPenalty || 0;
+  if (state.flags.serviceInstallStrained) chance += config.strainedInstallPenalty || 0;
+  if (phase.id === "tight") chance += config.tightSchedulePenalty || 0;
+  if (phase.id === "late") chance += config.lateSchedulePenalty || 0;
+  if (getDiscoveredServiceDiagnosticEvidenceIds().length >= 3) chance -= config.evidenceReduction || 0;
+  return Math.max(0.05, Math.min(0.85, chance));
+}
+
 function getServiceAppointmentConfig() {
   return content.serviceDispatch.appointment || {};
 }

@@ -40,7 +40,14 @@ function getServiceSwapTaskState() {
   if (!state.flags.serviceBrief) return getTaskState({ lockedReason: "Check in with the client contact first." });
   if (state.flags.serviceComplete) return getTaskState({ completed: true, detail: "The service swap is complete." });
   if (!state.flags.serviceInspected) return getTaskState({ stateId: "ready", detail: "Diagnose the failed display before opening replacement gear." });
-  if (isServiceInstallComplete()) return getTaskState({ completed: true, detail: "Replacement gear is installed. Close out with the client." });
+  if (isServiceInstallComplete()) {
+    const verification = getServiceFinalVerification();
+    if (!verification) return getTaskState({ stateId: "ready", detail: "Replacement gear is installed. Run the final room test." });
+    return getTaskState({
+      completed: true,
+      detail: `${getServiceFinalVerificationLabel(verification)}. The result is recorded for client closeout.`,
+    });
+  }
   if (!state.flags.serviceApproach) return getTaskState({ stateId: "ready", detail: "Review current findings and choose the service approach." });
   if (!hasCarriedItems()) return getTaskState({ lockedReason: "Pick up replacement gear before installing." });
   const check = getServiceAdjustedCheck(getServiceInstallCheck(state.carry));

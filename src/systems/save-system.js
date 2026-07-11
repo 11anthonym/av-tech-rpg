@@ -106,6 +106,41 @@ function normalizeServiceTimedActionEntries(entries = []) {
     : [];
 }
 
+function normalizeServiceFinalVerification(flags = {}) {
+  const result = flags.serviceFinalVerification;
+  const validIds = new Set(["full", "quick", "skip", "legacy"]);
+  const validStatuses = new Set(["confirmed", "quick", "recovered", "documented", "weak", "skipped"]);
+  if (result && typeof result === "object" && validIds.has(result.id) && validStatuses.has(result.status)) {
+    flags.serviceFinalVerification = {
+      id: result.id,
+      label: result.label || "Saved final room test",
+      status: result.status,
+      detail: result.detail || "Saved final room test result.",
+      clock: result.clock || "",
+      ...(result.recoveryAction ? { recoveryAction: result.recoveryAction } : {}),
+      ...(result.recoveryClock ? { recoveryClock: result.recoveryClock } : {}),
+    };
+    return;
+  }
+  delete flags.serviceFinalVerification;
+  if (!flags.serviceComplete) return;
+  const inheritedRisk = Boolean(
+    flags.returnTripRisks?.conshohockenServiceRoomPressure
+    || flags.serviceCallbackPending
+    || (flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined),
+  );
+  const confirmed = flags.serviceApproach === "verify" && !flags.serviceVerificationStrained && !inheritedRisk;
+  flags.serviceFinalVerification = {
+    id: "legacy",
+    label: "Saved pre-verification closeout",
+    status: inheritedRisk ? "skipped" : confirmed ? "confirmed" : "quick",
+    detail: inheritedRisk
+      ? "This completed career predates final room testing and already carried Conshohocken return pressure."
+      : "This completed career predates final room testing; its saved closeout result remains authoritative.",
+    clock: "",
+  };
+}
+
 function migrateServiceDiagnosticEvidence(flags = {}) {
   const entries = normalizeServiceDiagnosticEvidenceEntries(flags.serviceDiagnosticEvidence);
   const validRepairMethodIds = new Set((content.serviceDispatch?.repairApproaches || []).map((approach) => approach.id));
@@ -127,6 +162,7 @@ function migrateServiceDiagnosticEvidence(flags = {}) {
   if (flags.serviceRepairMethod === "negotiate-verification-window" && extension > 0) {
     flags.serviceAppointmentExtensionMinutes = Math.min(60, extension);
   } else delete flags.serviceAppointmentExtensionMinutes;
+  normalizeServiceFinalVerification(flags);
 }
 
 function migrateSavedGame(savedGame) {

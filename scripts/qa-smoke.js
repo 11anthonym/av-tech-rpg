@@ -1732,8 +1732,12 @@ async function clickButton(page, name) {
       const incidentResolution = incidentState.flags.serviceConditionResolutions?.["mislabeled-input"];
       const incidentLabels = window.getInteractions().map((interaction) => interaction.label);
       const incidentObjective = window.getObjective();
+      window.resolveServiceIncidentRecovery(incidentState.flags.serviceRoomIncidents?.[0]?.id, "carry");
       incidentState.flags.serviceApproach = "rush";
       incidentState.serviceInstalled = window.GAME_CONTENT.serviceDispatch.swapItems.map((item) => item.id);
+      incidentState.flags.serviceFinalVerification = {
+        id: "quick", label: "Run a quick confidence check", status: "quick", detail: "The quick test held.", clock: incidentState.clock,
+      };
       window.showServiceResults();
       const incidentCloseoutText = document.querySelector("#modal-backdrop")?.innerText || "";
       const incidentRiskSaved = Boolean(incidentState.flags.returnTripRisks?.conshohockenServiceRoomPressure);
@@ -1757,6 +1761,9 @@ async function clickButton(page, name) {
       const recoveryEnergyChanged = recoveryState.energy !== beforeRecoveryEnergy;
       recoveryState.flags.serviceApproach = "rush";
       recoveryState.serviceInstalled = window.GAME_CONTENT.serviceDispatch.swapItems.map((item) => item.id);
+      recoveryState.flags.serviceFinalVerification = {
+        id: "quick", label: "Run a quick confidence check", status: "quick", detail: "The quick test held.", clock: recoveryState.clock,
+      };
       window.showServiceResults();
       const recoveredCloseoutText = document.querySelector("#modal-backdrop")?.innerText || "";
       const recoveredRiskSaved = Boolean(recoveryState.flags.returnTripRisks?.conshohockenServiceRoomPressure);
@@ -1772,6 +1779,9 @@ async function clickButton(page, name) {
       const successResolution = successState.flags.serviceConditionResolutions?.["mislabeled-input"];
       successState.flags.serviceApproach = "rush";
       successState.serviceInstalled = window.GAME_CONTENT.serviceDispatch.swapItems.map((item) => item.id);
+      successState.flags.serviceFinalVerification = {
+        id: "quick", label: "Run a quick confidence check", status: "quick", detail: "The quick test held.", clock: successState.clock,
+      };
       window.showServiceResults();
       const successCloseoutText = document.querySelector("#modal-backdrop")?.innerText || "";
       return {
@@ -1872,7 +1882,7 @@ async function clickButton(page, name) {
     assert(serviceInstallTask.showsResultRows, "Service install should show structured result rows");
 
     const serviceRoomSequence = await page.evaluate(() => {
-      window.startGame("prototype-tech");
+      window.startGame("jordan");
       const state = window.AV_TECH_RPG_DEBUG.state;
       state.flags.finished = true;
       state.flags.reward = "toolBag";
@@ -1897,6 +1907,15 @@ async function clickButton(page, name) {
       const objective = window.resolveCurrentObjective().text;
       window.resumeRequiredPrompt();
       const modalAfterResume = document.querySelector("#modal-backdrop")?.classList.contains("hidden") === false;
+      window.getInteractions().find((interaction) => interaction.id === "service-display")?.action();
+      const verificationChoiceText = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.resolveServiceFinalVerification("full");
+      const verificationResultText = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.closeModal();
+      window.render();
+      const primaryAfterVerification = window.getPrimaryInteraction();
+      const objectiveAfterVerification = window.resolveCurrentObjective().text;
+      const verificationStatus = state.flags.serviceFinalVerification?.status || "";
       window.getInteractions().find((interaction) => interaction.id === "service-client")?.action();
       const closeoutText = document.querySelector("#modal-backdrop")?.innerText || "";
       const completeAfterClient = Boolean(state.flags.serviceComplete);
@@ -1929,6 +1948,11 @@ async function clickButton(page, name) {
         primaryMarkerText: primaryMarker?.textContent || "",
         objective,
         modalAfterResume,
+        verificationChoiceText,
+        verificationResultText,
+        verificationStatus,
+        primaryAfterVerification: primaryAfterVerification?.id || "",
+        objectiveAfterVerification,
         completeAfterClient,
         closeoutText,
         afterFirst,
@@ -1940,15 +1964,87 @@ async function clickButton(page, name) {
       };
     });
     assert(serviceRoomSequence.installModalText.includes("Review The Room") && !serviceRoomSequence.completeAfterInstall, "Final service install should return control to the room before closeout");
-    assert(serviceRoomSequence.primaryId === "service-client" && serviceRoomSequence.primaryMarkerText === "CLIENT", "Client should become the highlighted closeout interaction after install");
-    assert(serviceRoomSequence.objective.includes("close out the service call"), "Current objective should direct the player to physical client closeout");
+    assert(serviceRoomSequence.primaryId === "service-display" && serviceRoomSequence.primaryMarkerText === "TEST", "Installed display should become the highlighted final-test interaction after install");
+    assert(serviceRoomSequence.objective.includes("prove the repaired room"), "Current objective should direct the player to physical final verification");
     assert(!serviceRoomSequence.modalAfterResume, "Reloading the completed install state should not auto-open service closeout");
+    assert(/full room test|quick confidence check|unverified/i.test(serviceRoomSequence.verificationChoiceText), "Installed display should present readable final-test choices");
+    assert(serviceRoomSequence.verificationStatus === "confirmed" && /Repair Confirmed/i.test(serviceRoomSequence.verificationResultText), "Full final verification should record and explain a confirmed repair");
+    assert(serviceRoomSequence.primaryAfterVerification === "service-client" && serviceRoomSequence.objectiveAfterVerification.includes("close out the service call"), "Client should become the required physical handoff after final verification");
     assert(
       serviceRoomSequence.completeAfterClient && /service call complete/i.test(serviceRoomSequence.closeoutText),
       `Client interaction should complete the service closeout (complete=${serviceRoomSequence.completeAfterClient}, modal=${serviceRoomSequence.closeoutText.slice(0, 120)})`,
     );
     assert(serviceRoomSequence.afterFirst.recoverable === 0 && serviceRoomSequence.afterFirst.action === "carry", "Carried room pressure should remove the recovery marker after one decision");
     assert(serviceRoomSequence.afterSecond.energy === serviceRoomSequence.afterFirst.energy && serviceRoomSequence.afterSecond.choices === serviceRoomSequence.afterFirst.choices && serviceRoomSequence.afterSecond.action === "carry", "Room incident recovery decisions should be single use");
+
+    const serviceFinalVerificationBranches = await page.evaluate(() => {
+      const prepare = () => {
+        window.startGame("prototype-tech");
+        const state = window.AV_TECH_RPG_DEBUG.state;
+        window.enterScene("serviceOffice");
+        state.clock = "TUE 11:30 AM";
+        state.flags.serviceBrief = true;
+        state.flags.serviceInspected = true;
+        state.flags.serviceApproach = "rush";
+        state.flags.serviceRepairMethod = "ticket-swap";
+        state.flags.serviceRoomConditions = ["mislabeled-input"];
+        state.flags.serviceKnownRoomConditions = ["mislabeled-input"];
+        state.flags.serviceConditionResolutions = {
+          "mislabeled-input": { conditionId: "mislabeled-input", controlled: true },
+        };
+        state.serviceInstalled = window.GAME_CONTENT.serviceDispatch.swapItems.map((item) => item.id);
+        return state;
+      };
+
+      const quickState = prepare();
+      window.showServiceFinalVerificationChoice();
+      const choiceText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const choiceClasses = [...document.querySelectorAll("#modal-actions button")].map((button) => button.className);
+      window.resolveServiceFinalVerification("quick", 0);
+      const weakText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const weakObjective = window.getObjective();
+      window.showServiceIncidentRecoveryChoice();
+      const recoveryChoiceText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const incidentId = quickState.flags.serviceRoomIncidents?.[0]?.id;
+      window.resolveServiceIncidentRecovery(incidentId, "document");
+      const documentedStatus = quickState.flags.serviceFinalVerification?.status || "";
+      window.closeModal();
+      window.render();
+      window.getInteractions().find((interaction) => interaction.id === "service-client")?.action();
+      const documentedCloseoutText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const documentedRisk = Boolean(quickState.flags.returnTripRisks?.conshohockenServiceRoomPressure);
+
+      const skipState = prepare();
+      window.resolveServiceFinalVerification("skip");
+      const skipReviewText = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.closeModal();
+      window.render();
+      const skipPrimary = window.getPrimaryInteraction()?.id || "";
+      window.getInteractions().find((interaction) => interaction.id === "service-client")?.action();
+      const skipCloseoutText = document.querySelector("#modal-backdrop")?.innerText || "";
+      return {
+        choiceText,
+        choiceClasses,
+        weakText,
+        weakObjective,
+        recoveryChoiceText,
+        documentedStatus,
+        documentedCloseoutText,
+        documentedRisk,
+        skipReviewText,
+        skipPrimary,
+        skipCloseoutText,
+        skipRisk: Boolean(skipState.flags.returnTripRisks?.conshohockenServiceRoomPressure),
+      };
+    });
+    assert(!/% chance|rolled \d+%/i.test(serviceFinalVerificationBranches.choiceText), "Final-test choices should keep hidden quick-test odds out of pre-action copy");
+    assert(new Set(serviceFinalVerificationBranches.choiceClasses).size === 1, "Final-test decisions should use equal visual weight instead of steering the player with one highlighted choice");
+    assert(/dropout|weak diagnosis/i.test(serviceFinalVerificationBranches.weakText) && /visible room incident/i.test(serviceFinalVerificationBranches.weakObjective), "A failed confidence check should expose the weak diagnosis before closeout and take over the objective");
+    assert(serviceFinalVerificationBranches.recoveryChoiceText.includes("Document the failed handoff honestly"), "Failed final verification should offer an honest documentation path");
+    assert(serviceFinalVerificationBranches.documentedStatus === "documented" && serviceFinalVerificationBranches.documentedRisk, "Documenting a failed handoff should preserve known technical risk for the return visit");
+    assert(/Weak result documented|Final room test/i.test(serviceFinalVerificationBranches.documentedCloseoutText), "Documented verification pressure should remain visible in client closeout");
+    assert(/handed back without|unverified/i.test(serviceFinalVerificationBranches.skipReviewText) && serviceFinalVerificationBranches.skipPrimary === "service-client", "Skipping final verification should be explicit before enabling client handoff");
+    assert(serviceFinalVerificationBranches.skipRisk && /Room handed back unverified|Return-trip risk/i.test(serviceFinalVerificationBranches.skipCloseoutText), "Unverified handoff should create readable return-trip pressure");
 
     const serviceConditionCloseout = await page.evaluate(() => {
       window.startGame("prototype-tech");
@@ -1958,6 +2054,13 @@ async function clickButton(page, name) {
       state.flags.serviceKnownRoomConditions = ["mislabeled-input"];
       state.flags.serviceApproach = "rush";
       state.serviceInstalled = window.GAME_CONTENT.serviceDispatch.swapItems.map((item) => item.id);
+      state.flags.serviceFinalVerification = {
+        id: "skip",
+        label: "Hand the room back unverified",
+        status: "skipped",
+        detail: "The room was handed back without a final room test.",
+        clock: state.clock,
+      };
       window.showServiceResults();
       const closeoutText = document.querySelector("#modal-backdrop")?.innerText || "";
       window.usePortal("serviceOfficeToShop");

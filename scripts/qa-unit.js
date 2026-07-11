@@ -1110,6 +1110,14 @@ test("Conshohocken primary interactions guide the physical service-room sequence
     state.flags.serviceRoomIncidents[0].recoveryAction = "carry";
     state.serviceInstalled = content.serviceDispatch.swapItems.map((item) => item.id);
     state.carry = [];
+    snapshots.push(capture("verify"));
+    state.flags.serviceFinalVerification = {
+      id: "full",
+      label: "Run a full room test",
+      status: "confirmed",
+      detail: "The room held under test.",
+      clock: state.clock,
+    };
     snapshots.push(capture("closeout"));
     return snapshots;
   })()`);
@@ -1125,6 +1133,9 @@ test("Conshohocken primary interactions guide the physical service-room sequence
   assert.match(byId.install.objective, /fit the carried replacement gear/i);
   assert.equal(byId.recover.interactionId, "service-incident-recovery");
   assert.match(byId.recover.objective, /recover the visible room incident/i);
+  assert.equal(byId.verify.interactionId, "service-display");
+  assert.equal(byId.verify.marker, "TEST");
+  assert.match(byId.verify.objective, /prove the repaired room/i);
   assert.equal(byId.closeout.interactionId, "service-client");
   assert.match(byId.closeout.objective, /close out the service call/i);
   result.filter((entry) => entry.interactionId).forEach((entry) => {
@@ -1387,6 +1398,136 @@ test("Conshohocken appointment pressure trades diagnostic certainty for client t
   assert.deepEqual(result.migratedActions.map((entry) => [entry.id, entry.minutes]), [["display", 25], ["signal", 0]]);
   assert.equal(result.migratedExtension, 60);
   assert.equal(result.staleExtension, 0);
+});
+
+test("Conshohocken final verification can confirm, expose, recover, or inherit room risk", () => {
+  const result = readGameJson(`(() => {
+    const prepare = ({ approach = "verify", clock = "TUE 10:30 AM", strainedInstall = false } = {}) => {
+      Object.assign(state, createInitialState());
+      state.technician = content.technicians.find((technician) => technician.id === "prototype-tech");
+      state.tools = ["screwdriver"];
+      state.sceneId = "serviceOffice";
+      state.flags.currentAreaId = "serviceOffice";
+      state.clock = clock;
+      state.flags.serviceBrief = true;
+      state.flags.serviceInspected = true;
+      state.flags.serviceApproach = approach;
+      state.flags.serviceRepairMethod = approach === "verify" ? "verify-path" : "ticket-swap";
+      state.flags.serviceInstallStrained = strainedInstall;
+      state.flags.serviceRoomConditions = ["mislabeled-input"];
+      state.flags.serviceKnownRoomConditions = ["mislabeled-input"];
+      state.flags.serviceConditionResolutions = {
+        "mislabeled-input": { conditionId: "mislabeled-input", controlled: true },
+      };
+      state.serviceInstalled = content.serviceDispatch.swapItems.map((item) => item.id);
+    };
+
+    prepare();
+    resolveServiceFinalVerification("full");
+    const confirmed = {
+      result: { ...getServiceFinalVerification() },
+      fieldTask: state.flags.fieldTaskResults?.["service-final-verification"],
+      primaryId: getPrimaryInteraction()?.id || "",
+      objective: resolveCurrentObjective().text,
+    };
+
+    prepare({ approach: "verify", strainedInstall: true });
+    state.technician = content.technicians.find((technician) => technician.id === "jordan");
+    resolveServiceFinalVerification("full");
+    const provenInstall = {
+      status: getServiceFinalVerification()?.status || "",
+      installStrained: Boolean(state.flags.serviceInstallStrained),
+    };
+
+    prepare({ approach: "rush", clock: "TUE 1:05 PM", strainedInstall: true });
+    resolveServiceFinalVerification("full");
+    const exposedBefore = {
+      result: { ...getServiceFinalVerification() },
+      incidents: getServiceRoomIncidentEntries().length,
+      recoverable: getRecoverableServiceRoomIncidents().length,
+    };
+    const fullIncidentId = getServiceRoomIncidentId(getServiceRoomIncidentEntries()[0], 0);
+    resolveServiceIncidentRecovery(fullIncidentId, "document");
+    const documented = {
+      result: { ...getServiceFinalVerification() },
+      safe: isServiceFinalVerificationSafe(),
+      recoverable: getRecoverableServiceRoomIncidents().length,
+      openIncidents: getOpenServiceRoomIncidents().length,
+    };
+
+    prepare({ approach: "rush", clock: "TUE 11:30 AM" });
+    resolveServiceFinalVerification("quick", 0);
+    const quickFailure = {
+      result: { ...getServiceFinalVerification() },
+      incident: getServiceRoomIncidentEntries()[0],
+    };
+
+    prepare({ approach: "verify", clock: "TUE 12:20 PM" });
+    resolveServiceFinalVerification("skip");
+    const clockBeforeCloseout = state.clock;
+    showServiceResults();
+    const firstCloseout = {
+      clock: state.clock,
+      cash: state.cash,
+      jobs: state.jobsCompleted,
+      risk: state.flags.returnTripRisks?.conshohockenServiceRoomPressure,
+      summary: state.flags.lastJobSiteCloseoutSummary,
+      final: { ...getServiceFinalVerification() },
+    };
+    showServiceResults();
+    const repeatCloseout = { cash: state.cash, jobs: state.jobsCompleted, clock: state.clock };
+
+    const migrated = migrateSavedGame({
+      version: 27,
+      technicianId: "prototype-tech",
+      sceneId: "serviceOffice",
+      flags: {
+        serviceComplete: true,
+        serviceApproach: "rush",
+        serviceFinalVerification: { id: "removed", status: "impossible" },
+      },
+    });
+
+    return {
+      confirmed,
+      provenInstall,
+      exposedBefore,
+      documented,
+      quickFailure,
+      clockBeforeCloseout,
+      firstCloseout,
+      repeatCloseout,
+      migratedFinal: migrated.flags.serviceFinalVerification,
+    };
+  })()`);
+
+  assert.equal(result.confirmed.result.status, "confirmed");
+  assert.equal(result.confirmed.fieldTask.successful, true);
+  assert.equal(result.confirmed.primaryId, "service-client");
+  assert.match(result.confirmed.objective, /close out the service call/i);
+  assert.equal(result.provenInstall.status, "confirmed");
+  assert.equal(result.provenInstall.installStrained, false);
+  assert.equal(result.exposedBefore.result.status, "weak");
+  assert.equal(result.exposedBefore.incidents, 1);
+  assert.equal(result.exposedBefore.recoverable, 1);
+  assert.equal(result.documented.result.status, "documented");
+  assert.equal(result.documented.safe, false);
+  assert.equal(result.documented.recoverable, 0);
+  assert.equal(result.documented.openIncidents, 1);
+  assert.equal(result.quickFailure.result.status, "weak");
+  assert.equal(result.quickFailure.incident.conditionId, "final-verification");
+  assert.match(result.quickFailure.incident.detail, /drops|diagnosis/i);
+  assert.equal(result.firstCloseout.final.status, "skipped");
+  assert.ok(result.firstCloseout.risk);
+  assert.match(result.firstCloseout.summary.result, /Final test: Room handed back unverified/i);
+  assert.notEqual(result.firstCloseout.clock, result.clockBeforeCloseout);
+  assert.deepEqual(result.repeatCloseout, {
+    cash: result.firstCloseout.cash,
+    jobs: result.firstCloseout.jobs,
+    clock: result.firstCloseout.clock,
+  });
+  assert.equal(result.migratedFinal.id, "legacy");
+  assert.equal(result.migratedFinal.status, "skipped");
 });
 
 test("Conshohocken diagnostic evidence is data-backed, idempotent, and save-safe", () => {

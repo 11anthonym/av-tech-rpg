@@ -68,7 +68,7 @@ schedule pressure; rushing can save time but create an in-room problem.
 
 ## Step 5: Verification And Adaptive Closeout
 
-**Status:** Not started.
+**Status:** Complete.
 
 - Let verification confirm a repair or expose a weak diagnosis before closeout.
 - Let the player recover, document, or knowingly inherit remaining pressure.
@@ -130,3 +130,14 @@ same existing dispatch.
   a more workable handoff window. Save version 27 normalizes timing history and
   preserves valid extensions. Pre-action timing and odds stay qualitative;
   resolved actions record exact clock and incident results. Full QA passed.
+- 2026-07-11: Step 5 made the installed display a required `TEST` interaction
+  before client handoff. The player can run a full field-task verification, try
+  a seeded quick confidence check, or explicitly return the room unverified.
+  Full and quick tests can expose a weak diagnosis in the room; the player can
+  stabilize it, document the failed handoff, or knowingly carry it into
+  closeout. Final-test choices use equal visual weight and keep hidden odds out
+  of pre-action copy. Client notes, closeout summaries, return-trip pressure,
+  and the consequence ledger now name both the repair method and final-test
+  result. Fixed morning closeout times were removed, save version 28 migrates
+  older completed careers, and repeat closeout guards still prevent duplicate
+  rewards or clock changes. Full QA passed.

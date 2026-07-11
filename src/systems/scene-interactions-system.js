@@ -275,6 +275,7 @@ function getInteractions() {
     }
     if (state.flags.serviceComplete) return getScenePortalInteractions("serviceOffice");
     const installComplete = isServiceInstallComplete();
+    const finalVerification = getServiceFinalVerification();
     const investigationOpen = state.flags.serviceInspected && !state.flags.serviceApproach;
     const actionableClientIncident = getRecoverableServiceRoomIncidents()
       .find((incident) => incident.incidentFlags?.includes("serviceClientAngry"));
@@ -284,23 +285,27 @@ function getInteractions() {
       {
         id: "service-client",
         x: 300, y: 185,
-        label: installComplete
+        label: installComplete && finalVerification
           ? "Close out service call"
+          : installComplete
+          ? "Review client handoff"
           : actionableClientIncident
           ? "Address client concern"
           : state.flags.serviceBrief && !hasServiceDiagnosticEvidence("client-symptom-timeline")
           ? "Ask client about symptoms"
           : "Review client notes",
         npc: "CLIENT",
-        objectivePriority: () => installComplete || !state.flags.serviceBrief
+        objectivePriority: () => (installComplete && finalVerification) || !state.flags.serviceBrief
           ? "required"
           : openClientPressure
           ? "pressure"
           : investigationOpen
           ? ""
           : "optional",
-        objectiveHint: () => installComplete
+        objectiveHint: () => installComplete && finalVerification
           ? "Walk to CLIENT and close out the service call."
+          : installComplete
+          ? "Run a final room test at TEST before closing out with the client."
           : !state.flags.serviceBrief
           ? "Walk to CLIENT and check in before touching the room."
           : actionableClientIncident
@@ -309,6 +314,7 @@ function getInteractions() {
         pressureKind: openClientPressure ? "client" : "",
         taskState: () => {
           if (installComplete) {
+            if (!finalVerification) return getTaskState({ lockedReason: "Run the final room test at the installed display first." });
             return getTaskState({
               stateId: openClientPressure ? "strained" : "ready",
               detail: openClientPressure
@@ -322,8 +328,9 @@ function getInteractions() {
           return getTaskState({ completed: true, detail: "Client symptom timeline is recorded in the room findings." });
         },
         action: () => {
-          if (installComplete) return showServiceResults();
           if (actionableClientIncident) return showServiceIncidentRecoveryChoice();
+          if (installComplete && !finalVerification) return notify("Run the final room test at the installed display before client closeout.");
+          if (installComplete) return showServiceResults();
           if (state.flags.serviceBrief) return showServiceClientContext();
           state.flags.serviceBrief = true;
           ensureServiceRoomConditions();
@@ -388,27 +395,42 @@ function getInteractions() {
       {
         id: "service-display",
         x: 760, y: 305,
-        label: installComplete
-          ? "Review installed display"
+        label: installComplete && !finalVerification
+          ? "Run final room test"
+          : installComplete
+          ? "Review final room test"
           : investigationOpen
           ? "Choose service approach"
           : state.flags.serviceInspected
           ? "Install replacement parts"
           : "Inspect failed display",
-        markerText: investigationOpen ? "CHOOSE" : undefined,
-        objectivePriority: installComplete ? "optional" : investigationOpen ? "" : "required",
+        markerText: installComplete && !finalVerification ? "TEST" : investigationOpen ? "CHOOSE" : undefined,
+        objectivePriority: installComplete && !finalVerification ? "required" : installComplete ? "optional" : investigationOpen ? "" : "required",
         objectiveHint: () => !state.flags.serviceBrief
           ? "Check in with CLIENT before inspecting the room."
           : !state.flags.serviceInspected
           ? "Walk to CHECK and inspect the failed display."
           : !state.flags.serviceApproach
           ? "Gather another room finding or return to CHOOSE and select a service approach."
+          : installComplete && !finalVerification
+          ? "Walk to TEST and prove the repaired room before client handoff."
+          : installComplete
+          ? "Review the recorded final room test."
           : hasCarriedItems()
           ? "Walk to INSTALL and fit the carried replacement gear."
           : "Pick up the replacement gear before continuing the install.",
         pressureKind: "technical",
         pressure: () => {
           if (!state.flags.serviceBrief) return "";
+          if (installComplete && !finalVerification) {
+            const check = getServiceAdjustedCheck(getServiceFinalVerificationCheck());
+            return getActionPressureBrief({
+              check,
+              baseEnergyCost: check.energyCost,
+              includeSkill: true,
+              includeLedger: true,
+            });
+          }
           if (!state.flags.serviceInspected) {
             return getActionPressureBrief({
               baseEnergyCost: getServiceDiagnosisEnergyCost(3),
@@ -429,7 +451,7 @@ function getInteractions() {
         taskState: getServiceSwapTaskState,
         action: () => {
           if (!state.flags.serviceBrief) return notify("Check in with the client contact first.");
-          if (installComplete) return notify("The replacement display is installed. Close out with the client.");
+          if (installComplete) return finalVerification ? showServiceFinalVerificationReview() : showServiceFinalVerificationChoice();
           if (!state.flags.serviceInspected) {
             state.flags.serviceInspected = true;
             ensureServiceRoomConditions();

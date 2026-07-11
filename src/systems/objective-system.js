@@ -293,6 +293,7 @@ function getObjective() {
       : "";
     if (getRecoverableServiceRoomIncidents().length) return "Recover the visible room incident or carry it into closeout.";
     if (!state.flags.serviceApproach) return `${appointmentLead}Gather another room finding or return to CHOOSE and select a service approach.`;
+    if (isServiceInstallComplete() && !getServiceFinalVerification()) return `${appointmentLead}Return to TEST and prove the repaired room before client handoff.`;
     if (getActionableServiceRoomConditions().length) return `${appointmentLead}Decide how to handle the known room pressure or continue the display swap.`;
     if (isServiceInstallComplete()) return `${appointmentLead}Return to the client contact and close out the service call.`;
     return `${appointmentLead}Install replacement gear (${state.serviceInstalled.length}/${content.serviceDispatch.swapItems.length}).`;
