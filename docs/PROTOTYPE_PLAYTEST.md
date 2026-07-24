@@ -1823,6 +1823,29 @@ the repair and test path together, keeps the real clock moving forward, and
 cannot repeat rewards when reopened. Save version 28 supplies a defensive
 legacy result for careers completed before final room testing existed.
 
+Conshohocken replay-proof pass: Jordan, Wiley, and Morgan completed the same
+service call through distinct saved paths. Jordan inspected the display,
+signal path, and client history before isolating the coupler and confirming the
+repair with no open incident. Wiley inspected the display and replacement kit,
+staged a hardware-first swap, recovered a visible mount sag, and closed on a
+quick test that held. Morgan inspected the display and client history,
+negotiated a verification window, then documented a failed final test and left
+the resulting return-trip pressure visible.
+
+The browser replay saves and reloads at investigation, repair, incident, and
+closeout checkpoints. Evidence order, technician, repair method, incident
+recovery, final-test state, current objective, and consequence risk all survive.
+Repeated closeout remains read-only. This pass also caught and fixed an old
+migration rule that incorrectly recreated callback pressure after loading a
+clean modern hardware-swap closeout.
+
+Playtest decision: the diagnostic-agency pattern is proven, but it should not
+be copied wholesale into another job. Reassess the complete workday first.
+University City is the leading reuse candidate because inspection order already
+matters there; a future pass should reuse shared evidence, task, pressure,
+objective, and consequence helpers rather than duplicate the Conshohocken
+scene controller.
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

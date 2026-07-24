@@ -220,21 +220,34 @@ This is the pattern to reuse when another existing job room needs spatial depth:
 first clarify which object matters, then let room state and consequences change
 that object. Do not add another dispatch to prove the same point.
 
-## Active Implementation Lane
+## Completed Implementation Lane: Conshohocken Diagnostic Agency
 
-The next finite lane is tracked in
+The completed finite lane is tracked in
 [`DIAGNOSTIC_AGENCY_TRACKER.md`](DIAGNOSTIC_AGENCY_TRACKER.md). Work through its
 six numbered steps in order. Step 1 establishes findings and save safety; later
 steps connect those findings to investigation order, repair approaches, time
 pressure, verification, and adaptive closeout. Do not begin another roadmap
 lane until Step 6 closes this proof case.
 
-**Current status:** Steps 1 through 5 are complete. The service room supports an
+**Current status:** Steps 1 through 6 are complete. The service room supports an
 optional findings phase, universal and build-specific repair methods, and a
 saved appointment-pressure path driven by the visible workday clock. Careful
 investigation can squeeze the client handoff, rushed work can create a
 recoverable problem in the room, and negotiation can buy time. After install,
 the player must choose how to test the repaired room; weak verification can be
-recovered, documented, or knowingly inherited. Step 6 is the final boundary:
-prove replay variation and save/continue across the room states, then close
-this roadmap lane and reassess the whole playable day.
+recovered, documented, or knowingly inherited.
+
+Step 6 proved three distinct replays on the same dispatch:
+
+- Jordan used signal-path evidence and coupler isolation to reach a confirmed,
+  controlled closeout.
+- Wiley used replacement evidence and staged hardware work, recovered a visible
+  mount incident, and reached a quick test that held.
+- Morgan used client evidence and a negotiated verification window, then
+  documented a failed final test and retained return-trip pressure.
+
+Investigation, repair, incident, and closeout checkpoints all survive
+save/continue, and completed closeout cannot repeat rewards. This lane is
+closed. The next planning pass must reassess the whole playable day before
+selectively applying the shared pattern to University City or another existing
+job.

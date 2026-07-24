@@ -2997,6 +2997,229 @@ async function clickButton(page, name) {
     assert(commissioningTerminationTask.reviewShowsSavedResult, "Commissioning termination hotspot should reopen saved task result review");
     assert(commissioningTerminationTask.clipboardShowsHistory, "Career clipboard should show saved commissioning field-task history");
 
+    const serviceReplayProof = await page.evaluate(() => {
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.saveGame();
+      const priorCareerSave = localStorage.getItem("av-tech-rpg-save-v1");
+      const serviceItemIds = window.GAME_CONTENT.serviceDispatch.swapItems.map((item) => item.id);
+      const getEvidenceIds = () => (state.flags.serviceDiagnosticEvidence || []).map((entry) => entry.id);
+      const getIncidentStates = () => (state.flags.serviceRoomIncidents || []).map((incident) => ({
+        conditionId: incident.conditionId,
+        recoveryAction: incident.recoveryAction || "",
+        recovered: Boolean(incident.recovered),
+        mitigated: Boolean(incident.mitigated),
+      }));
+      const captureState = () => ({
+        technicianId: state.technician?.id || "",
+        sceneId: state.sceneId,
+        evidenceIds: getEvidenceIds(),
+        repairMethod: state.flags.serviceRepairMethod || "",
+        incidentStates: getIncidentStates(),
+        finalStatus: state.flags.serviceFinalVerification?.status || "",
+        complete: Boolean(state.flags.serviceComplete),
+        openRisk: Boolean(state.flags.returnTripRisks?.conshohockenServiceRoomPressure),
+        callbackPending: Boolean(state.flags.serviceCallbackPending),
+        objective: window.getObjective(),
+      });
+      const saveAndContinue = (stage) => {
+        const before = captureState();
+        window.saveGame();
+        state.technician = window.GAME_CONTENT.technicians.find((technician) => technician.id === "prototype-tech");
+        state.sceneId = "shop";
+        state.flags.serviceDiagnosticEvidence = [];
+        state.flags.serviceRepairMethod = "ticket-swap";
+        state.flags.serviceRoomIncidents = [];
+        delete state.flags.serviceFinalVerification;
+        state.flags.serviceComplete = false;
+        window.continueGame();
+        window.closeModal();
+        const after = captureState();
+        return {
+          stage,
+          before,
+          after,
+          restored: JSON.stringify(before) === JSON.stringify(after),
+        };
+      };
+      const useInteraction = (interactionId) => {
+        const interaction = window.getInteractions().find((entry) => entry.id === interactionId);
+        if (!interaction) throw new Error(`Replay proof could not find interaction ${interactionId}.`);
+        interaction.action();
+      };
+      const startReplay = (technicianId, roomConditions) => {
+        window.startGame(technicianId);
+        window.enterScene("serviceOffice");
+        state.clock = "TUE 10:15 AM";
+        state.flags.serviceStarted = true;
+        state.flags.routeHistory = { conshohockenService: 1 };
+        state.flags.serviceRoomConditions = roomConditions;
+        state.flags.serviceKnownRoomConditions = [];
+        state.flags.serviceConditionResolutions = {};
+        state.flags.serviceRoomIncidents = [];
+        state.flags.serviceDiagnosticEvidence = [];
+        state.flags.serviceTimedActions = [];
+        useInteraction("service-client");
+        window.closeModal();
+        window.render();
+        useInteraction("service-display");
+        window.closeModal();
+        window.render();
+      };
+      const installReplacementPackage = () => {
+        state.carry = [...serviceItemIds];
+        window.installServicePart();
+        window.closeModal();
+        window.render();
+      };
+      const closeOutWithClient = () => {
+        useInteraction("service-client");
+        return document.querySelector("#modal-backdrop")?.innerText || "";
+      };
+
+      startReplay("jordan", ["bad-ticket-notes", "mislabeled-input"]);
+      window.inspectServiceSignalPathFinding();
+      window.closeModal();
+      window.showServiceClientContext();
+      window.closeModal();
+      const jordanInvestigation = saveAndContinue("investigation");
+      window.chooseServiceRepairMethod("isolate-coupler");
+      window.closeModal();
+      window.resolveServiceConditionResponse("bad-ticket-notes", "document");
+      window.closeModal();
+      window.resolveServiceConditionResponse("mislabeled-input", "document");
+      window.closeModal();
+      installReplacementPackage();
+      window.resolveServiceFinalVerification("full");
+      window.closeModal();
+      const jordanCloseoutText = closeOutWithClient();
+      const jordanCloseout = saveAndContinue("closeout");
+      const jordanBeforeRepeat = {
+        cash: state.cash,
+        xp: state.xp,
+        jobs: state.jobsCompleted,
+        callbacks: state.stats.callbacks,
+        clock: state.clock,
+      };
+      window.showServiceResults();
+      const jordanAfterRepeat = {
+        cash: state.cash,
+        xp: state.xp,
+        jobs: state.jobsCompleted,
+        callbacks: state.stats.callbacks,
+        clock: state.clock,
+      };
+      const jordan = {
+        evidenceIds: jordanCloseout.after.evidenceIds,
+        repairMethod: jordanCloseout.after.repairMethod,
+        incidents: jordanCloseout.after.incidentStates,
+        finalStatus: jordanCloseout.after.finalStatus,
+        openRisk: jordanCloseout.after.openRisk,
+        objective: jordanCloseout.after.objective,
+        closeoutText: jordanCloseoutText,
+        repeatUnchanged: JSON.stringify(jordanBeforeRepeat) === JSON.stringify(jordanAfterRepeat),
+      };
+
+      startReplay("wiley", ["flaky-replacement-display", "loose-mount-hardware"]);
+      window.inspectServiceReplacementGearFinding();
+      window.closeModal();
+      window.chooseServiceRepairMethod("stage-clean-swap");
+      window.closeModal();
+      const wileyRepair = saveAndContinue("repair");
+      window.resolveServiceConditionResponse("flaky-replacement-display", "stabilize");
+      window.closeModal();
+      window.resolveServiceConditionResponse("loose-mount-hardware", "snug-mount-fast", 0);
+      window.closeModal();
+      const wileyIncidentId = state.flags.serviceRoomIncidents?.[0]?.id || "";
+      window.resolveServiceIncidentRecovery(wileyIncidentId, "stabilize");
+      window.closeModal();
+      installReplacementPackage();
+      window.resolveServiceFinalVerification("quick", 0.99);
+      window.closeModal();
+      const wileyCloseoutText = closeOutWithClient();
+      const wileyCloseout = saveAndContinue("closeout");
+      const wiley = {
+        evidenceIds: wileyCloseout.after.evidenceIds,
+        repairMethod: wileyCloseout.after.repairMethod,
+        incidents: wileyCloseout.after.incidentStates,
+        finalStatus: wileyCloseout.after.finalStatus,
+        openRisk: wileyCloseout.after.openRisk,
+        callbackPending: wileyCloseout.after.callbackPending,
+        closeoutText: wileyCloseoutText,
+      };
+
+      startReplay("morgan", ["client-time-pressure"]);
+      window.showServiceClientContext();
+      window.closeModal();
+      window.chooseServiceRepairMethod("negotiate-verification-window");
+      window.closeModal();
+      installReplacementPackage();
+      window.resolveServiceFinalVerification("quick", 0);
+      window.closeModal();
+      const morganIncident = saveAndContinue("incident");
+      const morganIncidentId = state.flags.serviceRoomIncidents?.[0]?.id || "";
+      window.resolveServiceIncidentRecovery(morganIncidentId, "document");
+      window.closeModal();
+      const morganCloseoutText = closeOutWithClient();
+      const morgan = {
+        evidenceIds: getEvidenceIds(),
+        repairMethod: state.flags.serviceRepairMethod || "",
+        incidents: getIncidentStates(),
+        finalStatus: state.flags.serviceFinalVerification?.status || "",
+        openRisk: Boolean(state.flags.returnTripRisks?.conshohockenServiceRoomPressure),
+        closeoutText: morganCloseoutText,
+      };
+
+      const replayResult = {
+        checkpoints: [jordanInvestigation, wileyRepair, morganIncident, jordanCloseout, wileyCloseout],
+        jordan,
+        wiley,
+        morgan,
+      };
+      localStorage.setItem("av-tech-rpg-save-v1", priorCareerSave);
+      window.continueGame();
+      window.closeModal();
+      return replayResult;
+    });
+    assert(serviceReplayProof.checkpoints.every((checkpoint) => checkpoint.restored), "Investigation, repair, incident, and closeout checkpoints should restore the same service state through save/continue");
+    assert(
+      new Set([
+        JSON.stringify(serviceReplayProof.jordan.evidenceIds),
+        JSON.stringify(serviceReplayProof.wiley.evidenceIds),
+        JSON.stringify(serviceReplayProof.morgan.evidenceIds),
+      ]).size === 3,
+      "Jordan, Wiley, and Morgan should preserve different investigation histories on the same dispatch",
+    );
+    assert(
+      serviceReplayProof.jordan.repairMethod === "isolate-coupler"
+        && serviceReplayProof.wiley.repairMethod === "stage-clean-swap"
+        && serviceReplayProof.morgan.repairMethod === "negotiate-verification-window",
+      "Three technician builds should retain distinct evidence-backed service methods after save/continue",
+    );
+    assert(serviceReplayProof.jordan.incidents.length === 0, "Jordan's evidence-first replay should avoid an immediate room incident");
+    assert(
+      serviceReplayProof.wiley.incidents.length === 1
+        && serviceReplayProof.wiley.incidents[0].recovered
+        && serviceReplayProof.wiley.incidents[0].recoveryAction === "stabilize",
+      "Wiley's hardware-first replay should be able to recover a visible mount incident before closeout",
+    );
+    assert(
+      serviceReplayProof.morgan.incidents.some((incident) => incident.conditionId === "final-verification" && incident.mitigated && incident.recoveryAction === "document"),
+      "Morgan's client-pressure replay should be able to document a failed final test instead of hiding it",
+    );
+    assert(
+      serviceReplayProof.jordan.finalStatus === "confirmed"
+        && serviceReplayProof.wiley.finalStatus === "quick"
+        && serviceReplayProof.morgan.finalStatus === "documented",
+      "The same service call should close with confirmed, quick-held, and documented-risk final states",
+    );
+    assert(!serviceReplayProof.jordan.openRisk && !serviceReplayProof.wiley.openRisk && serviceReplayProof.morgan.openRisk, "Only the replay that knowingly documents unresolved pressure should retain Conshohocken return risk");
+    assert(!serviceReplayProof.wiley.callbackPending, "A clean current hardware-swap closeout should not regain legacy callback pressure after continue");
+    assert(/return|shop/i.test(serviceReplayProof.jordan.objective), "A reloaded completed service call should still direct the player to the return portal");
+    assert(serviceReplayProof.jordan.repeatUnchanged, "Reloading and reviewing a completed service call should not repeat rewards, callbacks, or clock changes");
+    assert(/Trace and isolate the coupler|Repair method/i.test(serviceReplayProof.jordan.closeoutText), "Jordan's closeout should name the evidence-first repair path");
+    assert(/Stage a clean hardware swap|Quick test held/i.test(serviceReplayProof.wiley.closeoutText), "Wiley's closeout should name the hardware path and quick held result");
+    assert(/Negotiate a verification window|Weak result documented/i.test(serviceReplayProof.morgan.closeoutText), "Morgan's closeout should name the client-pressure path and documented weak result");
+
     const saveRoundTrip = await page.evaluate(() => {
       const state = window.AV_TECH_RPG_DEBUG.state;
       state.flags.routeHistory = { centerCityTutorial: 1, conshohockenService: 1 };

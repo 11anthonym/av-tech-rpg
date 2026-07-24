@@ -214,7 +214,13 @@ function migrateSavedGame(savedGame) {
   normalizeRetrofitInstallFlags(flags);
   migrateSurveyConsequenceFlags(flags);
   migrateServiceDiagnosticEvidence(flags);
-  if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
+  if (
+    flags.serviceComplete
+    && flags.serviceApproach !== "verify"
+    && flags.serviceCallbackResolved === undefined
+    && flags.serviceFinalVerification?.id === "legacy"
+    && flags.serviceFinalVerification.status === "skipped"
+  ) {
     flags.serviceCallbackPending = true;
   }
   flags.jobSiteCloseoutHistory = Array.isArray(flags.jobSiteCloseoutHistory)
@@ -654,9 +660,6 @@ function continueGame() {
   if (flags.handoffComplete) flags.handoffProgressAwarded = true;
   if (flags.systemsComplete) flags.systemsProgressAwarded = true;
   if (flags.travelComplete) flags.travelProgressAwarded = true;
-  if (flags.serviceComplete && flags.serviceApproach !== "verify" && flags.serviceCallbackResolved === undefined) {
-    flags.serviceCallbackPending = true;
-  }
   resetRuntimeState();
   Object.assign(state, savedGame, {
     technician,

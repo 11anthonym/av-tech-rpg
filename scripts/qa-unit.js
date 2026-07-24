@@ -964,6 +964,49 @@ test("save migration fills current route, cargo, support, and ledger defaults", 
   assert.equal(result.joshCrewSupportSource, "");
 });
 
+test("current verified service closeouts do not regain legacy callback pressure on load", () => {
+  const result = readGameJson(`(() => {
+    const current = migrateSavedGame({
+      version: SAVE_VERSION,
+      technicianId: "wiley",
+      sceneId: "serviceOffice",
+      flags: {
+        serviceComplete: true,
+        serviceApproach: "rush",
+        serviceRepairMethod: "stage-clean-swap",
+        serviceFinalVerification: {
+          id: "quick",
+          label: "Run a quick confidence check",
+          status: "quick",
+          detail: "The visible source and display path held through the confidence check.",
+          clock: "TUE 11:42 AM",
+        },
+        returnTripRisks: {},
+      },
+    });
+    const legacy = migrateSavedGame({
+      version: 27,
+      technicianId: "prototype-tech",
+      sceneId: "serviceOffice",
+      flags: {
+        serviceComplete: true,
+        serviceApproach: "rush",
+      },
+    });
+    return {
+      currentPending: Boolean(current.flags.serviceCallbackPending),
+      currentFinalStatus: current.flags.serviceFinalVerification?.status || "",
+      legacyPending: Boolean(legacy.flags.serviceCallbackPending),
+      legacyFinalId: legacy.flags.serviceFinalVerification?.id || "",
+    };
+  })()`);
+
+  assert.equal(result.currentPending, false);
+  assert.equal(result.currentFinalStatus, "quick");
+  assert.equal(result.legacyPending, true);
+  assert.equal(result.legacyFinalId, "legacy");
+});
+
 test("save serialization round-trips through migration with current state shape", () => {
   resetGameState("wiley");
   const result = readGameJson(`(() => {

@@ -80,7 +80,7 @@ and no completed action or reward can be repeated.
 
 ## Step 6: Replay Proof And Roadmap Closeout
 
-**Status:** Not started.
+**Status:** Complete.
 
 - Smoke test multiple saved room profiles and technician builds.
 - Confirm save/continue at investigation, repair, incident, and closeout states.
@@ -141,3 +141,28 @@ same existing dispatch.
   result. Fixed morning closeout times were removed, save version 28 migrates
   older completed careers, and repeat closeout guards still prevent duplicate
   rewards or clock changes. Full QA passed.
+- 2026-07-24: Step 6 replayed the same Conshohocken dispatch with Jordan,
+  Wiley, and Morgan. Jordan followed display, signal-path, and client evidence
+  into a confirmed coupler-isolation closeout with no incident. Wiley followed
+  display and replacement evidence into a staged hardware swap, recovered a
+  visible mount incident, and finished on a quick test that held. Morgan
+  followed display and client evidence into a negotiated verification window,
+  documented a failed final test, and retained named return-trip pressure.
+  Investigation, repair, incident, and closeout states each survived the real
+  save/continue path. Repeat closeout remained idempotent. Replay testing also
+  fixed a migration defect that reapplied legacy callback pressure to a clean
+  current hardware-swap save. Static, unit, and browser QA passed.
+
+## Lane Decision
+
+The proof question is answered: one existing room can support investigation,
+build identity, schedule tradeoffs, immediate consequences, recovery, and
+different closeouts without adding another dispatch.
+
+The general pattern is suitable for selective reuse, and University City is
+the strongest existing candidate because its survey already has inspection
+order and access-risk consequences. Do not port the Conshohocken controller or
+add a University City subsystem automatically. The next roadmap decision must
+first reassess the complete playable day, then choose the smallest existing job
+that benefits from the shared evidence, task, pressure, objective, and
+consequence contracts.
