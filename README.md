@@ -98,6 +98,10 @@ The long-term game vision is captured in
 The current gameplay roadmap after the QA/tooling closeout lives in
 [docs/GAMEPLAY_ROADMAP.md](docs/GAMEPLAY_ROADMAP.md).
 
+The next finite gameplay lane, which tests choosing optional work versus main
+board progression, lives in
+[docs/WORKDAY_AGENCY_TRACKER.md](docs/WORKDAY_AGENCY_TRACKER.md).
+
 The current vertical slice is scoped in
 [docs/VERTICAL_SLICE.md](docs/VERTICAL_SLICE.md).
 

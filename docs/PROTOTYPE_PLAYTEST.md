@@ -1846,6 +1846,25 @@ matters there; a future pass should reuse shared evidence, task, pressure,
 objective, and consequence helpers rather than duplicate the Conshohocken
 scene controller.
 
+Whole-workday reassessment: the current jobs contain more agency than the
+career schedule. The board has a long, mostly mandatory sequence and resolves
+the first available assignment, so players can choose how to work without
+usually choosing what workday to have. The clearest early example is the
+Conshohocken label follow-up: it was built as a small repeat-route and
+fast-travel proof, but it currently blocks University City like required main
+work.
+
+The next proof should make that follow-up genuinely optional beside the
+University City survey. Taking it spends a shift for existing pay, XP, route
+memory, and the label-versus-speed closeout. Moving directly to the survey keeps
+the main board moving and lets the shop reassign the small follow-up. This tests
+schedule agency with existing content before adding a calendar, more jobs, or a
+freely reorderable quest board.
+
+Playtest question: when both cards are available, can the player explain the
+opportunity cost and make a plan without assuming the optional job is secretly
+required?
+
 ## Prototype Guardrail
 
 Favor one readable choice with a visible consequence over a new subsystem.

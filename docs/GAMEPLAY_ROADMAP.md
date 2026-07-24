@@ -251,3 +251,30 @@ save/continue, and completed closeout cannot repeat rewards. This lane is
 closed. The next planning pass must reassess the whole playable day before
 selectively applying the shared pattern to University City or another existing
 job.
+
+## Whole-Workday Reassessment
+
+**Audit completed:** July 24, 2026.
+
+The current build already proves reusable pressure inside service, survey, and
+retrofit work. Applying another modifier to University City would deepen a
+system that is already represented. The larger remaining RPG gap is schedule
+agency: the dispatch board contains many assignments, but it normally selects
+the first available one and gives the player no meaningful say in job order.
+
+The next finite lane is tracked in
+[`WORKDAY_AGENCY_TRACKER.md`](WORKDAY_AGENCY_TRACKER.md).
+
+The proof case uses existing early-career content. After the Conshohocken
+service debrief, the player should choose between the small label follow-up and
+moving directly to the University City survey. Taking the follow-up spends a
+workday for its existing pay, route mastery, and documentation outcome. Taking
+the survey keeps the main board moving and lets coordination reassign the side
+job. Neither choice is the hidden correct answer.
+
+This is deliberately smaller than a freely reorderable quest board. It tests
+whether one visible workday plan can make the career feel less predetermined
+while keeping the current static-browser architecture and progression safe.
+
+**Current status:** Reassessment complete. Step 1, the board-choice contract and
+save-safe selection state, is the next implementation checkpoint.
