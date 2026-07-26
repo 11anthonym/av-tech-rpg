@@ -165,6 +165,18 @@ function migrateServiceDiagnosticEvidence(flags = {}) {
   normalizeServiceFinalVerification(flags);
 }
 
+function normalizePlannedDispatchId(flags = {}) {
+  const plannedDispatchId = typeof flags.plannedDispatchId === "string"
+    ? flags.plannedDispatchId.trim()
+    : "";
+  if (!plannedDispatchId || typeof getDispatchBoardEntryDefinitions !== "function") {
+    flags.plannedDispatchId = "";
+    return;
+  }
+  const validIds = new Set(getDispatchBoardEntryDefinitions().map((entry) => entry.id));
+  flags.plannedDispatchId = validIds.has(plannedDispatchId) ? plannedDispatchId : "";
+}
+
 function migrateSavedGame(savedGame) {
   if (!savedGame || typeof savedGame !== "object") return null;
   const flags = { ...(savedGame.flags || {}) };
@@ -214,6 +226,7 @@ function migrateSavedGame(savedGame) {
   normalizeRetrofitInstallFlags(flags);
   migrateSurveyConsequenceFlags(flags);
   migrateServiceDiagnosticEvidence(flags);
+  normalizePlannedDispatchId(flags);
   if (
     flags.serviceComplete
     && flags.serviceApproach !== "verify"

@@ -276,5 +276,8 @@ This is deliberately smaller than a freely reorderable quest board. It tests
 whether one visible workday plan can make the career feel less predetermined
 while keeping the current static-browser architecture and progression safe.
 
-**Current status:** Reassessment complete. Step 1, the board-choice contract and
-save-safe selection state, is the next implementation checkpoint.
+**Current status:** Step 1 is complete. Dispatch board roles, available-work
+lookup, save-backed planning, defensive migration, and one-job fallback are
+covered by static, unit, and browser QA. Step 2, the player-facing dispatch
+board selection between the existing follow-up and University City survey, is
+the next implementation checkpoint.

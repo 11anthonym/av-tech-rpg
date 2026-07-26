@@ -17,6 +17,7 @@ function getDispatchBoardEntryDefinitions() {
     },
     {
       id: "followup",
+      boardRole: "optional",
       contentKey: "followupDispatch",
       routeId: "conshohockenService",
       statusLabel: "FOLLOW-UP",
@@ -222,6 +223,7 @@ function resolveDispatchBoardEntry(entry) {
     : "Locked";
   return {
     ...entry,
+    boardRole: entry.boardRole === "optional" ? "optional" : "main",
     title: contentData.title || entry.fallbackTitle || "Dispatch Board Item",
     summary: contentData.summary || contentData.setup || entry.fallbackSummary || "",
     routeId,
@@ -239,9 +241,42 @@ function getDispatchBoardEntries() {
   return getDispatchBoardEntryDefinitions().map(resolveDispatchBoardEntry);
 }
 
+function getAvailableDispatchBoardEntries(entries = getDispatchBoardEntries()) {
+  if (state.flags.endShiftPending) return [];
+  return entries.filter((entry) => entry.isAvailable);
+}
+
+function getPlannedDispatchId() {
+  return typeof state.flags.plannedDispatchId === "string" ? state.flags.plannedDispatchId : "";
+}
+
+function getPlannedDispatchBoardEntry(entries = getDispatchBoardEntries()) {
+  const plannedDispatchId = getPlannedDispatchId();
+  if (!plannedDispatchId) return null;
+  return getAvailableDispatchBoardEntries(entries).find((entry) => entry.id === plannedDispatchId) || null;
+}
+
+function setPlannedDispatchBoardEntry(dispatchId, entries = getDispatchBoardEntries()) {
+  const entry = getAvailableDispatchBoardEntries(entries).find((candidate) => candidate.id === dispatchId);
+  if (!entry) return false;
+  state.flags.plannedDispatchId = entry.id;
+  markCareerSnapshotStale();
+  return true;
+}
+
+function clearPlannedDispatchBoardEntry() {
+  if (!getPlannedDispatchId()) return false;
+  state.flags.plannedDispatchId = "";
+  markCareerSnapshotStale();
+  return true;
+}
+
 function getCurrentDispatchBoardEntry(entries = getDispatchBoardEntries()) {
   if (state.flags.endShiftPending) return null;
-  return entries.find((entry) => entry.isAvailable) || null;
+  const availableEntries = getAvailableDispatchBoardEntries(entries);
+  const plannedEntry = getPlannedDispatchBoardEntry(availableEntries);
+  if (plannedEntry) return plannedEntry;
+  return availableEntries.length === 1 ? availableEntries[0] : null;
 }
 
 function getBlockedDispatchBoardEntry(entries = getDispatchBoardEntries()) {

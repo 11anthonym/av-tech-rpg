@@ -71,7 +71,7 @@ job decision near the beginning of the playable career.
 
 ## Step 1: Board Choice Contract And Save Safety
 
-**Status:** Not started.
+**Status:** Complete July 26, 2026.
 
 - Add a small main-versus-optional classification to dispatch-board entries.
 - Add helpers that return every currently available board item.
@@ -83,6 +83,13 @@ job decision near the beginning of the playable career.
 **Acceptance:** Old saves still load, one-job states behave as before, and the
 post-service morning can represent two available jobs without silently choosing
 one for the player.
+
+**Result:** Dispatch entries now expose a normalized main or optional board
+role. Reusable helpers return every available item, validate a save-backed
+planned dispatch, and preserve the existing one-job fallback. A future
+multi-job state without a valid plan returns no current dispatch instead of
+silently choosing the first item. Save version 29 defensively clears missing,
+stale, or invalid planned dispatch IDs.
 
 ## Step 2: Dispatch Board Selection
 
@@ -146,6 +153,22 @@ remain valid.
 plans, different route histories and rewards, and coherent later progression
 without adding content.
 
+## Work Log
+
+### July 26, 2026 - Step 1 Complete
+
+- Classified the existing Conshohocken follow-up as optional while preserving
+  main as the safe default role for current and older board definitions.
+- Added available-work and planned-work helpers without activating the
+  two-choice morning early.
+- Added save migration and round-trip coverage for valid, missing, and stale
+  planned dispatch IDs.
+- Added contract and browser coverage proving that current one-job states remain
+  unchanged and future multi-job states require an explicit plan.
+- Passed 43 static script checks, 28 unit and contract checks, and the browser
+  smoke suite.
+- Next checkpoint: Step 2, Dispatch Board Selection.
+
 ## Stop Rules
 
 - Do not add another dispatch to prove schedule agency.
@@ -156,4 +179,3 @@ without adding content.
   green.
 - Stop after Step 5 and reassess whether this single choice materially improves
   the early career rhythm.
-

@@ -2574,6 +2574,54 @@ async function clickButton(page, name) {
     assert(retrofitInstallBoard.current.routeId === "burlingtonRetrofitWalkdown", "Retrofit install should reuse the Burlington route");
     assert(retrofitInstallBoard.hud.title.includes("Retrofit Install"), "HUD should show the install variant instead of the walkdown title");
 
+    const boardPlanPersistence = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.finished = true;
+      state.flags.metJosh = true;
+      window.enterScene("shop");
+      const entries = window.getDispatchBoardEntries();
+      const roleById = Object.fromEntries(entries.map((entry) => [entry.id, entry.boardRole]));
+      const singleAvailable = window.getAvailableDispatchBoardEntries(entries).map((entry) => entry.id);
+      const selected = window.setPlannedDispatchBoardEntry("service", entries);
+      window.saveGame();
+      const savedVersion = JSON.parse(localStorage.getItem("av-tech-rpg-save-v1"))?.version || 0;
+      state.flags.plannedDispatchId = "";
+      window.continueGame();
+      const restoredPlan = state.flags.plannedDispatchId || "";
+      const restoredCurrent = window.getCurrentDispatchBoardEntry()?.id || "";
+      const restoredObjective = window.getObjective();
+
+      const choiceEntries = [
+        { id: "followup", boardRole: "optional", isAvailable: true },
+        { id: "survey", boardRole: "main", isAvailable: true },
+      ];
+      window.clearPlannedDispatchBoardEntry();
+      const noImplicitChoice = window.getCurrentDispatchBoardEntry(choiceEntries)?.id || "";
+      const plannedFutureChoice = window.setPlannedDispatchBoardEntry("survey", choiceEntries);
+      const selectedFutureChoice = window.getCurrentDispatchBoardEntry(choiceEntries)?.id || "";
+      return {
+        roleById,
+        singleAvailable,
+        selected,
+        savedVersion,
+        restoredPlan,
+        restoredCurrent,
+        restoredObjective,
+        noImplicitChoice,
+        plannedFutureChoice,
+        selectedFutureChoice,
+      };
+    });
+    assert(boardPlanPersistence.roleById.followup === "optional", "The Conshohocken follow-up should be the optional board entry");
+    assert(Object.values(boardPlanPersistence.roleById).filter((role) => role === "optional").length === 1, "Only the existing repeat-route follow-up should be optional in the Step 1 contract");
+    assert(boardPlanPersistence.singleAvailable.length === 1 && boardPlanPersistence.singleAvailable[0] === "service", "Existing one-job board states should remain unchanged");
+    assert(boardPlanPersistence.selected && boardPlanPersistence.savedVersion === 29, "Planned work should save through the current schema");
+    assert(boardPlanPersistence.restoredPlan === "service" && boardPlanPersistence.restoredCurrent === "service", "Continue should restore a valid planned board item");
+    assert(boardPlanPersistence.restoredObjective.includes("Conshohocken service call"), "A restored one-job plan should keep the existing current objective");
+    assert(!boardPlanPersistence.noImplicitChoice, "A future two-job state should not silently select the first available item");
+    assert(boardPlanPersistence.plannedFutureChoice && boardPlanPersistence.selectedFutureChoice === "survey", "A valid saved plan should resolve a future two-job state");
+
     const dispatchKeys = await page.evaluate(() => {
       function snapshot(label, setup, scene = "shop") {
         window.startGame("prototype-tech");
@@ -3122,6 +3170,17 @@ async function clickButton(page, name) {
       startReplay("wiley", ["flaky-replacement-display", "loose-mount-hardware"]);
       window.inspectServiceReplacementGearFinding();
       window.closeModal();
+      const wileyAppointmentPhase = window.getServiceAppointmentPhase().id;
+      const wileyAppointmentChance = window.GAME_CONTENT.serviceDispatch.appointment
+        ?.riskyRepairIncident?.chanceByPhase?.[wileyAppointmentPhase] || 0;
+      let wileySafeSeed = 1;
+      while (
+        window.getSeededUnit(
+          wileySafeSeed,
+          `appointment:stage-clean-swap:${wileyAppointmentPhase}`,
+        ) < wileyAppointmentChance
+      ) wileySafeSeed += 1;
+      state.flags.serviceRoomSeed = wileySafeSeed;
       window.chooseServiceRepairMethod("stage-clean-swap");
       window.closeModal();
       const wileyRepair = saveAndContinue("repair");
@@ -3129,7 +3188,8 @@ async function clickButton(page, name) {
       window.closeModal();
       window.resolveServiceConditionResponse("loose-mount-hardware", "snug-mount-fast", 0);
       window.closeModal();
-      const wileyIncidentId = state.flags.serviceRoomIncidents?.[0]?.id || "";
+      const wileyIncidentId = state.flags.serviceRoomIncidents
+        ?.find((incident) => incident.conditionId === "loose-mount-hardware")?.id || "";
       window.resolveServiceIncidentRecovery(wileyIncidentId, "stabilize");
       window.closeModal();
       installReplacementPackage();

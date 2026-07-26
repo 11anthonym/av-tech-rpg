@@ -436,6 +436,9 @@ test("dispatch board entries resolve to valid content, routes, and actions", () 
       if (!entry.statusLabel) failures.push("board entry " + entry.id + " is missing statusLabel");
       if (!entry.objective) failures.push("board entry " + entry.id + " is missing objective");
       if (!entry.availableReason) failures.push("board entry " + entry.id + " is missing availableReason");
+      if (entry.boardRole && !["main", "optional"].includes(entry.boardRole)) {
+        failures.push("board entry " + entry.id + " has invalid boardRole " + entry.boardRole);
+      }
       if (entry.contentKey && !content[entry.contentKey]) failures.push("board entry " + entry.id + " has unknown contentKey " + entry.contentKey);
       if (entry.routeId && typeof entry.routeId === "string" && !getWorldRoute(entry.routeId)) {
         failures.push("board entry " + entry.id + " has unknown routeId " + entry.routeId);
@@ -448,6 +451,7 @@ test("dispatch board entries resolve to valid content, routes, and actions", () 
     getDispatchBoardEntries().forEach((entry) => {
       if (!entry.title) failures.push("resolved board entry " + entry.id + " is missing title");
       if (!entry.summary) failures.push("resolved board entry " + entry.id + " is missing summary");
+      if (!["main", "optional"].includes(entry.boardRole)) failures.push("resolved board entry " + entry.id + " has invalid boardRole " + entry.boardRole);
       if (!["In progress", "Active board item", "Blocked", "Complete", "Locked"].includes(entry.boardStatus)) {
         failures.push("resolved board entry " + entry.id + " has invalid boardStatus " + entry.boardStatus);
       }
@@ -457,6 +461,77 @@ test("dispatch board entries resolve to valid content, routes, and actions", () 
   })()`);
 
   assert.deepEqual(failures, []);
+});
+
+test("dispatch board planning supports one-job fallback and future multi-job choice", () => {
+  resetGameState();
+  const result = readGameJson(`(() => {
+    state.flags.finished = true;
+    state.flags.metJosh = true;
+    const currentEntries = getDispatchBoardEntries();
+    const singleAvailableIds = getAvailableDispatchBoardEntries(currentEntries).map((entry) => entry.id);
+    state.flags.plannedDispatchId = "survey";
+    const stalePlanFallback = getCurrentDispatchBoardEntry(currentEntries)?.id || "";
+
+    const choiceEntries = [
+      { id: "followup", boardRole: "optional", isAvailable: true },
+      { id: "survey", boardRole: "main", isAvailable: true },
+    ];
+    state.flags.plannedDispatchId = "";
+    const availableChoiceIds = getAvailableDispatchBoardEntries(choiceEntries).map((entry) => entry.id);
+    const noImplicitChoice = getCurrentDispatchBoardEntry(choiceEntries);
+    const selected = setPlannedDispatchBoardEntry("survey", choiceEntries);
+    const plannedChoice = getCurrentDispatchBoardEntry(choiceEntries)?.id || "";
+    const rejectedLockedPlan = setPlannedDispatchBoardEntry("service", choiceEntries);
+
+    const valid = migrateSavedGame({
+      version: 28,
+      technicianId: "prototype-tech",
+      sceneId: "shop",
+      flags: { plannedDispatchId: " followup " },
+    });
+    const invalid = migrateSavedGame({
+      version: 28,
+      technicianId: "prototype-tech",
+      sceneId: "shop",
+      flags: { plannedDispatchId: "not-a-board-entry" },
+    });
+    const missing = migrateSavedGame({
+      version: 28,
+      technicianId: "prototype-tech",
+      sceneId: "shop",
+      flags: {},
+    });
+
+    return {
+      roles: Object.fromEntries(getDispatchBoardEntries().map((entry) => [entry.id, entry.boardRole])),
+      singleAvailableIds,
+      stalePlanFallback,
+      availableChoiceIds,
+      noImplicitChoice: noImplicitChoice?.id || "",
+      selected,
+      plannedChoice,
+      rejectedLockedPlan,
+      validPlan: valid.flags.plannedDispatchId,
+      invalidPlan: invalid.flags.plannedDispatchId,
+      missingPlan: missing.flags.plannedDispatchId,
+      migratedVersion: valid.version,
+    };
+  })()`);
+
+  assert.equal(result.roles.followup, "optional");
+  assert.equal(Object.entries(result.roles).filter(([, role]) => role === "optional").length, 1);
+  assert.deepEqual(result.singleAvailableIds, ["service"]);
+  assert.equal(result.stalePlanFallback, "service");
+  assert.deepEqual(result.availableChoiceIds, ["followup", "survey"]);
+  assert.equal(result.noImplicitChoice, "");
+  assert.equal(result.selected, true);
+  assert.equal(result.plannedChoice, "survey");
+  assert.equal(result.rejectedLockedPlan, false);
+  assert.equal(result.validPlan, "followup");
+  assert.equal(result.invalidPlan, "");
+  assert.equal(result.missingPlan, "");
+  assert.equal(result.migratedVersion, 29);
 });
 
 test("portal contracts expose valid spatial movement and lock messaging", () => {
