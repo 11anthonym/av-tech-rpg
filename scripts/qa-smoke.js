@@ -2707,6 +2707,96 @@ async function clickButton(page, name) {
     );
     assert(!boardChoiceFlow.switchAfterDeparture && boardChoiceFlow.availableAfterDeparture.join(",") === "survey", "Starting University City travel should close the planning window and remove the unused follow-up");
 
+    const travelSurfaceAgreement = await page.evaluate(() => {
+      const setupPostServiceMorning = () => {
+        window.startGame("prototype-tech");
+        const state = window.AV_TECH_RPG_DEBUG.state;
+        state.flags.finished = true;
+        state.flags.metJosh = true;
+        state.flags.serviceStarted = true;
+        state.flags.serviceComplete = true;
+        state.flags.serviceApproach = "verify";
+        state.flags.serviceRepairMethod = "verify-path";
+        state.flags.joshServiceDebriefed = true;
+        state.flags.plannedDispatchId = "";
+        window.enterScene("shop");
+        return state;
+      };
+      const snapshot = () => ({
+        text: document.querySelector("#modal-backdrop")?.innerText || "",
+        buttons: [...document.querySelectorAll("#modal-actions button")].map((button) => button.textContent),
+      });
+
+      const state = setupPostServiceMorning();
+      window.showVehicleMenu();
+      const noPlanVan = snapshot();
+      window.showRegionalMap();
+      const noPlanMap = snapshot();
+
+      window.setPlannedDispatchBoardEntry("survey");
+      const surveyObjective = window.getObjective();
+      window.showVehicleMenu();
+      const surveyVan = snapshot();
+      window.showRegionalMap();
+      const surveyMap = snapshot();
+      window.showRoutePrepModal("universitySurvey", { backAction: window.showRegionalMap, backLabel: "Back To Map" });
+      const surveyPrep = snapshot();
+
+      window.saveGame();
+      state.flags.plannedDispatchId = "";
+      window.continueGame();
+      const restoredPlan = state.flags.plannedDispatchId || "";
+      const restoredObjective = window.getObjective();
+      window.showVehicleMenu();
+      const restoredVan = snapshot();
+
+      const followupStartedBeforeGuard = Boolean(state.flags.conshohockenFollowupStarted);
+      window.launchRouteFromBoard("conshohockenService");
+      const staleLaunch = {
+        startedBefore: followupStartedBeforeGuard,
+        startedAfter: Boolean(state.flags.conshohockenFollowupStarted),
+        lastLog: state.log[0] || "",
+      };
+
+      setupPostServiceMorning();
+      const followupState = window.AV_TECH_RPG_DEBUG.state;
+      followupState.flags.routeHistory = { ...(followupState.flags.routeHistory || {}), conshohockenService: 1 };
+      window.setPlannedDispatchBoardEntry("followup");
+      const followupObjective = window.getObjective();
+      window.showRegionalMap();
+      const followupMap = snapshot();
+      window.showRoutePrepModal("conshohockenService", { fastTravel: true, backAction: window.showRegionalMap, backLabel: "Back To Map" });
+      const followupPrep = snapshot();
+
+      return {
+        noPlanVan,
+        noPlanMap,
+        surveyObjective,
+        surveyVan,
+        surveyMap,
+        surveyPrep,
+        restoredPlan,
+        restoredObjective,
+        restoredVan,
+        staleLaunch,
+        followupObjective,
+        followupMap,
+        followupPrep,
+      };
+    });
+    assert(travelSurfaceAgreement.noPlanVan.buttons.filter((label) => /Choose Work On Dispatch Board/i.test(label)).length === 1, "The van should present one clear board-choice action before a job is planned");
+    assert(/No job selected/i.test(travelSurfaceAgreement.noPlanVan.text), "The van should explain why no route can leave before selection");
+    assert(/Other Available Work/i.test(travelSurfaceAgreement.noPlanMap.text) && /Conshohocken Label Follow-up/i.test(travelSurfaceAgreement.noPlanMap.text) && /University City Site Survey/i.test(travelSurfaceAgreement.noPlanMap.text), "The map should group both unselected jobs as available work");
+    assert(travelSurfaceAgreement.surveyObjective.includes("Van #3") && travelSurfaceAgreement.surveyObjective.includes("University City survey"), "The selected survey objective should point through Van #3");
+    assert(/Planned work\s+University City Site Survey/i.test(travelSurfaceAgreement.surveyVan.text) && travelSurfaceAgreement.surveyVan.buttons.some((label) => /Drive Active Route: UNIVERSITY CITY/i.test(label)), "The van should name and launch the selected survey route");
+    assert(/\[Active\] UNIVERSITY CITY/i.test(travelSurfaceAgreement.surveyMap.text) && /\[Available Work\] CONSHOHOCKEN/i.test(travelSurfaceAgreement.surveyMap.text), "The map should separate the selected survey from the unselected follow-up");
+    assert(/Workday plan\s+University City Site Survey is today's main assignment/i.test(travelSurfaceAgreement.surveyPrep.text) && !/Locked reason/i.test(travelSurfaceAgreement.surveyPrep.text), "Survey prep should agree with the board plan and remain launchable");
+    assert(travelSurfaceAgreement.restoredPlan === "survey" && travelSurfaceAgreement.restoredObjective.includes("University City survey") && /Planned work\s+University City Site Survey/i.test(travelSurfaceAgreement.restoredVan.text), "Save/continue should restore agreement between plan, objective, and van");
+    assert(!travelSurfaceAgreement.staleLaunch.startedBefore && !travelSurfaceAgreement.staleLaunch.startedAfter && /planned job is University City Site Survey/i.test(travelSurfaceAgreement.staleLaunch.lastLog), "The final launch boundary should reject an unselected stale route");
+    assert(travelSurfaceAgreement.followupObjective.includes("Conshohocken follow-up"), "The alternate plan should update the objective");
+    assert(/\[Active \/ fast travel available\] CONSHOHOCKEN/i.test(travelSurfaceAgreement.followupMap.text) && /\[Available Work\] UNIVERSITY CITY/i.test(travelSurfaceAgreement.followupMap.text), "The alternate plan should make only Conshohocken active while preserving University City as other work");
+    assert(travelSurfaceAgreement.followupMap.buttons.some((label) => /Fast Travel to CONSHOHOCKEN/i.test(label)) && /Workday plan\s+Conshohocken Label Follow-up is today's optional follow-up/i.test(travelSurfaceAgreement.followupPrep.text), "Known-route fast travel and prep should remain tied to the selected follow-up");
+
     const dispatchKeys = await page.evaluate(() => {
       function snapshot(label, setup, scene = "shop") {
         window.startGame("prototype-tech");

@@ -276,12 +276,14 @@ This is deliberately smaller than a freely reorderable quest board. It tests
 whether one visible workday plan can make the career feel less predetermined
 while keeping the current static-browser architecture and progression safe.
 
-**Current status:** Steps 1 and 2 are complete. The save-safe board contract now
-drives a player-facing choice between the existing follow-up and University
+**Current status:** Steps 1 through 3 are complete. The save-safe board contract
+now drives a player-facing choice between the existing follow-up and University
 City survey. Both jobs show qualitative opportunity costs with equal-weight
 actions, the plan survives save/continue, and switching closes when travel
-begins. Step 3, agreement between the selected plan, Van #3, the regional map,
-route prep, and the current objective, is the next implementation checkpoint.
+begins. The objective, Van #3, regional map, route prep, launch guard, and fast
+travel now agree on the selected work while keeping the other job visible as
+available. Step 4, recording the optional follow-up outcome or reassignment as
+a readable workday consequence, is the next implementation checkpoint.
 
 ## Prototype Exit Gate: Ready For Real-Game Preproduction
 

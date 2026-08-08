@@ -22,6 +22,7 @@ function getDispatchBoardEntryDefinitions() {
       routeId: "conshohockenService",
       statusLabel: "FOLLOW-UP",
       objective: "Review the Conshohocken label follow-up on the dispatch board.",
+      plannedObjective: "Use Van #3 to review prep and leave for the planned Conshohocken follow-up.",
       availableReason: "Josh's service debrief unlocked a repeat-route label cleanup before the next new site.",
       planningSummary: "Use a familiar route for a small label cleanup and leave stronger service notes behind.",
       planningTradeoff: "This uses today's field window before University City, but pays for useful side work and improves the known room record.",
@@ -47,6 +48,7 @@ function getDispatchBoardEntryDefinitions() {
       routeId: "universitySurvey",
       statusLabel: "SITE SURVEY",
       objective: "Review the University City site survey on the dispatch board.",
+      plannedObjective: "Use Van #3 to review prep and leave for the planned University City survey.",
       availableReason: "Josh's service debrief cleared the next main assignment for planning.",
       planningSummary: "Move into new site work and inspect the access path before the future display install is committed.",
       planningTradeoff: "This keeps the main board moving, but coordination will reassign the small Conshohocken follow-up when you leave.",
@@ -250,6 +252,11 @@ function getAvailableDispatchBoardEntries(entries = getDispatchBoardEntries()) {
   return entries.filter((entry) => entry.isAvailable);
 }
 
+function getAvailableDispatchBoardEntryForRoute(routeId, entries = getDispatchBoardEntries()) {
+  if (!routeId) return null;
+  return getAvailableDispatchBoardEntries(entries).find((entry) => entry.routeId === routeId) || null;
+}
+
 function getDispatchPlanningEntries(entries = getDispatchBoardEntries()) {
   if (getInProgressDispatchBoardEntry(entries)) return [];
   const availableEntries = getAvailableDispatchBoardEntries(entries);
@@ -312,6 +319,13 @@ function getLastCompletedDispatchBoardEntry(entries = getDispatchBoardEntries())
 
 function getCurrentDispatchBoardObjective() {
   const entries = getDispatchBoardEntries();
+  const inProgressEntry = getInProgressDispatchBoardEntry(entries);
+  if (inProgressEntry) return inProgressEntry.objective || "";
+  const plannedEntry = getPlannedDispatchBoardEntry(entries);
+  if (plannedEntry && hasDispatchPlanningChoice(entries)) {
+    return plannedEntry.plannedObjective
+      || `Use Van #3 to review prep and leave for the planned ${plannedEntry.title}.`;
+  }
   const currentEntry = getCurrentDispatchBoardEntry(entries);
   if (currentEntry) return currentEntry.objective || "";
   if (hasDispatchPlanningChoice(entries)) return "Choose today's work on the dispatch board.";

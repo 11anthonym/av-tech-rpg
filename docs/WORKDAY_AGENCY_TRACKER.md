@@ -115,7 +115,7 @@ reassignment record and shift-result explanation.
 
 ## Step 3: Van, Map, And Objective Agreement
 
-**Status:** Not started.
+**Status:** Complete August 8, 2026.
 
 - Make Van #3 show the selected job as the active route.
 - Make the regional map distinguish the selected route from the other available
@@ -128,6 +128,15 @@ reassignment record and shift-result explanation.
 
 **Acceptance:** Board selection, van route, regional map, route prep, and
 objective all name the same planned work before departure and after save/load.
+
+**Result:** One board-aware route eligibility contract now controls map launch,
+van launch, route prep, and fast travel. Before selection, Van #3 and the map
+direct the player to choose work and list both jobs as available rather than
+quietly activating one. After selection, the objective, van, map, and prep card
+all name the same job; the other route remains visible as unselected work.
+Wrong-origin, completed, locked, and stale routes are rejected again at the
+final launch boundary. Save/continue preserves the selected route across all
+of these surfaces.
 
 ## Step 4: Optional Follow-Up Consequence
 
@@ -194,6 +203,24 @@ without adding content.
 - Passed 43 static script checks, 29 unit and contract checks, and the browser
   smoke suite.
 - Next checkpoint: Step 3, Van, Map, And Objective Agreement.
+
+### August 8, 2026 - Step 3 Complete
+
+- Centralized route launch eligibility around the current dispatch-board item,
+  route origin, completion state, and end-shift state.
+- Made Van #3 show the planned job, with one clear board-choice action when no
+  job has been selected and route-specific drive/prep actions afterward.
+- Added a distinct regional-map group for other available board work while the
+  selected job remains the only active route.
+- Added workday-plan context to route prep and tied fast travel to the selected
+  repeat route.
+- Added a final launch guard against unselected, stale, completed, reassigned,
+  or wrong-origin routes.
+- Added focused helper and browser coverage for no-plan, both selected paths,
+  fast travel, stale launch, wrong origin, and save/continue agreement.
+- Passed 43 static script checks, 30 unit and contract checks, and the browser
+  smoke suite.
+- Next checkpoint: Step 4, Optional Follow-Up Consequence.
 
 ## Stop Rules
 

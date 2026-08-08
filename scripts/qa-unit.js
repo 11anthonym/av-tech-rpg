@@ -623,6 +623,114 @@ test("post-service board choice stays readable and locks when travel begins", ()
   assert.equal(result.currentAfterFollowupDeparture, "followup");
 });
 
+test("planned work agrees across objective, van, map, prep, and route launch rules", () => {
+  resetGameState();
+  const result = readGameJson(`(() => {
+    state.flags.finished = true;
+    state.flags.metJosh = true;
+    state.flags.serviceStarted = true;
+    state.flags.serviceComplete = true;
+    state.flags.serviceApproach = "verify";
+    state.flags.serviceRepairMethod = "verify-path";
+    state.flags.joshServiceDebriefed = true;
+    state.flags.currentAreaId = "shop";
+    state.sceneId = "shop";
+    state.flags.plannedDispatchId = "";
+
+    const followupRoute = getWorldRoute("conshohockenService");
+    const surveyRoute = getWorldRoute("universitySurvey");
+    const noPlan = {
+      objective: getObjective(),
+      followupCanLaunch: canLaunchRouteFromRegionalMap(followupRoute.id),
+      surveyCanLaunch: canLaunchRouteFromRegionalMap(surveyRoute.id),
+      followupLock: getRouteLockReason(followupRoute),
+      surveyLock: getRouteLockReason(surveyRoute),
+      van: getVehicleMenuFlowMarkup(),
+      map: getRegionalRouteMarkup(),
+    };
+
+    setPlannedDispatchBoardEntry("survey");
+    const surveyPrep = Object.fromEntries(getRoutePrepRows(surveyRoute).map((row) => [row.label, row.detail]));
+    const surveyPlan = {
+      objective: getObjective(),
+      routeId: getCurrentDispatchRouteId(),
+      surveyCanLaunch: canLaunchRouteFromRegionalMap(surveyRoute.id),
+      followupCanLaunch: canLaunchRouteFromRegionalMap(followupRoute.id),
+      followupLock: getRouteLockReason(followupRoute),
+      surveyStatus: getRouteStatus(surveyRoute),
+      followupStatus: getRouteStatus(followupRoute),
+      van: getVehicleMenuFlowMarkup(),
+      map: getRegionalRouteMarkup(),
+      prep: surveyPrep,
+    };
+
+    state.flags.currentAreaId = "universitySurvey";
+    state.sceneId = "universitySurvey";
+    const wrongOrigin = getRouteLaunchEligibility(surveyRoute.id);
+    state.flags.currentAreaId = "shop";
+    state.sceneId = "shop";
+
+    state.flags.routeHistory = { ...(state.flags.routeHistory || {}), conshohockenService: 1 };
+    setPlannedDispatchBoardEntry("followup");
+    const followupPlan = {
+      objective: getObjective(),
+      routeId: getCurrentDispatchRouteId(),
+      canLaunch: canLaunchRouteFromRegionalMap(followupRoute.id),
+      fastTravel: canFastTravelRoute(followupRoute),
+      map: getRegionalRouteMarkup(),
+      prepPlan: Object.fromEntries(getRoutePrepRows(followupRoute).map((row) => [row.label, row.detail]))["Workday plan"],
+    };
+
+    state.flags.plannedDispatchId = "survey";
+    state.flags.surveyStarted = true;
+    state.flags.surveyComplete = true;
+    const stalePlan = {
+      currentEntry: getCurrentDispatchBoardEntry()?.id || "",
+      surveyCanLaunch: canLaunchRouteFromRegionalMap(surveyRoute.id),
+      surveyLock: getRouteLockReason(surveyRoute),
+    };
+
+    return { noPlan, surveyPlan, wrongOrigin, followupPlan, stalePlan };
+  })()`);
+
+  assert.match(result.noPlan.objective, /choose today's work/i);
+  assert.equal(result.noPlan.followupCanLaunch, false);
+  assert.equal(result.noPlan.surveyCanLaunch, false);
+  assert.match(result.noPlan.followupLock, /choose it on the dispatch board/i);
+  assert.match(result.noPlan.surveyLock, /choose it on the dispatch board/i);
+  assert.match(result.noPlan.van, /No job selected/i);
+  assert.match(result.noPlan.map, /Other Available Work/i);
+  assert.match(result.noPlan.map, /Conshohocken Label Follow-up/i);
+  assert.match(result.noPlan.map, /University City Site Survey/i);
+
+  assert.equal(result.surveyPlan.routeId, "universitySurvey");
+  assert.match(result.surveyPlan.objective, /Van #3.*University City survey/i);
+  assert.equal(result.surveyPlan.surveyCanLaunch, true);
+  assert.equal(result.surveyPlan.followupCanLaunch, false);
+  assert.match(result.surveyPlan.followupLock, /planned job is University City Site Survey/i);
+  assert.equal(result.surveyPlan.surveyStatus, "Active");
+  assert.equal(result.surveyPlan.followupStatus, "Available work");
+  assert.match(result.surveyPlan.van, /University City Site Survey/i);
+  assert.match(result.surveyPlan.map, /\[Active\] UNIVERSITY CITY/i);
+  assert.match(result.surveyPlan.map, /\[Available Work\] CONSHOHOCKEN/i);
+  assert.match(result.surveyPlan.prep["Workday plan"], /University City Site Survey.*main assignment/i);
+  assert.equal(result.surveyPlan.prep["Locked reason"], undefined);
+
+  assert.equal(result.wrongOrigin.allowed, false);
+  assert.match(result.wrongOrigin.reason, /Starts from WAYNE AREA/i);
+  assert.equal(result.followupPlan.routeId, "conshohockenService");
+  assert.match(result.followupPlan.objective, /Van #3.*Conshohocken follow-up/i);
+  assert.equal(result.followupPlan.canLaunch, true);
+  assert.equal(result.followupPlan.fastTravel, true);
+  assert.match(result.followupPlan.map, /\[Active \/ fast travel available\] CONSHOHOCKEN/i);
+  assert.match(result.followupPlan.map, /\[Available Work\] UNIVERSITY CITY/i);
+  assert.match(result.followupPlan.prepPlan, /Conshohocken Label Follow-up.*optional follow-up/i);
+
+  assert.equal(result.stalePlan.currentEntry, "commissioning");
+  assert.equal(result.stalePlan.surveyCanLaunch, false);
+  assert.match(result.stalePlan.surveyLock, /planned job is South Philadelphia Commissioning/i);
+});
+
 test("portal contracts expose valid spatial movement and lock messaging", () => {
   resetGameState();
   const result = readGameJson(`(() => {

@@ -71,9 +71,19 @@ function showVehicleCargo() {
 
 function getVehicleMenuFlowMarkup() {
   const tutorialRoute = getWorldRoute("centerCityTutorial");
-  const activeRoute = getWorldRoute(getCurrentDispatchRouteId()) || (isTutorialRouteReady() ? tutorialRoute : null);
+  const currentEntry = state.flags.finished ? getCurrentDispatchBoardEntry() : null;
+  const activeRoute = getWorldRoute(currentEntry?.routeId) || (isTutorialRouteReady() ? tutorialRoute : null);
+  const planningChoice = state.flags.finished && hasDispatchPlanningChoice();
   const canReviewBoard = state.flags.finished && !state.flags.endShiftPending;
   const rows = [
+    ...(state.flags.finished ? [{
+      label: "Planned work",
+      detail: currentEntry
+        ? `${currentEntry.title} (${getDispatchBoardRoleLabel(currentEntry).toLowerCase()}).`
+        : planningChoice
+        ? "No job selected. Choose today's work on the dispatch board before driving."
+        : "No route job is ready on the board.",
+    }] : []),
     {
       label: "Review cargo",
       detail: `${state.loaded.length}/${getVehicleCargoCapacity()} loaded: ${getVehicleCargoSummary()}.`,
@@ -87,7 +97,9 @@ function getVehicleMenuFlowMarkup() {
     {
       label: "Review dispatch board routes",
       detail: canReviewBoard
-        ? "Open job cards, prep choices, route memory, risks, and upcoming work."
+        ? planningChoice
+          ? "Choose between the available jobs or review the current plan before leaving."
+          : "Open job cards, prep choices, route memory, risks, and upcoming work."
         : state.flags.endShiftPending
         ? "Close out the current shift before taking another board route."
         : "Unlocks after the first Center City route closes out.",
@@ -103,13 +115,15 @@ function getVehicleMenuFlowMarkup() {
     {
       label: "Drive active route",
       detail: activeRoute
-        ? `${activeRoute.fromLabel} to ${activeRoute.toLabel}. ${getRouteStatus(activeRoute)}.`
+        ? `${currentEntry ? `${currentEntry.title}: ` : ""}${activeRoute.fromLabel} to ${activeRoute.toLabel}. ${getRouteStatus(activeRoute)}.`
         : "No active route is launchable from the van right now.",
     },
     {
       label: "Prep",
       detail: activeRoute
-        ? "Review required prep, recommended tools, risk tags, and route status before driving."
+        ? `Review required prep, recommended tools, risk tags, and route status for ${currentEntry?.title || activeRoute.toLabel}.`
+        : planningChoice
+        ? "Choose today's work before reviewing route-specific prep."
         : "Prep appears here once a route is active.",
     },
   ];
@@ -125,8 +139,10 @@ function showVehicleMenu() {
   if (state.flags.endShiftPending) return showEndShiftModal();
   const vehicle = getCurrentVehicle();
   const tutorialRoute = getWorldRoute("centerCityTutorial");
-  const activeRoute = getWorldRoute(getCurrentDispatchRouteId()) || (isTutorialRouteReady() ? tutorialRoute : null);
-  const canDriveCurrentRoute = Boolean(activeRoute) && !state.flags.endShiftPending;
+  const currentEntry = state.flags.finished ? getCurrentDispatchBoardEntry() : null;
+  const planningChoice = state.flags.finished && hasDispatchPlanningChoice();
+  const activeRoute = getWorldRoute(currentEntry?.routeId) || (isTutorialRouteReady() ? tutorialRoute : null);
+  const canDriveCurrentRoute = Boolean(activeRoute && canLaunchRouteFromRegionalMap(activeRoute.id));
   showModal({
     kicker: "Vehicle",
     title: vehicle.name,
@@ -134,6 +150,7 @@ function showVehicleMenu() {
       <div class="results-grid">
         <span>Cargo</span><strong>${state.loaded.length}/${getVehicleCargoCapacity()}</strong>
         <span>Loaded</span><strong>${escapeHtml(getVehicleCargoSummary())}</strong>
+        ${state.flags.finished ? `<span>Planned work</span><strong>${escapeHtml(currentEntry?.title || (planningChoice ? "Choose on dispatch board" : "No route job ready"))}</strong>` : ""}
         <span>Organization</span><strong>${escapeHtml(vehicle.organization)}</strong>
         <span>Reliability</span><strong>${escapeHtml(vehicle.reliability)}</strong>
         <span>Clearance</span><strong>${escapeHtml(vehicle.clearance)}</strong>
@@ -149,6 +166,10 @@ function showVehicleMenu() {
         label: `Load Carried Items: ${getCarriedLabels().join(" and ")}`,
         onClick: loadCarriedItemsIntoVehicle,
       }] : []),
+      ...(!activeRoute && planningChoice ? [{
+        label: "Choose Work On Dispatch Board",
+        onClick: showDispatchBoardSelection,
+      }] : []),
       ...(canDriveCurrentRoute ? [{
         label: `Drive Active Route: ${activeRoute.toLabel}`,
         onClick: () => showRoutePrepModal(activeRoute.id, { backAction: showVehicleMenu, backLabel: "Back To Van" }),
@@ -159,10 +180,12 @@ function showVehicleMenu() {
         onClick: () => showRoutePrepModal(activeRoute.id, { backAction: showVehicleMenu, backLabel: "Back To Van" }),
       }] : []),
       { label: "Review Cargo", className: "secondary-button", onClick: showVehicleCargo },
-      ...(state.flags.finished && !state.flags.endShiftPending ? [{
-        label: "Review Dispatch Board Routes",
+      ...(state.flags.finished && !state.flags.endShiftPending && (activeRoute || !planningChoice) ? [{
+        label: planningChoice
+          ? currentEntry ? "Change Planned Job" : "Choose Work On Dispatch Board"
+          : "Review Dispatch Board Routes",
         className: "secondary-button",
-        onClick: showDispatchPreview,
+        onClick: planningChoice ? showDispatchBoardSelection : showDispatchPreview,
       }] : []),
       ...(hasConsequenceReviewInfo() ? [{
         label: "Review Consequence Ledger",

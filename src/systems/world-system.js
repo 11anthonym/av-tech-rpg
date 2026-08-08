@@ -60,8 +60,69 @@ function isTutorialRouteReady() {
     && !state.flags.endShiftPending;
 }
 
+function getRouteBoardContext(routeId, entries = getDispatchBoardEntries()) {
+  const currentEntry = getCurrentDispatchBoardEntry(entries);
+  const availableEntry = getAvailableDispatchBoardEntryForRoute(routeId, entries);
+  return {
+    entries,
+    currentEntry,
+    availableEntry,
+    isCurrent: Boolean(currentEntry?.routeId === routeId),
+  };
+}
+
+// A route can leave only when it is today's board work and the van is at its origin.
+function getRouteLaunchEligibility(routeId) {
+  const route = getWorldRoute(routeId);
+  if (!route) return { allowed: false, reason: "Route is not mapped yet." };
+  if (route.planned) return { allowed: false, reason: "Future candidate; mapped for preview but not launchable yet." };
+  if (state.flags.endShiftPending) return { allowed: false, reason: "End-shift closeout is pending." };
+  if (route.id === "centerCityTutorial") {
+    if (state.flags.finished) return { allowed: false, reason: "First-day Center City route is already complete." };
+    if (!state.flags.shopBrief) return { allowed: false, reason: "Talk to the supervisor before loading the van." };
+    if (!hasLoadedItems(content.tutorial.shopLoad)) return { allowed: false, reason: "Load all staged cargo into Van #3." };
+  } else if (!state.flags.finished) {
+    return { allowed: false, reason: "Complete the first Center City job before later board routes unlock." };
+  }
+
+  const currentArea = getCurrentWorldArea();
+  if (currentArea?.id && route.fromAreaId !== currentArea.id) {
+    return {
+      allowed: false,
+      reason: `Starts from ${route.fromLabel}; current area is ${currentArea.label || currentArea.id}.`,
+    };
+  }
+  if (route.id === "centerCityTutorial") return { allowed: isTutorialRouteReady(), reason: "" };
+
+  const context = getRouteBoardContext(route.id);
+  if (context.isCurrent && (context.currentEntry.isAvailable || context.currentEntry.isInProgress)) {
+    return { allowed: true, reason: "", entry: context.currentEntry };
+  }
+  if (context.currentEntry?.routeId) {
+    return {
+      allowed: false,
+      reason: `Today's planned job is ${context.currentEntry.title}. Change the plan on the dispatch board before leaving.`,
+      entry: context.currentEntry,
+    };
+  }
+  if (context.availableEntry) {
+    return {
+      allowed: false,
+      reason: `${context.availableEntry.title} is available. Choose it on the dispatch board before driving.`,
+      entry: context.availableEntry,
+    };
+  }
+  const routeEntries = context.entries.filter((entry) => entry.routeId === route.id);
+  const blockedEntry = routeEntries.find((entry) => entry.blockedReason);
+  if (blockedEntry) return { allowed: false, reason: blockedEntry.blockedReason, entry: blockedEntry };
+  if (routeEntries.length && routeEntries.every((entry) => entry.isComplete)) {
+    return { allowed: false, reason: `${routeEntries[routeEntries.length - 1].title} is already complete.` };
+  }
+  return { allowed: false, reason: "Not active on the current dispatch board." };
+}
+
 function canLaunchRouteFromRegionalMap(routeId) {
-  return routeId === "centerCityTutorial" && isTutorialRouteReady();
+  return getRouteLaunchEligibility(routeId).allowed;
 }
 
 // Route history gates fast travel and gives the map its driven-before state.
@@ -70,10 +131,8 @@ function isFastTravelUnlocked(route) {
 }
 
 function canFastTravelRoute(route) {
-  const currentArea = getCurrentWorldArea();
   return isFastTravelUnlocked(route)
-    && currentArea?.id === route.fromAreaId
-    && getCurrentDispatchRouteId() === route.id;
+    && canLaunchRouteFromRegionalMap(route.id);
 }
 
 function getDispatchReference(dispatchId) {
@@ -116,6 +175,7 @@ function getRouteStatus(route) {
     return pressure ? "Active / consequence pressure" : "Active";
   }
   if (canLaunchRouteFromRegionalMap(route.id)) return pressure ? "Available / consequence pressure" : "Available";
+  if (getAvailableDispatchBoardEntryForRoute(route.id)) return pressure ? "Available work / consequence pressure" : "Available work";
   if (isFastTravelUnlocked(route)) return pressure ? "Driven before / fast travel / consequence pressure" : "Driven before / fast travel unlocked";
   if (travelCount > 0) return pressure ? `Completed / consequence pressure (${travelCount})` : `Completed / driven before (${travelCount})`;
   if (getRouteLockReason(route)) return pressure ? "Locked / consequence pressure" : "Locked";
@@ -135,21 +195,7 @@ function getRouteFastTravelText(route) {
 }
 
 function getRouteLockReason(route) {
-  if (route.planned) return "Future candidate; mapped for preview but not launchable yet.";
-  if (canLaunchRouteFromRegionalMap(route.id) || getCurrentDispatchRouteId() === route.id || canFastTravelRoute(route)) return "";
-  if (state.flags.endShiftPending) return "End-shift closeout is pending.";
-  if (route.id === "centerCityTutorial") {
-    if (state.flags.finished) return "First-day Center City route is already complete.";
-    if (!state.flags.shopBrief) return "Talk to the supervisor before loading the van.";
-    if (!hasLoadedItems(content.tutorial.shopLoad)) return "Load all staged cargo into Van #3.";
-  }
-  if (!state.flags.finished) return "Complete the first Center City job before later board routes unlock.";
-  const activeRoute = getWorldRoute(getCurrentDispatchRouteId());
-  if (activeRoute && activeRoute.id !== route.id) return `Current board route is ${activeRoute.toLabel}.`;
-  const currentArea = getCurrentWorldArea();
-  if (currentArea?.id && route.fromAreaId !== currentArea.id) return `Starts from ${route.fromLabel}; current area is ${currentArea.label || currentArea.id}.`;
-  if (route.fastTravelEligible && !isFastTravelUnlocked(route)) return "Drive this route once from the dispatch board to unlock fast travel.";
-  return "Not active on the current dispatch board.";
+  return getRouteLaunchEligibility(route.id).reason;
 }
 
 function getScenePortalInteractions(sceneId = state.sceneId) {
@@ -267,8 +313,15 @@ function getRoutePrepRows(route, { fastTravel = false } = {}) {
   const toolPlan = getDispatchToolPlan(job.familyId, route.id);
   const lockReason = getRouteLockReason(route);
   const differenceText = getDispatchDifferenceText({ routeId: route.id });
+  const boardContext = getRouteBoardContext(route.id);
+  const workdayPlan = boardContext.isCurrent
+    ? `${boardContext.currentEntry.title} is today's ${getDispatchBoardRoleLabel(boardContext.currentEntry).toLowerCase()}.`
+    : boardContext.availableEntry
+    ? `${boardContext.availableEntry.title} is available work, but it is not selected. Choose it on the dispatch board before driving.`
+    : "This route is not part of today's active board work.";
   return [
     { label: "Job", detail: job.title },
+    ...(state.flags.finished ? [{ label: "Workday plan", detail: workdayPlan }] : []),
     { label: "Destination", detail: `${destination?.label || route.toLabel}${region?.name ? `, ${region.name}` : ""}` },
     { label: "Job family", detail: getJobFamilyName(job.familyId) },
     { label: "Purpose", detail: job.purpose },
@@ -381,6 +434,13 @@ function getDispatchRoutePrepAction(routeId, backAction, options = {}) {
 }
 
 function launchRouteFromBoard(routeId, { fastTravel = false } = {}) {
+  const route = getWorldRoute(routeId);
+  if (!route) return notify(`Route ${routeId} is not mapped yet.`);
+  if (fastTravel && !canFastTravelRoute(route)) {
+    return notify("That fast travel route is not available for the current board route.");
+  }
+  const eligibility = getRouteLaunchEligibility(routeId);
+  if (!eligibility.allowed) return notify(`That route cannot leave yet. ${eligibility.reason}`);
   return getRouteLaunchFlow(routeId, { fastTravel }).launch();
 }
 
