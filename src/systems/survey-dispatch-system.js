@@ -23,7 +23,7 @@ function showSurveyDispatchPreview() {
     }),
     actions: [
       getDispatchRoutePrepAction("universitySurvey", showSurveyDispatchPreview),
-      { label: "Return to Shop", className: "secondary-button" },
+      getDispatchPreviewBackAction(),
     ],
   });
 }

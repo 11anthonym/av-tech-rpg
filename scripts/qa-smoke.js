@@ -2622,6 +2622,91 @@ async function clickButton(page, name) {
     assert(!boardPlanPersistence.noImplicitChoice, "A future two-job state should not silently select the first available item");
     assert(boardPlanPersistence.plannedFutureChoice && boardPlanPersistence.selectedFutureChoice === "survey", "A valid saved plan should resolve a future two-job state");
 
+    const boardChoiceFlow = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.flags.finished = true;
+      state.flags.metJosh = true;
+      state.flags.serviceStarted = true;
+      state.flags.serviceComplete = true;
+      state.flags.serviceApproach = "verify";
+      state.flags.serviceRepairMethod = "verify-path";
+      state.flags.joshServiceDebriefed = true;
+      state.flags.plannedDispatchId = "";
+      window.enterScene("shop");
+      window.showDispatchPreview();
+
+      const getModalSnapshot = () => ({
+        title: document.querySelector("#modal-title")?.textContent || "",
+        text: document.querySelector("#modal-backdrop")?.innerText || "",
+        buttons: [...document.querySelectorAll("#modal-actions button")].map((button) => ({
+          label: button.textContent,
+          className: button.className,
+        })),
+        cardClasses: [...document.querySelectorAll("#modal-body .route-card")]
+          .map((card) => card.className),
+      });
+      const clickModalButton = (pattern) => {
+        const button = [...document.querySelectorAll("#modal-actions button")]
+          .find((candidate) => pattern.test(candidate.textContent));
+        if (!button) throw new Error(`Dispatch choice smoke test could not find ${pattern}.`);
+        button.click();
+      };
+
+      const opening = getModalSnapshot();
+      const openingObjective = window.getObjective();
+      const openingHud = window.getHudDispatchPresentation();
+      clickModalButton(/University City Site Survey/i);
+      const surveyPreview = getModalSnapshot();
+      const surveyPlan = state.flags.plannedDispatchId || "";
+      clickModalButton(/Back To Dispatch Board/i);
+      const surveySelectedBoard = getModalSnapshot();
+      clickModalButton(/Conshohocken Label Follow-up/i);
+      const followupPreview = getModalSnapshot();
+      const followupPlan = state.flags.plannedDispatchId || "";
+      window.saveGame();
+      state.flags.plannedDispatchId = "";
+      window.continueGame();
+      const restoredPlan = state.flags.plannedDispatchId || "";
+      const restoredCurrent = window.getCurrentDispatchBoardEntry()?.id || "";
+
+      window.setPlannedDispatchBoardEntry("survey");
+      state.flags.surveyStarted = true;
+      const afterDepartureEntries = window.getDispatchBoardEntries();
+      const switchAfterDeparture = window.setPlannedDispatchBoardEntry("followup", afterDepartureEntries);
+      const availableAfterDeparture = window.getAvailableDispatchBoardEntries(afterDepartureEntries).map((entry) => entry.id);
+      return {
+        opening,
+        openingObjective,
+        openingHud,
+        surveyPreview,
+        surveyPlan,
+        surveySelectedBoard,
+        followupPreview,
+        followupPlan,
+        restoredPlan,
+        restoredCurrent,
+        switchAfterDeparture,
+        availableAfterDeparture,
+      };
+    });
+    const openingChoiceButtons = boardChoiceFlow.opening.buttons.filter((button) => button.label !== "Close");
+    assert(boardChoiceFlow.opening.title === "Choose Today's Work", "The post-service board should present a deliberate workday choice");
+    assert(/Optional follow-up/i.test(boardChoiceFlow.opening.text) && /Main assignment/i.test(boardChoiceFlow.opening.text), "Board cards should distinguish side work from main progression");
+    assert(/coordination will reassign/i.test(boardChoiceFlow.opening.text), "The University City card should explain the follow-up opportunity cost");
+    assert(openingChoiceButtons.length === 2 && openingChoiceButtons.every((button) => button.className === "choice-button"), "Both dispatch choices should have equal visual weight");
+    assert(boardChoiceFlow.opening.cardClasses.length === 2 && boardChoiceFlow.opening.cardClasses.every((className) => className === "route-card"), "Unplanned job cards should use the same neutral presentation");
+    assert(boardChoiceFlow.openingObjective.includes("Choose today's work") && boardChoiceFlow.openingHud.statusLabel === "WORKDAY PLAN", "Objective and HUD should call attention to the unplanned workday");
+    assert(boardChoiceFlow.surveyPlan === "survey" && /University City Site Survey/i.test(boardChoiceFlow.surveyPreview.title), "Selecting University City should save and open its job card");
+    assert(/Current plan\s+University City Site Survey/i.test(boardChoiceFlow.surveySelectedBoard.text), "Returning to the board should show the selected plan");
+    assert(boardChoiceFlow.surveySelectedBoard.cardClasses.filter((className) => className.includes("dispatch-plan-selected")).length === 1, "Only the saved plan should receive selected-card emphasis");
+    assert(boardChoiceFlow.followupPlan === "followup" && /Conshohocken Label Follow-up/i.test(boardChoiceFlow.followupPreview.title), "The player should be able to switch to the follow-up before travel");
+    assert(
+      boardChoiceFlow.restoredPlan === "followup" && boardChoiceFlow.restoredCurrent === "followup",
+      `Save/continue should preserve the selected workday plan (plan: ${boardChoiceFlow.restoredPlan || "none"}, current: ${boardChoiceFlow.restoredCurrent || "none"})`,
+    );
+    assert(!boardChoiceFlow.switchAfterDeparture && boardChoiceFlow.availableAfterDeparture.join(",") === "survey", "Starting University City travel should close the planning window and remove the unused follow-up");
+
     const dispatchKeys = await page.evaluate(() => {
       function snapshot(label, setup, scene = "shop") {
         window.startGame("prototype-tech");

@@ -276,8 +276,33 @@ This is deliberately smaller than a freely reorderable quest board. It tests
 whether one visible workday plan can make the career feel less predetermined
 while keeping the current static-browser architecture and progression safe.
 
-**Current status:** Step 1 is complete. Dispatch board roles, available-work
-lookup, save-backed planning, defensive migration, and one-job fallback are
-covered by static, unit, and browser QA. Step 2, the player-facing dispatch
-board selection between the existing follow-up and University City survey, is
-the next implementation checkpoint.
+**Current status:** Steps 1 and 2 are complete. The save-safe board contract now
+drives a player-facing choice between the existing follow-up and University
+City survey. Both jobs show qualitative opportunity costs with equal-weight
+actions, the plan survives save/continue, and switching closes when travel
+begins. Step 3, agreement between the selected plan, Van #3, the regional map,
+route prep, and the current objective, is the next implementation checkpoint.
+
+## Prototype Exit Gate: Ready For Real-Game Preproduction
+
+Finishing another content beat is not the exit condition. This browser build is
+ready to hand off into real-game preproduction when all of these are true:
+
+- The five-step workday-agency lane is complete and both job-order paths replay
+  cleanly with at least two technician builds.
+- A fresh player can follow shop, board, van, route, site, closeout, return, and
+  recovery without developer explanation.
+- At least one optional job has a visible opportunity cost, a saved outcome,
+  and coherent later progression whether it is taken or reassigned.
+- Skills, tools, condition, route history, and consequences each change at
+  least one existing decision without exposing all hidden math.
+- Save migration and full static, unit, and browser QA pass at the lane's final
+  checkpoint.
+- Architecture, save ownership, content-authoring boundaries, and known browser
+  limitations are documented well enough to estimate a production vertical
+  slice without reverse-engineering the prototype.
+
+After this gate, freeze broad prototype content and write a separate production
+technical plan. That plan can compare an engine and map-authoring workflow
+against the current static architecture using one small vertical-slice spike.
+Do not migrate the prototype itself merely because the agency lane is complete.

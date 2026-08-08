@@ -93,7 +93,7 @@ stale, or invalid planned dispatch IDs.
 
 ## Step 2: Dispatch Board Selection
 
-**Status:** Not started.
+**Status:** Complete August 8, 2026.
 
 - Let the dispatch board show both the optional follow-up and University City.
 - Explain the immediate opportunity cost in qualitative player-facing language.
@@ -103,6 +103,15 @@ stale, or invalid planned dispatch IDs.
 
 **Acceptance:** The player can deliberately plan either job and can explain why
 the other option still matters.
+
+**Result:** The first post-service planning window now presents the existing
+Conshohocken follow-up and University City survey together. Both cards identify
+their board role, route, purpose, and qualitative opportunity cost. Choice
+buttons have equal visual weight, the selected plan survives save/continue, and
+the player can switch until either route begins. Once travel starts, the other
+job can no longer replace work already underway. The unused follow-up leaves
+the available board when University City begins; Step 4 still owns the explicit
+reassignment record and shift-result explanation.
 
 ## Step 3: Van, Map, And Objective Agreement
 
@@ -168,6 +177,23 @@ without adding content.
 - Passed 43 static script checks, 28 unit and contract checks, and the browser
   smoke suite.
 - Next checkpoint: Step 2, Dispatch Board Selection.
+
+### August 8, 2026 - Step 2 Complete
+
+- Opened the existing University City survey beside the optional Conshohocken
+  follow-up after a clean service debrief.
+- Added a reusable workday-planning modal with role, route, purpose, and
+  qualitative opportunity-cost copy for each available job.
+- Kept both decision buttons neutral and made the current plan readable without
+  presenting either job as the preferred answer.
+- Added objective and HUD states that call for a dispatch choice when no plan is
+  selected.
+- Preserved plan switching before departure, save/continue persistence, and a
+  hard lock against switching to the unused job after travel starts.
+- Added focused unit and browser coverage for the complete selection flow.
+- Passed 43 static script checks, 29 unit and contract checks, and the browser
+  smoke suite.
+- Next checkpoint: Step 3, Van, Map, And Objective Agreement.
 
 ## Stop Rules
 

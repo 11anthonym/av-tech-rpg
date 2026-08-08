@@ -213,6 +213,8 @@ kbd { padding: 2px 5px; border: 1px solid #53615e; border-radius: 3px; color: va
 .modal-list li.route-card-fast-travel { border-color: rgba(105, 201, 139, .58); background: rgba(105, 201, 139, .07); }
 .modal-list li.route-card-locked { border-color: rgba(223, 138, 126, .58); border-style: dashed; background: rgba(95, 69, 61, .2); }
 .modal-list li.route-card-driven:not(.route-card-active):not(.route-card-pressure):not(.route-card-fast-travel) { border-color: rgba(111, 142, 130, .48); }
+.modal-list li.dispatch-plan-selected { border-color: rgba(105, 201, 139, .68); background: rgba(105, 201, 139, .08); }
+.modal-list li.dispatch-plan-selected strong { color: #9bddb3; }
 .dispatch-task-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 10px; margin: 14px 0; }
 .dispatch-task-card { padding: 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel-alt); }
 .dispatch-task-card.task-state-completed { border-color: rgba(105, 201, 139, .55); }

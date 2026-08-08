@@ -23,6 +23,8 @@ function getDispatchBoardEntryDefinitions() {
       statusLabel: "FOLLOW-UP",
       objective: "Review the Conshohocken label follow-up on the dispatch board.",
       availableReason: "Josh's service debrief unlocked a repeat-route label cleanup before the next new site.",
+      planningSummary: "Use a familiar route for a small label cleanup and leave stronger service notes behind.",
+      planningTradeoff: "This uses today's field window before University City, but pays for useful side work and improves the known room record.",
       isAvailable: () => isConshohockenFollowupAvailable()
         && !(state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved)
         && !hasPendingTraining(),
@@ -45,12 +47,14 @@ function getDispatchBoardEntryDefinitions() {
       routeId: "universitySurvey",
       statusLabel: "SITE SURVEY",
       objective: "Review the University City site survey on the dispatch board.",
-      availableReason: "The Conshohocken sequence is closed and the board has moved to a site survey.",
+      availableReason: "Josh's service debrief cleared the next main assignment for planning.",
+      planningSummary: "Move into new site work and inspect the access path before the future display install is committed.",
+      planningTradeoff: "This keeps the main board moving, but coordination will reassign the small Conshohocken follow-up when you leave.",
       isAvailable: () => state.flags.serviceComplete
         && state.flags.joshServiceDebriefed
         && !(state.flags.serviceCallbackPending && !state.flags.serviceCallbackResolved)
-        && state.flags.conshohockenFollowupComplete
         && !state.flags.surveyComplete
+        && (!state.flags.conshohockenFollowupStarted || state.flags.conshohockenFollowupComplete)
         && !hasPendingTraining(),
       isInProgress: () => state.sceneId === "universitySurvey" || (state.flags.surveyStarted && !state.flags.surveyComplete),
       isComplete: () => Boolean(state.flags.surveyComplete),
@@ -246,6 +250,16 @@ function getAvailableDispatchBoardEntries(entries = getDispatchBoardEntries()) {
   return entries.filter((entry) => entry.isAvailable);
 }
 
+function getDispatchPlanningEntries(entries = getDispatchBoardEntries()) {
+  if (getInProgressDispatchBoardEntry(entries)) return [];
+  const availableEntries = getAvailableDispatchBoardEntries(entries);
+  return availableEntries.length > 1 ? availableEntries : [];
+}
+
+function hasDispatchPlanningChoice(entries = getDispatchBoardEntries()) {
+  return getDispatchPlanningEntries(entries).length > 1;
+}
+
 function getPlannedDispatchId() {
   return typeof state.flags.plannedDispatchId === "string" ? state.flags.plannedDispatchId : "";
 }
@@ -257,6 +271,8 @@ function getPlannedDispatchBoardEntry(entries = getDispatchBoardEntries()) {
 }
 
 function setPlannedDispatchBoardEntry(dispatchId, entries = getDispatchBoardEntries()) {
+  const inProgressEntry = getInProgressDispatchBoardEntry(entries);
+  if (inProgressEntry && inProgressEntry.id !== dispatchId) return false;
   const entry = getAvailableDispatchBoardEntries(entries).find((candidate) => candidate.id === dispatchId);
   if (!entry) return false;
   state.flags.plannedDispatchId = entry.id;
@@ -273,6 +289,8 @@ function clearPlannedDispatchBoardEntry() {
 
 function getCurrentDispatchBoardEntry(entries = getDispatchBoardEntries()) {
   if (state.flags.endShiftPending) return null;
+  const inProgressEntry = getInProgressDispatchBoardEntry(entries);
+  if (inProgressEntry) return inProgressEntry;
   const availableEntries = getAvailableDispatchBoardEntries(entries);
   const plannedEntry = getPlannedDispatchBoardEntry(availableEntries);
   if (plannedEntry) return plannedEntry;
@@ -293,11 +311,20 @@ function getLastCompletedDispatchBoardEntry(entries = getDispatchBoardEntries())
 }
 
 function getCurrentDispatchBoardObjective() {
-  return getCurrentDispatchBoardEntry()?.objective || "";
+  const entries = getDispatchBoardEntries();
+  const currentEntry = getCurrentDispatchBoardEntry(entries);
+  if (currentEntry) return currentEntry.objective || "";
+  if (hasDispatchPlanningChoice(entries)) return "Choose today's work on the dispatch board.";
+  return "";
 }
 
 function getDispatchBoardStateMarkup({ showBlocked = true } = {}) {
-  const entry = getCurrentDispatchBoardEntry() || (showBlocked ? getBlockedDispatchBoardEntry() : null);
+  const entries = getDispatchBoardEntries();
+  const planningEntries = getDispatchPlanningEntries(entries);
+  const entry = getCurrentDispatchBoardEntry(entries) || (showBlocked ? getBlockedDispatchBoardEntry(entries) : null);
+  if (!entry && planningEntries.length) {
+    return `<li><strong>Board choice</strong><span>${escapeHtml(`${planningEntries.length} jobs are available. Choose which work to plan before using the van or regional map.`)}</span></li>`;
+  }
   if (!entry) return "";
   const routeDetail = entry.route
     ? `Route: ${entry.routeLabel}.`
@@ -333,8 +360,16 @@ function getFallbackDispatchPresentation() {
 function getHudDispatchPresentation() {
   if (state.flags.endShiftPending) return getFallbackDispatchPresentation();
   const entries = getDispatchBoardEntries();
+  const currentEntry = getCurrentDispatchBoardEntry(entries);
+  if (state.sceneId === "shop" && !currentEntry && hasDispatchPlanningChoice(entries)) {
+    return {
+      title: "Choose Today's Work",
+      summary: "The follow-up and University City survey are both ready. Use the dispatch board to plan one before leaving.",
+      statusLabel: "WORKDAY PLAN",
+    };
+  }
   const entry = getInProgressDispatchBoardEntry(entries)
-    || (state.sceneId === "shop" ? getCurrentDispatchBoardEntry(entries) || getBlockedDispatchBoardEntry(entries) : null)
+    || (state.sceneId === "shop" ? currentEntry || getBlockedDispatchBoardEntry(entries) : null)
     || getLastCompletedDispatchBoardEntry(entries);
   const fallback = getFallbackDispatchPresentation();
   if (!entry) return fallback;
@@ -350,10 +385,84 @@ function getCurrentDispatchRouteId() {
   return getCurrentDispatchBoardEntry()?.routeId || null;
 }
 
+function getDispatchBoardRoleLabel(entry) {
+  return entry?.boardRole === "optional" ? "Optional follow-up" : "Main assignment";
+}
+
+function getDispatchBoardPlanningCardMarkup(entry, plannedEntry = null) {
+  const isPlanned = plannedEntry?.id === entry.id;
+  const job = entry.routeId ? getRouteJobData(entry.routeId) : null;
+  const status = isPlanned ? "Planned" : "Available";
+  const routeText = entry.route ? entry.routeLabel : "Shop / board task";
+  return `
+    <li class="route-card${isPlanned ? " dispatch-plan-selected" : ""}">
+      <strong>${escapeHtml(`[${status}] ${entry.title}`)}</strong>
+      <span>${escapeHtml(`${getDispatchBoardRoleLabel(entry)} | ${job ? getJobFamilyName(job.familyId) : entry.statusLabel} | ${routeText}`)}</span>
+      <span>${escapeHtml(entry.planningSummary || entry.summary)}</span>
+      <span>${escapeHtml(`Tradeoff: ${entry.planningTradeoff || "This work uses the current field window before the board advances."}`)}</span>
+    </li>
+  `;
+}
+
+function getDispatchPreviewBackAction() {
+  if (hasDispatchPlanningChoice()) {
+    return { label: "Back To Dispatch Board", className: "secondary-button", onClick: showDispatchBoardSelection };
+  }
+  return { label: "Return to Shop", className: "secondary-button" };
+}
+
+function selectDispatchBoardPlan(dispatchId) {
+  const entries = getDispatchBoardEntries();
+  if (!setPlannedDispatchBoardEntry(dispatchId, entries)) {
+    return notify("That job cannot replace work that is already underway.");
+  }
+  const selectedEntry = getPlannedDispatchBoardEntry(entries);
+  if (selectedEntry?.previewAction) return selectedEntry.previewAction();
+  return showDispatchBoardSelection();
+}
+
+function showDispatchBoardSelection() {
+  const entries = getDispatchBoardEntries();
+  const planningEntries = getDispatchPlanningEntries(entries);
+  if (planningEntries.length < 2) {
+    const currentEntry = getCurrentDispatchBoardEntry(entries);
+    if (currentEntry?.previewAction) return currentEntry.previewAction();
+    return showDispatchPreview();
+  }
+  const plannedEntry = getPlannedDispatchBoardEntry(planningEntries);
+  showModal({
+    kicker: "Dispatch Board",
+    title: "Choose Today's Work",
+    body: `
+      <p>Both jobs are ready. Plan one now; you can switch until you leave the shop.</p>
+      <div class="results-grid">
+        <span>Current plan</span><strong>${escapeHtml(plannedEntry?.title || "Not selected")}</strong>
+        <span>Choice window</span><strong>Closes when travel begins</strong>
+      </div>
+      <ul class="modal-list">
+        ${planningEntries.map((entry) => getDispatchBoardPlanningCardMarkup(entry, plannedEntry)).join("")}
+      </ul>
+      <p class="muted">Coordination will accept either plan. The follow-up trades schedule momentum for useful side work; University City moves the main assignment forward.</p>
+    `,
+    actions: [
+      ...planningEntries.map((entry) => ({
+        label: plannedEntry?.id === entry.id ? `Review Planned Job: ${entry.title}` : `Plan & Review: ${entry.title}`,
+        className: "choice-button",
+        onClick: () => selectDispatchBoardPlan(entry.id),
+      })),
+      { label: "Close", className: "text-button", onClick: render },
+    ],
+  });
+}
+
 function showDispatchPreview() {
   if (shouldIntroduceJoshBeforeNextDispatch()) return notifyJoshIntroRequired();
   if (state.flags.endShiftPending) return showEndShiftModal();
-  const entry = getCurrentDispatchBoardEntry();
+  const entries = getDispatchBoardEntries();
+  const inProgressEntry = getInProgressDispatchBoardEntry(entries);
+  if (inProgressEntry?.previewAction) return inProgressEntry.previewAction();
+  if (hasDispatchPlanningChoice(entries)) return showDispatchBoardSelection();
+  const entry = getCurrentDispatchBoardEntry(entries);
   if (entry?.previewAction) return entry.previewAction();
   const blockedEntry = getBlockedDispatchBoardEntry();
   if (blockedEntry?.blockedReason) return notify(blockedEntry.blockedReason);

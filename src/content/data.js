@@ -996,13 +996,16 @@ window.GAME_CONTENT = {
       followup: {
         dispatchId: "followupDispatch",
         purpose: "Repeat-route label follow-up.",
+        unlockCondition: "Optional after Josh's service debrief until the University City route begins.",
+        rewards: "Side-job wages, route mastery, and clearer Conshohocken service notes.",
+        riskTags: ["schedule tradeoff", "service notes", "repeat route"],
       },
     },
     universitySurvey: {
       dispatchId: "surveyDispatch",
       familyId: "survey",
       purpose: "Site survey for access, scope, and future install risk.",
-      unlockCondition: "Unlocked after the Conshohocken service/follow-up sequence.",
+      unlockCondition: "Available after Josh's service debrief; choosing it moves past the optional Conshohocken follow-up.",
       rewards: "Survey wages, XP, documentation progress, and install-risk flags.",
       riskTags: ["scope pressure", "access", "future install"],
     },

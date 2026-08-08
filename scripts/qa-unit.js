@@ -439,6 +439,9 @@ test("dispatch board entries resolve to valid content, routes, and actions", () 
       if (entry.boardRole && !["main", "optional"].includes(entry.boardRole)) {
         failures.push("board entry " + entry.id + " has invalid boardRole " + entry.boardRole);
       }
+      if (["followup", "survey"].includes(entry.id) && (!entry.planningSummary || !entry.planningTradeoff)) {
+        failures.push("board entry " + entry.id + " is missing planning copy");
+      }
       if (entry.contentKey && !content[entry.contentKey]) failures.push("board entry " + entry.id + " has unknown contentKey " + entry.contentKey);
       if (entry.routeId && typeof entry.routeId === "string" && !getWorldRoute(entry.routeId)) {
         failures.push("board entry " + entry.id + " has unknown routeId " + entry.routeId);
@@ -532,6 +535,92 @@ test("dispatch board planning supports one-job fallback and future multi-job cho
   assert.equal(result.invalidPlan, "");
   assert.equal(result.missingPlan, "");
   assert.equal(result.migratedVersion, 29);
+});
+
+test("post-service board choice stays readable and locks when travel begins", () => {
+  resetGameState();
+  const result = readGameJson(`(() => {
+    state.flags.finished = true;
+    state.flags.metJosh = true;
+    state.flags.serviceStarted = true;
+    state.flags.serviceComplete = true;
+    state.flags.serviceApproach = "verify";
+    state.flags.serviceRepairMethod = "verify-path";
+    state.flags.joshServiceDebriefed = true;
+    state.flags.plannedDispatchId = "";
+
+    const openEntries = getDispatchBoardEntries();
+    const planningEntries = getDispatchPlanningEntries(openEntries);
+    const openingCards = planningEntries.map((entry) => getDispatchBoardPlanningCardMarkup(entry));
+    const openingObjective = getCurrentDispatchBoardObjective();
+    const openingHud = getHudDispatchPresentation();
+    const openingBoardState = getDispatchBoardStateMarkup();
+
+    const selectedFollowup = setPlannedDispatchBoardEntry("followup", openEntries);
+    const followupCurrent = getCurrentDispatchBoardEntry(openEntries)?.id || "";
+    const followupRouteId = getCurrentDispatchRouteId();
+    const selectedSurvey = setPlannedDispatchBoardEntry("survey", openEntries);
+    const surveyCurrent = getCurrentDispatchBoardEntry(openEntries)?.id || "";
+    const surveyRouteId = getCurrentDispatchRouteId();
+
+    state.flags.surveyStarted = true;
+    const surveyStartedEntries = getDispatchBoardEntries();
+    const availableAfterSurveyDeparture = getAvailableDispatchBoardEntries(surveyStartedEntries).map((entry) => entry.id);
+    const rejectedFollowupSwitch = setPlannedDispatchBoardEntry("followup", surveyStartedEntries);
+    const currentAfterSurveyDeparture = getCurrentDispatchBoardEntry(surveyStartedEntries)?.id || "";
+
+    state.flags.surveyStarted = false;
+    state.flags.plannedDispatchId = "followup";
+    state.flags.conshohockenFollowupStarted = true;
+    const followupStartedEntries = getDispatchBoardEntries();
+    const availableAfterFollowupDeparture = getAvailableDispatchBoardEntries(followupStartedEntries).map((entry) => entry.id);
+    const rejectedSurveySwitch = setPlannedDispatchBoardEntry("survey", followupStartedEntries);
+    const currentAfterFollowupDeparture = getCurrentDispatchBoardEntry(followupStartedEntries)?.id || "";
+
+    return {
+      planningIds: planningEntries.map((entry) => entry.id),
+      roles: planningEntries.map((entry) => entry.boardRole),
+      openingCards,
+      openingObjective,
+      openingHud,
+      openingBoardState,
+      selectedFollowup,
+      followupCurrent,
+      followupRouteId,
+      selectedSurvey,
+      surveyCurrent,
+      surveyRouteId,
+      availableAfterSurveyDeparture,
+      rejectedFollowupSwitch,
+      currentAfterSurveyDeparture,
+      availableAfterFollowupDeparture,
+      rejectedSurveySwitch,
+      currentAfterFollowupDeparture,
+    };
+  })()`);
+
+  assert.deepEqual(result.planningIds, ["followup", "survey"]);
+  assert.deepEqual(result.roles, ["optional", "main"]);
+  assert.match(result.openingCards[0], /Optional follow-up/i);
+  assert.match(result.openingCards[0], /Tradeoff:/i);
+  assert.match(result.openingCards[1], /Main assignment/i);
+  assert.match(result.openingCards[1], /coordination will reassign/i);
+  assert.equal(result.openingObjective, "Choose today's work on the dispatch board.");
+  assert.equal(result.openingHud.title, "Choose Today's Work");
+  assert.equal(result.openingHud.statusLabel, "WORKDAY PLAN");
+  assert.match(result.openingBoardState, /2 jobs are available/i);
+  assert.equal(result.selectedFollowup, true);
+  assert.equal(result.followupCurrent, "followup");
+  assert.equal(result.followupRouteId, "conshohockenService");
+  assert.equal(result.selectedSurvey, true);
+  assert.equal(result.surveyCurrent, "survey");
+  assert.equal(result.surveyRouteId, "universitySurvey");
+  assert.deepEqual(result.availableAfterSurveyDeparture, ["survey"]);
+  assert.equal(result.rejectedFollowupSwitch, false);
+  assert.equal(result.currentAfterSurveyDeparture, "survey");
+  assert.deepEqual(result.availableAfterFollowupDeparture, ["followup"]);
+  assert.equal(result.rejectedSurveySwitch, false);
+  assert.equal(result.currentAfterFollowupDeparture, "followup");
 });
 
 test("portal contracts expose valid spatial movement and lock messaging", () => {

@@ -3,6 +3,7 @@
 function isConshohockenFollowupAvailable() {
   return state.flags.serviceComplete
     && state.flags.joshServiceDebriefed
+    && !state.flags.surveyStarted
     && !state.flags.conshohockenFollowupComplete;
 }
 
@@ -31,7 +32,7 @@ function showConshohockenFollowupPreview() {
     actions: [
       ...(fastTravelReady ? [{ label: "Open Regional Map", onClick: showRegionalMap }] : []),
       getDispatchRoutePrepAction("conshohockenService", showConshohockenFollowupPreview, { className: fastTravelReady ? "secondary-button" : undefined }),
-      { label: "Return to Shop", className: "secondary-button" },
+      getDispatchPreviewBackAction(),
     ],
   });
 }
