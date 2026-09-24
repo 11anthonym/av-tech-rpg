@@ -3336,6 +3336,31 @@ async function clickButton(page, name) {
     assert(walkdownTask.usedResolverLog, "Retrofit walkdown task should log through shared resolver");
     assert(walkdownTask.showsResultRows, "Retrofit walkdown task should show structured result rows");
 
+    const backedScopeCall = await page.evaluate(() => {
+      window.startGame("organized-rookie");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("burlingtonRetrofitWalkdown");
+      state.flags.retrofitWalkdownBrief = true;
+      state.flags.retrofitWalkdownPreparation = "drawings";
+      state.retrofitWalkdownChecks = window.GAME_CONTENT.retrofitWalkdownDispatch.checks.map((check) => check.id);
+      state.reputation.management = 2;
+      window.showRetrofitWalkdownChoice();
+      const choiceText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const scopeButton = [...document.querySelectorAll("#modal-backdrop button")].find((button) => button.textContent.includes("Push scope change with photos"));
+      scopeButton?.click();
+      const closeoutText = document.querySelector("#modal-backdrop")?.innerText || "";
+      return {
+        choiceText, scopeAvailable: Boolean(scopeButton), closeoutText,
+        backed: state.flags.retrofitScopeBackedByManagement,
+        branch: state.flags.retrofitInstallBranch,
+        clock: state.clock,
+      };
+    });
+    assert(backedScopeCall.scopeAvailable, "Commercial-process build should keep the Burlington scope option");
+    assert(backedScopeCall.choiceText.includes("more effort and time") && backedScopeCall.choiceText.includes("Management knows your work"), "Scope decision should show its tradeoff and standing advantage before selection");
+    assert(backedScopeCall.backed && backedScopeCall.branch === "protected" && backedScopeCall.clock.endsWith("12:17 PM"), "Backed scope call should protect install day while taking more time");
+    assert(backedScopeCall.closeoutText.includes("management backing used") && backedScopeCall.closeoutText.includes("Longer onsite"), "Closeout should show why management friction was softened");
+
     await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;

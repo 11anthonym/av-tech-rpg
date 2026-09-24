@@ -393,3 +393,19 @@ careful/coworker-oriented play has its own benefits. Do not add more one-off
 shop favors in this phase. The next checkpoint is an observed playtest of
 whether players notice these tradeoffs and understand that each standing has
 a different practical role.
+
+### Burlington Balance Check, September 24, 2026
+
+The Burlington walkdown scope call previously protected install day even with
+thin notes while costing less effort and no more time than documentation. It
+now takes more field effort and a longer onsite call. Documentation remains a
+cheaper, quicker way to warn the install crew, but a strained note can leave
+partial risk. Preserved management standing softens the relationship cost of
+the scope call; spending that standing on a shop tool contribution removes
+the backing. Both paths still reach the same install branch they did before,
+and older scope saves retain their original reputation result.
+
+This is a balance pass on an existing decision, not a new branch. The playtest
+question is whether the player sees a real tradeoff between time, condition,
+cash, management standing, and install protection without being shown exact
+energy math before choosing.

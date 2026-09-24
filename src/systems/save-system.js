@@ -256,6 +256,7 @@ function migrateSavedGame(savedGame) {
   flags.joshCrewSupportUsed = Boolean(flags.joshCrewSupportUsed);
   flags.joshCrewSupportSource = flags.joshCrewSupportSource || "";
   flags.companyToolContributionUsed = Boolean(flags.companyToolContributionUsed);
+  flags.retrofitScopeBackedByManagement = Boolean(flags.retrofitScopeBackedByManagement);
   flags.callbackPressureUsed = flags.callbackPressureUsed && typeof flags.callbackPressureUsed === "object" && !Array.isArray(flags.callbackPressureUsed)
     ? flags.callbackPressureUsed
     : {};
@@ -431,7 +432,7 @@ function inferSavedReputation(savedGame) {
     } else {
       reputation.clients += savedGame.flags.retrofitWalkdownApproach === "scope" ? 2 : 1;
       reputation.coworkers += 1;
-      reputation.management += savedGame.flags.retrofitWalkdownApproach === "scope" ? -2 : -1;
+      reputation.management += savedGame.flags.retrofitWalkdownApproach === "scope" && !savedGame.flags.retrofitScopeBackedByManagement ? -2 : -1;
     }
   }
   if (savedGame.flags?.retrofitInstallComplete) {

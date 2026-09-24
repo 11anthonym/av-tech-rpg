@@ -1452,6 +1452,79 @@ test("Burlington retrofit install branch uses visible task modifiers", () => {
   assert.equal(result.protectedModifier.energyDelta, -2);
 });
 
+test("Burlington scope protection now costs more field time and effort than documentation", () => {
+  function closeWalkdown(approach, management) {
+    resetGameState();
+    return readGameJson(`(() => {
+      state.sceneId = "burlingtonRetrofitWalkdown";
+      state.flags.currentAreaId = "burlingtonRetrofitWalkdown";
+      state.flags.retrofitWalkdownBrief = true;
+      state.flags.retrofitWalkdownPreparation = "drawings";
+      state.flags.retrofitWalkdownChecksStrained = true;
+      state.retrofitWalkdownChecks = content.retrofitWalkdownDispatch.checks.map((check) => check.id);
+      state.energy = 80;
+      state.reputation.management = ${management};
+      const beforeEnergy = state.energy;
+      finishRetrofitWalkdown(${JSON.stringify(approach)});
+      const saved = migrateSavedGame(JSON.parse(JSON.stringify(serializeGame())));
+      return {
+        energySpent: beforeEnergy - state.energy,
+        clock: state.clock,
+        management: state.reputation.management,
+        scopeBacked: state.flags.retrofitScopeBackedByManagement,
+        savedScopeBacked: saved.flags.retrofitScopeBackedByManagement,
+        branch: state.flags.retrofitInstallBranch,
+      };
+    })()`);
+  }
+  const documented = closeWalkdown("document", 2);
+  const scopeBacked = closeWalkdown("scope", 2);
+  const scopeUnbacked = closeWalkdown("scope", 0);
+  assert.equal(documented.branch, "partial", "Strained documentation should leave a partial install warning");
+  assert.equal(scopeBacked.branch, "protected", "Scope call should still protect install day");
+  assert.ok(scopeBacked.energySpent > documented.energySpent, "Stronger protection should require more field effort");
+  assert.match(documented.clock, /11:58 AM$/);
+  assert.match(scopeBacked.clock, /12:17 PM$/);
+  assert.equal(scopeBacked.management, 1);
+  assert.equal(scopeUnbacked.management, -2);
+  assert.equal(scopeBacked.scopeBacked, true);
+  assert.equal(scopeBacked.savedScopeBacked, true);
+});
+
+test("Keeping management standing instead of spending it at the shop softens a later scope call", () => {
+  function purchaseAndScope(useCompanyContribution) {
+    resetGameState();
+    return readGameJson(`(() => {
+      state.flags.metJosh = true;
+      state.cash = 125;
+      state.reputation.management = 2;
+      buyTool("drill", { useCompanyContribution: ${useCompanyContribution} });
+      const standingAtSite = state.reputation.management;
+      state.sceneId = "burlingtonRetrofitWalkdown";
+      state.flags.currentAreaId = "burlingtonRetrofitWalkdown";
+      state.flags.retrofitWalkdownBrief = true;
+      state.retrofitWalkdownChecks = content.retrofitWalkdownDispatch.checks.map((check) => check.id);
+      finishRetrofitWalkdown("scope");
+      return { standingAtSite, standingAfter: state.reputation.management, backed: state.flags.retrofitScopeBackedByManagement, tool: ownsTool("drill"), branch: state.flags.retrofitInstallBranch };
+    })()`);
+  }
+  const cashPath = purchaseAndScope(false);
+  const companyPath = purchaseAndScope(true);
+  assert.deepEqual(cashPath, { standingAtSite: 2, standingAfter: 1, backed: true, tool: true, branch: "protected" });
+  assert.deepEqual(companyPath, { standingAtSite: 0, standingAfter: -2, backed: false, tool: true, branch: "protected" });
+});
+
+test("Older scope saves keep their original management result", () => {
+  const result = readGameJson(`(() => {
+    const old = migrateSavedGame({ version: 1, technicianId: "prototype-tech", flags: { retrofitWalkdownComplete: true, retrofitWalkdownApproach: "scope" } });
+    const backed = migrateSavedGame({ version: 30, technicianId: "prototype-tech", flags: { retrofitWalkdownComplete: true, retrofitWalkdownApproach: "scope", retrofitScopeBackedByManagement: true } });
+    return { oldBacked: old.flags.retrofitScopeBackedByManagement, oldManagement: inferSavedReputation(old).management, backedManagement: inferSavedReputation(backed).management };
+  })()`);
+  assert.equal(result.oldBacked, false);
+  assert.equal(result.oldManagement, -2);
+  assert.equal(result.backedManagement, -1);
+});
+
 test("consequence review groups active, resolved, and inherited pressure", () => {
   resetGameState();
   const result = readGameJson(`(() => {

@@ -161,6 +161,7 @@ function showRetrofitWalkdownChoice() {
       <p>The new display wall can work, but the existing pathway does not reach it cleanly. The install can be protected now, or the crew can discover the missing pathway while holding cable.</p>
       ${state.flags.retrofitWalkdownChecksStrained ? `<p class="muted">One walkdown check was strained. A scope pushback can keep the weak note from being buried.</p>` : ""}
       ${getDocumentationSupportReduction() ? `<p class="muted">Your documentation habits make the closeout less draining.</p>` : ""}
+      ${state.reputation.management >= 2 ? `<p class="muted">Management knows your work. That standing can soften the field-change argument if you choose to push scope.</p>` : ""}
       ${getChoicePressureMarkup([
         {
           label: "Document blockers",
@@ -168,7 +169,7 @@ function showRetrofitWalkdownChoice() {
         },
         ...(getSkillValue("commercialProcess") >= 3 || canUsePressureChoice() ? [{
           label: "Push scope change",
-          detail: "Turns the pathway miss into a field-change conversation. Best future-install protection, with sharper management friction.",
+          detail: "Strongest install protection, even with thin notes. The field-change call takes more effort and time than filing blockers; management backing can soften the friction.",
         }] : []),
         {
           label: "Accept pathway",
@@ -188,8 +189,9 @@ function showRetrofitWalkdownChoice() {
   });
 }
 
-function getRetrofitWalkdownReputationSummary(approach, strained = false) {
+function getRetrofitWalkdownReputationSummary(approach, strained = false, scopeBacked = false) {
   if (approach === "accept") return "Management likes the clean quote; crew trust drops later";
+  if (approach === "scope" && scopeBacked) return "Client and crew trust rise; management backs the field change but notices the longer call";
   if (approach === "scope") return "Client and crew trust rise; management friction sharpens";
   if (strained) return "Client trust rises; crew gets partial help; management grumbles";
   return "Client and crew trust rise; management grumbles about the scope note";
@@ -213,10 +215,12 @@ function finishRetrofitWalkdown(approach) {
   const before = getTrackedStateSnapshot();
   const documented = approach !== "accept";
   const strained = Boolean(state.flags.retrofitWalkdownChecksStrained) && approach === "document";
+  const scopeBacked = approach === "scope" && state.reputation.management >= 2;
   const xp = (approach === "scope" ? 65 : approach === "document" ? 55 : 35) - (strained ? 5 : 0);
-  if (documented) changeEnergy(-getRetrofitWalkdownCloseoutEnergyCost(approach === "scope" ? 3 : 4));
+  if (documented) changeEnergy(-getRetrofitWalkdownCloseoutEnergyCost(approach === "scope" ? 6 : 4));
   state.flags.retrofitWalkdownComplete = true;
   state.flags.retrofitWalkdownApproach = approach;
+  state.flags.retrofitScopeBackedByManagement = scopeBacked;
   markCareerSnapshotStale();
   const futureInstallPartialWarning = approach === "document" && strained;
   const futureInstallProtected = approach === "scope" || (approach === "document" && !futureInstallPartialWarning);
@@ -227,7 +231,7 @@ function finishRetrofitWalkdown(approach) {
   state.flags.retrofitInstallPartialWarning = futureInstallPartialWarning;
   state.flags.retrofitInstallBranch = futureInstallBranch;
   state.flags.retrofitScopeChangeLogged = approach === "scope";
-  setClock(`${state.clock.slice(0, 3)} ${approach === "accept" ? "11:34" : "11:58"} AM`);
+  setClock(`${state.clock.slice(0, 3)} ${approach === "accept" ? "11:34 AM" : approach === "scope" ? "12:17 PM" : "11:58 AM"}`);
   if (!state.flags.retrofitWalkdownPaid) {
     state.cash += documented ? 76 : 58;
     state.flags.retrofitWalkdownPaid = true;
@@ -236,7 +240,7 @@ function finishRetrofitWalkdown(approach) {
     awardCareerProgress({
       xp,
       reputation: documented
-        ? { clients: approach === "scope" ? 2 : 1, coworkers: strained ? 0 : 1, management: approach === "scope" ? -2 : -1 }
+        ? { clients: approach === "scope" ? 2 : 1, coworkers: strained ? 0 : 1, management: approach === "scope" && !scopeBacked ? -2 : -1 }
         : { clients: 0, coworkers: -1, management: 1 },
       source: content.retrofitWalkdownDispatch.title,
     });
@@ -300,7 +304,8 @@ function finishRetrofitWalkdown(approach) {
         <span>Cash balance</span><strong>${formatCash(state.cash)}</strong>
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Preparation</span><strong>${getRetrofitWalkdownPreparationLabel()}</strong>
-        <span>Relationship result</span><strong>${getRetrofitWalkdownReputationSummary(approach, strained)}</strong>
+        <span>Relationship result</span><strong>${getRetrofitWalkdownReputationSummary(approach, strained, scopeBacked)}</strong>
+        ${approach === "scope" ? `<span>Field-change call</span><strong>Longer onsite; ${scopeBacked ? "management backing used" : "management friction increased"}</strong>` : ""}
         <span>Future install hook</span><strong>${getRetrofitInstallHookSummary(approach, strained)}</strong>
         ${strained ? `<span>Skill consequence</span><strong>Strained walkdown note leaves partial install risk</strong>` : ""}
       </div>
