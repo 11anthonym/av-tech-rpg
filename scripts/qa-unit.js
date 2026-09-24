@@ -1186,6 +1186,92 @@ test("University City full evidence preserves the complete report and leaves no 
   assert.equal(result.risk, null);
 });
 
+test("Client standing from earlier choices opens a costly South Philly repair window", () => {
+  resetGameState();
+  const result = readGameJson(`(() => {
+    state.sceneId = "southPhillyCommissioning";
+    state.flags.currentAreaId = "southPhillyCommissioning";
+    state.flags.commissioningBrief = true;
+    state.reputation.clients = 5;
+    const routeBefore = getDispatchDifferenceText({ routeId: "southPhillyCommissioning" });
+    const baseCheck = getSkillCheckResult({ check: getCommissioningTerminationTask("clean"), skillId: "install", difficulty: getCommissioningTerminationTaskDifficulty("clean"), contextId: "commissioning-termination" });
+    requestCommissioningClientWindow();
+    const managementAfterRequest = state.reputation.management;
+    requestCommissioningClientWindow();
+    const managementAfterRepeat = state.reputation.management;
+    const saved = migrateSavedGame(JSON.parse(JSON.stringify(serializeGame())));
+    const supportedCheck = getSkillCheckResult({ check: getCommissioningTerminationTask("clean"), skillId: "install", difficulty: getCommissioningTerminationTaskDifficulty("clean"), contextId: "commissioning-termination" });
+    resolveCommissioningTerminationTask("clean");
+    const result = state.flags.fieldTaskResults?.["commissioning-termination-clean"];
+    const routeAfter = getDispatchDifferenceText({ routeId: "southPhillyCommissioning" });
+    state.commissioningChecks = content.commissioningDispatch.checks.map((check) => check.id);
+    finishCommissioning("repair");
+    return {
+      routeBefore, routeAfter,
+      managementAfterRequest, managementAfterRepeat,
+      savedWindow: saved.flags.commissioningClientWindowGranted,
+      baseScore: baseCheck.score, supportedScore: supportedCheck.score,
+      applied: (result?.modifiersApplied || []).map((modifier) => modifier.id),
+      clock: state.clock,
+    };
+  })()`);
+  assert.match(result.routeBefore, /Client standing lets you ask/);
+  assert.match(result.routeAfter, /client granted a longer room window/i);
+  assert.equal(result.managementAfterRequest, -1);
+  assert.equal(result.managementAfterRepeat, -1);
+  assert.equal(result.savedWindow, true);
+  assert.equal(result.supportedScore, result.baseScore + 1);
+  assert.ok(result.applied.includes("commissioning-client-window"));
+  assert.match(result.clock, /4:23 PM$/, "Extra room time should remain in the final shift clock");
+});
+
+test("Low standing blocks the extra window but a communication build can negotiate it", () => {
+  resetGameState();
+  const lowStanding = readGameJson(`(() => {
+    state.sceneId = "southPhillyCommissioning";
+    state.flags.commissioningBrief = true;
+    state.reputation.clients = 2;
+    requestCommissioningClientWindow();
+    return { source: getCommissioningWindowSource(), granted: Boolean(state.flags.commissioningClientWindowGranted), management: state.reputation.management, preview: getCommissioningWindowPreviewText() };
+  })()`);
+  assert.equal(lowStanding.source, "");
+  assert.equal(lowStanding.granted, false);
+  assert.equal(lowStanding.management, 0);
+  assert.match(lowStanding.preview, /Clean re-termination remains possible/);
+
+  resetGameState("morgan");
+  const specialist = readGameJson(`(() => {
+    state.sceneId = "southPhillyCommissioning";
+    state.flags.commissioningBrief = true;
+    state.reputation.clients = 2;
+    const source = getCommissioningWindowSource();
+    requestCommissioningClientWindow();
+    return { source, granted: Boolean(state.flags.commissioningClientWindowGranted) };
+  })()`);
+  assert.equal(specialist.source, "Client communication skill");
+  assert.equal(specialist.granted, true);
+});
+
+test("University City report choice changes South Philly client access on the next job", () => {
+  function closeSurvey(approach, inspections) {
+    resetGameState();
+    return readGameJson(`(() => {
+      state.sceneId = "universitySurvey";
+      state.flags.surveyBrief = true;
+      state.flags.surveyPreparation = "sketch";
+      state.reputation.clients = 4;
+      state.surveyInspections = ${JSON.stringify(inspections)};
+      finishSurvey(${JSON.stringify(approach)});
+      return { clients: state.reputation.clients, nextJobWindowSource: getCommissioningWindowSource() };
+    })()`);
+  }
+  const complete = closeSurvey("document", ["elevator", "hallway", "wall"]);
+  const provisional = closeSurvey("provisional", ["elevator", "wall"]);
+  assert.equal(complete.nextJobWindowSource, "Client standing");
+  assert.equal(provisional.nextJobWindowSource, "");
+  assert.ok(complete.clients > provisional.clients);
+});
+
 test("Burlington retrofit install branch uses visible task modifiers", () => {
   resetGameState();
   const result = readGameJson(`(() => {

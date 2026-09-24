@@ -315,7 +315,9 @@ function getObjective() {
     if (state.flags.commissioningComplete) return "Use the room exit to return to Radnor Rack & Wire.";
     if (!state.flags.commissioningBrief) return "Check in with the client contact.";
     if (state.commissioningChecks.includes("termination") && !state.flags.commissioningTerminationAction) {
-      return "Choose how to handle the loose credenza termination.";
+      return getCommissioningWindowSource() && !state.flags.commissioningClientWindowGranted
+        ? "Choose how to handle the loose termination, or ask the client for more room time."
+        : "Choose how to handle the loose credenza termination.";
     }
     if (state.commissioningChecks.length < content.commissioningDispatch.checks.length) {
       return `Commission the training room (${state.commissioningChecks.length}/${content.commissioningDispatch.checks.length}).`;

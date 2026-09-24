@@ -680,11 +680,11 @@ function getInteractions() {
     const readyForCloseout = allChecked && !needsTerminationTask;
     return [
       {
-        x: 300, y: 185, label: readyForCloseout ? "Close out commissioning visit" : needsTerminationTask ? "Client waiting on technical answer" : "Talk to client contact", npc: "CLIENT",
+        x: 300, y: 185, label: readyForCloseout ? "Close out commissioning visit" : state.flags.commissioningBrief && !state.flags.commissioningTerminationAction && !state.flags.commissioningClientWindowGranted ? "Discuss room time" : needsTerminationTask ? "Client waiting on technical answer" : "Talk to client contact", npc: "CLIENT",
         action: () => {
           if (readyForCloseout) return showCommissioningChoice();
-          if (needsTerminationTask) return notify("Handle the loose termination at the credenza before closeout.");
-          if (state.flags.commissioningBrief) return notify('Client: "The back of the room is still quieter. The installer said commissioning would tune it."');
+          if (needsTerminationTask && state.flags.commissioningClientWindowGranted) return notify("Handle the loose termination at the credenza before closeout.");
+          if (state.flags.commissioningBrief) return showCommissioningClientConversation();
           state.flags.commissioningBrief = true;
           addLog("Client reported that one side of the completed room still sounds quieter.");
           showModal({
@@ -692,7 +692,7 @@ function getInteractions() {
             title: "The Room Is Ready For Final Final",
             body: `
               <p>"The install team said the room was complete. The back speaker never sounded right, but they said commissioning would tune it."</p>
-              <p class="muted">Test the ceiling speakers, inspect the credenza termination, and review the closeout drawing.</p>
+              <p class="muted">Test the ceiling speakers, inspect the credenza termination, and review the closeout drawing. You can return to discuss room time before repairing the speaker.</p>
             `,
             actions: [{ label: "Start Commissioning", onClick: render }],
           });

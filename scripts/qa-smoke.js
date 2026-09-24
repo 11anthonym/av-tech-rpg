@@ -2188,6 +2188,33 @@ async function clickButton(page, name) {
     assert(provisionalSurvey.clientReputation === -1 && provisionalSurvey.approach === "provisional", "Provisional closeout should change present reputation and save the branch");
     assert(provisionalSurvey.risk?.cause.includes("hallway turn"), "Provisional closeout should name the exact missing measurement");
 
+    const commissioningWindow = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("southPhillyCommissioning");
+      state.flags.commissioningBrief = true;
+      state.commissioningChecks = ["termination"];
+      state.reputation.clients = 5;
+      state.player = { x: 300, y: 185 };
+      window.render();
+      const contact = window.getInteractions().find((item) => item.label === "Discuss room time");
+      contact?.action();
+      const decision = document.querySelector("#modal-backdrop")?.innerText || "";
+      const request = [...document.querySelectorAll("#modal-backdrop button")].find((button) => button.textContent.includes("Ask for more room time"));
+      request?.click();
+      const granted = document.querySelector("#modal-backdrop")?.innerText || "";
+      return {
+        contactReady: Boolean(contact), decision, requestReady: Boolean(request), granted,
+        saved: Boolean(state.flags.commissioningClientWindowGranted),
+        management: state.reputation.management,
+        modifier: window.getTaskModifierPreviewText(window.getCommissioningTerminationTask("clean")),
+      };
+    });
+    assert(commissioningWindow.contactReady && commissioningWindow.requestReady, "High client standing should expose an onsite room-time decision");
+    assert(commissioningWindow.decision.includes("management standing") && commissioningWindow.decision.includes("clean re-termination"), "Decision should show the tradeoff before clicking");
+    assert(commissioningWindow.saved && commissioningWindow.management === -1, "Granted window should persist and change management standing immediately");
+    assert(commissioningWindow.granted.includes("Management") && commissioningWindow.modifier.includes("Extra room time"), "The result and repair preview should explain the downstream benefit");
+
     const surveyCloseoutGuard = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;

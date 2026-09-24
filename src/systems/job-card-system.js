@@ -203,7 +203,11 @@ function getDispatchFieldTasksForRoute(routeId = "") {
 
 function getDispatchDifferenceText({ routeId = "", fieldTasks = [] } = {}) {
   const tasks = fieldTasks.length ? fieldTasks : getDispatchFieldTasksForRoute(routeId);
-  return getWhyDifferentTodayText(tasks);
+  const taskText = getWhyDifferentTodayText(tasks);
+  const clientWindowText = routeId === "southPhillyCommissioning" && typeof getCommissioningWindowPreviewText === "function"
+    ? getCommissioningWindowPreviewText()
+    : "";
+  return [taskText, clientWindowText].filter(Boolean).join(" ");
 }
 
 function getRouteBranchRows(route) {

@@ -49,8 +49,76 @@ function getCommissioningRepairEnergyCost(baseCost) {
   return Math.max(0, getVerificationEnergyCost(baseCost) - getCarefulTaskReduction());
 }
 
+function getCommissioningWindowSource() {
+  if (state.reputation.clients >= 5) return "Client standing";
+  if (getSkillValue("clientCommunication") >= 4) return "Client communication skill";
+  return "";
+}
+
+function getCommissioningWindowPreviewText() {
+  if (state.flags.commissioningClientWindowGranted) return "The client granted a longer room window. Clean re-termination is easier, but management will see the schedule change.";
+  const source = getCommissioningWindowSource();
+  return source
+    ? `${source} lets you ask the client for more verification time onsite. Accepting it helps clean re-termination but costs management standing and time.`
+    : "The client will not extend the room window without stronger client standing or communication skill. Clean re-termination remains possible without it.";
+}
+
+function showCommissioningClientConversation() {
+  if (state.flags.commissioningClientWindowGranted) return notify('Client: "You have the extra room time. Please make the speaker right."');
+  if (state.flags.commissioningTerminationAction) return notify('Client: "Please show me what you found before we sign off."');
+  const source = getCommissioningWindowSource();
+  showModal({
+    kicker: "Client Contact",
+    title: "The Room Is Booked Again Soon",
+    body: `
+      <p>The client needs the training room back. A longer window would let you work on the speaker termination without rushing the next booking.</p>
+      <p class="muted">${getCommissioningWindowPreviewText()}</p>
+    `,
+    actions: [
+      ...(source ? [{ label: "Ask for more room time", onClick: requestCommissioningClientWindow }] : []),
+      { label: "Return to the room", className: "secondary-button", onClick: render },
+    ],
+  });
+}
+
+function requestCommissioningClientWindow() {
+  if (state.sceneId !== "southPhillyCommissioning" || !state.flags.commissioningBrief || state.flags.commissioningComplete || state.flags.commissioningTerminationAction || state.flags.commissioningClientWindowGranted || !getCommissioningWindowSource()) {
+    return notify("The extra room window is not available now.");
+  }
+  const source = getCommissioningWindowSource();
+  state.flags.commissioningClientWindowGranted = true;
+  state.reputation.management -= 1;
+  markCareerSnapshotStale();
+  addLog(`Used ${source.toLowerCase()} to secure more commissioning time. Management noticed the schedule change.`);
+  render();
+  showModal({
+    kicker: "Room Window Granted",
+    title: "The Client Gives You More Time",
+    body: `
+      <p>The client moves the next room booking. You can now take a steadier pass at the speaker termination.</p>
+      <div class="results-grid">
+        <span>Clean repair</span><strong>Better conditions for the skill check</strong>
+        <span>Schedule</span><strong>More time on site</strong>
+        <span>Management</span><strong>Standing reduced</strong>
+      </div>
+    `,
+    actions: [{ label: "Return to the room", onClick: render }],
+  });
+}
+
 function getCommissioningTerminationTask(action = state.flags.commissioningTerminationAction) {
-  return content.commissioningDispatch.terminationTasks?.find((task) => task.id === action) || null;
+  const task = content.commissioningDispatch.terminationTasks?.find((item) => item.id === action) || null;
+  if (!task || action !== "clean" || !state.flags.commissioningClientWindowGranted) return task;
+  return {
+    ...task,
+    taskModifiers: [...(task.taskModifiers || []), {
+      id: "commissioning-client-window",
+      label: "Extra room time",
+      source: "The client moved the next booking, so clean re-termination can be checked without rushing.",
+      statDelta: 1,
+      resultText: "The longer room window helped the clean repair hold.",
+    }],
+  };
 }
 
 function getCommissioningTerminationContextBonus(task) {
@@ -199,6 +267,7 @@ function getCommissioningTerminationSkillCheck(action) {
   const task = getCommissioningTerminationTask(action);
   if (!task?.skillId) return null;
   return resolveSkillCheck(`commissioning-termination-action-${action}`, {
+    check: task,
     skillId: task.skillId,
     difficulty: getCommissioningTerminationTaskDifficulty(action),
     contextBonus: getCommissioningTerminationContextBonus(task),
@@ -286,6 +355,7 @@ function showCommissioningTerminationChoice() {
         <li><strong>Client Communication ${getSkillValue("clientCommunication")}</strong><span>Explaining the mismatch can protect trust while hurting schedule optics.</span></li>
       </ul>
       ${ownsTool("labeler") ? `<p class="muted">Josh's rebuilt labeler unlocks a stronger trace-and-label path.</p>` : `<p class="muted">A labeler would make the documentation path stronger here.</p>`}
+      ${state.flags.commissioningClientWindowGranted ? `<p class="muted">The extra room window supports a clean re-termination. Management has already noticed the schedule change.</p>` : ""}
       ${getChoicePressureMarkup([
         {
           label: "Re-land fast",
@@ -440,6 +510,7 @@ function finishCommissioning(approach) {
   state.flags.commissioningRiskDocumented = documentedRisk;
   markCareerSnapshotStale();
   setClock(`${state.clock.slice(0, 3)} ${approach === "pass" ? (cleanTask ? "3:47" : "3:39") : approach === "craft" ? "4:12" : "4:03"} PM`);
+  if (state.flags.commissioningClientWindowGranted) advanceClockMinutes(20);
   if (!state.flags.commissioningPaid) {
     state.cash += 84;
     state.flags.commissioningPaid = true;
@@ -512,6 +583,7 @@ function finishCommissioning(approach) {
         <span>Closeout</span><strong>${approach === "craft" ? "Clean punch list issued" : approach === "repair" ? "Issue repaired and documented" : "Room marked passed"}</strong>
         <span>Technical task</span><strong>${getCommissioningTerminationTaskLabel()}</strong>
         <span>Task outcome</span><strong>${getCommissioningTerminationQualityLabel()}</strong>
+        ${state.flags.commissioningClientWindowGranted ? `<span>Room window</span><strong>Extra time used; management standing spent</strong>` : ""}
         <span>Reputation</span><strong>${formatReputationDelta(reputation)}</strong>
         <span>Callback ledger</span><strong>${callbackRiskAdded ? callbackDetail : stableTask ? "No speaker callback created" : "Risk documented before callback"}</strong>
       </div>

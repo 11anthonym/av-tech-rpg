@@ -341,3 +341,22 @@ save-safe; static, unit, and browser smoke QA cover the tradeoff.
 Observe whether a new player notices the optional measurement and understands
 why facilities cannot approve the provisional path. If that is clear, use the
 existing exit gate above rather than expanding this job again.
+
+### Lasting Choice Proof, September 23, 2026
+
+The next playable job now reacts to earlier client standing. A complete,
+careful University City report can earn enough trust to ask the South Philly
+client for a longer commissioning window; a provisional report may leave that
+request unavailable. A communication-focused technician can negotiate the
+same window through their build instead. The player may still finish the room
+without it. If they take it, management standing drops immediately, the final
+shift clock runs later, and the clean re-termination check gets a visible
+field-task modifier. The decision is single-use, saved, and shown on route prep,
+at the contact, in the task result, and at closeout.
+
+This is the RPG rule to carry into a production vertical slice: a saved choice
+should change later access or working conditions, offer another route through
+skill or tools where sensible, and make the sacrifice visible without making
+the other path a dead end. It is a proof, not a full reputation simulation.
+No more one-off reputation gates are planned for this browser phase. The
+remaining gate is the observed first-time playtest above.
