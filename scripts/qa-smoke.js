@@ -3188,6 +3188,8 @@ async function clickButton(page, name) {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;
       window.enterScene("warrantyReturn");
+      state.stats.callbacks = 1;
+      const preview = window.getTaskModifierPreviewText(window.GAME_CONTENT.callbackCleanupDispatch.checks.find((item) => item.id === "actual-fault"));
       const beforeEnergy = state.energy;
       window.inspectCallbackCleanupCondition("actual-fault");
       const modalText = document.querySelector("#modal-backdrop")?.innerText || "";
@@ -3199,6 +3201,10 @@ async function clickButton(page, name) {
         resultSkill: result?.skillId || "",
         energyChanged: state.energy !== beforeEnergy,
         showsResultRows: modalText.includes("Task type") && modalText.includes("Risk tracked") && modalText.includes("unclear root cause"),
+        preview,
+        applied: (result?.modifiersApplied || []).map((modifier) => modifier.id),
+        pressureUsed: state.flags.callbackPressureUsed?.callback,
+        nextPreview: window.getTaskModifierPreviewText(window.GAME_CONTENT.callbackCleanupDispatch.checks.find((item) => item.id === "ticket-history")),
       };
     });
     assert(callbackTask.checked, "Callback cleanup check should complete");
@@ -3207,6 +3213,8 @@ async function clickButton(page, name) {
     assert(callbackTask.resultSkill === "troubleshooting", "Callback cleanup check should use data-backed skill");
     assert(callbackTask.energyChanged, "Callback cleanup check should affect energy");
     assert(callbackTask.showsResultRows, "Callback cleanup check should show structured result rows");
+    assert(callbackTask.preview.includes("Callback ledger pressure") && callbackTask.applied.includes("callback-ledger-pressure"), "Open callback debt should affect the check, not just the route copy");
+    assert(callbackTask.pressureUsed === 1 && !callbackTask.nextPreview.includes("Callback ledger pressure"), "Callback effort should apply once on this visit");
 
     await page.evaluate(() => {
       window.startGame("prototype-tech");

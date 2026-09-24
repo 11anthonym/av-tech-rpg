@@ -360,3 +360,19 @@ skill or tools where sensible, and make the sacrifice visible without making
 the other path a dead end. It is a proof, not a full reputation simulation.
 No more one-off reputation gates are planned for this browser phase. The
 remaining gate is the observed first-time playtest above.
+
+### Callback Debt Check, September 23, 2026
+
+The shared field-task layer now makes open callback debt mechanically true:
+the first relevant service, warranty, handoff, or systems check takes extra
+verification effort. The pressure appears before the check, is recorded in
+its result, and is spent once for that work type per callback wave instead of
+stacking on every hotspot. A new callback can bring the pressure back; if all
+callbacks are resolved, later work no longer receives the
+modifier. Existing saves default the usage record safely. This complements
+the existing secure-access energy friction; it does not add another callback
+dispatch or another content branch.
+
+**Balance boundary:** Keep the added effort capped and recoverable. Watch in
+the first-time playtest whether players can identify the source and a route to
+clear it. Do not turn callback debt into an endless penalty spiral.

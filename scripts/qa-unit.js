@@ -1044,6 +1044,59 @@ test("field task modifiers preview, apply, and consume one-time support", () => 
   assert.equal(result.joshCrewSupportLastUsed.contextId, "callback-documentation");
 });
 
+test("Open callback debt adds effort to only the first relevant check on each later job", () => {
+  resetGameState();
+  const result = readGameJson(`(() => {
+    state.sceneId = "warrantyReturn";
+    state.flags.currentAreaId = "warrantyReturn";
+    state.stats.callbacks = 1;
+    const check = content.callbackCleanupDispatch.checks[0];
+    const nextCheck = content.callbackCleanupDispatch.checks[1];
+    const preview = getTaskModifierPreviewText(check);
+    const routeBefore = getDispatchDifferenceText({ routeId: "warrantyReturn" });
+    const baseWithDebt = applyTaskModifiers(check).baseEnergyCost;
+    inspectCallbackCleanupCondition(check.id);
+    const firstResult = state.flags.fieldTaskResults?.["callback-client-notes"];
+    const nextPreview = getTaskModifierPreviewText(nextCheck);
+    const baseAfterFirst = applyTaskModifiers(nextCheck).baseEnergyCost;
+    const saved = migrateSavedGame(JSON.parse(JSON.stringify(serializeGame())));
+    state.sceneId = "systemsService";
+    const systemsCheck = content.systemsDispatch.checks[0];
+    const laterJobPreview = getTaskModifierPreviewText(systemsCheck);
+    state.stats.callbacksResolved = 1;
+    const resolvedPreview = getTaskModifierPreviewText(systemsCheck);
+    state.stats.callbacks = 2;
+    const newCallbackPreview = getTaskModifierPreviewText(check);
+    return {
+      preview, routeBefore, baseWithDebt, baseAfterFirst,
+      applied: (firstResult?.modifiersApplied || []).map((modifier) => modifier.id),
+      spent: state.flags.callbackPressureUsed?.callback,
+      savedSpent: saved.flags.callbackPressureUsed?.callback,
+      nextPreview, laterJobPreview, resolvedPreview, newCallbackPreview,
+    };
+  })()`);
+  assert.match(result.preview, /Callback ledger pressure.*adds effort.*first relevant check/);
+  assert.match(result.routeBefore, /Callback ledger pressure/);
+  assert.equal(result.baseWithDebt, result.baseAfterFirst + 1);
+  assert.ok(result.applied.includes("callback-ledger-pressure"));
+  assert.equal(result.spent, 1);
+  assert.equal(result.savedSpent, 1);
+  assert.doesNotMatch(result.nextPreview, /Callback ledger pressure/);
+  assert.match(result.laterJobPreview, /Callback ledger pressure/);
+  assert.doesNotMatch(result.resolvedPreview, /Callback ledger pressure/);
+  assert.match(result.newCallbackPreview, /Callback ledger pressure/);
+});
+
+test("Old saves default callback pressure usage safely", () => {
+  const result = readGameJson(`(() => {
+    const missing = migrateSavedGame({ version: 1, technicianId: "prototype-tech", flags: {} });
+    const malformed = migrateSavedGame({ version: 1, technicianId: "prototype-tech", flags: { callbackPressureUsed: [] } });
+    return { missing: missing.flags.callbackPressureUsed, malformed: malformed.flags.callbackPressureUsed };
+  })()`);
+  assert.deepEqual(result.missing, {});
+  assert.deepEqual(result.malformed, {});
+});
+
 test("University City survey task modifiers respond to prep and inspection order", () => {
   resetGameState();
   const result = readGameJson(`(() => {

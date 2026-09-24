@@ -255,6 +255,9 @@ function migrateSavedGame(savedGame) {
   flags.joshCrewSupportAvailable = Boolean(flags.joshCrewSupportAvailable);
   flags.joshCrewSupportUsed = Boolean(flags.joshCrewSupportUsed);
   flags.joshCrewSupportSource = flags.joshCrewSupportSource || "";
+  flags.callbackPressureUsed = flags.callbackPressureUsed && typeof flags.callbackPressureUsed === "object" && !Array.isArray(flags.callbackPressureUsed)
+    ? flags.callbackPressureUsed
+    : {};
   if (!flags.joshCrewSupportAvailable) delete flags.joshCrewSupportLastUsed;
   if (!flags.currentAreaId) {
     flags.currentAreaId = getWorldAreaByScene(savedGame.sceneId)?.id || content.world?.homeAreaId || "shop";

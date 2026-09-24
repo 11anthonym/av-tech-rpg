@@ -61,7 +61,7 @@ function getTaskModifierSummary(modifiers = []) {
       const deltas = [
         getSkillModifierText(modifier.statDelta),
         getEnergyModifierText(modifier.energyDelta),
-        modifier.consumesOnUse ? "one-time support" : "",
+        modifier.consumesOnUse ? (modifier.statDelta < 0 || modifier.energyDelta > 0 ? "first relevant check" : "one-time support") : "",
       ].filter(Boolean).join(", ");
       return `${modifier.label}${deltas ? ` (${deltas})` : ""}: ${modifier.source}`;
     })
@@ -125,12 +125,15 @@ function getActiveTaskModifiers(check = {}, base = {}) {
       resultText: "Josh's after-hours help carried into this check.",
     }));
   }
-  if (typeof getUnresolvedCallbackCount === "function" && getUnresolvedCallbackCount() && /callback|service|handoff|systems/.test(contextId)) {
+  const callbackWorkKey = /^(service|callback|handoff|systems)-/.exec(contextId)?.[1];
+  if (callbackWorkKey && getUnresolvedCallbackCount() && (state.flags.callbackPressureUsed?.[callbackWorkKey] || 0) < state.stats.callbacks) {
     modifiers.push(normalizeTaskModifier({
       id: "callback-ledger-pressure",
       label: "Callback ledger pressure",
-      source: `${getUnresolvedCallbackCount()} unresolved callback${getUnresolvedCallbackCount() === 1 ? "" : "s"} can make this work harder to close cleanly.`,
-      resultText: "Open callback pressure stayed visible during the check.",
+      source: `${getUnresolvedCallbackCount()} unresolved callback${getUnresolvedCallbackCount() === 1 ? "" : "s"} make coordination ask for extra verification on this job's first field check.`,
+      energyDelta: 1,
+      consumesOnUse: true,
+      resultText: "The open callback took extra effort to account for on this job.",
     }));
   }
   return modifiers;
@@ -155,6 +158,15 @@ function consumeTaskModifiers(check = {}, result = {}) {
     if (modifier.id === "josh-crew-support" && typeof consumeJoshCrewSupport === "function" && consumeJoshCrewSupport(result)) {
       consumed.push(modifier.id);
     }
+    if (modifier.id === "callback-ledger-pressure") {
+      const workKey = /^(service|callback|handoff|systems)-/.exec(result.contextId || "")?.[1];
+      if (workKey && (state.flags.callbackPressureUsed?.[workKey] || 0) < state.stats.callbacks) {
+        state.flags.callbackPressureUsed ||= {};
+        state.flags.callbackPressureUsed[workKey] = state.stats.callbacks;
+        addLog("Open callback debt added verification effort to this job's first field check.");
+        consumed.push(modifier.id);
+      }
+    }
   });
   return consumed;
 }
@@ -170,7 +182,7 @@ function getTaskModifierBrief(modifiers = []) {
     if (modifier.id === "zero-energy-pressure") return "Exhaustion: harder check";
     if (modifier.id === "josh-crew-support") return "Josh support: one-time edge";
     if (modifier.id === "next-shift-prep") return "Next-shift prep: helpful setup";
-    if (modifier.id === "callback-ledger-pressure") return `Callback debt: ${modifier.source.split(" can ")[0]}`;
+    if (modifier.id === "callback-ledger-pressure") return "Callback debt: extra verification on the first relevant check";
     const deltas = [
       getSkillModifierText(modifier.statDelta),
       getEnergyModifierText(modifier.energyDelta),
