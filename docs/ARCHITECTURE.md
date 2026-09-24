@@ -44,6 +44,23 @@ app.
 - Job-specific field flows stay in their dispatch system files until they share
   enough behavior to justify a deeper extraction.
 
+## Workday Decision Ownership
+
+- `dispatch-board-system.js` owns the selected board item and the saved
+  Conshohocken follow-up outcome. A selected plan is reversible until travel.
+- `world-system.js` resolves whether today's route can leave from the current
+  area. `route-system.js` checks that rule again at departure, then records a
+  one-time follow-up reassignment if University City was chosen first.
+- `conshohocken-followup-system.js` owns the follow-up closeout rewards and room
+  note. `shift-system.js` presents the workday result; `shop-system.js` keeps
+  the decision visible on the career clipboard.
+- `save-system.js` migrates old survey careers into the reassigned outcome.
+  The save key remains stable and save version 30 adds only a defensive flag.
+
+The current maps are compact fixed-area scenes. The browser smoke suite tests
+game state and rendered UI, but player comprehension still needs an observed
+first-time playtest before calling the prototype ready for production planning.
+
 This keeps the repo closer to a real game structure without forcing a build
 step, bundled imports, or an engine migration.
 

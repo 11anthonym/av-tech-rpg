@@ -67,6 +67,7 @@ function showCareerClipboard() {
       </div>
       <p><strong>Consequence review:</strong></p>
       ${getConsequenceReviewFilterSummaryMarkup()}
+      ${getFollowupWorkdayOutcome() ? `<p><strong>Workday decision:</strong></p><ul class="modal-list">${getFollowupWorkdayOutcomeMarkup()}</ul>` : ""}
       <p><strong>Active consequences:</strong></p>
       ${getActiveCareerSummaryMarkup()}
       <p><strong>Consequence ledger:</strong></p>

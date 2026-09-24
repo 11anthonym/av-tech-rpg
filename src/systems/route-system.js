@@ -204,6 +204,10 @@ function applyFastTravelRoute(route) {
 function travelRoute(routeId, { beforeTravel, afterTravel, routeChoice, fastTravel = false } = {}) {
   const route = getWorldRoute(routeId);
   if (!route) return notify(`Route ${routeId} is not mapped yet.`);
+  const eligibility = getRouteLaunchEligibility(routeId);
+  if (!eligibility.allowed) return notify(`That route cannot leave yet. ${eligibility.reason}`);
+  if (fastTravel && !canFastTravelRoute(route)) return notify("Fast travel is not available for today's route.");
+  if (routeId === "universitySurvey") recordConshohockenFollowupReassignment();
   beforeTravel?.(route);
   const before = {
     energy: state.energy,

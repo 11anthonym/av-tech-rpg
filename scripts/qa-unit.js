@@ -534,7 +534,7 @@ test("dispatch board planning supports one-job fallback and future multi-job cho
   assert.equal(result.validPlan, "followup");
   assert.equal(result.invalidPlan, "");
   assert.equal(result.missingPlan, "");
-  assert.equal(result.migratedVersion, 29);
+  assert.equal(result.migratedVersion, 30);
 });
 
 test("post-service board choice stays readable and locks when travel begins", () => {
@@ -729,6 +729,119 @@ test("planned work agrees across objective, van, map, prep, and route launch rul
   assert.equal(result.stalePlan.currentEntry, "commissioning");
   assert.equal(result.stalePlan.surveyCanLaunch, false);
   assert.match(result.stalePlan.surveyLock, /planned job is South Philadelphia Commissioning/i);
+});
+
+test("optional follow-up choice survives travel, closeout, shift reset, and migration", () => {
+  const setupMorning = `
+    state.flags.finished = true;
+    state.flags.metJosh = true;
+    state.flags.serviceStarted = true;
+    state.flags.serviceComplete = true;
+    state.flags.serviceApproach = "verify";
+    state.flags.serviceRepairMethod = "verify-path";
+    state.flags.joshServiceDebriefed = true;
+    state.flags.currentAreaId = "shop";
+    state.sceneId = "shop";
+    state.flags.routeHistory = { conshohockenService: 1 };
+  `;
+
+  resetGameState();
+  const surveyPath = readGameJson(`(() => {
+    ${setupMorning}
+    setPlannedDispatchBoardEntry("survey");
+    const beforeDeparture = getFollowupWorkdayOutcome();
+    travelRoute("universitySurvey", { beforeTravel: () => { state.flags.surveyStarted = true; } });
+    const afterDeparture = {
+      reassigned: state.flags.conshohockenFollowupReassigned,
+      outcome: getFollowupWorkdayOutcome(),
+      board: getDispatchBoardStateMarkup(),
+      available: isConshohockenFollowupAvailable(),
+      routeCount: getRouteTravelCount("universitySurvey"),
+      callbacks: state.stats.callbacks,
+    };
+    travelRoute("universitySurvey", { beforeTravel: () => { state.flags.surveyStarted = true; } });
+    const afterStaleLaunch = {
+      routeCount: getRouteTravelCount("universitySurvey"),
+      reassignmentLogs: state.log.filter((line) => line.includes("Coordination reassigned the Conshohocken label follow-up")).length,
+    };
+    state.surveyInspections = content.surveyDispatch.inspections.map((inspection) => inspection.id);
+    state.flags.surveyBrief = true;
+    finishSurvey("document");
+    returnToShopAfterDispatch(content.surveyDispatch.title);
+    completeShift("clock-out");
+    const resultBody = elements.modalBody.innerHTML;
+    const migrated = migrateSavedGame(serializeGame());
+    return {
+      beforeDeparture,
+      afterDeparture,
+      afterStaleLaunch,
+      shiftResult: resultBody,
+      nextBoard: getDispatchBoardStateMarkup(),
+      migratedReassigned: migrated.flags.conshohockenFollowupReassigned,
+      migratedVersion: migrated.version,
+      oldSaveReassigned: migrateSavedGame({ flags: {
+        finished: true,
+        serviceComplete: true,
+        surveyStarted: true,
+      }, sceneId: "universitySurvey" }).flags.conshohockenFollowupReassigned,
+    };
+  })()`);
+  assert.equal(surveyPath.beforeDeparture, null);
+  assert.equal(surveyPath.afterDeparture.reassigned, true);
+  assert.equal(surveyPath.afterDeparture.outcome.label, "Follow-up reassigned");
+  assert.match(surveyPath.afterDeparture.board, /Follow-up reassigned/);
+  assert.equal(surveyPath.afterDeparture.available, false);
+  assert.equal(surveyPath.afterDeparture.routeCount, 1);
+  assert.equal(surveyPath.afterDeparture.callbacks, 0);
+  assert.equal(surveyPath.afterStaleLaunch.routeCount, 1);
+  assert.equal(surveyPath.afterStaleLaunch.reassignmentLogs, 1);
+  assert.match(surveyPath.shiftResult, /Workday Decision.*Follow-up reassigned/s);
+  assert.match(surveyPath.nextBoard, /Follow-up reassigned/);
+  assert.equal(surveyPath.migratedReassigned, true);
+  assert.equal(surveyPath.migratedVersion, 30);
+  assert.equal(surveyPath.oldSaveReassigned, true);
+
+  resetGameState();
+  const followupPath = readGameJson(`(() => {
+    ${setupMorning}
+    setPlannedDispatchBoardEntry("followup");
+    const beforeDeparture = getFollowupWorkdayOutcome();
+    travelRoute("conshohockenService", {
+      beforeTravel: () => { state.flags.conshohockenFollowupStarted = true; },
+    });
+    const afterDeparture = {
+      reassigned: Boolean(state.flags.conshohockenFollowupReassigned),
+      routeCount: getRouteTravelCount("conshohockenService"),
+    };
+    finishConshohockenFollowup("label");
+    const afterCloseout = {
+      outcome: getFollowupWorkdayOutcome(),
+      cash: state.cash,
+      xp: state.xp,
+      routeCount: getRouteTravelCount("conshohockenService"),
+      surveyAvailable: getAvailableDispatchBoardEntries().some((entry) => entry.id === "survey"),
+    };
+    returnToShopAfterDispatch(content.followupDispatch.title);
+    completeShift("clock-out");
+    return {
+      beforeDeparture,
+      afterDeparture,
+      afterCloseout,
+      shiftResult: elements.modalBody.innerHTML,
+      nextBoard: getDispatchBoardStateMarkup(),
+      migratedReassigned: migrateSavedGame(serializeGame()).flags.conshohockenFollowupReassigned,
+    };
+  })()`);
+  assert.equal(followupPath.beforeDeparture, null);
+  assert.equal(followupPath.afterDeparture.reassigned, false);
+  assert.equal(followupPath.afterDeparture.routeCount, 2);
+  assert.equal(followupPath.afterCloseout.outcome.label, "Follow-up completed");
+  assert.match(followupPath.afterCloseout.outcome.detail, /labeled coupler path/i);
+  assert.equal(followupPath.afterCloseout.routeCount, 2);
+  assert.equal(followupPath.afterCloseout.surveyAvailable, true);
+  assert.match(followupPath.shiftResult, /Workday Decision.*Follow-up completed/s);
+  assert.match(followupPath.nextBoard, /Follow-up completed/);
+  assert.equal(followupPath.migratedReassigned, false);
 });
 
 test("portal contracts expose valid spatial movement and lock messaging", () => {

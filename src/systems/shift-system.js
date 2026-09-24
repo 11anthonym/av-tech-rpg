@@ -624,11 +624,15 @@ function resolveServiceCallbackFromAfterHoursHelp(scenario) {
 
 function showShiftResultModal({ choice, source, before, recovery }) {
   const canReviewBoard = state.flags.finished && !state.flags.endShiftPending && !shouldIntroduceJoshBeforeNextDispatch();
+  const followupOutcome = [content.followupDispatch.title, content.surveyDispatch.title].includes(source)
+    ? getFollowupWorkdayOutcome()
+    : null;
   showModal({
     kicker: "Shift Result",
     title: `${source} Closed Out`,
     body: `
       <p>${escapeHtml(getShiftChoiceResultText(choice, recovery))}</p>
+      ${followupOutcome ? `<h3>Workday Decision</h3><p><strong>${escapeHtml(followupOutcome.label)}:</strong> ${escapeHtml(followupOutcome.detail)}</p>` : ""}
       <h3>What Changed</h3>
       ${getTrackedStateDeltaMarkup(before)}
       <h3>Workday Memory</h3>

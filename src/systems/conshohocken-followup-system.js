@@ -4,6 +4,7 @@ function isConshohockenFollowupAvailable() {
   return state.flags.serviceComplete
     && state.flags.joshServiceDebriefed
     && !state.flags.surveyStarted
+    && !state.flags.conshohockenFollowupReassigned
     && !state.flags.conshohockenFollowupComplete;
 }
 

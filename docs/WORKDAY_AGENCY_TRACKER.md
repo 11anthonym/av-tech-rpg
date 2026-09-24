@@ -36,7 +36,7 @@ job decision near the beginning of the playable career.
 - Route cards, job cards, objectives, portals, and consequence review share
   reusable state instead of relying only on flavor text.
 
-### What Still Feels Scripted
+### What Felt Scripted At The Start Of This Lane
 
 - The dispatch board contains a long sequence of mostly mandatory beats and
   `getCurrentDispatchBoardEntry()` selects the first available item.
@@ -140,7 +140,7 @@ of these surfaces.
 
 ## Step 4: Optional Follow-Up Consequence
 
-**Status:** Not started.
+**Status:** Complete September 23, 2026.
 
 - Completing the follow-up retains its current pay, XP, route-memory, and
   documentation tradeoff.
@@ -156,9 +156,16 @@ of these surfaces.
 rewards; moving on preserves momentum but closes that opportunity. Both paths
 remain valid.
 
+**Result:** The decision becomes final when travel begins. Taking the repeat
+route still earns its existing wages, XP, route memory, and chosen room-note
+result. Starting University City records a one-time reassignment of the label
+follow-up. The shift result, next board card, and career clipboard explain what
+was gained or left to another tech. Reassignment never adds callback debt.
+Older saves already on the survey route infer the same outcome on migration.
+
 ## Step 5: Replay Proof And Lane Closeout
 
-**Status:** Not started.
+**Status:** Complete September 23, 2026.
 
 - Replay both paths with at least two technician builds.
 - Save/continue before selection, after selection, after route launch, and
@@ -170,6 +177,15 @@ remain valid.
 **Acceptance:** Two careers can leave the service debrief with different workday
 plans, different route histories and rewards, and coherent later progression
 without adding content.
+
+**Result:** Four browser replays cover Alex and Jordan taking the follow-up and
+Wiley and Morgan taking University City. Each replay saves and continues before
+selection, after selection, after departure, and after shift closeout; uses the
+job-site return portal; and checks the next board item. Existing browser QA
+also covers Josh's next-morning introduction and callback gates. The final
+travel action rechecks route eligibility, so an old travel modal cannot leave
+after the plan or location changes. Static, unit, and browser QA passed. This
+lane is closed; further work belongs to the separate prototype exit review.
 
 ## Work Log
 
@@ -222,13 +238,25 @@ without adding content.
   smoke suite.
 - Next checkpoint: Step 4, Optional Follow-Up Consequence.
 
+### September 23, 2026 - Steps 4 And 5 Complete
+
+- Recorded the optional job as completed or reassigned when the relevant work
+  actually happened, with no penalty for choosing the main assignment.
+- Showed the result at shift closeout, on the next job card, and on the career
+  clipboard. Old survey saves infer reassignment safely under save version 30.
+- Rechecked eligibility at the final travel action to reject stale modals.
+- Replayed both paths with two technician builds each, including four save
+  checkpoints, route history, rewards, return portals, and next-board routing.
+- Passed 43 static script checks, 31 unit and contract checks, and the browser
+  smoke suite.
+- Stop here. The next decision is the prototype exit gate in the gameplay
+  roadmap, not another workday-agency feature.
+
 ## Stop Rules
 
 - Do not add another dispatch to prove schedule agency.
 - Do not make the whole dispatch board freely reorderable in this lane.
 - Do not add a calendar, quest log, deadline simulator, or relationship system.
 - Do not convert optional work into hidden punishment.
-- Do not begin Step 2 until the selection and migration contract in Step 1 is
-  green.
 - Stop after Step 5 and reassess whether this single choice materially improves
   the early career rhythm.

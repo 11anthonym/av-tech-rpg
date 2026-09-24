@@ -332,21 +332,56 @@ function getCurrentDispatchBoardObjective() {
   return "";
 }
 
+function getFollowupWorkdayOutcome() {
+  if (state.flags.conshohockenFollowupComplete) {
+    const documented = state.flags.conshohockenFollowupApproach === "label";
+    return {
+      label: "Follow-up completed",
+      detail: documented
+        ? "You spent a shift on the repeat Conshohocken route, earned the side-job wages, and left a labeled coupler path for the next tech. University City remained on the board."
+        : "You spent a shift on the repeat Conshohocken route and earned the side-job wages. The room note still needs interpretation. University City remained on the board.",
+    };
+  }
+  if (state.flags.conshohockenFollowupReassigned) {
+    return {
+      label: "Follow-up reassigned",
+      detail: "You drove to University City first. Coordination reassigned the Conshohocken label follow-up; its wages and room-note cleanup were left for another tech. The survey moved ahead without creating callback debt.",
+    };
+  }
+  return null;
+}
+
+function getFollowupWorkdayOutcomeMarkup() {
+  const outcome = getFollowupWorkdayOutcome();
+  return outcome
+    ? `<li><strong>${escapeHtml(outcome.label)}</strong><span>${escapeHtml(outcome.detail)}</span></li>`
+    : "";
+}
+
+function recordConshohockenFollowupReassignment() {
+  if (state.flags.conshohockenFollowupReassigned || !isConshohockenFollowupAvailable()) return false;
+  state.flags.conshohockenFollowupReassigned = true;
+  markCareerSnapshotStale();
+  addLog("Chose the University City survey. Coordination reassigned the Conshohocken label follow-up without adding callback debt.");
+  return true;
+}
+
 function getDispatchBoardStateMarkup({ showBlocked = true } = {}) {
   const entries = getDispatchBoardEntries();
   const planningEntries = getDispatchPlanningEntries(entries);
   const entry = getCurrentDispatchBoardEntry(entries) || (showBlocked ? getBlockedDispatchBoardEntry(entries) : null);
+  const workdayOutcome = getFollowupWorkdayOutcomeMarkup();
   if (!entry && planningEntries.length) {
-    return `<li><strong>Board choice</strong><span>${escapeHtml(`${planningEntries.length} jobs are available. Choose which work to plan before using the van or regional map.`)}</span></li>`;
+    return `<li><strong>Board choice</strong><span>${escapeHtml(`${planningEntries.length} jobs are available. Choose which work to plan before using the van or regional map.`)}</span></li>${workdayOutcome}`;
   }
-  if (!entry) return "";
+  if (!entry) return workdayOutcome;
   const routeDetail = entry.route
     ? `Route: ${entry.routeLabel}.`
     : "Route: no drive route; this resolves from the board or shop.";
   const why = entry.blockedReason
     ? `Why blocked: ${entry.blockedReason}`
     : `Why active: ${entry.availableReason || "Unlocked by current board progression."}`;
-  return `<li><strong>Board state</strong><span>${escapeHtml(`${entry.boardStatus}: ${entry.title}. ${routeDetail} ${why}`)}</span></li>`;
+  return `<li><strong>Board state</strong><span>${escapeHtml(`${entry.boardStatus}: ${entry.title}. ${routeDetail} ${why}`)}</span></li>${workdayOutcome}`;
 }
 
 function getFallbackDispatchPresentation() {

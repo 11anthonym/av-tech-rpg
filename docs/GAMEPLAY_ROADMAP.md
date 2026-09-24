@@ -276,14 +276,12 @@ This is deliberately smaller than a freely reorderable quest board. It tests
 whether one visible workday plan can make the career feel less predetermined
 while keeping the current static-browser architecture and progression safe.
 
-**Current status:** Steps 1 through 3 are complete. The save-safe board contract
-now drives a player-facing choice between the existing follow-up and University
-City survey. Both jobs show qualitative opportunity costs with equal-weight
-actions, the plan survives save/continue, and switching closes when travel
-begins. The objective, Van #3, regional map, route prep, launch guard, and fast
-travel now agree on the selected work while keeping the other job visible as
-available. Step 4, recording the optional follow-up outcome or reassignment as
-a readable workday consequence, is the next implementation checkpoint.
+**Current status:** The five-step workday-agency lane is complete as of
+September 23, 2026. The follow-up and University City paths now leave different
+saved records, rewards, and route histories. Van #3, route prep, the regional
+map, shift result, next board, and career clipboard agree with the decision.
+Four technician replays and full QA pass. This lane is closed; the prototype
+exit gate below is the only remaining decision for this phase.
 
 ## Prototype Exit Gate: Ready For Real-Game Preproduction
 
@@ -308,3 +306,22 @@ After this gate, freeze broad prototype content and write a separate production
 technical plan. That plan can compare an engine and map-authoring workflow
 against the current static architecture using one small vertical-slice spike.
 Do not migrate the prototype itself merely because the agency lane is complete.
+
+### Exit Review, September 23, 2026
+
+| Gate | Current evidence | Status |
+| --- | --- | --- |
+| Workday agency and two job-order paths | Four replays across Alex, Jordan, Wiley, and Morgan; saves at each decision checkpoint | Met |
+| Unassisted first-time comprehension | Automated smoke covers the route and objective surfaces, but cannot establish what a new player understands | Needs one observed playtest |
+| Optional job consequence | Completion or reassignment is saved and shown at shift result, next board, and clipboard | Met |
+| Build, condition, route, and callback decisions | Existing service, survey, recovery, fast-travel, and consequence checks exercise these systems | Met in the prototype slice |
+| Save migration and QA | Save version 30 migrates older survey careers; static, unit, and browser suites pass | Met |
+| Production handoff material | [Architecture](ARCHITECTURE.md), [content authoring](ADDING_CONTENT.md), and this roadmap define current ownership and limits | Met for an estimate |
+
+**Finite stop:** Observe one first-time player from the title screen through
+the first end-shift and the post-service board choice, without developer hints.
+Record only places where the player cannot identify the next action or predict
+the decision's tradeoff. Fix any blocking comprehension defect and rerun the
+affected QA. If none remain, mark this gate complete and freeze feature work
+in the browser prototype. The next artifact is a production vertical-slice
+plan, not another open-ended prototype roadmap.

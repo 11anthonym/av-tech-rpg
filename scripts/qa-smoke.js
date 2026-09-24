@@ -2616,7 +2616,7 @@ async function clickButton(page, name) {
     assert(boardPlanPersistence.roleById.followup === "optional", "The Conshohocken follow-up should be the optional board entry");
     assert(Object.values(boardPlanPersistence.roleById).filter((role) => role === "optional").length === 1, "Only the existing repeat-route follow-up should be optional in the Step 1 contract");
     assert(boardPlanPersistence.singleAvailable.length === 1 && boardPlanPersistence.singleAvailable[0] === "service", "Existing one-job board states should remain unchanged");
-    assert(boardPlanPersistence.selected && boardPlanPersistence.savedVersion === 29, "Planned work should save through the current schema");
+    assert(boardPlanPersistence.selected && boardPlanPersistence.savedVersion === 30, "Planned work should save through the current schema");
     assert(boardPlanPersistence.restoredPlan === "service" && boardPlanPersistence.restoredCurrent === "service", "Continue should restore a valid planned board item");
     assert(boardPlanPersistence.restoredObjective.includes("Conshohocken service call"), "A restored one-job plan should keep the existing current objective");
     assert(!boardPlanPersistence.noImplicitChoice, "A future two-job state should not silently select the first available item");
@@ -2758,6 +2758,18 @@ async function clickButton(page, name) {
         lastLog: state.log[0] || "",
       };
 
+      window.showTravelRouteModal({
+        routeId: "universitySurvey",
+        beforeTravel: () => { state.flags.surveyStarted = true; },
+      });
+      window.setPlannedDispatchBoardEntry("followup");
+      document.querySelector("#modal-actions button")?.click();
+      const staleTravelModal = {
+        surveyStarted: Boolean(state.flags.surveyStarted),
+        surveyDriveCount: state.flags.routeHistory?.universitySurvey || 0,
+        lastLog: state.log[0] || "",
+      };
+
       setupPostServiceMorning();
       const followupState = window.AV_TECH_RPG_DEBUG.state;
       followupState.flags.routeHistory = { ...(followupState.flags.routeHistory || {}), conshohockenService: 1 };
@@ -2779,6 +2791,7 @@ async function clickButton(page, name) {
         restoredObjective,
         restoredVan,
         staleLaunch,
+        staleTravelModal,
         followupObjective,
         followupMap,
         followupPrep,
@@ -2793,9 +2806,114 @@ async function clickButton(page, name) {
     assert(/Workday plan\s+University City Site Survey is today's main assignment/i.test(travelSurfaceAgreement.surveyPrep.text) && !/Locked reason/i.test(travelSurfaceAgreement.surveyPrep.text), "Survey prep should agree with the board plan and remain launchable");
     assert(travelSurfaceAgreement.restoredPlan === "survey" && travelSurfaceAgreement.restoredObjective.includes("University City survey") && /Planned work\s+University City Site Survey/i.test(travelSurfaceAgreement.restoredVan.text), "Save/continue should restore agreement between plan, objective, and van");
     assert(!travelSurfaceAgreement.staleLaunch.startedBefore && !travelSurfaceAgreement.staleLaunch.startedAfter && /planned job is University City Site Survey/i.test(travelSurfaceAgreement.staleLaunch.lastLog), "The final launch boundary should reject an unselected stale route");
+    assert(!travelSurfaceAgreement.staleTravelModal.surveyStarted && travelSurfaceAgreement.staleTravelModal.surveyDriveCount === 0 && /planned job is Conshohocken Label Follow-up/i.test(travelSurfaceAgreement.staleTravelModal.lastLog), "A travel modal opened before changing the board plan should not drive the old route");
     assert(travelSurfaceAgreement.followupObjective.includes("Conshohocken follow-up"), "The alternate plan should update the objective");
     assert(/\[Active \/ fast travel available\] CONSHOHOCKEN/i.test(travelSurfaceAgreement.followupMap.text) && /\[Available Work\] UNIVERSITY CITY/i.test(travelSurfaceAgreement.followupMap.text), "The alternate plan should make only Conshohocken active while preserving University City as other work");
     assert(travelSurfaceAgreement.followupMap.buttons.some((label) => /Fast Travel to CONSHOHOCKEN/i.test(label)) && /Workday plan\s+Conshohocken Label Follow-up is today's optional follow-up/i.test(travelSurfaceAgreement.followupPrep.text), "Known-route fast travel and prep should remain tied to the selected follow-up");
+
+    const workdayReplays = await page.evaluate(() => {
+      const profiles = [
+        { techId: "prototype-tech", plan: "followup" },
+        { techId: "jordan", plan: "followup" },
+        { techId: "wiley", plan: "survey" },
+        { techId: "morgan", plan: "survey" },
+      ];
+      return profiles.map(({ techId, plan }) => {
+        window.startGame(techId);
+        const state = window.AV_TECH_RPG_DEBUG.state;
+        Object.assign(state.flags, {
+          finished: true,
+          metJosh: true,
+          serviceStarted: true,
+          serviceComplete: true,
+          serviceApproach: "verify",
+          serviceRepairMethod: "verify-path",
+          joshServiceDebriefed: true,
+          currentAreaId: "shop",
+          plannedDispatchId: "",
+          routeHistory: { conshohockenService: 1 },
+        });
+        window.enterScene("shop");
+        window.saveGame();
+        window.continueGame();
+        const beforeChoice = {
+          current: window.getCurrentDispatchBoardEntry()?.id || "",
+          choiceAvailable: window.hasDispatchPlanningChoice(),
+        };
+
+        window.setPlannedDispatchBoardEntry(plan);
+        window.saveGame();
+        window.continueGame();
+        const selected = window.getCurrentDispatchBoardEntry()?.id || "";
+        const routeId = plan === "followup" ? "conshohockenService" : "universitySurvey";
+        const fastTravelBefore = window.canFastTravelRoute(window.getWorldRoute(routeId));
+        const cashBefore = state.cash;
+        const xpBefore = state.xp;
+        window.travelRoute(routeId, {
+          beforeTravel: () => {
+            state.flags[plan === "followup" ? "conshohockenFollowupStarted" : "surveyStarted"] = true;
+          },
+        });
+        window.saveGame();
+        window.continueGame();
+        const afterDeparture = {
+          scene: state.sceneId,
+          selected: window.getCurrentDispatchBoardEntry()?.id || "",
+          reassigned: Boolean(state.flags.conshohockenFollowupReassigned),
+          routeCount: window.getRouteTravelCount(routeId),
+        };
+
+        if (plan === "followup") {
+          window.finishConshohockenFollowup("label");
+        } else {
+          state.flags.surveyBrief = true;
+          state.surveyInspections = window.GAME_CONTENT.surveyDispatch.inspections.map((item) => item.id);
+          window.finishSurvey("document");
+        }
+        window.usePortal(plan === "followup" ? "conshohockenFollowupToShop" : "universitySurveyToShop");
+        document.querySelector("#modal-actions button")?.click();
+        const returnedToShop = state.sceneId === "shop" && state.flags.endShiftPending;
+        window.completeShift("clock-out");
+        const shiftResult = document.querySelector("#modal-backdrop")?.innerText || "";
+        window.saveGame();
+        window.continueGame();
+        window.showDispatchPreview();
+        const nextBoard = document.querySelector("#modal-backdrop")?.innerText || "";
+        return {
+          techId,
+          plan,
+          beforeChoice,
+          selected,
+          fastTravelBefore,
+          cashGained: state.cash - cashBefore,
+          xpGained: state.xp - xpBefore,
+          afterDeparture,
+          returnedToShop,
+          shiftResult,
+          nextBoard,
+          outcome: window.getFollowupWorkdayOutcome()?.label || "",
+          followupAvailable: window.isConshohockenFollowupAvailable(),
+          callbacks: state.stats.callbacks,
+          routeHistory: { ...state.flags.routeHistory },
+        };
+      });
+    });
+    for (const replay of workdayReplays) {
+      assert(!replay.beforeChoice.current && replay.beforeChoice.choiceAvailable, `${replay.techId} should return to a genuine board choice before selecting work`);
+      assert(replay.selected === replay.plan && replay.afterDeparture.selected === replay.plan, `${replay.techId} should keep the same board plan through selection and departure saves`);
+      assert(replay.returnedToShop, `${replay.techId} should return through the job-site portal before end-shift closeout`);
+      assert(replay.cashGained > 0 && replay.xpGained > 0, `${replay.techId} should earn the chosen job's wages and XP`);
+      assert(replay.callbacks === 0 && !replay.followupAvailable, `${replay.techId} should not acquire callback debt or reopen the optional follow-up`);
+      if (replay.plan === "followup") {
+        assert(replay.fastTravelBefore && replay.afterDeparture.scene === "serviceOffice" && replay.afterDeparture.routeCount === 2, `${replay.techId} should use a previously driven follow-up route`);
+        assert(!replay.afterDeparture.reassigned && replay.outcome === "Follow-up completed", `${replay.techId} should retain the completed side-job outcome`);
+        assert(/Follow-up completed/i.test(replay.shiftResult) && /Follow-up completed/i.test(replay.nextBoard) && /University City Site Survey/i.test(replay.nextBoard), `${replay.techId} should see the earned side job at shift closeout and on the next board`);
+      } else {
+        assert(!replay.fastTravelBefore && replay.afterDeparture.scene === "universitySurvey" && replay.afterDeparture.routeCount === 1, `${replay.techId} should drive the new University City route normally`);
+        assert(replay.afterDeparture.reassigned && replay.outcome === "Follow-up reassigned", `${replay.techId} should retain the one-time reassignment`);
+        assert(/Follow-up reassigned/i.test(replay.shiftResult) && /Follow-up reassigned/i.test(replay.nextBoard) && /South Philadelphia Commissioning/i.test(replay.nextBoard), `${replay.techId} should see the reassignment at shift closeout and on the next board`);
+      }
+    }
 
     const dispatchKeys = await page.evaluate(() => {
       function snapshot(label, setup, scene = "shop") {

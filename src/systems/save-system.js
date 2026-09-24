@@ -227,6 +227,10 @@ function migrateSavedGame(savedGame) {
   migrateSurveyConsequenceFlags(flags);
   migrateServiceDiagnosticEvidence(flags);
   normalizePlannedDispatchId(flags);
+  flags.conshohockenFollowupReassigned = Boolean(
+    flags.conshohockenFollowupReassigned
+    || (flags.surveyStarted && !flags.conshohockenFollowupStarted && !flags.conshohockenFollowupComplete),
+  );
   if (
     flags.serviceComplete
     && flags.serviceApproach !== "verify"
