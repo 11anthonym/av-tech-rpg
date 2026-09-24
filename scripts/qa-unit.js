@@ -293,6 +293,65 @@ test("roster, tools, skills, and character creator data stay valid", () => {
   assert.deepEqual(failures, []);
 });
 
+test("Company tool contribution trades management standing for lasting equipment", () => {
+  resetGameState();
+  const result = readGameJson(`(() => {
+    state.flags.metJosh = true;
+    state.cash = 100;
+    state.reputation.management = 2;
+    const installBefore = getSkillValue("install");
+    const availableBefore = canUseCompanyToolContribution();
+    buyTool("drill", { useCompanyContribution: true });
+    const afterFirst = {
+      cash: state.cash,
+      management: state.reputation.management,
+      used: state.flags.companyToolContributionUsed,
+      ownsDrill: ownsTool("drill"),
+      install: getSkillValue("install"),
+    };
+    const saved = migrateSavedGame(JSON.parse(JSON.stringify(serializeGame())));
+    buyTool("handTruck", { useCompanyContribution: true });
+    const afterRepeat = { cash: state.cash, management: state.reputation.management, ownsHandTruck: ownsTool("handTruck") };
+    state.cash = 100;
+    buyTool("handTruck");
+    return {
+      availableBefore, installBefore, afterFirst, afterRepeat,
+      savedUsed: saved.flags.companyToolContributionUsed,
+      savedDrill: saved.tools.includes("drill"),
+      afterCashPurchase: { cash: state.cash, management: state.reputation.management, ownsHandTruck: ownsTool("handTruck") },
+    };
+  })()`);
+  assert.equal(result.availableBefore, true);
+  assert.deepEqual(result.afterFirst, { cash: 25, management: 0, used: true, ownsDrill: true, install: result.installBefore + 1 });
+  assert.equal(result.savedUsed, true);
+  assert.equal(result.savedDrill, true);
+  assert.deepEqual(result.afterRepeat, { cash: 25, management: 0, ownsHandTruck: false });
+  assert.deepEqual(result.afterCashPurchase, { cash: 0, management: 0, ownsHandTruck: true });
+});
+
+test("Tool support never bypasses standing or cash requirements", () => {
+  resetGameState();
+  const result = readGameJson(`(() => {
+    state.flags.metJosh = true;
+    state.cash = 125;
+    state.reputation.management = 1;
+    buyTool("drill", { useCompanyContribution: true });
+    const deniedForStanding = { cash: state.cash, owned: ownsTool("drill"), used: Boolean(state.flags.companyToolContributionUsed) };
+    state.reputation.management = 2;
+    state.cash = 20;
+    buyTool("drill", { useCompanyContribution: true });
+    const deniedForCash = { cash: state.cash, owned: ownsTool("drill"), used: Boolean(state.flags.companyToolContributionUsed) };
+    buyTool("labeler");
+    const giftProtected = !ownsTool("labeler");
+    const oldSave = migrateSavedGame({ version: 1, technicianId: "prototype-tech", flags: {} });
+    return { deniedForStanding, deniedForCash, giftProtected, oldSaveUsed: oldSave.flags.companyToolContributionUsed };
+  })()`);
+  assert.deepEqual(result.deniedForStanding, { cash: 125, owned: false, used: false });
+  assert.deepEqual(result.deniedForCash, { cash: 20, owned: false, used: false });
+  assert.equal(result.giftProtected, true);
+  assert.equal(result.oldSaveUsed, false);
+});
+
 test("energy and route previews use qualitative pressure language", () => {
   resetGameState();
   const result = readGameJson(`(() => {

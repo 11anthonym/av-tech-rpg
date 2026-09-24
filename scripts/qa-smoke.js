@@ -167,6 +167,32 @@ async function clickButton(page, name) {
     assert(energyMeterReset.dangerBefore, "Energy meter should show danger at zero energy");
     assert(!energyMeterReset.dangerAfter && energyMeterReset.energy > 0, "Fresh start should clear stale energy-danger meter state");
 
+    const companyToolPurchase = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      state.cash = 100;
+      state.reputation.management = 2;
+      window.showSupplyCounter();
+      const counterText = document.querySelector("#modal-backdrop")?.innerText || "";
+      const buttons = [...document.querySelectorAll("#modal-backdrop button")];
+      const cashButton = buttons.find((button) => button.textContent.includes("Buy Basic Drill"));
+      const companyButton = buttons.find((button) => button.textContent.includes("Use company contribution for Basic Drill"));
+      companyButton?.click();
+      const resultText = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.showSupplyCounter();
+      const afterButtons = [...document.querySelectorAll("#modal-backdrop button")].map((button) => button.textContent || "");
+      return {
+        counterText, cashButtonStyle: cashButton?.className || "", companyButtonStyle: companyButton?.className || "",
+        companyButtonText: companyButton?.textContent || "", resultText,
+        cash: state.cash, management: state.reputation.management,
+        owned: state.tools.includes("drill"), used: Boolean(state.flags.companyToolContributionUsed), afterButtons,
+      };
+    });
+    assert(companyToolPurchase.counterText.includes("up to $50") && companyToolPurchase.companyButtonText.includes("$75"), "Supply counter should show the cash-versus-standing tradeoff before purchase");
+    assert(companyToolPurchase.cashButtonStyle === companyToolPurchase.companyButtonStyle, "Cash and company-funded choices should have equal visual weight");
+    assert(companyToolPurchase.owned && companyToolPurchase.used && companyToolPurchase.cash === 25 && companyToolPurchase.management === 0, "Company contribution should buy the tool and spend resources exactly once");
+    assert(companyToolPurchase.resultText.includes("Company contribution") && !companyToolPurchase.afterButtons.some((label) => label.includes("Use company contribution")), "Purchase result and future menu should show that the favor was spent");
+
     const cartAssemblyTask = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;

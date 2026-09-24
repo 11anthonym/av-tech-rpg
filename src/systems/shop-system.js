@@ -420,7 +420,15 @@ function receiveJoshLabeler() {
   });
 }
 
-function showSupplyCounter() {
+function canUseCompanyToolContribution() {
+  return state.reputation.management >= 2 && !state.flags.companyToolContributionUsed;
+}
+
+function getCompanyToolContribution(tool) {
+  return Math.min(50, tool.price);
+}
+
+function showSupplyCounter({ notice = "" } = {}) {
   if (shouldIntroduceJoshBeforeNextDispatch()) return notifyJoshIntroRequired();
   const availableTools = Object.values(content.tools).filter((tool) => tool.price > 0 && !ownsTool(tool.id));
   showModal({
@@ -428,36 +436,64 @@ function showSupplyCounter() {
     title: "Personal Tool Purchases",
     body: availableTools.length ? `
       <p>Company reimbursement policy: optimistic.</p>
+      ${notice ? `<p class="expense">${escapeHtml(notice)}</p>` : ""}
       <ul class="modal-list">
         ${availableTools.map((tool) => `<li><strong>${tool.name} - $${tool.price}</strong><span>${getToolEffectText(tool)}</span></li>`).join("")}
       </ul>
-      <p class="muted">Cash available: ${formatCash(state.cash)}</p>
+      <p class="muted">Cash available: ${formatCash(state.cash)}. Management standing: ${formatReputation(state.reputation.management)}.</p>
+      <p class="muted">${canUseCompanyToolContribution()
+        ? `Management will cover up to $50 toward one tool. Using that favor spends 2 management standing; paying full price preserves it.`
+        : state.flags.companyToolContributionUsed
+        ? "The company contribution has already been used. Other tools are still available at full price."
+        : "A one-time company contribution becomes available at 2 management standing. Full-price purchases remain available."}</p>
     ` : `<p>You already own every tool currently stocked here.</p>`,
     actions: [
-      ...availableTools.map((tool) => ({
-        label: `Buy ${tool.name} - $${tool.price}`,
-        className: "secondary-button",
-        onClick: () => buyTool(tool.id),
-      })),
+      ...availableTools.flatMap((tool) => [
+        {
+          label: `Buy ${tool.name} - $${tool.price}`,
+          className: "secondary-button",
+          onClick: () => buyTool(tool.id),
+        },
+        ...(canUseCompanyToolContribution() ? [{
+          label: `Use company contribution for ${tool.name} - $${tool.price - getCompanyToolContribution(tool)}`,
+          className: "secondary-button",
+          onClick: () => buyTool(tool.id, { useCompanyContribution: true }),
+        }] : []),
+      ]),
       { label: "Leave Supply Counter" },
     ],
   });
 }
 
-function buyTool(toolId) {
+function buyTool(toolId, { useCompanyContribution = false } = {}) {
   const tool = content.tools[toolId];
-  if (!tool || ownsTool(toolId)) return showSupplyCounter();
-  if (state.cash < tool.price) {
-    addLog(`Not enough cash for ${tool.name}.`);
-    return showSupplyCounter();
+  if (!tool || tool.price <= 0 || ownsTool(toolId)) return showSupplyCounter();
+  if (useCompanyContribution && !canUseCompanyToolContribution()) {
+    return showSupplyCounter({ notice: "The company contribution is not available now." });
   }
-  state.cash -= tool.price;
+  const contribution = useCompanyContribution ? getCompanyToolContribution(tool) : 0;
+  const cashCost = tool.price - contribution;
+  if (state.cash < cashCost) {
+    addLog(`Not enough cash for ${tool.name}.`);
+    return showSupplyCounter({ notice: `${tool.name} still needs ${formatCash(cashCost)} cash for this purchase.` });
+  }
+  state.cash -= cashCost;
+  if (useCompanyContribution) {
+    state.reputation.management -= 2;
+    state.flags.companyToolContributionUsed = true;
+  }
   state.tools.push(toolId);
-  addLog(`${tool.name} purchased for $${tool.price}.`);
+  markCareerSnapshotStale();
+  addLog(`${tool.name} purchased for $${cashCost}${contribution ? ` after a $${contribution} company contribution that spent management standing` : ""}.`);
   showModal({
     kicker: "Personal Tool Added",
     title: tool.name,
-    body: `<p>${tool.description}</p><p class="muted">${getToolEffectText(tool)}</p><p class="muted">Cash remaining: ${formatCash(state.cash)}</p>`,
+    body: `<p>${tool.description}</p><p class="muted">${getToolEffectText(tool)}</p>
+      <div class="results-grid">
+        <span>Cash paid</span><strong>${formatCash(cashCost)}</strong>
+        ${contribution ? `<span>Company contribution</span><strong>${formatCash(contribution)}</strong><span>Management standing</span><strong>${formatReputation(state.reputation.management)}</strong>` : ""}
+        <span>Cash remaining</span><strong>${formatCash(state.cash)}</strong>
+      </div>`,
     actions: [{ label: "Return to Shop", onClick: render }],
   });
 }

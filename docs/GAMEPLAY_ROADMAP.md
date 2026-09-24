@@ -376,3 +376,20 @@ dispatch or another content branch.
 **Balance boundary:** Keep the added effort capped and recoverable. Watch in
 the first-time playtest whether players can identify the source and a route to
 clear it. Do not turn callback debt into an endless penalty spiral.
+
+### Shop Resource Choice, September 24, 2026
+
+Management standing now has one practical, limited use at the supply counter.
+At 2 standing, the player can take one company contribution of up to $50 toward
+a purchasable tool, spending both standing points, or keep the standing and
+pay full price. The purchased tool remains in the kit and keeps its ordinary
+field bonuses. Low-standing technicians can still buy the same gear with cash;
+Josh's labeler remains a separate coworker-trust path. The contribution is
+single-use, save-safe, and guarded against duplicate or unaffordable purchases.
+
+This makes company-friendly closeouts useful without declaring them the best
+path: their cash advantage competes with callback debt and client trust, while
+careful/coworker-oriented play has its own benefits. Do not add more one-off
+shop favors in this phase. The next checkpoint is an observed playtest of
+whether players notice these tradeoffs and understand that each standing has
+a different practical role.

@@ -255,6 +255,7 @@ function migrateSavedGame(savedGame) {
   flags.joshCrewSupportAvailable = Boolean(flags.joshCrewSupportAvailable);
   flags.joshCrewSupportUsed = Boolean(flags.joshCrewSupportUsed);
   flags.joshCrewSupportSource = flags.joshCrewSupportSource || "";
+  flags.companyToolContributionUsed = Boolean(flags.companyToolContributionUsed);
   flags.callbackPressureUsed = flags.callbackPressureUsed && typeof flags.callbackPressureUsed === "object" && !Array.isArray(flags.callbackPressureUsed)
     ? flags.callbackPressureUsed
     : {};
