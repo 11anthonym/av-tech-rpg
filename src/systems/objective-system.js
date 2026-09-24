@@ -301,8 +301,10 @@ function getObjective() {
   if (state.sceneId === "universitySurvey") {
     if (state.flags.surveyComplete) return "Use the site exit to return to Radnor Rack & Wire.";
     if (!state.flags.surveyBrief) return "Check in with the facilities contact.";
+    if (isSurveyInspectionComplete()) return "Return to the facilities contact and file the survey report.";
+    if (canFileProvisionalSurvey()) return `Measure the ${getUnmeasuredSurveyAccessPoint()} or discuss a provisional report with facilities.`;
     if (state.flags.surveyWallCheckedBeforeAccessPath && !hasSurveyMeasuredAccessPath()) {
-      return "Measure the elevator and hallway so the wall-first survey note can be cleaned up.";
+      return "Measure at least one access point to assess the delivery path.";
     }
     if (state.surveyInspections.length < content.surveyDispatch.inspections.length) {
       return `Inspect the campus access path (${state.surveyInspections.length}/${content.surveyDispatch.inspections.length}).`;

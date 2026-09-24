@@ -109,6 +109,15 @@ function isSurveyInspectionComplete() {
   return content.surveyDispatch.inspections.every((item) => state.surveyInspections.includes(item.id));
 }
 
+function canFileProvisionalSurvey() {
+  return state.surveyInspections.includes("wall")
+    && ["elevator", "hallway"].some((inspectionId) => state.surveyInspections.includes(inspectionId));
+}
+
+function getUnmeasuredSurveyAccessPoint() {
+  return state.surveyInspections.includes("elevator") ? "hallway turn" : "freight elevator opening";
+}
+
 function hasSurveyMeasuredAccessPath(completedChecks = state.surveyInspections) {
   return ["elevator", "hallway"].every((inspectionId) => completedChecks.includes(inspectionId));
 }
@@ -218,6 +227,7 @@ function getSurveyReportTitle(approach = state.flags.surveyApproach) {
   return {
     pushback: "The Quote Is Paused Before The Damage",
     document: "The Constraint Is Now Somebody's Email",
+    provisional: "The Missing Measurement Stays Visible",
     trust: "The Quote Remains Basically Approved",
   }[approach] || "The Survey Report Is Filed";
 }
@@ -226,6 +236,7 @@ function getSurveyReportLabel(approach = state.flags.surveyApproach) {
   return {
     pushback: "Sales called directly",
     document: "Access risk documented",
+    provisional: "Provisional access report filed",
     trust: "Quoted plan accepted",
   }[approach] || "Report filed";
 }
@@ -258,7 +269,7 @@ function inspectSurveyConstraint(inspectionId) {
       ${getFieldTaskResultMarkup({ check: inspection, skillCheck, energyCost })}
       ${surveyResultNote ? `<p class="muted">${escapeHtml(surveyResultNote)}</p>` : ""}
       ${inspection.id === "wall" && getCharacterLine("surveyWall") ? `<p class="muted">${getCharacterLine("surveyWall")}</p>` : ""}
-      ${allChecked ? `<p class="muted">You have enough information. Return to the facilities contact and file the survey report.</p>` : ""}
+      ${allChecked ? `<p class="muted">You have enough information. Return to the facilities contact and file the survey report.</p>` : canFileProvisionalSurvey() ? `<p class="muted">You can measure the remaining access point or ask facilities to accept a provisional report now.</p>` : ""}
     `,
     actions: [{ label: allChecked ? "Return To Facilities Contact" : "Keep Surveying", onClick: render }],
   });
@@ -274,6 +285,7 @@ function showSurveyCompleteReview() {
       <div class="results-grid">
         <span>Preparation</span><strong>${getSurveyPreparationLabel()}</strong>
         <span>Report</span><strong>${getSurveyReportLabel()}</strong>
+        ${state.flags.surveyApproach === "provisional" ? `<span>Outstanding</span><strong>Measure the ${getUnmeasuredSurveyAccessPoint()} before delivery</strong>` : ""}
         <span>Return route</span><strong>${returnPortal ? `${escapeHtml(returnPortal.label)} marker is ready` : "Use the site exit when available"}</strong>
       </div>
       <p class="muted">No more survey energy, XP, wages, or reputation changes can be taken from this contact. Walk to the marked return point to leave the site.</p>
@@ -284,7 +296,26 @@ function showSurveyCompleteReview() {
 
 function showSurveyReportChoice() {
   if (state.flags.surveyComplete) return showSurveyCompleteReview();
-  if (!isSurveyInspectionComplete()) return notify("Finish the elevator, hallway, and wall observations before filing the survey report.");
+  if (!isSurveyInspectionComplete() && !canFileProvisionalSurvey()) return notify("Check the wall and at least one access point before discussing the report.");
+  if (!isSurveyInspectionComplete()) {
+    showModal({
+      kicker: "Facilities Contact",
+      title: "One Access Point Is Still Unknown",
+      body: `
+        <p>You checked the classroom wall and one part of the delivery path. The ${getUnmeasuredSurveyAccessPoint()} is still unmeasured.</p>
+        <p>Facilities needs an answer today. A provisional report tells them exactly what is unknown, but they cannot sign off on the full delivery path. You can go back and measure it instead.</p>
+        ${getChoicePressureMarkup([
+          { label: "Measure the remaining access point", detail: "Spend more time on site to give facilities a complete answer and keep full report options open." },
+          { label: "File a provisional report", detail: "Close the visit now. Facilities withholds full confidence, and install planning inherits an explicit measurement to resolve." },
+        ])}
+      `,
+      actions: [
+        { label: "Keep surveying", onClick: render },
+        { label: "File a provisional report", className: "secondary-button", onClick: () => finishSurvey("provisional") },
+      ],
+    });
+    return;
+  }
   showModal({
     kicker: "Survey Report",
     title: "The Wall Is Not The Only Dimension",
@@ -323,18 +354,22 @@ function showSurveyReportChoice() {
 
 function finishSurvey(approach) {
   if (state.flags.surveyComplete) return showSurveyCompleteReview();
+  if (!["document", "pushback", "trust", "provisional"].includes(approach)) return;
+  if (approach === "provisional" ? !canFileProvisionalSurvey() || isSurveyInspectionComplete() : !isSurveyInspectionComplete()) {
+    return notify("The current observations do not support that report.");
+  }
   const before = getTrackedStateSnapshot();
   const careful = approach !== "trust";
   const strainedDocument = Boolean(state.flags.surveyDocumentationStrained) && approach === "document";
-  const xp = (approach === "pushback" ? 60 : approach === "document" ? 55 : 35) - (strainedDocument ? 5 : 0);
+  const xp = (approach === "pushback" ? 60 : approach === "document" ? 55 : approach === "provisional" ? 40 : 35) - (strainedDocument ? 5 : 0);
   if (careful) changeEnergy(-getSurveyReportEnergyCost(approach === "pushback" ? 2 : 3));
   state.flags.surveyComplete = true;
   state.flags.surveyApproach = approach;
-  state.flags.surveyAccessPressureInherited = approach === "trust";
+  state.flags.surveyAccessPressureInherited = approach === "trust" || approach === "provisional";
   state.flags.surveyAccessPressureDocumented = careful;
   state.flags.surveySalesPushbackFriction = approach === "pushback";
   markCareerSnapshotStale();
-  setClock(`${state.clock.slice(0, 3)} ${approach === "trust" ? "2:06" : "2:21"} PM`);
+  setClock(`${state.clock.slice(0, 3)} ${approach === "trust" || approach === "provisional" ? "2:06" : "2:21"} PM`);
   if (!state.flags.surveyPaid) {
     state.cash += 72;
     state.flags.surveyPaid = true;
@@ -343,7 +378,9 @@ function finishSurvey(approach) {
     awardCareerProgress({
       xp,
       reputation: careful
-        ? { clients: strainedDocument ? 1 : 2, coworkers: strainedDocument ? 0 : 1, management: -1 }
+        ? approach === "provisional"
+          ? { clients: -1, coworkers: 1, management: 0 }
+          : { clients: strainedDocument ? 1 : 2, coworkers: strainedDocument ? 0 : 1, management: -1 }
         : { clients: 0, coworkers: 0, management: 1 },
       source: content.surveyDispatch.title,
     });
@@ -356,14 +393,20 @@ function finishSurvey(approach) {
     state.flags.surveyStatsRecorded = true;
   }
   addLog(careful
-    ? "Documented the University City access problem before it became an install-day problem."
+    ? approach === "provisional"
+      ? `Filed a provisional University City report. Facilities could not approve the unmeasured ${getUnmeasuredSurveyAccessPoint()}.`
+      : "Documented the University City access problem before it became an install-day problem."
     : "Marked the University City survey complete without adding the access problem to the quote.");
   if (approach === "pushback") addLog("Sales and management felt the University City pushback immediately, even though it protected install day.");
-  if (approach === "trust") {
+  if (approach === "trust" || approach === "provisional") {
     recordReturnTripRisk("universitySurveyAccessPressure", {
       source: content.surveyDispatch.title,
-      cause: "The quote was trusted even though the elevator and hallway path did not match the display size.",
-      detail: "University City access pressure is still open. Future install planning may inherit a cleaner-looking quote than the site deserves.",
+      cause: approach === "provisional"
+        ? `The ${getUnmeasuredSurveyAccessPoint()} was left unmeasured in a disclosed provisional report.`
+        : "The quote was trusted even though the elevator and hallway path did not match the display size.",
+      detail: approach === "provisional"
+        ? `Facilities withheld full approval. Future University City install planning must measure the ${getUnmeasuredSurveyAccessPoint()} before delivery.`
+        : "University City access pressure is still open. Future install planning may inherit a cleaner-looking quote than the site deserves.",
       affects: "future University City install planning and classroom display delivery",
     });
   } else if (state.flags.returnTripRisks?.universitySurveyAccessPressure) {
@@ -374,13 +417,17 @@ function finishSurvey(approach) {
   }
   const closeoutConsequences = [{
     source: content.surveyDispatch.title,
-    status: careful ? "documented" : "inherited",
+    status: approach === "provisional" ? "inherited" : careful ? "documented" : "inherited",
     cause: careful
-      ? "Access constraints were filed before the install quote could pretend they were simple."
+      ? approach === "provisional"
+        ? `The ${getUnmeasuredSurveyAccessPoint()} was disclosed but not measured before filing.`
+        : "Access constraints were filed before the install quote could pretend they were simple."
       : "The quote was trusted even though the access path still looked constrained.",
     affects: "future install planning and access expectations",
     detail: careful
-      ? state.flags.surveyWallCheckedBeforeAccessPath
+      ? approach === "provisional"
+        ? `Facilities could not approve the delivery path today. The ${getUnmeasuredSurveyAccessPoint()} remains an explicit install-planning requirement.`
+        : state.flags.surveyWallCheckedBeforeAccessPath
         ? "Wall-first uncertainty was called out in the report before the future crew inherited it."
         : "Future work starts with the access issue visible."
       : "Future work may inherit a cleaner-looking quote than the site deserves.",
@@ -402,6 +449,7 @@ function finishSurvey(approach) {
         <span>Experience</span><strong>+${xp} XP</strong>
         <span>Preparation</span><strong>${getSurveyPreparationLabel()}</strong>
         <span>Report</span><strong>${getSurveyReportLabel(approach)}</strong>
+        ${approach === "provisional" ? `<span>Facilities response</span><strong>Full approval withheld</strong><span>Next requirement</span><strong>Measure the ${getUnmeasuredSurveyAccessPoint()}</strong>` : ""}
         ${approach === "pushback" ? `<span>Immediate friction</span><strong>Sales and management challenged today</strong>` : ""}
         ${approach === "trust" ? `<span>Future pressure</span><strong>University City access pressure remains open</strong>` : ""}
         ${strainedDocument ? `<span>Skill consequence</span><strong>Thin notes softened the coworker/client gain</strong>` : ""}

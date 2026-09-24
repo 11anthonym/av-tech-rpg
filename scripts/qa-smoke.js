@@ -2155,6 +2155,39 @@ async function clickButton(page, name) {
     assert(surveyTask.energyChanged, "Survey inspection should affect energy");
     assert(surveyTask.showsResultRows, "Survey inspection should show structured result rows");
 
+    const provisionalSurvey = await page.evaluate(() => {
+      window.startGame("prototype-tech");
+      const state = window.AV_TECH_RPG_DEBUG.state;
+      window.enterScene("universitySurvey");
+      state.flags.surveyBrief = true;
+      state.flags.surveyPreparation = "sketch";
+      state.surveyInspections = ["elevator", "wall"];
+      state.player = { x: 310, y: 185 };
+      window.render();
+      const objective = document.querySelector("#objective-card")?.innerText || document.body.innerText;
+      const contact = window.getInteractions().find((item) => item.label === "Discuss survey evidence");
+      contact?.action();
+      const decision = document.querySelector("#modal-backdrop")?.innerText || "";
+      window.finishSurvey("provisional");
+      const closeout = document.querySelector("#modal-backdrop")?.innerText || "";
+      const risk = state.flags.returnTripRisks?.universitySurveyAccessPressure;
+      return {
+        objective,
+        contactReady: Boolean(contact),
+        decision,
+        closeout,
+        risk,
+        clientReputation: state.reputation.clients,
+        approach: state.flags.surveyApproach,
+      };
+    });
+    assert(provisionalSurvey.contactReady, "Partial evidence should let the player discuss a report with facilities");
+    assert(provisionalSurvey.objective.includes("hallway turn") && provisionalSurvey.objective.includes("provisional report"), "Objective should explain both available paths");
+    assert(provisionalSurvey.decision.includes("Keep surveying") && provisionalSurvey.decision.includes("File a provisional report"), "Contact should offer a real evidence tradeoff");
+    assert(provisionalSurvey.closeout.includes("Full approval withheld") && provisionalSurvey.closeout.includes("Measure the hallway turn"), "Immediate client response and unresolved work should be visible");
+    assert(provisionalSurvey.clientReputation === -1 && provisionalSurvey.approach === "provisional", "Provisional closeout should change present reputation and save the branch");
+    assert(provisionalSurvey.risk?.cause.includes("hallway turn"), "Provisional closeout should name the exact missing measurement");
+
     const surveyCloseoutGuard = await page.evaluate(() => {
       window.startGame("prototype-tech");
       const state = window.AV_TECH_RPG_DEBUG.state;

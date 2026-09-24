@@ -502,7 +502,7 @@ function getInteractions() {
     const allChecked = isSurveyInspectionComplete();
     return [
       {
-        x: 310, y: 185, label: surveyComplete ? "Review filed survey" : allChecked ? "File survey report" : "Talk to facilities contact", npc: "CLIENT",
+        x: 310, y: 185, label: surveyComplete ? "Review filed survey" : allChecked ? "File survey report" : canFileProvisionalSurvey() ? "Discuss survey evidence" : "Talk to facilities contact", npc: "CLIENT",
         taskState: () => {
           if (surveyComplete) {
             return getTaskState({
@@ -511,6 +511,7 @@ function getInteractions() {
             });
           }
           if (allChecked) return getTaskState({ stateId: "ready", detail: "File the survey report before returning to the shop." });
+          if (canFileProvisionalSurvey()) return getTaskState({ stateId: "ready", detail: "Measure the remaining access point or discuss a provisional report." });
           if (state.flags.surveyBrief) {
             return getTaskState({
               stateId: "inProgress",
@@ -521,7 +522,7 @@ function getInteractions() {
         },
         action: () => {
           if (surveyComplete) return showSurveyCompleteReview();
-          if (allChecked) return showSurveyReportChoice();
+          if (allChecked || canFileProvisionalSurvey()) return showSurveyReportChoice();
           if (state.flags.surveyBrief) return notify('Facilities contact: "The wall is upstairs. The elevator is the reason I called twice."');
           state.flags.surveyBrief = true;
           addLog("Facilities asked whether the quoted display can actually reach the classroom.");

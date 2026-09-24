@@ -325,3 +325,19 @@ the decision's tradeoff. Fix any blocking comprehension defect and rerun the
 affected QA. If none remain, mark this gate complete and freeze feature work
 in the browser prototype. The next artifact is a production vertical-slice
 plan, not another open-ended prototype roadmap.
+
+### Selected-Job Agency Check, September 23, 2026
+
+University City now allows a report after the wall and one access point are
+checked. The player can measure the remaining point for a complete report or
+file an honest provisional report and leave earlier. Facilities withholds full
+approval immediately, client reputation falls, and the exact missing
+measurement appears in the filed review, route consequence, and return-trip
+record. Full-evidence closeout still offers the existing documentation,
+sales-pushback, and quote-trust decisions. Both paths are single-use and
+save-safe; static, unit, and browser smoke QA cover the tradeoff.
+
+**Stop for this job:** Do not add another survey branch in the browser build.
+Observe whether a new player notices the optional measurement and understands
+why facilities cannot approve the provisional path. If that is clear, use the
+existing exit gate above rather than expanding this job again.

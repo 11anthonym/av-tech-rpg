@@ -1084,7 +1084,7 @@ test("University City survey task modifiers respond to prep and inspection order
   assert.match(result.routeDifferenceBefore, /Thin starting notes|Access path unresolved/);
   assert.ok(result.wallResultIds.includes("survey-wall-before-path"), "Resolved wall-first check should save the applied modifier");
   assert.equal(result.wallFirstFlag, true, "Wall-first choice should become saved survey state");
-  assert.match(result.objectiveAfterWall, /Measure the elevator and hallway/);
+  assert.match(result.objectiveAfterWall, /Measure at least one access point/);
   assert.ok(result.wallAfterIds.includes("survey-access-path-measured"), "Wall check after access path should carry access-path support");
   assert.match(result.wallAfterPreview, /Access path measured/);
   assert.match(result.surveyTaskMarkup, /Pressure on this action/);
@@ -1117,6 +1117,73 @@ test("University City trusted quote creates visible route consequence pressure",
   assert.match(result.pressureText, /University City access pressure/);
   assert.match(result.routeCard, /Mapped consequence pressure/);
   assert.match(result.closeoutDetail, /cleaner-looking quote/);
+});
+
+test("University City provisional survey trades a faster exit for immediate client friction and named access pressure", () => {
+  resetGameState();
+  const result = readGameJson(`(() => {
+    state.sceneId = "universitySurvey";
+    state.flags.currentAreaId = "universitySurvey";
+    state.flags.surveyBrief = true;
+    state.flags.surveyPreparation = "sketch";
+    state.surveyInspections = ["elevator"];
+    finishSurvey("provisional");
+    const blocked = !state.flags.surveyComplete;
+    state.surveyInspections.push("wall");
+    const objective = resolveCurrentObjective().text;
+    const ready = canFileProvisionalSurvey();
+    finishSurvey("provisional");
+    const first = { cash: state.cash, xp: state.xp, reputation: { ...state.reputation } };
+    const risk = state.flags.returnTripRisks?.universitySurveyAccessPressure;
+    const saved = migrateSavedGame(JSON.parse(JSON.stringify(serializeGame())));
+    finishSurvey("document");
+    return {
+      blocked, ready, objective, first,
+      repeated: { cash: state.cash, xp: state.xp },
+      approach: state.flags.surveyApproach,
+      clientFriction: state.reputation.clients,
+      risk, savedRisk: saved.flags.returnTripRisks?.universitySurveyAccessPressure,
+      savedApproach: saved.flags.surveyApproach,
+      closeout: state.flags.lastJobSiteCloseoutSummary?.consequences?.[0],
+      routeCard: getRouteCardMarkup(getWorldRoute("universitySurvey")),
+    };
+  })()`);
+
+  assert.equal(result.blocked, true, "One observation cannot close the survey");
+  assert.equal(result.ready, true);
+  assert.match(result.objective, /hallway turn.*provisional report/);
+  assert.equal(result.approach, "provisional");
+  assert.equal(result.clientFriction, -1, "Facilities should react during this visit");
+  assert.match(result.risk.cause, /hallway turn was left unmeasured/);
+  assert.match(result.savedRisk.detail, /Facilities withheld full approval/);
+  assert.equal(result.savedApproach, "provisional");
+  assert.equal(result.closeout.status, "inherited");
+  assert.match(result.routeCard, /hallway turn/);
+  assert.deepEqual(result.repeated, { cash: result.first.cash, xp: result.first.xp });
+});
+
+test("University City full evidence preserves the complete report and leaves no access debt", () => {
+  resetGameState();
+  const result = readGameJson(`(() => {
+    state.sceneId = "universitySurvey";
+    state.flags.currentAreaId = "universitySurvey";
+    state.flags.surveyBrief = true;
+    state.flags.surveyPreparation = "sketch";
+    state.surveyInspections = ["elevator", "hallway", "wall"];
+    finishSurvey("provisional");
+    const provisionalBlocked = !state.flags.surveyComplete;
+    finishSurvey("document");
+    return {
+      provisionalBlocked,
+      approach: state.flags.surveyApproach,
+      clients: state.reputation.clients,
+      risk: state.flags.returnTripRisks?.universitySurveyAccessPressure || null,
+    };
+  })()`);
+  assert.equal(result.provisionalBlocked, true);
+  assert.equal(result.approach, "document");
+  assert.equal(result.clients, 2);
+  assert.equal(result.risk, null);
 });
 
 test("Burlington retrofit install branch uses visible task modifiers", () => {

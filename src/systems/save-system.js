@@ -302,7 +302,7 @@ function inferSavedXp(savedGame) {
   return (savedGame.flags?.finished ? 40 : 0)
     + (savedGame.flags?.serviceComplete ? (savedGame.flags.serviceApproach === "verify" ? 50 : 40) : 0)
     + (savedGame.flags?.conshohockenFollowupComplete ? (savedGame.flags.conshohockenFollowupApproach === "label" ? 30 : 20) : 0)
-    + (savedGame.flags?.surveyComplete ? (savedGame.flags.surveyApproach === "pushback" ? 60 : savedGame.flags.surveyApproach === "document" ? 55 : 35) : 0)
+    + (savedGame.flags?.surveyComplete ? (savedGame.flags.surveyApproach === "pushback" ? 60 : savedGame.flags.surveyApproach === "document" ? 55 : savedGame.flags.surveyApproach === "provisional" ? 40 : 35) : 0)
     + (savedGame.flags?.commissioningComplete ? (savedGame.flags.commissioningApproach === "craft" ? 65 : savedGame.flags.commissioningApproach === "repair" ? 60 : 40) : 0)
     + (savedGame.flags?.warehouseComplete ? (savedGame.flags.warehouseApproach === "label" ? 50 : 35) : 0)
     + (savedGame.flags?.secureAccessComplete ? (savedGame.flags.secureAccessApproach === "pushback" ? 60 : savedGame.flags.secureAccessApproach === "document" ? 55 : 35) : 0)
@@ -341,6 +341,9 @@ function inferSavedReputation(savedGame) {
   if (savedGame.flags?.surveyComplete) {
     if (savedGame.flags.surveyApproach === "trust") {
       reputation.management += 1;
+    } else if (savedGame.flags.surveyApproach === "provisional") {
+      reputation.clients -= 1;
+      reputation.coworkers += 1;
     } else {
       reputation.clients += 2;
       reputation.coworkers += 1;
