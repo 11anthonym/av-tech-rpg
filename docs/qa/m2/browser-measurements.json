@@ -1,7 +1,7 @@
 {
-  "capturedAt": "2026-11-22T19:45:41.226Z",
+  "capturedAt": "2026-11-22T19:53:42.795Z",
   "base": "http://127.0.0.1:4173/av-tech-rpg/3d/",
-  "commit": "8af77b6eb6b9a290cda7d9561e387c3a339f8519",
+  "commit": "db91ac0c29bb15e7929a76bba9ce3c302c8a6fab",
   "browser": "Firefox 159.0",
   "viewport": {
     "width": 1280,
@@ -44,31 +44,31 @@
         "height": 1.78,
         "speed": 0,
         "walkWeight": 0,
-        "idleFrame": 105.96,
+        "idleFrame": 62.6532588654146,
         "walkFrame": 0,
         "pose": [
-          0.9847790598869324,
-          -0.17381006479263306,
-          1.5657909102628764e-7,
+          0.98431795835495,
+          -0.1764027327299118,
+          1.2537871896256547e-7,
           0,
-          0.17381004989147186,
-          0.9847790002822876,
-          -1.4182948149255026e-9,
+          0.1764027178287506,
+          0.9843178987503052,
+          8.186380284769257e-8,
           0,
-          -1.5394932972867537e-7,
-          2.861173520329885e-8,
+          -1.3785354724404897e-7,
+          -5.846288075872508e-8,
           1,
           0
         ]
       },
       "performance": {
-        "readyMs": 9752,
-        "sampledFrames": 13,
+        "readyMs": 15641,
+        "sampledFrames": 11,
         "frameMs": {
-          "p50": 107,
-          "p95": 190,
-          "p99": 190,
-          "max": 190
+          "p50": 427,
+          "p95": 688,
+          "p99": 688,
+          "max": 688
         },
         "drawCalls": 67,
         "vertices": 20458,
@@ -78,7 +78,7 @@
           "version": "WebGL 2.0"
         }
       },
-      "frames": 17,
+      "frames": 15,
       "activeMeshes": 35,
       "webgl": 2,
       "errors": []
@@ -89,7 +89,7 @@
       "position": [
         0,
         0.92,
-        -2.5066666666666806
+        -2.5533333333333363
       ],
       "camera": {
         "yaw": 0,
@@ -98,10 +98,10 @@
       },
       "cameraPosition": [
         0,
-        2.62884168972037,
+        2.611807026628288,
         -6.640156821788155
       ],
-      "actualCameraDistance": 4.4002663677468865,
+      "actualCameraDistance": 4.350587825855668,
       "actionId": "shop.inspect-workbench",
       "completedActions": [],
       "paused": false,
@@ -109,33 +109,33 @@
         "model": "Rocketbox Andre / tee",
         "joints": 80,
         "height": 1.78,
-        "speed": 1.399999999999979,
+        "speed": 1.4000000000000057,
         "walkWeight": 1,
-        "idleFrame": 182.46,
-        "walkFrame": 24.19198119980223,
+        "idleFrame": 147.5911223813191,
+        "walkFrame": 25.309105708103345,
         "pose": [
-          0.5955557227134705,
-          -0.8033138513565063,
-          1.9557603536668466e-8,
+          0.5126505494117737,
+          -0.8585972189903259,
+          5.3074639794203904e-8,
           0,
-          0.8033138513565063,
-          0.5955557227134705,
-          -1.385958086075334e-7,
+          0.8585972189903259,
+          0.5126505494117737,
+          -6.378624561875768e-8,
           0,
-          9.968830738671386e-8,
-          9.825243552086249e-8,
+          2.7557959469959314e-8,
+          7.82698066359444e-8,
           0.9999999403953552,
           0
         ]
       },
       "performance": {
-        "readyMs": 9752,
-        "sampledFrames": 35,
+        "readyMs": 15641,
+        "sampledFrames": 30,
         "frameMs": {
-          "p50": 107,
-          "p95": 190,
-          "p99": 202,
-          "max": 202
+          "p50": 352,
+          "p95": 688,
+          "p99": 705,
+          "max": 705
         },
         "drawCalls": 67,
         "vertices": 20458,
@@ -145,7 +145,7 @@
           "version": "WebGL 2.0"
         }
       },
-      "frames": 39,
+      "frames": 34,
       "activeMeshes": 35,
       "webgl": 2,
       "errors": []
@@ -154,9 +154,9 @@
       "build": "0.1.0+local",
       "areaId": "shop",
       "position": [
-        1.96,
+        1.9599999999999995,
         0.92,
-        -2.36666666666668
+        -2.4133333333333757
       ],
       "camera": {
         "yaw": 0,
@@ -164,11 +164,11 @@
         "distance": 5.5
       },
       "cameraPosition": [
-        1.96,
-        2.67994567899663,
+        1.9599999999999995,
+        2.6629110159045326,
         -6.640156821788155
       ],
-      "actualCameraDistance": 4.549301993420577,
+      "actualCameraDistance": 4.499623451529315,
       "actionId": null,
       "completedActions": [],
       "paused": false,
@@ -178,31 +178,31 @@
         "height": 1.78,
         "speed": 1.3999999999999924,
         "walkWeight": 1,
-        "idleFrame": 182.46,
-        "walkFrame": 52.18859071712444,
+        "idleFrame": 147.5911223813191,
+        "walkFrame": 8.106103757842163,
         "pose": [
-          0.9466239213943481,
-          -0.3223397731781006,
-          -3.508760215709117e-8,
+          0.9560653567314148,
+          -0.29315316677093506,
+          -2.210163252414077e-8,
           0,
-          0.3223397731781006,
-          0.9466239213943481,
-          1.0192495736305318e-8,
+          0.29315316677093506,
+          0.9560653567314148,
+          1.930056825472093e-8,
           0,
-          2.9929321243571394e-8,
-          -2.0958591306907692e-8,
+          1.5472584991016447e-8,
+          -2.493177220230791e-8,
           0.9999999403953552,
           0
         ]
       },
       "performance": {
-        "readyMs": 9752,
-        "sampledFrames": 60,
+        "readyMs": 15641,
+        "sampledFrames": 45,
         "frameMs": {
-          "p50": 87,
-          "p95": 183,
-          "p99": 202,
-          "max": 202
+          "p50": 341,
+          "p95": 676,
+          "p99": 705,
+          "max": 705
         },
         "drawCalls": 67,
         "vertices": 20458,
@@ -212,7 +212,7 @@
           "version": "WebGL 2.0"
         }
       },
-      "frames": 64,
+      "frames": 49,
       "activeMeshes": 35,
       "webgl": 2,
       "errors": []
@@ -221,9 +221,9 @@
       "build": "0.1.0+local",
       "areaId": "shop",
       "position": [
-        1.96,
+        1.9599999999999995,
         0.92,
-        -3.556666666666675
+        -3.5333333333333723
       ],
       "camera": {
         "yaw": 0,
@@ -231,11 +231,11 @@
         "distance": 5.5
       },
       "cameraPosition": [
-        1.96,
-        2.2455617701484263,
-        -6.640156821788155
+        1.9599999999999995,
+        2.254079101694458,
+        -6.640156821788154
       ],
-      "actualCameraDistance": 3.282499175194222,
+      "actualCameraDistance": 3.3073384461398034,
       "actionId": null,
       "completedActions": [],
       "paused": false,
@@ -243,33 +243,33 @@
         "model": "Rocketbox Andre / tee",
         "joints": 80,
         "height": 1.78,
-        "speed": 1.4000000000000057,
+        "speed": 1.399999999999979,
         "walkWeight": 1,
-        "idleFrame": 424.86,
-        "walkFrame": 7.648659987738483,
+        "idleFrame": 327.81368973337374,
+        "walkFrame": 6.570246319559715,
         "pose": [
-          0.9571734666824341,
-          -0.28951454162597656,
-          -1.4258154656943134e-8,
+          0.9572985768318176,
+          -0.28910061717033386,
+          2.1705608421740408e-9,
           0,
-          0.28951454162597656,
-          0.9571734666824341,
-          2.058854597919435e-8,
+          0.28910061717033386,
+          0.9572985768318176,
+          1.64653570777773e-8,
           0,
-          7.686844938348258e-9,
-          -2.3834758167140535e-8,
+          -6.838021704425046e-9,
+          -1.5134755670942468e-8,
           0.9999999403953552,
           0
         ]
       },
       "performance": {
-        "readyMs": 9752,
-        "sampledFrames": 79,
+        "readyMs": 15641,
+        "sampledFrames": 58,
         "frameMs": {
-          "p50": 85,
-          "p95": 182,
-          "p99": 202,
-          "max": 202
+          "p50": 339,
+          "p95": 676,
+          "p99": 705,
+          "max": 705
         },
         "drawCalls": 67,
         "vertices": 20458,
@@ -279,7 +279,7 @@
           "version": "WebGL 2.0"
         }
       },
-      "frames": 83,
+      "frames": 62,
       "activeMeshes": 35,
       "webgl": 2,
       "errors": []
@@ -288,9 +288,9 @@
       "build": "0.1.0+local",
       "areaId": "shop",
       "position": [
-        -0.02333333333332971,
+        -0.11666666666666323,
         0.92,
-        -3.556666666666675
+        -3.5333333333333723
       ],
       "camera": {
         "yaw": 0,
@@ -298,11 +298,11 @@
         "distance": 5.5
       },
       "cameraPosition": [
-        -0.02333333333332971,
-        2.2455617701484263,
-        -6.640156821788155
+        -0.11666666666666323,
+        2.254079101694458,
+        -6.640156821788154
       ],
-      "actualCameraDistance": 3.282499175194222,
+      "actualCameraDistance": 3.3073384461398034,
       "actionId": null,
       "completedActions": [],
       "paused": false,
@@ -312,31 +312,31 @@
         "height": 1.78,
         "speed": 1.4,
         "walkWeight": 1,
-        "idleFrame": 506.52,
-        "walkFrame": 26.26791176005031,
+        "idleFrame": 404.79361414904156,
+        "walkFrame": 62.790087137595606,
         "pose": [
-          0.4374028146266937,
-          -0.8992655873298645,
-          7.578213256920208e-8,
+          0.8969915509223938,
+          -0.4420473575592041,
+          -2.0519175336630724e-7,
           0,
-          0.8992655873298645,
-          0.4374028146266937,
-          2.81407985802673e-9,
+          0.4420473575592041,
+          0.8969915509223938,
+          1.562028728585574e-8,
           0,
-          -3.567792816738802e-8,
-          6.691738718700435e-8,
+          1.7715039746235561e-7,
+          -1.047157596190118e-7,
           0.9999999403953552,
           0
         ]
       },
       "performance": {
-        "readyMs": 9752,
-        "sampledFrames": 106,
+        "readyMs": 15641,
+        "sampledFrames": 78,
         "frameMs": {
-          "p50": 83,
-          "p95": 181,
-          "p99": 190,
-          "max": 202
+          "p50": 337,
+          "p95": 676,
+          "p99": 962,
+          "max": 962
         },
         "drawCalls": 67,
         "vertices": 20458,
@@ -346,7 +346,7 @@
           "version": "WebGL 2.0"
         }
       },
-      "frames": 110,
+      "frames": 82,
       "activeMeshes": 35,
       "webgl": 2,
       "errors": []
@@ -355,9 +355,9 @@
       "build": "0.1.0+local",
       "areaId": "shop",
       "position": [
-        -0.023333333333330115,
+        -0.11666666666666323,
         0.92,
-        -0.8266666666666966
+        -0.8266666666667157
       ],
       "camera": {
         "yaw": 0,
@@ -365,9 +365,9 @@
         "distance": 5.5
       },
       "cameraPosition": [
-        -0.023333333333330115,
+        -0.11666666666666323,
         3.0059379410049827,
-        -5.9932165873272805
+        -5.9932165873273
       ],
       "actualCameraDistance": 5.5,
       "actionId": "shop.inspect-workbench",
@@ -377,33 +377,33 @@
         "model": "Rocketbox Andre / tee",
         "joints": 80,
         "height": 1.78,
-        "speed": 1.4000000000000057,
+        "speed": 1.399999999999999,
         "walkWeight": 1,
-        "idleFrame": 649.2,
-        "walkFrame": 41.27907422143528,
+        "idleFrame": 524.7416780066228,
+        "walkFrame": 12.369506662842127,
         "pose": [
-          0.818347692489624,
-          -0.5747232437133789,
-          1.2759518597249553e-7,
+          0.9035348892211914,
+          -0.4285142421722412,
+          -8.042255927875885e-8,
           0,
-          0.5747232437133789,
-          0.818347692489624,
-          -9.449016147300426e-8,
+          0.4285142421722412,
+          0.9035348892211914,
+          -7.0168759691569e-8,
           0,
-          -5.011154513567817e-8,
-          1.5065775471612142e-7,
+          1.0273291906059967e-7,
+          2.893771444689719e-8,
           0.9999999403953552,
           0
         ]
       },
       "performance": {
-        "readyMs": 9752,
-        "sampledFrames": 141,
+        "readyMs": 15641,
+        "sampledFrames": 107,
         "frameMs": {
-          "p50": 83,
-          "p95": 181,
-          "p99": 191,
-          "max": 202
+          "p50": 337,
+          "p95": 688,
+          "p99": 962,
+          "max": 1083
         },
         "drawCalls": 67,
         "vertices": 20458,
@@ -413,7 +413,7 @@
           "version": "WebGL 2.0"
         }
       },
-      "frames": 145,
+      "frames": 111,
       "activeMeshes": 35,
       "webgl": 2,
       "errors": []
@@ -422,9 +422,9 @@
       "build": "0.1.0+local",
       "areaId": "shop",
       "position": [
-        -0.02333333333333026,
+        -0.11666666666666323,
         0.92,
-        -0.7946666666666944
+        -0.7936665417353771
       ],
       "camera": {
         "yaw": 0,
@@ -432,9 +432,9 @@
         "distance": 5.5
       },
       "cameraPosition": [
-        -0.02333333333333026,
+        -0.11666666666666323,
         3.0059379410049827,
-        -5.961216587327279
+        -5.9602164623959615
       ],
       "actualCameraDistance": 5.5,
       "actionId": "shop.inspect-workbench",
@@ -446,31 +446,31 @@
         "height": 1.78,
         "speed": 0,
         "walkWeight": 0,
-        "idleFrame": 183.01998092651365,
-        "walkFrame": 1.0990580618557715,
+        "idleFrame": 66.85294360719695,
+        "walkFrame": 42.93343188656149,
         "pose": [
-          0.9862598180770874,
-          -0.16520094871520996,
-          2.0125342814480973e-7,
+          0.9841830134391785,
+          -0.1771540343761444,
+          1.0982731879494168e-7,
           0,
-          0.16520093381404877,
-          0.9862597584724426,
-          2.50854075289908e-8,
+          0.1771540343761444,
+          0.9841829538345337,
+          5.995084428889186e-10,
           0,
-          -2.0263235001038993e-7,
-          8.50652703832111e-9,
+          -1.0819641715897887e-7,
+          1.886633249625902e-8,
           1,
           0
         ]
       },
       "performance": {
-        "readyMs": 9752,
-        "sampledFrames": 169,
+        "readyMs": 15641,
+        "sampledFrames": 135,
         "frameMs": {
-          "p50": 82,
-          "p95": 181,
-          "p99": 193,
-          "max": 202
+          "p50": 327,
+          "p95": 678,
+          "p99": 962,
+          "max": 1083
         },
         "drawCalls": 67,
         "vertices": 20458,
@@ -480,7 +480,7 @@
           "version": "WebGL 2.0"
         }
       },
-      "frames": 173,
+      "frames": 139,
       "activeMeshes": 35,
       "webgl": 2,
       "errors": []
@@ -489,9 +489,9 @@
       "build": "0.1.0+local",
       "areaId": "shop",
       "position": [
-        2.7502375084805286,
-        0.9150070243382012,
-        -0.8125066664616599
+        2.776666666666671,
+        0.92,
+        -0.7936665417353771
       ],
       "camera": {
         "yaw": 0,
@@ -499,9 +499,9 @@
         "distance": 5.5
       },
       "cameraPosition": [
-        2.7502375084805286,
-        3.0009449653431837,
-        -5.979056587122244
+        2.776666666666671,
+        3.0059379410049827,
+        -5.9602164623959615
       ],
       "actualCameraDistance": 5.5,
       "actionId": null,
@@ -515,31 +515,31 @@
         "height": 1.78,
         "speed": 1.4000000000000057,
         "walkWeight": 1,
-        "idleFrame": 282.9799809265137,
-        "walkFrame": 52.12223826878176,
+        "idleFrame": 108.8470164360483,
+        "walkFrame": 44.477878693684715,
         "pose": [
-          0.9471010565757751,
-          -0.32093510031700134,
-          -3.4110531288433776e-8,
+          0.9193930625915527,
+          -0.39333972334861755,
+          -8.543081264633656e-8,
           0,
-          0.32093510031700134,
-          0.9471010565757751,
-          1.0826222585080814e-8,
+          0.39333972334861755,
+          0.9193930625915527,
+          9.906663223091527e-8,
           0,
-          2.8831612652879812e-8,
-          -2.1200797561959916e-8,
+          3.957766736562007e-8,
+          -1.2468453292058257e-7,
           0.9999999403953552,
           0
         ]
       },
       "performance": {
-        "readyMs": 9752,
-        "sampledFrames": 180,
+        "readyMs": 15641,
+        "sampledFrames": 161,
         "frameMs": {
-          "p50": 77,
-          "p95": 173,
-          "p99": 193,
-          "max": 232
+          "p50": 326,
+          "p95": 664,
+          "p99": 962,
+          "max": 1083
         },
         "drawCalls": 67,
         "vertices": 20458,
@@ -549,7 +549,7 @@
           "version": "WebGL 2.0"
         }
       },
-      "frames": 220,
+      "frames": 165,
       "activeMeshes": 35,
       "webgl": 2,
       "errors": []
@@ -558,9 +558,9 @@
       "build": "0.1.0+local",
       "areaId": "shop",
       "position": [
-        2.7502375084805752,
-        0.9150070243382129,
-        1.6374933335383401
+        2.776666666666671,
+        0.92,
+        1.7263334582646226
       ],
       "camera": {
         "yaw": 0,
@@ -568,9 +568,9 @@
         "distance": 5.5
       },
       "cameraPosition": [
-        2.7502375084805752,
-        3.000944965343195,
-        -3.529056587122244
+        2.776666666666671,
+        3.0059379410049827,
+        -3.4402164623959615
       ],
       "actualCameraDistance": 5.5,
       "actionId": null,
@@ -584,31 +584,31 @@
         "height": 1.78,
         "speed": 1.3999999999999924,
         "walkWeight": 1,
-        "idleFrame": 427.6999809265137,
-        "walkFrame": 27.985397937506605,
+        "idleFrame": 263.5892344309201,
+        "walkFrame": 55.55117076566603,
         "pose": [
-          0.29499098658561707,
-          -0.9554999470710754,
-          1.0193832622462651e-7,
+          0.9197397232055664,
+          -0.3925284445285797,
+          -8.332456502557761e-8,
           0,
-          0.9554999470710754,
-          0.29499098658561707,
-          1.2602662025074096e-7,
+          0.3925284445285797,
+          0.9197397232055664,
+          -2.3789196390566758e-8,
           0,
-          -1.5048934187689156e-7,
-          6.022535359306858e-8,
+          8.597486100825336e-8,
+          -1.0827394092416398e-8,
           0.9999999403953552,
           0
         ]
       },
       "performance": {
-        "readyMs": 9752,
+        "readyMs": 15641,
         "sampledFrames": 180,
         "frameMs": {
-          "p50": 76,
-          "p95": 191,
-          "p99": 513,
-          "max": 655
+          "p50": 321,
+          "p95": 673,
+          "p99": 962,
+          "max": 1083
         },
         "drawCalls": 66,
         "vertices": 20458,
@@ -618,7 +618,7 @@
           "version": "WebGL 2.0"
         }
       },
-      "frames": 254,
+      "frames": 189,
       "activeMeshes": 34,
       "webgl": 2,
       "errors": []
@@ -627,9 +627,9 @@
       "build": "0.1.0+local",
       "areaId": "shop",
       "position": [
-        2.7502375084805863,
-        0.9150070243382157,
-        1.0541600002050084
+        2.776666666666671,
+        0.92,
+        1.026333458264625
       ],
       "camera": {
         "yaw": 0,
@@ -637,9 +637,9 @@
         "distance": 5.5
       },
       "cameraPosition": [
-        2.7502375084805863,
-        3.000944965343198,
-        -4.112389920455575
+        2.776666666666671,
+        3.0059379410049827,
+        -4.1402164623959585
       ],
       "actualCameraDistance": 5.5,
       "actionId": null,
@@ -652,32 +652,32 @@
         "joints": 80,
         "height": 1.78,
         "speed": 1.4000000000000057,
-        "walkWeight": 0.9932620530009144,
-        "idleFrame": 294.1199427795409,
-        "walkFrame": 40.457101410713676,
+        "walkWeight": 0.9975212478233336,
+        "idleFrame": 614.7450757740014,
+        "walkFrame": 40.759320696504574,
         "pose": [
-          0.7881937026977539,
-          -0.6154270768165588,
-          1.9559772113098006e-7,
+          0.7989652752876282,
+          -0.601377010345459,
+          1.7076735048249247e-7,
           0,
-          0.6154270768165588,
-          0.7881937026977539,
-          -1.476567348390745e-7,
+          0.601377010345459,
+          0.7989652752876282,
+          -1.287167350483287e-7,
           0,
-          -6.329696589091327e-8,
-          2.367582823126213e-7,
+          -5.902992228357107e-8,
+          2.0553578394810756e-7,
           0.9999999403953552,
           0
         ]
       },
       "performance": {
-        "readyMs": 9752,
+        "readyMs": 15641,
         "sampledFrames": 180,
         "frameMs": {
-          "p50": 86,
-          "p95": 662,
-          "p99": 1020,
-          "max": 1140
+          "p50": 320,
+          "p95": 690,
+          "p99": 962,
+          "max": 1083
         },
         "drawCalls": 66,
         "vertices": 20458,
@@ -687,7 +687,7 @@
           "version": "WebGL 2.0"
         }
       },
-      "frames": 307,
+      "frames": 237,
       "activeMeshes": 34,
       "webgl": 2,
       "errors": []
@@ -696,21 +696,21 @@
       "build": "0.1.0+local",
       "areaId": "shop",
       "position": [
-        2.7502375084805863,
-        0.9150070243382157,
-        1.0541600002050084
+        2.776666666666671,
+        0.92,
+        1.026333458264625
       ],
       "camera": {
         "yaw": 0,
         "pitch": 0.35,
-        "distance": 5.1
+        "distance": 2.2
       },
       "cameraPosition": [
-        2.7502375084805863,
-        2.8637858423610174,
-        -3.736640835316624
+        2.776666666666671,
+        1.8743751764019931,
+        -1.0402865099996088
       ],
-      "actualCameraDistance": 5.1,
+      "actualCameraDistance": 2.2,
       "actionId": null,
       "completedActions": [
         "shop.inspect-workbench"
@@ -722,33 +722,33 @@
         "height": 1.78,
         "speed": 0,
         "walkWeight": 0,
-        "idleFrame": 15.439923706054742,
-        "walkFrame": 59.9091014107139,
+        "idleFrame": 191.02455679192667,
+        "walkFrame": 44.36295551839157,
         "pose": [
-          0.9894327521324158,
-          -0.14499154686927795,
-          2.6410491571482453e-8,
+          0.9867020845413208,
+          -0.1625383347272873,
+          2.2451850156812725e-7,
           0,
-          0.14499153196811676,
-          0.989432692527771,
-          8.546205521042793e-9,
+          0.1625383198261261,
+          0.986702024936676,
+          4.965853062088854e-9,
           0,
-          -2.7370539612547873e-8,
-          -4.626599547918886e-9,
+          -2.223400770162698e-7,
+          3.159305350663999e-8,
           1,
           0
         ]
       },
       "performance": {
-        "readyMs": 9752,
+        "readyMs": 15641,
         "sampledFrames": 180,
         "frameMs": {
-          "p50": 104,
-          "p95": 738,
-          "p99": 1140,
-          "max": 1189
+          "p50": 328,
+          "p95": 728,
+          "p99": 1047,
+          "max": 1097
         },
-        "drawCalls": 66,
+        "drawCalls": 60,
         "vertices": 20458,
         "graphics": {
           "vendor": "Google Inc. (Microsoft)",
@@ -756,8 +756,8 @@
           "version": "WebGL 2.0"
         }
       },
-      "frames": 328,
-      "activeMeshes": 34,
+      "frames": 283,
+      "activeMeshes": 27,
       "webgl": 2,
       "errors": []
     },
@@ -765,21 +765,21 @@
       "build": "0.1.0+local",
       "areaId": "shop",
       "position": [
-        2.7502375084805863,
-        0.9150070243382157,
-        1.0541600002050084
+        2.776666666666671,
+        0.92,
+        1.026333458264625
       ],
       "camera": {
         "yaw": 0,
         "pitch": 0.35,
-        "distance": 5.1
+        "distance": 2.2
       },
       "cameraPosition": [
-        2.7502375084805863,
-        2.8637858423610174,
-        -3.736640835316624
+        2.776666666666671,
+        1.8743751764019931,
+        -1.0402865099996088
       ],
-      "actualCameraDistance": 5.1,
+      "actualCameraDistance": 2.2,
       "actionId": null,
       "completedActions": [
         "shop.inspect-workbench"
@@ -791,33 +791,33 @@
         "height": 1.78,
         "speed": 0,
         "walkWeight": 0,
-        "idleFrame": 336.9198664855958,
-        "walkFrame": 59.9091014107139,
+        "idleFrame": 187.08746315832695,
+        "walkFrame": 44.36295551839157,
         "pose": [
-          0.9880841970443726,
-          -0.15391354262828827,
-          1.2026329443415307e-7,
+          0.9865235686302185,
+          -0.16361862421035767,
+          1.7499507976026507e-7,
           0,
-          0.15391352772712708,
-          0.9880841374397278,
-          -1.1532530486135784e-8,
+          0.16361860930919647,
+          0.9865235090255737,
+          -1.2068381849417165e-9,
           0,
-          -1.1705527214189715e-7,
-          2.9905272924679593e-8,
+          -1.7243934280486428e-7,
+          2.98230382611564e-8,
           1,
           0
         ]
       },
       "performance": {
-        "readyMs": 9752,
+        "readyMs": 15641,
         "sampledFrames": 180,
         "frameMs": {
-          "p50": 307,
-          "p95": 942,
-          "p99": 1225,
-          "max": 1344
+          "p50": 374,
+          "p95": 755,
+          "p99": 1047,
+          "max": 1097
         },
-        "drawCalls": 66,
+        "drawCalls": 60,
         "vertices": 20458,
         "graphics": {
           "vendor": "Google Inc. (Microsoft)",
@@ -825,576 +825,576 @@
           "version": "WebGL 2.0"
         }
       },
-      "frames": 448,
-      "activeMeshes": 34,
+      "frames": 404,
+      "activeMeshes": 27,
       "webgl": 2,
       "errors": []
     }
   },
   "resources": [
     {
+      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/index-DjekBs3U.js",
+      "durationMs": 1788,
+      "transferBytes": 194913,
+      "encodedBytes": 194613,
+      "decodedBytes": 765123
+    },
+    {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/shaderStore-D-XQlhUT.js",
-      "durationMs": 511,
+      "durationMs": 423,
       "transferBytes": 818,
       "encodedBytes": 518,
       "decodedBytes": 518
     },
     {
+      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/performanceConfigurator-UtxC_Odd.js",
+      "durationMs": 448,
+      "transferBytes": 861,
+      "encodedBytes": 561,
+      "decodedBytes": 561
+    },
+    {
+      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/engineStore-Bn2tApal.js",
+      "durationMs": 451,
+      "transferBytes": 1551,
+      "encodedBytes": 1251,
+      "decodedBytes": 3561
+    },
+    {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/logger-CuBYPcDK.js",
-      "durationMs": 516,
+      "durationMs": 451,
       "transferBytes": 1166,
       "encodedBytes": 866,
       "decodedBytes": 1925
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/precisionDate-BklAGA5s.js",
-      "durationMs": 518,
+      "durationMs": 451,
       "transferBytes": 5548,
       "encodedBytes": 5248,
       "decodedBytes": 14686
     },
     {
-      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/engineStore-Bn2tApal.js",
-      "durationMs": 522,
-      "transferBytes": 1551,
-      "encodedBytes": 1251,
-      "decodedBytes": 3561
-    },
-    {
-      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/index-Cx0y4zeO.js",
-      "durationMs": 794,
-      "transferBytes": 194866,
-      "encodedBytes": 194566,
-      "decodedBytes": 765047
-    },
-    {
-      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/performanceConfigurator-UtxC_Odd.js",
-      "durationMs": 513,
-      "transferBytes": 861,
-      "encodedBytes": 561,
-      "decodedBytes": 561
-    },
-    {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/internalTexture-B3djGrls.js",
-      "durationMs": 793,
+      "durationMs": 460,
       "transferBytes": 2384,
       "encodedBytes": 2084,
       "decodedBytes": 7932
     },
     {
-      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/buffer.pure-D7i9SmvK.js",
-      "durationMs": 793,
-      "transferBytes": 2764,
-      "encodedBytes": 2464,
-      "decodedBytes": 7450
+      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/thinEngine.pure-D4sByAiU.js",
+      "durationMs": 469,
+      "transferBytes": 31987,
+      "encodedBytes": 31687,
+      "decodedBytes": 130543
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/halfFloat-Cfx5m4ll.js",
-      "durationMs": 793,
+      "durationMs": 467,
       "transferBytes": 984,
       "encodedBytes": 684,
       "decodedBytes": 1419
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/tools.pure-DziwxBcC.js",
-      "durationMs": 793,
+      "durationMs": 466,
       "transferBytes": 10702,
       "encodedBytes": 10402,
       "decodedBytes": 31296
     },
     {
-      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/thinEngine.pure-D4sByAiU.js",
-      "durationMs": 793,
-      "transferBytes": 31987,
-      "encodedBytes": 31687,
-      "decodedBytes": 130543
+      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/buffer.pure-D7i9SmvK.js",
+      "durationMs": 468,
+      "transferBytes": 2764,
+      "encodedBytes": 2464,
+      "decodedBytes": 7450
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/math.scalar.functions-lnL7TJ7T.js",
-      "durationMs": 798,
+      "durationMs": 466,
       "transferBytes": 1123,
       "encodedBytes": 823,
       "decodedBytes": 823
     },
     {
-      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/decorators-DI--mtdq.js",
-      "durationMs": 800,
-      "transferBytes": 1908,
-      "encodedBytes": 1608,
-      "decodedBytes": 3886
-    },
-    {
-      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/decorators.serialization-CX0jzs6-.js",
-      "durationMs": 801,
-      "transferBytes": 2408,
-      "encodedBytes": 2108,
-      "decodedBytes": 5691
-    },
-    {
-      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/baseTexture.pure-BA5I9DyG.js",
-      "durationMs": 802,
-      "transferBytes": 4177,
-      "encodedBytes": 3877,
-      "decodedBytes": 15141
-    },
-    {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/sphericalPolynomial.pure-iC54KHvl.js",
-      "durationMs": 802,
+      "durationMs": 476,
       "transferBytes": 1684,
       "encodedBytes": 1384,
       "decodedBytes": 5798
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/math.color.pure-Bk4uNGU0.js",
-      "durationMs": 809,
+      "durationMs": 478,
       "transferBytes": 18711,
       "encodedBytes": 18411,
       "decodedBytes": 77027
     },
     {
+      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/decorators-DI--mtdq.js",
+      "durationMs": 477,
+      "transferBytes": 1908,
+      "encodedBytes": 1608,
+      "decodedBytes": 3886
+    },
+    {
+      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/decorators.serialization-CX0jzs6-.js",
+      "durationMs": 477,
+      "transferBytes": 2408,
+      "encodedBytes": 2108,
+      "decodedBytes": 5691
+    },
+    {
+      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/baseTexture.pure-BA5I9DyG.js",
+      "durationMs": 478,
+      "transferBytes": 4177,
+      "encodedBytes": 3877,
+      "decodedBytes": 15141
+    },
+    {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/drawWrapper-CW2zleKZ.js",
-      "durationMs": 806,
+      "durationMs": 481,
       "transferBytes": 1733,
       "encodedBytes": 1433,
       "decodedBytes": 3228
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/math.plane-9EB0RMkr.js",
-      "durationMs": 809,
+      "durationMs": 482,
       "transferBytes": 1103,
       "encodedBytes": 803,
       "decodedBytes": 1863
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/texture.pure-eK5QNtRq.js",
-      "durationMs": 811,
+      "durationMs": 482,
       "transferBytes": 6556,
       "encodedBytes": 6256,
       "decodedBytes": 21942
     },
     {
-      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/lightConstants-CunxXadL.js",
-      "durationMs": 810,
-      "transferBytes": 4531,
-      "encodedBytes": 4231,
-      "decodedBytes": 19002
-    },
-    {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/smartArray-BRfcgNbX.js",
-      "durationMs": 812,
+      "durationMs": 484,
       "transferBytes": 778,
       "encodedBytes": 478,
       "decodedBytes": 1234
     },
     {
+      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/lightConstants-CunxXadL.js",
+      "durationMs": 754,
+      "transferBytes": 4531,
+      "encodedBytes": 4231,
+      "decodedBytes": 19002
+    },
+    {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/sceneComponent-BTG-2-ul.js",
-      "durationMs": 815,
+      "durationMs": 1510,
       "transferBytes": 5321,
       "encodedBytes": 5021,
       "decodedBytes": 18536
     },
     {
-      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/math.color-C-2Ci0cS.js",
-      "durationMs": 813,
-      "transferBytes": 402,
-      "encodedBytes": 102,
-      "decodedBytes": 102
-    },
-    {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/renderTargetTexture.pure-BZOzbnH8.js",
-      "durationMs": 815,
+      "durationMs": 1665,
       "transferBytes": 8524,
       "encodedBytes": 8224,
       "decodedBytes": 33262
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/scene.pure-DwdS0WEE.js",
-      "durationMs": 825,
+      "durationMs": 1676,
       "transferBytes": 35395,
       "encodedBytes": 35095,
       "decodedBytes": 162979
     },
     {
+      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/math.color-C-2Ci0cS.js",
+      "durationMs": 1665,
+      "transferBytes": 402,
+      "encodedBytes": 102,
+      "decodedBytes": 102
+    },
+    {
+      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/objectModelMapping-DbkdppJI.js",
+      "durationMs": 1784,
+      "transferBytes": 11008,
+      "encodedBytes": 10708,
+      "decodedBytes": 47721
+    },
+    {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/constants-DlOANaVb.js",
-      "durationMs": 818,
+      "durationMs": 1674,
       "transferBytes": 3569,
       "encodedBytes": 3269,
       "decodedBytes": 11860
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/animation.pure-D3psA0pX.js",
-      "durationMs": 820,
+      "durationMs": 1678,
       "transferBytes": 7101,
       "encodedBytes": 6801,
       "decodedBytes": 26629
     },
     {
-      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/objectModelMapping-DbkdppJI.js",
-      "durationMs": 821,
-      "transferBytes": 11008,
-      "encodedBytes": 10708,
-      "decodedBytes": 47721
-    },
-    {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/effectRenderer.pure-AoULHUnm.js",
-      "durationMs": 820,
+      "durationMs": 1785,
       "transferBytes": 2803,
       "encodedBytes": 2503,
       "decodedBytes": 8467
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/postProcess.pure-DtYkjZYu.js",
-      "durationMs": 821,
+      "durationMs": 1787,
       "transferBytes": 5384,
       "encodedBytes": 5084,
       "decodedBytes": 18436
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/material.pure-Bzmu7Mr2.js",
-      "durationMs": 825,
+      "durationMs": 1789,
       "transferBytes": 21475,
       "encodedBytes": 21175,
       "decodedBytes": 83220
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/brdfTextureTools-BArDfoab.js",
-      "durationMs": 955,
+      "durationMs": 1790,
       "transferBytes": 50708,
       "encodedBytes": 50408,
       "decodedBytes": 80317
     },
     {
-      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/bone.pure-DzeB5I9t.js",
-      "durationMs": 825,
-      "transferBytes": 3111,
-      "encodedBytes": 2811,
-      "decodedBytes": 11836
-    },
-    {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/pbrMaterial.pure-B1jsCpm-.js",
-      "durationMs": 956,
+      "durationMs": 1790,
       "transferBytes": 29201,
       "encodedBytes": 28901,
       "decodedBytes": 151584
     },
     {
+      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/bone.pure-DzeB5I9t.js",
+      "durationMs": 1788,
+      "transferBytes": 3111,
+      "encodedBytes": 2811,
+      "decodedBytes": 11836
+    },
+    {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/index-egtEkJ0V.css",
-      "durationMs": 825,
+      "durationMs": 1787,
       "transferBytes": 1514,
       "encodedBytes": 1214,
       "decodedBytes": 2944
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/shadowMap.fragment-Di-kbM2R.js",
-      "durationMs": 9,
+      "durationMs": 1544,
       "transferBytes": 1494,
       "encodedBytes": 1194,
       "decodedBytes": 3352
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/packingFunctions-DpGwbupU.js",
-      "durationMs": 8,
+      "durationMs": 1426,
       "transferBytes": 883,
       "encodedBytes": 583,
       "decodedBytes": 583
     },
     {
-      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/clipPlaneFragment-DVK0wgyZ.js",
-      "durationMs": 10,
-      "transferBytes": 694,
-      "encodedBytes": 394,
-      "decodedBytes": 1229
-    },
-    {
-      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/shadowMap.vertex-BkHOJrDV.js",
-      "durationMs": 22,
-      "transferBytes": 1921,
-      "encodedBytes": 1621,
-      "decodedBytes": 4779
-    },
-    {
-      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/sceneVertexDeclaration-CluTp-RC.js",
-      "durationMs": 19,
-      "transferBytes": 690,
-      "encodedBytes": 390,
-      "decodedBytes": 390
-    },
-    {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/clipPlaneVertex-Cqy6RCeP.js",
-      "durationMs": 21,
+      "durationMs": 1543,
       "transferBytes": 2142,
       "encodedBytes": 1842,
       "decodedBytes": 8878
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/morphTargetsVertex-6N5r7oF1.js",
-      "durationMs": 21,
+      "durationMs": 1543,
       "transferBytes": 1326,
       "encodedBytes": 1026,
       "decodedBytes": 4435
     },
     {
+      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/clipPlaneFragment-DVK0wgyZ.js",
+      "durationMs": 1543,
+      "transferBytes": 694,
+      "encodedBytes": 394,
+      "decodedBytes": 1229
+    },
+    {
+      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/shadowMap.vertex-BkHOJrDV.js",
+      "durationMs": 1543,
+      "transferBytes": 1921,
+      "encodedBytes": 1621,
+      "decodedBytes": 4779
+    },
+    {
+      "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/sceneVertexDeclaration-CluTp-RC.js",
+      "durationMs": 1546,
+      "transferBytes": 690,
+      "encodedBytes": 390,
+      "decodedBytes": 390
+    },
+    {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/helperFunctions-D89zo_74.js",
-      "durationMs": 21,
+      "durationMs": 1541,
       "transferBytes": 2654,
       "encodedBytes": 2354,
       "decodedBytes": 6982
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/sceneUboDeclaration-B5VhSG0v.js",
-      "durationMs": 126,
+      "durationMs": 1546,
       "transferBytes": 721,
       "encodedBytes": 421,
       "decodedBytes": 421
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/meshUboDeclaration-BmNu2KU_.js",
-      "durationMs": 257,
+      "durationMs": 1546,
       "transferBytes": 701,
       "encodedBytes": 401,
       "decodedBytes": 401
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/depthBoxBlur.fragment-CLEAG5DG.js",
-      "durationMs": 256,
+      "durationMs": 1545,
       "transferBytes": 893,
       "encodedBytes": 593,
       "decodedBytes": 593
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/shadowMapFragmentSoftTransparentShadow-R_iOKnyx.js",
-      "durationMs": 255,
+      "durationMs": 1545,
       "transferBytes": 746,
       "encodedBytes": 446,
       "decodedBytes": 446
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/envTextureLoader-BQQ44QfN.js",
-      "durationMs": 290,
+      "durationMs": 1544,
       "transferBytes": 3553,
       "encodedBytes": 3253,
       "decodedBytes": 8104
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/cubemapToSphericalPolynomial-CiUE6bUL.js",
-      "durationMs": 291,
+      "durationMs": 1544,
       "transferBytes": 1954,
       "encodedBytes": 1654,
       "decodedBytes": 3745
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/shop-lighting.env",
-      "durationMs": 182,
+      "durationMs": 98,
       "transferBytes": 63366,
       "encodedBytes": 63066,
       "decodedBytes": 66132
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/rgbdDecode.fragment-ycGs1SRq.js",
-      "durationMs": 22,
+      "durationMs": 10,
       "transferBytes": 877,
       "encodedBytes": 577,
       "decodedBytes": 577
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/postprocess.vertex-DJCmMhI8.js",
-      "durationMs": 323,
+      "durationMs": 6,
       "transferBytes": 816,
       "encodedBytes": 516,
       "decodedBytes": 516
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/engineering-toolcase.glb",
-      "durationMs": 161,
+      "durationMs": 23,
       "transferBytes": 1068,
       "encodedBytes": 768,
       "decodedBytes": 768
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/pbrMaterial.pure-Pa_037eH.js",
-      "durationMs": 19,
+      "durationMs": 9,
       "transferBytes": 411,
       "encodedBytes": 111,
       "decodedBytes": 111
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/pbrMaterialLoadingAdapter-BsjbVMOm.js",
-      "durationMs": 18,
+      "durationMs": 9,
       "transferBytes": 3581,
       "encodedBytes": 3281,
       "decodedBytes": 16589
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/textureProcessor-CEyZ6hON.js",
-      "durationMs": 19,
+      "durationMs": 9,
       "transferBytes": 6634,
       "encodedBytes": 6334,
       "decodedBytes": 20610
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/technician.glb",
-      "durationMs": 429,
+      "durationMs": 109,
       "transferBytes": 1493636,
       "encodedBytes": 1493336,
       "decodedBytes": 1493336
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/animationGroup.pure-DMnQWhGb.js",
-      "durationMs": 6,
+      "durationMs": 320,
       "transferBytes": 10592,
       "encodedBytes": 10292,
       "decodedBytes": 42159
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/glTFLoaderAnimation.pure-DLio7QS5.js",
-      "durationMs": 62,
+      "durationMs": 3,
       "transferBytes": 1173,
       "encodedBytes": 873,
       "decodedBytes": 1898
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/default.vertex-CdQErHUY.js",
-      "durationMs": 7,
+      "durationMs": 5,
       "transferBytes": 2603,
       "encodedBytes": 2303,
       "decodedBytes": 8162
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/logDepthVertex-DbaC19x4.js",
-      "durationMs": 11,
+      "durationMs": 113,
       "transferBytes": 2103,
       "encodedBytes": 1803,
       "decodedBytes": 7143
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/defaultUboDeclaration-C53xcSdv.js",
-      "durationMs": 13,
+      "durationMs": 119,
       "transferBytes": 882,
       "encodedBytes": 582,
       "decodedBytes": 1321
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/instancesDeclaration-CJBvtBV5.js",
-      "durationMs": 8,
+      "durationMs": 34,
       "transferBytes": 1291,
       "encodedBytes": 991,
       "decodedBytes": 991
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/logDepthDeclaration-D_lEqJ0h.js",
-      "durationMs": 13,
+      "durationMs": 10,
       "transferBytes": 803,
       "encodedBytes": 503,
       "decodedBytes": 503
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/bumpVertexDeclaration-CP4xz8pV.js",
-      "durationMs": 17,
+      "durationMs": 10,
       "transferBytes": 723,
       "encodedBytes": 423,
       "decodedBytes": 423
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/vertexColorMixing-B7dmaeCQ.js",
-      "durationMs": 6,
+      "durationMs": 9,
       "transferBytes": 1106,
       "encodedBytes": 806,
       "decodedBytes": 806
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/bumpVertex-matgJiZ9.js",
-      "durationMs": 3,
+      "durationMs": 12,
       "transferBytes": 893,
       "encodedBytes": 593,
       "decodedBytes": 593
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/default.fragment-Beb9xtBT.js",
-      "durationMs": 7,
+      "durationMs": 8,
       "transferBytes": 6289,
       "encodedBytes": 5989,
       "decodedBytes": 25445
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/oitFragment-C2qnI7mL.js",
-      "durationMs": 8,
+      "durationMs": 10,
       "transferBytes": 11277,
       "encodedBytes": 10977,
       "decodedBytes": 53469
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/reflectionFunction-BTwp8RXV.js",
-      "durationMs": 11,
+      "durationMs": 9,
       "transferBytes": 1630,
       "encodedBytes": 1330,
       "decodedBytes": 5149
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/lightFragment-x7Xpl9uU.js",
-      "durationMs": 4,
+      "durationMs": 8,
       "transferBytes": 3688,
       "encodedBytes": 3388,
       "decodedBytes": 20618
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/bumpFragment-BASNbuGF.js",
-      "durationMs": 8,
+      "durationMs": 12,
       "transferBytes": 2736,
       "encodedBytes": 2436,
       "decodedBytes": 6934
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/fogFragment-CISE_m3s.js",
-      "durationMs": 6,
+      "durationMs": 7,
       "transferBytes": 823,
       "encodedBytes": 523,
       "decodedBytes": 1133
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/pbr.vertex-B062lJEp.js",
-      "durationMs": 8,
+      "durationMs": 6,
       "transferBytes": 3963,
       "encodedBytes": 3663,
       "decodedBytes": 17343
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/pbrUboDeclaration-C6VSFqZI.js",
-      "durationMs": 7,
+      "durationMs": 5,
       "transferBytes": 1023,
       "encodedBytes": 723,
       "decodedBytes": 1900
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/pbrBRDFFunctions-BCNINF-p.js",
-      "durationMs": 7,
+      "durationMs": 16,
       "transferBytes": 4460,
       "encodedBytes": 4160,
       "decodedBytes": 11985
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/harmonicsFunctions-QSz_WdsQ.js",
-      "durationMs": 4,
+      "durationMs": 18,
       "transferBytes": 830,
       "encodedBytes": 530,
       "decodedBytes": 1182
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/pbr.fragment-l7eKgVrz.js",
-      "durationMs": 7,
+      "durationMs": 22,
       "transferBytes": 18764,
       "encodedBytes": 18464,
       "decodedBytes": 98954
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/pbrDebug-Cmv3zC18.js",
-      "durationMs": 9,
+      "durationMs": 19,
       "transferBytes": 8880,
       "encodedBytes": 8580,
       "decodedBytes": 38269
     },
     {
       "url": "http://127.0.0.1:4173/av-tech-rpg/3d/assets/pbrIBLFunctions-CZOjFl72.js",
-      "durationMs": 9,
+      "durationMs": 17,
       "transferBytes": 1833,
       "encodedBytes": 1533,
       "decodedBytes": 4985

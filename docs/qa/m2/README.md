@@ -58,10 +58,94 @@ installs/builds neither fetch nor regenerate art.
 
 ## Verification and visual acceptance
 
-The eight existing domain tests and production Firefox keyboard/mouse flow
-passed during integration. The two added artifact/validation checks pass.
-Final full-suite results, browser screenshots, footage and measurements are
-recorded below after capture. Tests do not establish owner visual acceptance.
+Code verified: `db91ac0c29bb15e7929a76bba9ce3c302c8a6fab`.
+[Clean-checkout CI](https://github.com/11anthonym/av-tech-rpg/actions/runs/45062885260)
+passed on 2026-11-22. It installs the committed lockfile, typechecks/builds both
+variants and tests the staged production artifact. No deployment ran.
+
+| Check | Result |
+| --- | --- |
+| `pnpm install --frozen-lockfile`, clean Ubuntu/Node 24 CI | Passed |
+| `pnpm test` | 10 passed: 8 domain/save contracts and 2 artifact checks |
+| `pnpm build`, `pnpm build:portable` | Passed, including strict TypeScript for source/tests/config |
+| `xvfb-run --auto-servernum pnpm test:browser`, software Mesa CI | **19 passed**: 9 Chromium, 9 Firefox, 1 portable-root |
+| `node scripts/qa-all.js`, local Windows | 43 static-script and 43 unit checks passed; full legacy browser smoke passed |
+| `node scripts/capture-m2.mjs`, local Firefox | Actual keyboard/mouse gameplay, screenshots and measurements captured; zero JS/console/HTTP errors |
+| `M2_VIDEO=1 node scripts/capture-m2.mjs` | Actual walking/turning recording captured and sampled for visual QA |
+
+The browser checks retain M1 interaction, camera, collision, focus/pause,
+storage-denial/corrupt-save and legacy-root checks. Added checks verify actual
+bone-pose/clip-frame changes during travel, blending to idle against a collider,
+save/reload at that exact resting point, frozen animation during pause and
+visible failures for a missing human or lighting asset. A low-speed collision
+resting-point discrepancy was found and fixed: save validation now allows the
+engine's observed ~2cm collision tolerance rather than resetting that position.
+
+Local Chromium headless-shell startup stalled and a full local-suite attempt
+was interrupted when the automation service restarted. Chromium now selects
+Playwright's full/new-headless channel; the complete final browser result above
+is the clean Linux CI run. Local Firefox integration checks and full legacy
+smoke also passed. Tests do not establish owner visual acceptance.
+
+## Actual browser evidence
+
+- [Normal follow camera](shop-follow.png), [walking pose](technician-walking.png).
+- [Face/clothes close view](technician-front.png), [workbench](workbench.png),
+  [Van #3/loading bay](van-loading-bay.png).
+- [50-second walking/turning gameplay excerpt](walking-turning.webm).
+  It is an unsped-up excerpt from the recorded game, not an offline render.
+  Keyboard input turns/walks in four directions and approaches the bench.
+  The VP9 container is 960×540 at 25 encoded frames/s; repeated frames from the
+  software renderer mean this is **not** evidence of 25 rendered FPS.
+
+The committed excerpt trims original seconds 24–74, removing startup. It was
+re-encoded without changing elapsed time (`-ss 24 -t 50 -c:v libvpx-vp9 -crf 32
+-b:v 0 -deadline realtime -cpu-used 6`). `video.json` records the output hash;
+rerunning capture produces a new full recording, not an identical excerpt.
+
+![Normal follow-camera game view](shop-follow.png)
+
+![Human face and work clothes in the actual game](technician-front.png)
+
+The face, normal anatomy, clothes and separate shoes are visible. Sampled
+recording frames at original 30/50/65 seconds show forward travel, side-facing
+stride and the bench approach without inversion or ragdoll pose. Standing soles
+are aligned to the flat floor; native gait and camera near obstacles still need
+owner motion review. Source footwear is not a work-boot asset. No carry/tool
+pose is represented as implemented. The workbench action uses its existing UI.
+
+## Measured limits
+
+Raw observations: [browser measurements](browser-measurements.json),
+[build sizes](build-size.json), [video metadata](video.json).
+
+| Observation | Measured value |
+| --- | --- |
+| Browser/viewport | Firefox 159.0, 1280×720, WebGL 2 |
+| Host | Windows 10.0.26100 VM, QEMU CPU, 4 logical cores, 12,864,364,544 bytes RAM |
+| Renderer | ANGLE / Microsoft Basic Render Driver, Direct3D11 **software rendering** |
+| Local first interactive | 15,641ms in a fresh browser context; local preview, caches not deliberately flushed |
+| Last 180 frame intervals after gameplay/zoom | p50 374ms; p95 755ms; p99 1,047ms; max 1,097ms |
+| Scene geometry / observed draw calls | 20,458 vertices; 60 at close view, 67 initially, including shadows |
+| Human geometry | 4,246 vertices; 7,153 triangles; 5 meshes, 80 joints |
+| Embedded human images | 11 × 1024² WebP, 938,510 bytes encoded; ~58.7 MiB RGBA8+mips estimate |
+| Deployable build, excluding source maps | 166 files, 4,722,922 bytes; sum of per-file gzip estimates 2,106,548 bytes |
+| Largest JS chunk | 765,123 bytes; Vite's >500kB warning remains visible |
+| Runtime errors | Zero captured JS exceptions, console errors or HTTP failures |
+
+These software-VM timings are slow and are **not a playable target-device
+performance pass**. Automated screenshots and close-up pixel fill also affect
+frame intervals. The 100ms simulation cap slows travel under heavy stalls;
+animation uses the same capped clock to avoid a real-time gait outrunning that
+travel, and uses zero time scale during pause to prevent resume jumps.
+Hardware GPU allocation is not measured; the texture figure is an estimate,
+not process/GPU memory. Build gzip values are estimates, not hosted transfers.
+
+Browser warnings are preserved in the JSON: deprecated renderer-info access,
+lazy cube-face initialization and software depth-comparison filtering behavior.
+Shadow aliasing, simple procedural surfaces and the faceted van remain visible
+art limitations. No threshold was relaxed to turn these observations into an
+art or performance acceptance claim.
 
 ## Known limits
 

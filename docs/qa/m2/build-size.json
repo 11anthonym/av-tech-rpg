@@ -1,0 +1,32 @@
+{
+  "deployableFiles": 166,
+  "bytes": 4722922,
+  "perFileGzipEstimateBytes": 2106548,
+  "largest": [
+    {
+      "file": "assets\\technician.glb",
+      "bytes": 1493336,
+      "gzipBytes": 1241098
+    },
+    {
+      "file": "assets\\index-DjekBs3U.js",
+      "bytes": 765123,
+      "gzipBytes": 194613
+    },
+    {
+      "file": "assets\\scene.pure-DwdS0WEE.js",
+      "bytes": 162979,
+      "gzipBytes": 35095
+    },
+    {
+      "file": "assets\\pbrMaterial.pure-B1jsCpm-.js",
+      "bytes": 151584,
+      "gzipBytes": 28901
+    },
+    {
+      "file": "assets\\openpbrMaterial.pure-7ZtiE1-9.js",
+      "bytes": 140637,
+      "gzipBytes": 31548
+    }
+  ]
+}

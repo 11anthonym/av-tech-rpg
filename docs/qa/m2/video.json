@@ -1,0 +1,15 @@
+{
+  "file": "walking-turning.webm",
+  "bytes": 1254757,
+  "sha256": "8fbb6c49533c7e6ba467e003320ccdfb58000e643eeebedd3da2d40bfe2c873b",
+  "sourceDurationSeconds": 80.92,
+  "excerptStartSeconds": 24,
+  "excerptDurationSeconds": 50,
+  "width": 960,
+  "height": 540,
+  "codec": "VP9",
+  "encodedFramesPerSecond": 25,
+  "source": "Playwright actual Firefox gameplay capture; normal keyboard input; no game-state setters",
+  "processing": "Trim original seconds 24–74 and re-encode VP9; no speed change or generated frames",
+  "renderPerformance": "Software WARP renderer; repeated video frames do not establish 25 rendered FPS"
+}
