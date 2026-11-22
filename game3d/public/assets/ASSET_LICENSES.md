@@ -19,7 +19,8 @@ Full notices: [Rocketbox](licenses/ROCKETBOX.md),
 
 Modifications: select tee/trousers/shoes; tint clothing; remove unused garments,
 morphs and clips; keep Idle/Walk; remove horizontal Walk hip travel; flatten
-identity skinned-mesh parenting; resample/deduplicate; generate MikkTSpace
+identity skinned-mesh parenting; resample/deduplicate; resize embedded WebP maps
+from 2K to 1K at quality 90; generate MikkTSpace
 tangents. Two degenerate tangent vectors receive normal-orthogonal fallbacks.
 Face, body proportions, skin, rig and gait remain derived source work.
 The reproducible conversion and original/runtime hashes are recorded in

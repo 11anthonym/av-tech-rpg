@@ -54,6 +54,8 @@ export function isSafePosition(position: Vec3): boolean {
     && Math.abs(position[2] - floor.position[2]) <= floor.size[2] / 2
     && position[1] >= 0.85 && position[1] <= 2
     && !shop.props.some(prop => prop.solid && prop.id !== "floor" &&
-      Math.abs(position[0] - prop.position[0]) < prop.size[0] / 2 + 0.29 &&
-      Math.abs(position[2] - prop.position[2]) < prop.size[2] / 2 + 0.29);
+      // Babylon swept collision can settle ~2cm inside its nominal 0.3m
+      // radius at walking speed. Accept those real resting points on reload.
+      Math.abs(position[0] - prop.position[0]) < prop.size[0] / 2 + 0.27 &&
+      Math.abs(position[2] - prop.position[2]) < prop.size[2] / 2 + 0.27);
 }

@@ -13,10 +13,10 @@ export function createShopArt(scene: Scene, root: TransformNode) {
   const batches = new Map<PBRMaterial, Mesh[]>();
   const material = (name: string, color: string, roughness = 0.7, metallic = 0) => {
     const m = new PBRMaterial(name, scene);
-    m.albedoColor = Color3.FromHexString(color); m.roughness = roughness; m.metallic = metallic;
+    m.albedoColor = Color3.FromHexString(color).toLinearSpace(); m.roughness = roughness; m.metallic = metallic;
     return m;
   };
-  const steel = material("powder-coated-steel", "#343d43", 0.48, 0.65);
+  const steel = material("powder-coated-steel", "#343d43", 0.55, 0.25);
   const aluminium = material("rack-rails", "#9ba4a7", 0.32, 0.85);
   const black = material("equipment-ABS", "#161c21", 0.52, 0.12);
   const rubber = material("rubber", "#171a1d", 0.95);

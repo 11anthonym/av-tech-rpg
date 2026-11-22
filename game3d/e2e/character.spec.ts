@@ -24,6 +24,13 @@ test("real human animates through keyboard travel, blends to idle at collision a
   expect((await snapshot(page)).character?.speed).toBeLessThan(0.08);
   await page.keyboard.up("w");
   await page.getByRole("button", { name: "Pause / settings" }).click();
+  // Save at the actual low-speed collision resting point, then reload there.
+  const resting = await snapshot(page);
+  await page.reload();
+  await expect(page.locator("#app")).toHaveAttribute("data-ready", "true", { timeout: 30000 });
+  const reloaded = await snapshot(page);
+  expect(Math.hypot(...reloaded.position.map((n, i) => n - resting.position[i]!))).toBeLessThan(0.03);
+  await page.getByRole("button", { name: "Pause / settings" }).click();
   const paused = await snapshot(page);
   await page.waitForFunction(frame => window.__AV3D__!.snapshot().frames > frame + 5, paused.frames);
   const still = await snapshot(page);
@@ -38,5 +45,13 @@ test("a missing technician reports failure without substituting a capsule", asyn
   await page.goto("./?debug=1");
   await expect(page.locator("#error-panel")).toBeVisible();
   expect((await snapshot(page)).character).toBeNull();
+  await expect(page.locator("#app")).toHaveAttribute("data-ready", "false");
+});
+
+test("missing shop lighting fails visibly instead of waiting forever", async ({ page }) => {
+  await page.route("**/assets/shop-lighting.env", route => route.fulfill({ status: 404, body: "Missing environment fixture" }));
+  await page.goto("./");
+  await expect(page.locator("#error-panel")).toBeVisible();
+  await expect(page.locator("#error-copy")).toContainText("Shop lighting could not load");
   await expect(page.locator("#app")).toHaveAttribute("data-ready", "false");
 });

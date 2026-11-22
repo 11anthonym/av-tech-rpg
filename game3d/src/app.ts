@@ -19,7 +19,7 @@ export interface Diagnostics {
   cameraPosition: number[]; actualCameraDistance: number; actionId: string | null;
   completedActions: string[]; paused: boolean; frames: number; activeMeshes: number; webgl: number; errors: string[];
   character: CharacterController["character"] | null;
-  performance: { readyMs: number; sampledFrames: number; frameMs: { p50: number; p95: number; max: number }; drawCalls: number; vertices: number; graphics: { vendor: string; renderer: string; version: string } } | null;
+  performance: { readyMs: number; sampledFrames: number; frameMs: { p50: number; p95: number; p99: number; max: number }; drawCalls: number; vertices: number; graphics: { vendor: string; renderer: string; version: string } } | null;
 }
 declare global { interface Window { __AV3D__?: { snapshot(): Diagnostics } } }
 
@@ -96,6 +96,7 @@ export async function startGame(root: HTMLElement) {
   try {
     renderer = createRenderer(hud.canvas);
     input = new PlayerInput(hud.canvas);
+    await renderer.ready;
     area = await createAreaView(renderer.scene, shop);
     hud.notice("Loading technician and movement clips…");
     controller = new CharacterController(renderer.scene, loaded.data.position, await createTechnicianVisual(renderer.scene));
@@ -115,7 +116,8 @@ export async function startGame(root: HTMLElement) {
     renderer.engine.runRenderLoop(() => {
       if (failed || contextLost || !renderer || !input || !controller || !camera || !area) return;
       try {
-        const delta = Math.min(renderer.engine.getDeltaTime() / 1000, 0.1);
+        const rawDelta = Math.max(renderer.engine.getDeltaTime() / 1000, 0.001);
+        const delta = Math.min(rawDelta, 0.1);
         if (frames > 3) { frameTimes.push(renderer.engine.getDeltaTime()); if (frameTimes.length > 180) frameTimes.shift(); }
         if (!paused && !document.hidden) {
           camera.orbit(input.consumeCamera());
@@ -134,7 +136,11 @@ export async function startGame(root: HTMLElement) {
           sinceUi = 0;
         }
         if (input.consumeInteraction()) interact();
-        renderer.scene.animationsEnabled = !paused && !document.hidden;
+        // Keep the animation clock on the same capped time as movement. At
+        // low FPS a real-time gait otherwise runs ahead of collision travel.
+        // A zero scale also keeps Babylon's timestamp current during pause,
+        // preventing a clip jump when the scene resumes.
+        renderer.scene.animationTimeScale = paused || document.hidden ? 0 : delta / rawDelta;
         renderer.scene.render();
         frames += 1;
         if (frames === 3) {
@@ -152,5 +158,5 @@ export async function startGame(root: HTMLElement) {
 
 function percentiles(values: number[]) {
   const sorted = [...values].sort((a, b) => a - b);
-  return { p50: sorted[Math.floor(sorted.length * 0.5)] ?? 0, p95: sorted[Math.floor(sorted.length * 0.95)] ?? 0, max: sorted.at(-1) ?? 0 };
+  return { p50: sorted[Math.floor(sorted.length * 0.5)] ?? 0, p95: sorted[Math.floor(sorted.length * 0.95)] ?? 0, p99: sorted[Math.floor(sorted.length * 0.99)] ?? 0, max: sorted.at(-1) ?? 0 };
 }

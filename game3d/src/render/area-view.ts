@@ -42,7 +42,7 @@ export async function createAreaView(scene: Scene, area: AreaDefinition) {
   caseRoot.scaling.set(0.45, 0.25, 0.3);
   const caseAsset = await loadModel(scene, "engineering-toolcase.glb", caseRoot);
   const caseMaterial = new PBRMaterial("toolcase-polymer", scene);
-  caseMaterial.albedoColor = Color3.FromHexString("#303a40"); caseMaterial.roughness = 0.68; caseMaterial.metallic = 0.08;
+  caseMaterial.albedoColor = Color3.FromHexString("#303a40").toLinearSpace(); caseMaterial.roughness = 0.68; caseMaterial.metallic = 0.08;
   caseAsset.meshes.forEach(mesh => { mesh.isPickable = false; if (mesh.getTotalVertices()) mesh.material = caseMaterial; });
   const art = createShopArt(scene, root);
   let focused: AbstractMesh | undefined;

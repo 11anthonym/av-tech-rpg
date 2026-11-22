@@ -37,11 +37,14 @@ pin original/runtime hashes and record transformations.
 
 | Asset | Original bytes | Runtime bytes |
 | --- | ---: | ---: |
-| Andre GLB | 12,701,036 | 3,289,032 |
+| Andre GLB | 12,701,036 | 1,493,336 |
 | Studio Small 09 HDR | 1,615,248 | 66,132, prefiltered `.env` |
 | Engineering toolcase | 768 | unchanged |
 
-The human embeds 11 WebP images. Source validation had 22 warnings for missing
+The human embeds 11 1K WebP images (quality 90), reduced from 11 2K source maps.
+Their RGBA8-with-mips estimate drops from 235 MiB to 58.7 MiB; this estimates
+texture storage, not measured GPU allocation or total process memory.
+Source validation had 22 warnings for missing
 tangents and non-root skinned nodes; processed validation has **zero errors and
 zero warnings**. MikkTSpace needed normal-orthogonal tangent fallbacks at two
 degenerate vertices. No runtime decoder download is needed.

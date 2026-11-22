@@ -29,6 +29,7 @@
     "@types/node": "24.10.1",
     "gltf-validator": "2.0.0-dev.3.10",
     "mikktspace": "1.1.1",
+    "sharp": "0.35.5",
     "typescript": "7.0.2",
     "vite": "8.3.8"
   }

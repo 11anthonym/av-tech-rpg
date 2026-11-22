@@ -36,7 +36,8 @@ export class CharacterController {
   }
   private syncVisual(speed: number, delta: number) {
     this.visual.root.position.copyFrom(this.body.position);
-    this.visual.root.position.y -= 0.9;
+    // Capsule has 2cm flat-floor clearance; visible soles rest on the floor.
+    this.visual.root.position.y -= 0.92;
     this.visual.setMotion(speed, delta);
   }
   dispose() { this.body.dispose(); this.visual.dispose(); }

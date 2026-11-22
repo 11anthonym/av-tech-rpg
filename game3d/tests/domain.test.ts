@@ -48,7 +48,7 @@ test("save round trip preserves domain and safe transforms", () => {
   assert.deepEqual(parseSave(JSON.stringify(invalidPosition)).position, shop.spawn);
   // Real swept-collision resting points at the bench and outer walls must not
   // be mistaken for corrupt positions and reset to spawn on reload.
-  for (const position of [[0, 0.92, -0.803], [-5.5, 0.92, -6.573], [8.573, 0.92, 0]]) {
+  for (const position of [[0, 0.92, -0.803], [0, 0.92, -0.7806628815], [-5.5, 0.92, -6.573], [8.573, 0.92, 0], [8.60, 0.92, 0], [4.419, 0.92, 4.5]]) {
     assert.deepEqual(parseSave(JSON.stringify({ ...data, position })).position, position);
   }
   assert.equal(isSafePosition([-5.5, 0.92, -6.7]), false);

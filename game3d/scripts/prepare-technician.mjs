@@ -5,8 +5,9 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
-import { dedup, prune, resample, tangents, unweld, weld } from '@gltf-transform/functions';
+import { dedup, prune, resample, tangents, unweld, weld, textureCompress } from '@gltf-transform/functions';
 import { generateTangents } from 'mikktspace';
+import sharp from 'sharp';
 import validator from 'gltf-validator';
 
 const base = fileURLToPath(new URL('../', import.meta.url));
@@ -34,8 +35,6 @@ for (const node of root.listNodes()) {
 for (const mesh of root.listMeshes()) {
   for (const primitive of mesh.listPrimitives()) {
     for (const target of primitive.listTargets()) { primitive.removeTarget(target); target.dispose(); }
-    if (mesh.getName() === 'Top_tee') primitive.getMaterial()?.setBaseColorFactor([0.08, 0.16, 0.23, 1]);
-    if (mesh.getName() === 'Trousers') primitive.getMaterial()?.setBaseColorFactor([0.2, 0.22, 0.24, 1]);
   }
   mesh.setWeights([]);
   mesh.setExtras({});
@@ -71,6 +70,9 @@ for (const mesh of root.listMeshes()) for (const primitive of mesh.listPrimitive
   }
   tangent.setArray(values);
 }
+// 11 source 2K maps cost ~235 MiB as RGBA8+mips for one person. 1K maps
+// reduce that estimate to ~59 MiB while keeping the normal follow-camera detail.
+await doc.transform(textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [1024, 1024], quality: 90 }));
 const output = await io.writeBinary(doc);
 const after = await validator.validateBytes(output, { uri: 'technician.glb' });
 if (after.issues.numErrors) throw new Error(`Runtime GLB fails glTF validation: ${JSON.stringify(after.issues.messages)}`);
@@ -81,9 +83,12 @@ const report = {
   source: { url: sourceUrl, revision, sha256: hash(bytes), bytes: bytes.length },
   runtime: { file: 'technician.glb', sha256: hash(output), bytes: output.length,
     outfit, meshes: root.listMeshes().length, joints: root.listSkins()[0].listJoints().length, degenerateTangents,
+    vertices: root.listMeshes().reduce((n, m) => n + m.listPrimitives().reduce((s,p) => s + p.getAttribute('POSITION').getCount(), 0), 0),
+    triangles: root.listMeshes().reduce((n, m) => n + m.listPrimitives().reduce((s,p) => s + p.getIndices().getCount() / 3, 0), 0),
+    decodedRGBA8WithMipBytesEstimate: root.listTextures().reduce((s,t) => { const [w,h] = t.getSize(); return s + w*h*4*4/3; }, 0),
     textures: root.listTextures().map(t => ({ name: t.getName(), mime: t.getMimeType(), size: t.getSize(), bytes: t.getImage()?.length })),
     animations: root.listAnimations().map(a => a.getName()),
-    transforms: ['Retain tee, trousers, shoes, exposed skin and head', 'Remove unused garments, clips and facial morph targets', 'Tint work clothes', 'Remove Walk horizontal hip travel; preserve vertical gait', 'Move skinned meshes out of identity Rig parent', 'Resample/deduplicate/prune and generate MikkTSpace tangents; no geometry quantization'] },
+    transforms: ['Retain tee, trousers, shoes, exposed skin and head', 'Remove unused garments, clips and facial morph targets', 'Tint work clothes', 'Remove Walk horizontal hip travel; preserve vertical gait', 'Move skinned meshes out of identity Rig parent', 'Resample/deduplicate/prune and generate MikkTSpace tangents; no geometry quantization', 'Resize embedded WebP images to 1K, quality 90'] },
   validation: Object.fromEntries([['source', before], ['runtime', after]].map(([name, result]) => [name, {
     errors: result.issues.numErrors, warnings: result.issues.numWarnings, infos: result.issues.numInfos,
     messages: result.issues.messages.filter(m => m.severity <= 1),
