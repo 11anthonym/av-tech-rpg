@@ -2,10 +2,12 @@ import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import type { Scene } from "@babylonjs/core/scene";
 import type { AreaDefinition } from "../world/shop.ts";
 import { loadModel } from "./assets.ts";
+import { createShopArt } from "./shop-art.ts";
 
 export async function createAreaView(scene: Scene, area: AreaDefinition) {
   const root = new TransformNode(area.id, scene);
@@ -24,6 +26,7 @@ export async function createAreaView(scene: Scene, area: AreaDefinition) {
     mesh.position.set(...prop.position);
     mesh.material = materials.get(prop.material)!;
     mesh.checkCollisions = prop.solid;
+    mesh.isVisible = false;
     mesh.metadata = { blocksSight: prop.solid, cameraSolid: prop.solid };
     meshes.set(prop.id, mesh);
   }
@@ -38,7 +41,10 @@ export async function createAreaView(scene: Scene, area: AreaDefinition) {
   caseRoot.position.set(0.8, 1.18, 0);
   caseRoot.scaling.set(0.45, 0.25, 0.3);
   const caseAsset = await loadModel(scene, "engineering-toolcase.glb", caseRoot);
-  caseAsset.meshes.forEach(mesh => { mesh.isPickable = false; });
+  const caseMaterial = new PBRMaterial("toolcase-polymer", scene);
+  caseMaterial.albedoColor = Color3.FromHexString("#303a40"); caseMaterial.roughness = 0.68; caseMaterial.metallic = 0.08;
+  caseAsset.meshes.forEach(mesh => { mesh.isPickable = false; if (mesh.getTotalVertices()) mesh.material = caseMaterial; });
+  const art = createShopArt(scene, root);
   let focused: AbstractMesh | undefined;
   return {
     root, meshes,
@@ -47,6 +53,7 @@ export async function createAreaView(scene: Scene, area: AreaDefinition) {
       if (next === focused) return;
       if (focused?.material instanceof StandardMaterial) focused.material.emissiveColor.set(0, 0, 0);
       focused = next;
+      art.focus(Boolean(next));
       if (focused?.material instanceof StandardMaterial) focused.material.emissiveColor.set(0.18, 0.12, 0.025);
     },
     dispose() { caseAsset.dispose(); root.dispose(false, true); },

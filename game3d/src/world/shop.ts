@@ -39,6 +39,8 @@ export const shop: AreaDefinition = {
     { id: "staging", position: [-5.5, 1, 5], size: [3, 2, 0.8], material: "steel", solid: true },
     { id: "staging-cartons", position: [-5.5, 2.25, 5], size: [2.5, 0.5, 0.6], material: "carton", solid: false },
     { id: "supply-counter", position: [-5.5, 0.6, -2], size: [2.5, 1.2, 1], material: "wood", solid: true },
+    { id: "equipment-racks", position: [-0.85, 1, 7.9], size: [1.5, 2, 0.9], material: "steel", solid: true },
+    { id: "display-cart", position: [-3.1, 0.95, 1.6], size: [1.25, 1.9, 0.7], material: "steel", solid: true },
     { id: contentIds.vehicle, position: [5.8, 1.1, 4.5], size: [2.2, 2.2, 4.8], material: "steel", solid: true },
   ],
   interactions: [{ id: "shop.workbench", actionId: "shop.inspect-workbench", anchor: [0, 1.05, -0.55],

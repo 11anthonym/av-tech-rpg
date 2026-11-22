@@ -17,8 +17,8 @@ export class GameHud {
     this.root = root;
     root.innerHTML = `
       <canvas id="game-view" tabindex="0" aria-label="3D shop. Use WASD or arrow keys to walk, drag to orbit, wheel to zoom, and E to interact."></canvas>
-      <header class="topbar"><div><span class="eyebrow">AV TECH RPG · M1 ENGINEERING SCENE</span><h1>Trunkslammer Shop</h1>
-        <p class="stage-note">Placeholder assets · realistic characters and shop art arrive in M2</p></div>
+      <header class="topbar"><div><span class="eyebrow">AV TECH RPG · M2 ART TRIAL</span><h1>Trunkslammer Shop</h1>
+        <p class="stage-note">Service bench · systems test · Van 3 loading bay</p></div>
         <nav><a id="legacy-link">Original 2D career</a><button id="pause-button">Pause / settings</button></nav></header>
       <div id="notice" role="status" class="notice">Loading shop…</div>
       <footer><div class="controls"><span><kbd>WASD</kbd> / arrows · Walk</span><span>Drag · Orbit</span><span>Wheel · Zoom</span></div>

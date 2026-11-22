@@ -1,0 +1,288 @@
+{
+  "source": {
+    "url": "https://raw.githubusercontent.com/memoriesrohit/avatar-studio/2fd9ec82fbe1613d40ae38aadcca3f410725f740/models/andre_casual.glb",
+    "revision": "2fd9ec82fbe1613d40ae38aadcca3f410725f740",
+    "sha256": "65c2dd49191505efe01546ff73dd98a0eada760059628612f1aa5e07785b2953",
+    "bytes": 12701036
+  },
+  "runtime": {
+    "file": "technician.glb",
+    "sha256": "5f55638c096e7269907e692d2672b4ec22e8ccda7d0d193756fd697551a67ab6",
+    "bytes": 3289032,
+    "outfit": [
+      "Body",
+      "Shoes",
+      "Skin_tee",
+      "Top_tee",
+      "Trousers"
+    ],
+    "meshes": 5,
+    "joints": 80,
+    "degenerateTangents": 2,
+    "textures": [
+      {
+        "name": "m007_head_normal",
+        "mime": "image/webp",
+        "size": [
+          2048,
+          2048
+        ],
+        "bytes": 211324
+      },
+      {
+        "name": "m007_head_color",
+        "mime": "image/webp",
+        "size": [
+          2048,
+          2048
+        ],
+        "bytes": 390684
+      },
+      {
+        "name": "m007_head_rough",
+        "mime": "image/webp",
+        "size": [
+          2048,
+          2048
+        ],
+        "bytes": 177886
+      },
+      {
+        "name": "m025_body_normal",
+        "mime": "image/webp",
+        "size": [
+          2048,
+          2048
+        ],
+        "bytes": 207214
+      },
+      {
+        "name": "m025_body_color",
+        "mime": "image/webp",
+        "size": [
+          2048,
+          2048
+        ],
+        "bytes": 163234
+      },
+      {
+        "name": "m025_body_rough",
+        "mime": "image/webp",
+        "size": [
+          2048,
+          2048
+        ],
+        "bytes": 20954
+      },
+      {
+        "name": "m017_body_normal",
+        "mime": "image/webp",
+        "size": [
+          2048,
+          2048
+        ],
+        "bytes": 425350
+      },
+      {
+        "name": "m017_body_color",
+        "mime": "image/webp",
+        "size": [
+          2048,
+          2048
+        ],
+        "bytes": 461304
+      },
+      {
+        "name": "m017_body_rough",
+        "mime": "image/webp",
+        "size": [
+          2048,
+          2048
+        ],
+        "bytes": 89136
+      },
+      {
+        "name": "tee_neutral",
+        "mime": "image/webp",
+        "size": [
+          2048,
+          2048
+        ],
+        "bytes": 417404
+      },
+      {
+        "name": "trousers_neutral",
+        "mime": "image/webp",
+        "size": [
+          2048,
+          2048
+        ],
+        "bytes": 169722
+      }
+    ],
+    "animations": [
+      "Idle",
+      "Walk"
+    ],
+    "transforms": [
+      "Retain tee, trousers, shoes, exposed skin and head",
+      "Remove unused garments, clips and facial morph targets",
+      "Tint work clothes",
+      "Remove Walk horizontal hip travel; preserve vertical gait",
+      "Move skinned meshes out of identity Rig parent",
+      "Resample/deduplicate/prune and generate MikkTSpace tangents; no geometry quantization"
+    ]
+  },
+  "validation": {
+    "source": {
+      "errors": 0,
+      "warnings": 22,
+      "infos": 0,
+      "messages": [
+        {
+          "code": "MESH_PRIMITIVE_GENERATED_TANGENT_SPACE",
+          "message": "Material requires a tangent space but the mesh primitive does not provide it. Runtime-generated tangent space may be non-portable across implementations.",
+          "severity": 1,
+          "pointer": "/meshes/0/primitives/0/material"
+        },
+        {
+          "code": "MESH_PRIMITIVE_GENERATED_TANGENT_SPACE",
+          "message": "Material requires a tangent space but the mesh primitive does not provide it. Runtime-generated tangent space may be non-portable across implementations.",
+          "severity": 1,
+          "pointer": "/meshes/1/primitives/0/material"
+        },
+        {
+          "code": "MESH_PRIMITIVE_GENERATED_TANGENT_SPACE",
+          "message": "Material requires a tangent space but the mesh primitive does not provide it. Runtime-generated tangent space may be non-portable across implementations.",
+          "severity": 1,
+          "pointer": "/meshes/2/primitives/0/material"
+        },
+        {
+          "code": "MESH_PRIMITIVE_GENERATED_TANGENT_SPACE",
+          "message": "Material requires a tangent space but the mesh primitive does not provide it. Runtime-generated tangent space may be non-portable across implementations.",
+          "severity": 1,
+          "pointer": "/meshes/3/primitives/0/material"
+        },
+        {
+          "code": "MESH_PRIMITIVE_GENERATED_TANGENT_SPACE",
+          "message": "Material requires a tangent space but the mesh primitive does not provide it. Runtime-generated tangent space may be non-portable across implementations.",
+          "severity": 1,
+          "pointer": "/meshes/4/primitives/0/material"
+        },
+        {
+          "code": "MESH_PRIMITIVE_GENERATED_TANGENT_SPACE",
+          "message": "Material requires a tangent space but the mesh primitive does not provide it. Runtime-generated tangent space may be non-portable across implementations.",
+          "severity": 1,
+          "pointer": "/meshes/5/primitives/0/material"
+        },
+        {
+          "code": "MESH_PRIMITIVE_GENERATED_TANGENT_SPACE",
+          "message": "Material requires a tangent space but the mesh primitive does not provide it. Runtime-generated tangent space may be non-portable across implementations.",
+          "severity": 1,
+          "pointer": "/meshes/6/primitives/0/material"
+        },
+        {
+          "code": "MESH_PRIMITIVE_GENERATED_TANGENT_SPACE",
+          "message": "Material requires a tangent space but the mesh primitive does not provide it. Runtime-generated tangent space may be non-portable across implementations.",
+          "severity": 1,
+          "pointer": "/meshes/7/primitives/0/material"
+        },
+        {
+          "code": "MESH_PRIMITIVE_GENERATED_TANGENT_SPACE",
+          "message": "Material requires a tangent space but the mesh primitive does not provide it. Runtime-generated tangent space may be non-portable across implementations.",
+          "severity": 1,
+          "pointer": "/meshes/8/primitives/0/material"
+        },
+        {
+          "code": "MESH_PRIMITIVE_GENERATED_TANGENT_SPACE",
+          "message": "Material requires a tangent space but the mesh primitive does not provide it. Runtime-generated tangent space may be non-portable across implementations.",
+          "severity": 1,
+          "pointer": "/meshes/9/primitives/0/material"
+        },
+        {
+          "code": "MESH_PRIMITIVE_GENERATED_TANGENT_SPACE",
+          "message": "Material requires a tangent space but the mesh primitive does not provide it. Runtime-generated tangent space may be non-portable across implementations.",
+          "severity": 1,
+          "pointer": "/meshes/10/primitives/0/material"
+        },
+        {
+          "code": "NODE_SKINNED_MESH_NON_ROOT",
+          "message": "Node with a skinned mesh is not root. Parent transforms will not affect a skinned mesh.",
+          "severity": 1,
+          "pointer": "/nodes/80"
+        },
+        {
+          "code": "NODE_SKINNED_MESH_NON_ROOT",
+          "message": "Node with a skinned mesh is not root. Parent transforms will not affect a skinned mesh.",
+          "severity": 1,
+          "pointer": "/nodes/81"
+        },
+        {
+          "code": "NODE_SKINNED_MESH_NON_ROOT",
+          "message": "Node with a skinned mesh is not root. Parent transforms will not affect a skinned mesh.",
+          "severity": 1,
+          "pointer": "/nodes/82"
+        },
+        {
+          "code": "NODE_SKINNED_MESH_NON_ROOT",
+          "message": "Node with a skinned mesh is not root. Parent transforms will not affect a skinned mesh.",
+          "severity": 1,
+          "pointer": "/nodes/83"
+        },
+        {
+          "code": "NODE_SKINNED_MESH_NON_ROOT",
+          "message": "Node with a skinned mesh is not root. Parent transforms will not affect a skinned mesh.",
+          "severity": 1,
+          "pointer": "/nodes/84"
+        },
+        {
+          "code": "NODE_SKINNED_MESH_NON_ROOT",
+          "message": "Node with a skinned mesh is not root. Parent transforms will not affect a skinned mesh.",
+          "severity": 1,
+          "pointer": "/nodes/85"
+        },
+        {
+          "code": "NODE_SKINNED_MESH_NON_ROOT",
+          "message": "Node with a skinned mesh is not root. Parent transforms will not affect a skinned mesh.",
+          "severity": 1,
+          "pointer": "/nodes/86"
+        },
+        {
+          "code": "NODE_SKINNED_MESH_NON_ROOT",
+          "message": "Node with a skinned mesh is not root. Parent transforms will not affect a skinned mesh.",
+          "severity": 1,
+          "pointer": "/nodes/87"
+        },
+        {
+          "code": "NODE_SKINNED_MESH_NON_ROOT",
+          "message": "Node with a skinned mesh is not root. Parent transforms will not affect a skinned mesh.",
+          "severity": 1,
+          "pointer": "/nodes/88"
+        },
+        {
+          "code": "NODE_SKINNED_MESH_NON_ROOT",
+          "message": "Node with a skinned mesh is not root. Parent transforms will not affect a skinned mesh.",
+          "severity": 1,
+          "pointer": "/nodes/89"
+        },
+        {
+          "code": "NODE_SKINNED_MESH_NON_ROOT",
+          "message": "Node with a skinned mesh is not root. Parent transforms will not affect a skinned mesh.",
+          "severity": 1,
+          "pointer": "/nodes/90"
+        }
+      ],
+      "codes": {
+        "MESH_PRIMITIVE_GENERATED_TANGENT_SPACE": 11,
+        "NODE_SKINNED_MESH_NON_ROOT": 11
+      }
+    },
+    "runtime": {
+      "errors": 0,
+      "warnings": 0,
+      "infos": 0,
+      "messages": [],
+      "codes": {}
+    }
+  }
+}

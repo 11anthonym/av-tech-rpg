@@ -3,6 +3,11 @@
 **Research:** 11/22/2026. **Status:** Authoring and acceptance specification for M2, **not** evidence that these production assets exist. **Supplement:** source-qualified low-cost character and code-authored art approach after reviewing Fable 5.2 browser-game examples.  
 **Prerequisites:** M1 `game3d/` browser build. See [3D Foundation Assessment](3D_FOUNDATION_ASSESSMENT.md) and [Production Roadmap](PRODUCTION_ROADMAP.md).
 
+**Implementation update:** [M2/P0.4-A evidence](qa/m2/README.md) records the first
+Rocketbox/Avatar Studio human and parameterized PBR shop in the existing client.
+This specification remains the acceptance target; the trial does not complete
+the missing boot/carry/interact/turn-in-place or owner visual-review gates.
+
 ## Direction and asset selection order
 
 The product needs a believable **adult commercial AV installation technician** in a believable **small AV integration shop**, in normal third-person gameplay. We should spend effort on a small coherent kit rather than a large assortment of unmatched or procedural assets.

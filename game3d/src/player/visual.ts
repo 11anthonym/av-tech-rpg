@@ -1,31 +1,56 @@
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
-import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
-import { Color3 } from "@babylonjs/core/Maths/math.color";
 import type { Scene } from "@babylonjs/core/scene";
+import { loadModel } from "../render/assets.ts";
 
 export interface TechnicianVisual {
   root: TransformNode;
   setMotion(speed: number, delta: number): void;
+  snapshot(): { model: string; joints: number; height: number; speed: number; walkWeight: number; idleFrame: number; walkFrame: number; pose: number[] };
   dispose(): void;
 }
 
-// Engineering proxy only. M2 replaces this adapter with a human GLB and clips;
-// collision, camera, domain actions and saves do not depend on its meshes.
-export function createPlaceholderVisual(scene: Scene): TechnicianVisual {
+export async function createTechnicianVisual(scene: Scene): Promise<TechnicianVisual> {
   const root = new TransformNode("technician-visual", scene);
-  const material = new StandardMaterial("engineering-proxy-orange", scene);
-  material.diffuseColor = Color3.FromHexString("#e59b42");
-  material.specularColor.set(0.05, 0.05, 0.05);
-  const body = MeshBuilder.CreateCapsule("technician-proxy", { height: 1.8, radius: 0.3 }, scene);
-  body.parent = root;
-  body.position.y = 0.9;
-  body.material = material;
-  body.isPickable = false;
-  const front = MeshBuilder.CreateBox("proxy-forward-marker", { width: 0.22, height: 0.12, depth: 0.08 }, scene);
-  front.parent = root;
-  front.position.set(0, 1.55, 0.29);
-  front.material = material;
-  front.isPickable = false;
-  return { root, setMotion() {}, dispose: () => root.dispose(false, true) };
+  const model = new TransformNode("technician-model", scene);
+  model.parent = root;
+  const asset = await loadModel(scene, "technician.glb", model);
+  const idle = asset.animationGroups.find(group => group.name === "Idle");
+  const walk = asset.animationGroups.find(group => group.name === "Walk");
+  const skeleton = asset.skeletons[0];
+  if (!idle || !walk || !skeleton) { asset.dispose(); root.dispose(); throw new Error("Technician requires a rig and Idle/Walk clips"); }
+  for (const mesh of asset.meshes) {
+    mesh.isPickable = false;
+    mesh.checkCollisions = false;
+    mesh.receiveShadows = true;
+    mesh.computeWorldMatrix(true);
+  }
+  const bounds = model.getHierarchyBoundingVectors(true);
+  const height = bounds.max.y - bounds.min.y;
+  if (!Number.isFinite(height) || height < 1 || height > 3) throw new Error(`Unexpected technician height ${height}`);
+  const scale = 1.78 / height;
+  model.scaling.setAll(scale);
+  model.position.y = -bounds.min.y * scale;
+  idle.start(true, 1);
+  walk.start(true, 1);
+  idle.setWeightForAllAnimatables(1);
+  walk.setWeightForAllAnimatables(0);
+  let weight = 0;
+  let speed = 0;
+  return {
+    root,
+    setMotion(metresPerSecond, delta) {
+      speed = metresPerSecond;
+      const target = speed > 0.08 ? 1 : 0;
+      weight += (target - weight) * (1 - Math.exp(-12 * delta));
+      if (Math.abs(target - weight) < 0.001) weight = target;
+      idle.setWeightForAllAnimatables(1 - weight);
+      walk.setWeightForAllAnimatables(weight);
+      // Native stride travels 1.213m in 1.2s, scaled with this model.
+      walk.speedRatio = Math.max(0.1, speed / (1.213 / 1.2 * scale));
+    },
+    snapshot: () => ({ model: "Rocketbox Andre / tee", joints: skeleton.bones.length, height: 1.78, speed,
+      walkWeight: weight, idleFrame: idle.getCurrentFrame(), walkFrame: walk.getCurrentFrame(),
+      pose: Array.from(skeleton.bones.find(bone => bone.name === "mixamorig:LeftLeg")?.getLocalMatrix().asArray().slice(0, 12) ?? []) }),
+    dispose() { asset.dispose(); root.dispose(false, true); },
+  };
 }
