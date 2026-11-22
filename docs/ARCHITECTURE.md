@@ -1,8 +1,16 @@
 # Static Browser Architecture
 
-AV Tech RPG stays a no-build static browser game for this phase. The code is
-split by ownership, but it is still loaded as ordered classic browser scripts
-from `index.html`.
+This document describes the existing no-build 2D browser prototype. Its code
+is split by ownership and loaded as ordered classic browser scripts from
+`index.html`. It remains the behavioral reference during the 3D transition.
+
+**November 21, 2026 direction:** prioritize a browser-playable 3D game with a
+third-person following camera, realistic/PBR human characters and furnished
+locations with detailed surfaces and lighting. The new client may use an
+engine, modules and a build step. The
+comparison and proposed architecture are in
+[3D_FOUNDATION_ASSESSMENT.md](3D_FOUNDATION_ASSESSMENT.md). Restrictions below
+on engine/build changes describe the earlier prototype phase, not the new client.
 
 ## Runtime Layout
 

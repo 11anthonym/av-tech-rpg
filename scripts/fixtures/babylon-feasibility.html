@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AV Tech RPG — browser 3D feasibility</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; color: #f0ece0; background: #17232a; font: 16px system-ui; }
+  canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
+  aside { position: absolute; top: 20px; left: 20px; max-width: 380px; padding: 18px;
+    background: #16232aee; border: 1px solid #849794; border-radius: 8px; pointer-events: none; }
+  h1 { font-size: 23px; margin: 0 0 10px; } p { line-height: 1.5; margin: 8px 0; }
+  small { color: #f3bc57; }
+</style>
+<canvas id="view" aria-label="Third-person 3D shop feasibility scene"></canvas>
+<aside><small>ENGINE FEASIBILITY • PLACEHOLDER GEOMETRY</small><h1>Trunkslammer Shop / 3D</h1>
+  <p>WASD / arrows: walk<br>Drag: orbit technician · Wheel: zoom</p>
+  <p>This tests the browser renderer and controller. Career gameplay is in the original prototype.</p>
+  <p id="status">Loading…</p>
+</aside>
+<script src="/babylon.js"></script>
+<script src="/loaders.js"></script>
+<script src="/content.js"></script>
+<script>
+(async () => {
+  const B = BABYLON;
+  const canvas = document.querySelector("canvas");
+  const engine = new B.Engine(canvas, true);
+  const scene = new B.Scene(engine);
+  scene.clearColor = new B.Color4(0.13, 0.18, 0.21, 1);
+  scene.collisionsEnabled = true;
+  const light = new B.HemisphericLight("ambient", new B.Vector3(0.3, 1, 0.1), scene);
+  light.intensity = 0.9;
+  const sun = new B.DirectionalLight("shop daylight", new B.Vector3(-0.5, -1, 0.4), scene);
+  sun.intensity = 0.7;
+  function material(name, color) {
+    const m = new B.StandardMaterial(name, scene);
+    m.diffuseColor = B.Color3.FromHexString(color);
+    m.specularColor = new B.Color3(0.08, 0.08, 0.08);
+    return m;
+  }
+  const floorMat = material("concrete", "#999b90");
+  const steel = material("steel", "#577276");
+  const wood = material("bench", "#b3935d");
+  const wall = material("walls", "#d8cfb7");
+  const orange = material("technician shirt", "#dc8539");
+  const skin = material("face", "#d7b28b");
+  function box(name, size, position, mat, solid = true) {
+    const mesh = B.MeshBuilder.CreateBox(name, { width: size[0], height: size[1], depth: size[2] }, scene);
+    mesh.position.set(...position);
+    mesh.material = mat;
+    mesh.checkCollisions = solid;
+    return mesh;
+  }
+  box("shop floor", [14, 0.2, 16], [0, -0.1, 2], floorMat);
+  box("back wall", [14, 3, 0.2], [0, 1.5, 10], wall);
+  box("left wall", [0.2, 3, 16], [-7, 1.5, 2], wall);
+  box("right wall", [0.2, 3, 16], [7, 1.5, 2], wall);
+  const bench = box("workbench", [3, 1, 1], [0, 0.5, 2], wood);
+  box("staging shelf", [3, 2, 0.8], [-4, 1, 6], steel);
+  box("staging cartons", [2, 0.5, 0.6], [-4, 2.25, 6], wood, false);
+  box("van cargo body", [2.2, 2.1, 4.8], [4.4, 1.05, 5.5], steel);
+  box("supply counter", [2.5, 1.1, 0.9], [-4.2, 0.55, -1], wood);
+  const player = B.MeshBuilder.CreateCapsule("technician", { height: 1.8, radius: 0.3 }, scene);
+  player.material = orange;
+  player.position.set(0, 0.9, -1);
+  player.ellipsoid = new B.Vector3(0.3, 0.85, 0.3);
+  const head = B.MeshBuilder.CreateSphere("head", { diameter: 0.42, segments: 12 }, scene);
+  head.parent = player;
+  head.position.y = 0.7;
+  head.material = skin;
+  const camera = new B.ArcRotateCamera("third person", -Math.PI / 2, 1.08, 6, player.position, scene);
+  camera.lockedTarget = player;
+  camera.lowerRadiusLimit = 2;
+  camera.upperRadiusLimit = 9;
+  camera.lowerBetaLimit = 0.45;
+  camera.upperBetaLimit = 1.35;
+  camera.minZ = 0.1;
+  camera.checkCollisions = true;
+  camera.collisionRadius = new B.Vector3(0.25, 0.25, 0.25);
+  camera.attachControl(canvas, true);
+  // Arrow keys control the technician, not the camera's default keyboard orbit.
+  camera.inputs.removeByType("ArcRotateCameraKeyboardMoveInput");
+  const keys = new Set();
+  window.addEventListener("keydown", event => {
+    const key = event.key.toLowerCase();
+    if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
+      keys.add(key);
+      event.preventDefault();
+    }
+  });
+  window.addEventListener("keyup", event => keys.delete(event.key.toLowerCase()));
+  window.addEventListener("blur", () => keys.clear());
+  function step(dt) {
+    const forward = camera.getForwardRay().direction;
+    forward.y = 0;
+    forward.normalize();
+    const right = B.Vector3.Cross(B.Axis.Y, forward).normalize();
+    const x = Number(keys.has("d") || keys.has("arrowright")) - Number(keys.has("a") || keys.has("arrowleft"));
+    const z = Number(keys.has("w") || keys.has("arrowup")) - Number(keys.has("s") || keys.has("arrowdown"));
+    const direction = forward.scale(z).add(right.scale(x));
+    if (direction.lengthSquared() > 0) {
+      direction.normalize();
+      player.rotation.y = Math.atan2(direction.x, direction.z);
+      player.moveWithCollisions(direction.scale(3.8 * Math.min(dt, 0.05)));
+    }
+  }
+  const imported = await B.SceneLoader.ImportMeshAsync("", "/", "unit-cube.glb", scene);
+  const importedMesh = imported.meshes.find(mesh => mesh.getTotalVertices() > 0);
+  importedMesh.computeWorldMatrix(true);
+  const cubeSize = importedMesh.getBoundingInfo().boundingBox.extendSizeWorld.scale(2).asArray();
+  imported.meshes[0].position.set(-2.5, 0.5, 5);
+  let frames = 0;
+  engine.runRenderLoop(() => {
+    step(engine.getDeltaTime() / 1000);
+    scene.render();
+    frames += 1;
+  });
+  window.addEventListener("resize", () => engine.resize());
+  window.probe = {
+    engine, scene, player, camera, bench, cubeSize, keys, step,
+    snapshot: () => ({ version: B.Engine.Version, frames, position: player.position.asArray(),
+      cameraTarget: camera.getTarget().asArray(), cubeSize,
+      sceneIds: Object.keys(window.GAME_CONTENT.scenes),
+      routes: Object.keys(window.GAME_CONTENT.world.routes).length }),
+  };
+  document.querySelector("#status").textContent = "3D ready · " + B.Engine.Version;
+})().catch(error => { console.error(error); document.querySelector("#status").textContent = error.message; });
+</script>
+</html>

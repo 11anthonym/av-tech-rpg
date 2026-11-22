@@ -1,5 +1,12 @@
 # Gameplay Roadmap
 
+**Current priority, November 21, 2026:** begin a browser-playable 3D slice with
+a third-person camera, realistic/PBR human models and a furnished AV shop. RPG
+completion is not a prerequisite. Follow
+[3D_FOUNDATION_ASSESSMENT.md](3D_FOUNDATION_ASSESSMENT.md) for the new lane.
+The completed browser gameplay lanes below remain reference material; their
+no-engine/no-build guardrail does not constrain the new 3D client.
+
 This roadmap picks up after the QA/tooling closeout. The goal is to make the
 current prototype feel more like the documented AV Tech RPG, not to add a big
 batch of new jobs.

@@ -14,6 +14,17 @@ works when the client walks in.
 This repository is the shared home for brainstorming and prototype development.
 The initial concept notes live in [docs/GAME_CONCEPT.md](docs/GAME_CONCEPT.md).
 
+The next development priority is a **3D browser game with a third-person camera
+following the technician**, with realistic/PBR art, natural human proportions,
+detailed surfaces and lighting. Characters must look and move like people, and
+the shop must be a recognizable, furnished AV workplace. The existing RPG does not
+need to be finished before that work begins. The engine/asset comparison,
+repository inventory, feasibility QA and staged implementation plan live in
+[docs/3D_FOUNDATION_ASSESSMENT.md](docs/3D_FOUNDATION_ASSESSMENT.md).
+The recommendation is Babylon.js, TypeScript and Vite, with Blender/GLB assets.
+The current hosted career remains the 2D prototype; the new probes establish
+capability and do not constitute a production 3D game or accepted artwork.
+
 ## First Prototype Goal
 
 Build one small playable career loop:
@@ -153,8 +164,9 @@ is the simplest repository-based option for a public play link.
 
 ## Development
 
-Start with a top-down 2D browser prototype using simple placeholder art. Keep AV
-details legible and funny rather than building a technical simulator.
+The existing prototype uses top-down 2D browser scenes. The next 3D client should
+follow the foundation assessment above. Keep AV details legible and funny as
+the visual presentation develops.
 
 Opening `index.html` directly is enough for ordinary playtesting. To serve the
 prototype over HTTP during development, run this optional command from the

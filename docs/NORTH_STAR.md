@@ -6,8 +6,16 @@ in view.
 
 ## Target Experience
 
-AV Tech RPG should grow into a top-down workplace RPG about becoming a better
+AV Tech RPG should grow into a browser-playable 3D workplace RPG with a
+third-person camera following the technician, about becoming a better
 commercial AV technician in a fictionalized Greater Philadelphia region.
+Use realistic/PBR art with natural human proportions, detailed surfaces and
+lighting. People should look and move like people, and locations should be
+recognizable, furnished workplaces. Start the 3D slice while the RPG matures.
+
+The November 21, 2026 engine, asset and migration assessment is in
+[3D_FOUNDATION_ASSESSMENT.md](3D_FOUNDATION_ASSESSMENT.md). It supersedes the
+older top-down-only and engine-deferral direction below.
 
 The long-term feel is:
 
@@ -36,6 +44,9 @@ route costs. A good choice can still hurt now; a bad choice can still feel
 tempting because it saves time, energy, cash, or social friction in the moment.
 
 ## Research Anchors
+
+These anchors record the original 2D gameplay/engine research. Use the current
+3D foundation assessment for engine, camera and realistic/PBR asset decisions.
 
 - [Stardew Valley: About](https://www.stardewvalley.net/about/) is the main
   reference for an open-ended RPG loop where practical skills, upgrades,
@@ -80,7 +91,8 @@ The world data should keep these concepts separate:
   Hill.
 - **Area:** a specific place the player can be in, such as shop, garage, lobby,
   job room, loading dock, campus gate, or warehouse.
-- **Scene:** the current playable top-down board.
+- **Scene:** the current playable area presentation; currently a 2D board,
+  moving toward an authored 3D space.
 - **Portal:** a door, elevator, building entrance, van exit, or return route.
 - **Route:** a planned travel step between areas.
 - **Vehicle:** a persistent work object with storage, comfort, reliability,
@@ -88,7 +100,11 @@ The world data should keep these concepts separate:
 
 ## Expansion Priorities
 
-Build toward the full vision in this order:
+The next lane is the 3D browser slice: real client build, third-person shop,
+recognizable human/room assets, loading Van #3, then one complete workday.
+Use the assessment's exit conditions before expanding content.
+
+The following order records the earlier 2D prototype phase:
 
 1. **Keep the current browser prototype stable.** Do not migrate engines just
    because the future is bigger.
