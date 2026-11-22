@@ -4,6 +4,8 @@
 **Status:** Production execution plan; milestones below are **planned**, not completed  
 **Primary objective:** Turn the proven 2D workday RPG into a compelling, browser-playable, realistic third-person 3D game **without losing its existing gameplay identity**.
 
+For the sourced hosting options and community reference checks, see [Hosting and Playable Reference Research](HOSTING_AND_REFERENCE_RESEARCH.md). Its deployment decision gate supplements M1/P0.1; changing hosts is not an automatic prerequisite for building the game. The [repo-specific M1 Engineering Delivery Audit](M1_ENGINEERING_DELIVERY_AUDIT.md) identifies the current Pages-pipeline and browser-QA gaps; the [Visual Asset Pipeline](VISUAL_ASSET_PIPELINE.md) defines practical rig/GLB/rights acceptance for M2, including a bounded optional Babylon Editor trial. The [First 3D Workday Specification](FIRST_3D_WORKDAY_SPEC.md) maps the existing tutorial's actual actions, IDs, area gates and rewards to a testable third-person experience.
+
 This is the source of truth for **what gets built next, in what order, and what counts as done**. The [North Star](NORTH_STAR.md) defines the vision; the [3D Foundation Assessment](3D_FOUNDATION_ASSESSMENT.md) records engine feasibility, technical evidence, and asset research; the historical [Gameplay Roadmap](GAMEPLAY_ROADMAP.md) records the 2D prototype's completed experiments. Those documents remain useful but do not override this production priority order. Update this plan when a gate changes or evidence forces a different decision.
 
 **M1 implementation update:** The bounded production client and controller/action
@@ -80,7 +82,7 @@ We are making a **workplace RPG, not a wiring simulator or a generic 3D walking 
 - Add isolated `game3d/` with pinned Babylon core/loaders, TypeScript, Vite, lockfile and documented clean-checkout setup. Keep dependencies few and intentional.
 - Establish clear modules: `domain/` (state, career, job rules), `content/` (IDs/contracts), `world/` (areas/anchors), `render/` (scene/assets), `player/` (input/movement/camera), `ui/` (HUD), and `persistence/` (versioned saves/import).
 - Deliver `dev` / `typecheck` / `test` / `build` / `preview` scripts; lint if low-cost; repeatable browser smoke test. CI must actually build the game and detect missing assets or incorrect subpath URLs.
-- Deploy **beside** the existing game, ideally under `/av-tech-rpg/3d/`; do not overwrite the 2D root link or replace Pages with an unvalidated build.
+- Deploy **beside** the existing game, with a host-portable asset build: `/av-tech-rpg/3d/` on GitHub Pages **or** an independently verified Cloudflare preview/root URL. Follow [Hosting and Playable Reference Research](HOSTING_AND_REFERENCE_RESEARCH.md): assess Workers Static Assets first, Pages as a simpler alternative, and GitHub Pages as fallback. Do not overwrite the 2D root link, claim an unconnected host is deployed, or change production based only on anecdotal performance.
 - Render an interactive third-person qualification scene. Show debug state (scene, action, build version, errors) without exposing developer UI by default.
 - Build the minimal typed content bridge (technician, tool, world IDs). Do **not** mass-port the shared-global runtime.
 
@@ -113,7 +115,7 @@ We are making a **workplace RPG, not a wiring simulator or a generic 3D walking 
 
 ### M4 — Complete first workday in 3D (vertical slice)
 
-**Goal:** Prove the actual product loop end to end.
+**Goal:** Prove the actual product loop end to end. Use the [source-accurate First 3D Workday Specification](FIRST_3D_WORKDAY_SPEC.md) as the canonical scene/interaction storyboard and acceptance contract, not a new generic warehouse storyline.
 
 - Travel with the existing route-choice abstraction to Center City East; use compact garage, lobby/entry and cart-install room. Correct portals and return flow matter more than map size.
 - Build the two mobile conferencing carts with a few legible staged actions, a workmanship/time tradeoff and a verification/closeout decision.
@@ -180,15 +182,15 @@ These are the **next actionable implementation tickets** after this planning com
 
 | Order | Ticket / intended PR | Minimum deliverable | Acceptance evidence |
 | --- | --- | --- | --- |
-| **P0.1** | Scaffold `game3d/` | Pinned TS/Vite/Babylon project, lockfile, documented commands, correct Pages subpath, independent preview deployment | Clean clone -> install -> build -> hosted route; CI and smoke pass; 2D unaffected |
+| **P0.1** | Scaffold `game3d/` | Pinned TS/Vite/Babylon project, lockfile, documented commands, host-portable root/subpath assets, real preview deployment and [documented hosting choice](HOSTING_AND_REFERENCE_RESEARCH.md) | Clean clone -> install -> build -> hosted route; CI and smoke pass; 2D unaffected; URL and host limitations verified |
 | **P0.2** | Domain/content seam and save guard | Typed IDs for first-workday content; explicit domain action/results; dev-only save namespace and read-only legacy-fixture adapter | Deterministic tests; no writing/reset of 2D save; no duplicate reward |
 | **P0.3** | Controller/camera engineering scene | Delta-time movement, follow/orbit, obstruction tests, picking/prompts, focus handling and debug capture | Automated browser test plus ordinary keyboard/mouse replay; allowed greybox |
-| **P0.4** | Visual qualification scene | One properly rigged clothed human with idle/walk/carry/interact plus coherent PBR AV shop and Van #3 | Screenshots/video, source/rights manifest, scale/animation check, human art acceptance |
+| **P0.4** | Visual qualification scene | Compare at most two licensed humanoid pipelines; accept one rigged clothed human with idle/walk/carry/interact plus coherent PBR AV shop and Van #3; consider Babylon Editor only in a small trial | Screenshots/video, source/rights manifest, scale/animation check, human art acceptance per [asset pipeline](VISUAL_ASSET_PIPELINE.md) |
 | **P0.5** | Shop interaction loop | Supervisor, screwdriver, boxes, carry capacity, van loadout, save/resume | Fresh-player task path; state and visual inventory checks; browser regression |
-| **P0.6** | First-day complete traversal | Route, garage/entry, two-cart install, verification, end shift, return/recover | End-to-end 3D browser replay and 2D checkpoint comparison |
+| **P0.6** | First-day complete traversal | Route, garage/entry, two-cart install, verification, end shift, return/recover; preserve existing [tutorial IDs and consequences](FIRST_3D_WORKDAY_SPEC.md) | End-to-end normal-input 3D browser replay and 2D checkpoint comparison |
 | **P1** | Conshohocken depth and alpha gates | Evidence/repair/verification branching; UX, audio, accessibility, browser/perf/playtest qualification | Three outcome replays, human observation and release checklist |
 
-**Agent kickoff brief for P0.1:** Implement the production `game3d/` workspace in a new bounded branch/PR. Follow this roadmap and the foundation assessment. Keep existing `index.html`, `src/`, `styles.css`, QA and save key functioning unchanged. Use pinned packages and a lockfile; ship a real build and a separate GH Pages route; add smoke tests/CI for that route; document run/deploy commands and failure modes. Do **not** port all job systems or claim the 3D art gate is complete. Report changed files, commands/results, hosted proof if deployed, remaining blockers and the next smallest ticket.
+**Agent kickoff brief for P0.1:** Implement the production `game3d/` workspace in a new bounded branch/PR. Follow this roadmap, the foundation assessment, and the [M1 delivery audit](M1_ENGINEERING_DELIVERY_AUDIT.md). **Current GitHub Pages uploads the repo root without building Vite; do not add a competing Pages deploy.** If sharing Pages, build a single staged artifact preserving the 2D root and placing 3D in `/3d/`; if hosting 3D independently, leave the legacy Pages workflow intact. Keep existing `index.html`, `src/`, `styles.css`, QA and save key functioning unchanged. Use pinned packages and a lockfile; ship a real host-neutral static build and independently test a separate preview route. Check Cloudflare Workers Static Assets and Pages against the repository's existing GitHub Pages fallback, using the sourced hosting research; prefer the simplest verified solution with PR preview access, rather than forcing a migration. Add smoke tests/CI for the deployed route; document run/deploy commands, asset limits, localStorage-origin save constraints and failure modes. Do **not** port all job systems or claim the 3D art gate is complete. Report changed files, commands/results, hosted proof if deployed, remaining blockers and the next smallest ticket.
 
 ## 7. Architecture and content contracts
 
@@ -210,6 +212,7 @@ These are the **next actionable implementation tickets** after this planning com
 - Use a coherent kit where possible. **AI-generated art is not accepted solely because it looks attractive in a still image**; validate geometry, consistency, rigging, rights, animation, performance and reproducibility.
 - Standardize a humanoid skeleton and animation naming early. Verify footsteps, hand placement, carry pose and root motion against the actual camera.
 - Add room tone and interactive audio gradually. Every important sound cue needs a visual or caption alternative. Do not use unlicensed music, sampled voices or recognizable manufacturer marks without permission.
+- For character/scene assets, follow the [Visual Asset Pipeline](VISUAL_ASSET_PIPELINE.md): preserve named rigs/animations, validate exported GLB, test imported motion after optimization, record rights for public-runtime vs editable-source redistribution, and conduct ordinary-camera art review.
 - No paid assets, subscriptions or third-party services should be purchased without explicit owner approval.
 
 ### Gameplay, writing and UX
@@ -278,7 +281,10 @@ These are the **next actionable implementation tickets** after this planning com
 | 11/21/2026 | Keep browser-first, third-person, realistic/PBR product direction | Owner-confirmed requirements in the foundation assessment; revisit only on explicit product change |
 | 11/21/2026 | Choose Babylon.js + TypeScript + Vite; Blender/GLB | Browser-native capability and smaller JS migration; revisit for demonstrated authoring/performance blocker |
 | 11/21/2026 | Preserve 2D career during 3D development | Avoid losing working content, hosted access or saves |
+| 11/21/2026 | Evaluate Cloudflare Workers Static Assets / Pages for 3D previews, retain GitHub Pages fallback | Cloudflare supports static game asset delivery and branch previews; choice requires deployed proof, asset-size review and explicit origin-based save safety; see [hosting research](HOSTING_AND_REFERENCE_RESEARCH.md) |
 | 11/21/2026 | Prioritize shop/human visual gate, first day, then Conshohocken | Proves appearance, playable workflow and RPG depth before adding breadth |
 | 11/21/2026 | Treat engine probes and passing 2D QA as feasibility evidence, not 3D completion | No production 3D client, real art qualification or performance/player acceptance yet |
 
 **Next action:** Start **P0.1** in a bounded implementation PR. Deliver the actual `game3d/` workspace and independent build/deployment proof, then proceed through the acceptance gates rather than repeating engine research.
+
+**Research diminishing-returns rule (11/22/2026):** Preproduction is sufficiently specified for implementation. Do not add more general research documents, broad engine comparisons, third-party host plans or speculative art catalogs. Reopen research only for a reproducible issue involving: (a) a real human/animation import, (b) shop scene authoring productivity, (c) production browser performance, (d) save/migration parity, (e) verified deployment, or (f) an observed playtest blocker. Make the smallest evidence-backed update that resolves it, then return to implementation. Any recurring research review should use the same rule and avoid repetitive commits with no practical change.
