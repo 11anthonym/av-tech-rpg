@@ -6,6 +6,12 @@
 
 This is the source of truth for **what gets built next, in what order, and what counts as done**. The [North Star](NORTH_STAR.md) defines the vision; the [3D Foundation Assessment](3D_FOUNDATION_ASSESSMENT.md) records engine feasibility, technical evidence, and asset research; the historical [Gameplay Roadmap](GAMEPLAY_ROADMAP.md) records the 2D prototype's completed experiments. Those documents remain useful but do not override this production priority order. Update this plan when a gate changes or evidence forces a different decision.
 
+**M1 implementation update:** The bounded production client and controller/action
+seams are implemented in `game3d/` on `codex/m1-production-3d-client`. See
+[M1 executed evidence](qa/M1_PRODUCTION_3D.md) for current checks and the main-only
+Pages deployment restriction. M1 hosted acceptance and M2 visual acceptance
+remain open; implementation is not permission to count later milestones done.
+
 ## 1. Product decision
 
 We are making a **workplace RPG, not a wiring simulator or a generic 3D walking demo**. The player starts as an under-equipped technician at a poorly managed commercial AV integrator in a fictionalized Greater Philadelphia. They move through recognizable workspaces, prepare for jobs, troubleshoot and build systems, manage time/fatigue, learn tools, navigate coworker and client pressure, and live with decisions that can create or prevent later work.
