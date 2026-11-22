@@ -24,18 +24,37 @@ realistic human/shop visual gate. No M2 art acceptance is claimed.
 
 ## Checks and observed results
 
-This section is updated from executed commands before final delivery.
+Verified implementation source: `d32054b` (plus subsequent delivery-only
+documentation/artifact packaging changes). CI uses a fresh checkout and records
+the PR merge-build identifier in diagnostics.
 
 | Check | Current evidence |
 | --- | --- |
 | `pnpm typecheck` / production build | Passed locally |
 | `pnpm test` | 8 deterministic contract tests passed locally |
-| Chromium production browser suite | 6 tests passed locally; normal keyboard/mouse flow included |
-| Firefox production browser suite | Boot/subpath/legacy-link test passed; complete suite verification in progress |
-| Clean-checkout install/build/test | Pending final source commit and isolated checkout |
-| Legacy full QA | Pending final verification |
-| PR CI | Pending push/PR |
+| Chromium production browser suite | 6/6 passed in Linux CI, including normal keyboard/mouse replay |
+| Firefox production browser suite | 6/6 passed locally and in Linux CI; Linux uses Xvfb/Mesa for WebGL |
+| Independent-root build | Separate `/` build booted with its JS/CSS/GLB; 1/1 browser test passed locally and in CI |
+| Clean-checkout install/build/test | Local detached `e77f48a` checkout: frozen install, 8 contracts, typecheck/build passed; latest implementation also passed fresh-checkout CI |
+| Legacy full QA | Passed: 43 script checks, 43 unit/contracts, full browser smoke |
+| PR CI | [Run 45048739015](https://github.com/11anthonym/av-tech-rpg/actions/runs/45048739015) passed both jobs and all 13 browser cases |
+| Pages workflow dry run | [Run 45049020842](https://github.com/11anthonym/av-tech-rpg/actions/runs/45049020842): build/verification/artifact upload passed; deploy correctly skipped on the development branch |
 | Hosted 3D URL | Not deployed; main-only Pages environment blocks branch publication |
+
+Evidence: [CI Chromium scene](m1-20261122/chromium-shop.png),
+[CI Firefox scene](m1-20261122/firefox-shop.png), and
+[recorded Firefox engineering replay](m1-20261122/engineering-replay.webm).
+The downloaded Pages tar was independently checked against the canonical Git
+blob and the current live legacy HTML, including compiled subpath/GLB presence
+and source-map/dependency exclusions: [artifact check](m1-20261122/pages-artifact-check.json).
+The motion capture repeats the normal-input test against the production build;
+it passed in 16.6 seconds. This is engineering evidence, not human art review.
+
+The final local Firefox/root run passed all seven selected cases. Windows
+Chromium software-GPU runs also encountered long recorder/context teardown
+timeouts during development; they are not reported as final passing runs.
+Chromium's final full qualification comes from the clean Linux CI job. Motion
+recording is opt-in, and tests navigate away before finalizing the WebGL context.
 
 The normal-input replay walks into the workbench until collision stops further
 motion, inspects and reviews it with E, checks modal pause and focused settings,
@@ -51,8 +70,12 @@ never used by these tests.
 
 During qualification, a small vertical jitter was found in a partial gravity
 implementation. M1's flat-floor movement was corrected; gravity, ramps and
-stairs remain a properly scoped M2 controller decision. No failing result is
-counted as a pass.
+stairs remain a properly scoped M2 controller decision. Reload testing also
+caught over-restrictive position validation, and screenshot inspection caught
+an early blank frame after a premature ready signal. The delivered client
+validates against authored geometry, waits for scene resources, and verifies
+active geometry before reporting ready. Wall/bench resting positions have
+save regression checks. No failing result is counted as a pass.
 
 ## Deployment boundary
 
@@ -64,9 +87,36 @@ The proposed Pages workflow runs production checks before staging/deployment,
 and refuses a non-main deployment. CI preserves the combined site artifact for
 review. The public legacy root must stay available throughout.
 
+**Hosting decision:** retain the already configured GitHub Pages fallback for
+this PR. The upstream hosting research's Cloudflare Workers Static Assets / Pages
+option was checked against available access: the repository has no configured
+secrets, and this task environment has neither `CLOUDFLARE_API_TOKEN` nor
+`CLOUDFLARE_ACCOUNT_ID`. No connected Cloudflare project/deployment was claimed.
+The root-portable build is ready for an authorized independent-host trial.
+
+To publish on the existing host, the reviewed PR must reach `main` and the
+allowed Pages workflow must deploy; then rerun the browser checks at the live
+URL. An independent Cloudflare preview instead requires the owner to connect
+and authorize that account/project. No policy relaxation, new account, paid
+service, domain, backend or automatic PR merge was introduced.
+
+Live HTTP checks after the branch dry run returned **200** for the existing
+2D root and **404** for `/3d/`, consistent with the deployment remaining blocked.
+
 Intended route after merge/deploy: `https://11anthonym.github.io/av-tech-rpg/3d/`.
 This record does not call that route live or verified. M1's hosted acceptance
 gate remains open until an allowed deployment is run and checked in a browser.
+
+### Build size observation
+
+The verified local production build contains 141 deployable files excluding
+source maps, totaling **3,041,680 bytes**. Summing per-file gzip estimates gives
+**763,443 bytes**; the largest chunk is **686,593 bytes** (173,244 bytes gzipped).
+These are build-size observations, not measured cold/warm hosted transfer or
+load time. The original engineering GLB is 768 bytes and is not representative
+of M2 human/room assets. Current files are below the 25 MiB per-file Cloudflare
+limit recorded in the upstream hosting research. Hosted timing, real content
+memory/transfer and real-device frame times remain unmeasured.
 
 ## Limits and next gate
 

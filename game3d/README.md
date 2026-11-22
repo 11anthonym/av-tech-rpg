@@ -27,21 +27,29 @@ are off by default; enable them in settings or append `?debug=1`.
 | `pnpm typecheck` | Strict TypeScript checks, including tests/config |
 | `pnpm test` | Native Node deterministic domain, ID, movement and save contracts |
 | `pnpm build` | Typecheck and produce the static `dist/` client |
+| `pnpm build:portable` | Produce `dist-portable/` with root `/` asset URLs for independent hosting |
 | `pnpm preview` | Serve that production build at `http://127.0.0.1:4173/av-tech-rpg/3d/` |
 | `pnpm exec playwright install chromium firefox` | Install local test browsers and recording support |
 | `pnpm test:browser` | Test the staged production artifact in Chromium and Firefox |
 | `pnpm check` | Unit tests, production build, browser tests |
 
-Browser tests need a built `dist/`. They stage the combined site and start/stop
-their own server at port 4174, under the real `/av-tech-rpg/3d/` prefix. A separate
+Browser tests need both builds. They stage the combined site and start/stop
+their own server at port 4174, under the real `/av-tech-rpg/3d/` prefix, plus
+a root-build server at port 4175. A separate
 run can target `--project=chromium` or `--project=firefox`. Playwright's matching
 browsers are the default; `CHROME_EXECUTABLE_PATH` optionally selects an installed
 Chrome. CI installs Playwright's browsers. Software-GPU results are functional evidence, not player
 performance measurements. Safari, mobile and controller support are not claimed.
 
-`PLAYWRIGHT_BASE_URL` can point the same checks at a deployed client after
-release. Browser artifact paths are under `test-results/` and
-`playwright-report/`; CI preserves screenshots, traces, videos and reports.
+Linux Firefox uses a virtual display for WebGL: run the suite with
+`xvfb-run --auto-servernum pnpm test:browser` after installing Playwright's Linux
+dependencies. CI provides that display and Mesa software rendering.
+
+`PLAYWRIGHT_BASE_URL` can point repository-path checks at a deployed client;
+`PLAYWRIGHT_PORTABLE_URL` selects an independent root preview. Browser artifact
+paths are under `test-results/` and `playwright-report/`; CI preserves
+screenshots, failure traces and reports. `RECORD_VIDEO=1` enables motion capture;
+it is opt-in because software-GPU recording can add substantial overhead.
 
 For the combined local Pages preview, run from the repository root after building:
 
@@ -100,7 +108,8 @@ ticket. There is no silent import or career reset.
 
 ## Deployment and rollback
 
-Vite's base is explicitly `/av-tech-rpg/3d/`, not `/`. Runtime assets are local
+The default Pages build base is explicitly `/av-tech-rpg/3d/`. The portable
+build uses `/` and is separately tested for JS/CSS/GLB resolution. Runtime assets are local
 and hashed build chunks; no floating runtime CDN is needed. `build-pages.mjs`
 copies an allowlist of legacy `index.html`, `styles.css` and `src/` byte-for-byte
 to `.pages/`, then adds `game3d/dist/` as `3d/`. It excludes dependencies,
