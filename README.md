@@ -25,6 +25,11 @@ The recommendation is Babylon.js, TypeScript and Vite, with Blender/GLB assets.
 The current hosted career remains the 2D prototype; the new probes establish
 capability and do not constitute a production 3D game or accepted artwork.
 
+The active studio-level **production roadmap and milestone acceptance gates** are in
+[docs/PRODUCTION_ROADMAP.md](docs/PRODUCTION_ROADMAP.md). Use that plan to sequence
+3D implementation, art qualification, the first playable workday, RPG depth,
+playtesting, and release readiness while retaining the existing 2D career.
+
 ## First Prototype Goal
 
 Build one small playable career loop:
