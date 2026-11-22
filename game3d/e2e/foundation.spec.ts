@@ -28,6 +28,7 @@ test("normal keyboard/mouse play: follow, collision, orbit, interaction, focus a
   await ready(page);
   const initial = await snapshot(page);
   expect(initial.webgl).toBe(2);
+  expect(initial.activeMeshes).toBeGreaterThan(0);
   expect(initial.actualCameraDistance).toBeLessThan(initial.camera.distance); // Front wall shortens orbit.
   expect(initial.cameraPosition[2]).toBeGreaterThan(-6.75);
   await page.screenshot({ path: testInfo.outputPath("m1-shop.png") });

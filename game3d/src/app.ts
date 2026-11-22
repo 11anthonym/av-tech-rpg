@@ -17,7 +17,7 @@ declare const __BUILD_VERSION__: string;
 export interface Diagnostics {
   build: string; areaId: string; position: number[]; camera: SaveData["camera"];
   cameraPosition: number[]; actualCameraDistance: number; actionId: string | null;
-  completedActions: string[]; paused: boolean; frames: number; webgl: number; errors: string[];
+  completedActions: string[]; paused: boolean; frames: number; activeMeshes: number; webgl: number; errors: string[];
 }
 declare global { interface Window { __AV3D__?: { snapshot(): Diagnostics } } }
 
@@ -74,7 +74,8 @@ export async function startGame(root: HTMLElement) {
     position: controller?.position.asArray() ?? [], camera: { ...(camera?.state ?? loaded.data.camera) },
     cameraPosition: camera?.camera.position.asArray() ?? [], actualCameraDistance: camera?.actualDistance ?? 0,
     actionId: active?.actionId ?? null, completedActions: [...session.completedActions], paused,
-    frames, webgl: renderer?.engine.webGLVersion ?? 0, errors: [...errors] });
+    frames, activeMeshes: renderer?.scene.getActiveMeshes().length ?? 0,
+    webgl: renderer?.engine.webGLVersion ?? 0, errors: [...errors] });
   // Read-only observability is available on explicit debug URLs, never a state setter.
   if (new URLSearchParams(location.search).has("debug")) window.__AV3D__ = { snapshot };
   window.addEventListener("error", event => fatal(event.error ?? event.message), { signal: abort.signal });
@@ -92,6 +93,7 @@ export async function startGame(root: HTMLElement) {
     controller = new CharacterController(renderer.scene, loaded.data.position, createPlaceholderVisual(renderer.scene));
     camera = new FollowCamera(renderer.scene, loaded.data.camera);
     camera.update(controller.position);
+    await renderer.scene.whenReadyAsync();
     renderer.engine.onContextLostObservable.add(() => {
       contextLost = true; input?.setEnabled(false); save(); hud.notice("Graphics interrupted. Waiting for the browser to recover…");
     });
@@ -124,7 +126,10 @@ export async function startGame(root: HTMLElement) {
         if (input.consumeInteraction()) interact();
         renderer.scene.render();
         frames += 1;
-        if (frames === 3) hud.ready(loaded.message);
+        if (frames === 3) {
+          if (renderer.scene.getActiveMeshes().length === 0) throw new Error("The shop has no visible active geometry");
+          hud.ready(loaded.message);
+        }
         sinceSave += delta;
         if (sinceSave >= 3) { save(); sinceSave = 0; }
       } catch (error) { fatal(error); }

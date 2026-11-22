@@ -14,6 +14,7 @@ export class FollowCamera {
     this.scene = scene;
     this.state = { ...initial };
     this.camera = new FreeCamera("third-person", Vector3.Zero(), scene);
+    scene.activeCamera = this.camera;
     this.camera.inputs.clear();
     this.camera.minZ = 0.05;
     this.camera.maxZ = 120;
