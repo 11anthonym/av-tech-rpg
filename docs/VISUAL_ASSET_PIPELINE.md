@@ -92,6 +92,18 @@ Before producing many assets, run exactly two bounded proofs:
 
 These trials can happen alongside M1 engineering work; M2 remains **not complete** until both actual playable-art reviews pass. The owner must explicitly accept real in-browser motion and environment presentation.
 
+## Animation reuse correction: Babylon v9 can retarget, but it is not automatic polish
+
+[Official Babylon animation retargeting](https://doc.babylonjs.com/features/featuresDeepDive/animation/animationRetargeting) documents §AnimatorAvatar.retargetAnimationGroup§ as available since Babylon 9.0. It remaps source **transform-node** animation groups by bone/morph target name and can compensate for reference-pose differences. It is a useful **second route** to a single Blender-baked animation library—especially if Rocketbox and Ara share named bones—but **does not** prove that two arbitrary rigs can share convincing carry/work animations.
+
+The source animation hierarchy must be restored to its **rest pose** before retargeting. The target needs a correct recorded rest pose; mismatched bone names, hierarchy, limb proportions and attachment positions can still fail or cause foot sliding. Enabling the hierarchy check drops incompatible tracks rather than magically adapting them. Confirm that §retargetAnimationGroup§ exists in the **pinned Babylon package** and run it against a real source/target GLB before making the architecture depend on it.
+
+**Trial comparison:** For one idle/walk clip, compare (A) Blender-baked animation on the intended technician vs (B) Babylon runtime retargeting from a reference rig. Prefer simpler reliable results. Use a hand-authored/in-place carry/interact animation if retargeting does not preserve hand grip and foot placement. Keep a stable §animationId§ abstraction so swapping pipeline does not change game rules.
+
+**Blender exporter version caveat:** Current [Blender glTF exporter documentation](https://docs.blender.org/manual/en/latest/addons/scene_gltf2.html) specifies multiple export animation modes; Blender 4.4's slotted actions changed how some actions/NLA tracks merge. Do not rely on old pre-4.4 tutorials that claim NLA track names alone always merge clips. Pin Blender version and export mode; inspect the **actual exported GLB's animation group names**, test simultaneous model/prop animation and play every required group in Babylon.
+
+**Performance correction:** Babylon's [scene optimization guide](https://doc.babylonjs.com/features/featuresDeepDive/scene/optimize_your_scene/) recommends optimizations such as freezing world matrices and materials, but freezing a matrix intentionally prevents later transform changes. Use such measures on **verified static** props, not carried objects, interactive carts, doors, skeleton meshes or other mutable geometry. Don't disable pickability of interaction targets as an incidental "optimization." Profile first; make performance optimizations targeted and reversible.
+
 ## Safety of visual automation
 
 Screenshots are evidence of **what rendered**, not proof of **aesthetic acceptability**. Playwright pixel snapshots can vary with browser, OS, GPU and software rendering; use stable CI baselines for regressions but retain manual art review. [Playwright visual comparison guidance](https://playwright.dev/docs/test-snapshots).
