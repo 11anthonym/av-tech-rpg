@@ -68,6 +68,24 @@ No specific source model or paid kit has been licensed and accepted by this docu
 
 **Resource discipline:** Start with zero-cost sourced assets, existing AI coding capability and a bounded asset trial. Do not purchase credits, subscriptions, rig packs or character models before comparing these free pipelines and obtaining explicit owner authorization. The actual cost of AI iteration and delivery remains **unknown** until the first benchmark passes.
 
+## Optional editor-assisted authoring trial — do not change the main engine
+
+**Research finding (11/22/2026):** [Babylon.js Editor 5](https://editor.babylonjs.com/documentation) is a free/open-source desktop scene editor with visual composition, materials, model import and built-in optimization tools. Its [source](https://github.com/BabylonJS/Editor) includes an assistant panel supporting coding agents and a local MCP bridge; the [MCP tools contract](https://github.com/BabylonJS/Editor/blob/master/mcp/mcp-tools-contract.md) covers scene objects, materials, scripts, animations, previews, screenshots and play-test commands. The source currently comments out the **old global** §initializeMcpServer§ call, while the assistant panel has its own **on-demand** §startMcpServer§ path. This means the **specific installed editor version and agent integration must actually be tested**; reading the tools contract does not prove that all advertised agent workflows run.
+
+**Why it matters:** For one believable furnished AV shop, a drag-and-drop editor plus coding-agent scene composition might be more efficient than scripting every light and shelf in Blender or TypeScript. It should be an authoring convenience, **not a second runtime engine, second game codebase or mandatory hosting service**.
+
+**Controlled trial:** After M1 renders a stable §game3d/§ scene, build an identical *small loading-bay corner* with one rack, shelf, cart, doorway, workbench and three light/material treatments in (A) existing Blender/script/GLB workflow and (B) Babylon Editor 5. Compare:
+- Time/complexity to arrange and revise ten objects, fix their scale and positions, and make them look coherent.
+- Output reproducibility in Git, inspectable asset IDs, license manifest, and ability to load the scene in the existing Babylon+Vite app **without** editor-only runtime dependencies or rearchitecting the project.
+- Normal-camera appearance and ability to place interaction/collision anchors, plus actual browser performance/cold-load size.
+- Whether local Codex/Claude-assisted editing, saving and screenshot verification works in the installed editor; distinguish implemented features from specification-only tools.
+
+**Unit trap:** The editor's documented authoring convention uses **centimeters** and its import path may scale glTF by **×100**, whereas AV Tech RPG's planned runtime convention is **1 game unit = 1 meter**. Explicitly test a known-size human, 42U rack and doorway; implement a documented conversion boundary if the editor wins. **Do not apply scale twice** or leak authoring units into saved positions.
+
+**Adoption rule:** Adopt Editor-based level assembly only if it measurably saves work, creates maintainable **source-controlled/exportable** scenes, preserves the existing Vite runtime, and does not compromise scale, licensing or QA. Otherwise keep it as an optional visual inspection tool. No mandatory editor/agent plugin installation for M1.
+
+**Security note:** [Blender's official MCP server page](https://www.blender.org/lab/mcp-server/) explicitly warns that generated Python can run without safeguards and recommends isolation from sensitive data. Never enable autonomous editor/Blender execution on a computer holding private data or unattended production credentials merely for art generation. Use sandboxed or isolated projects with a reviewable file boundary.
+
 ## Proposed minimal manifest schema (illustrative only)
 
 Do **not** mark fictional entries as acquired. These are suggested fields for actual `assets.manifest.json` records:
