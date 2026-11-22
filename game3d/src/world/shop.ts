@@ -46,8 +46,11 @@ export const shop: AreaDefinition = {
 };
 
 export function isSafePosition(position: Vec3): boolean {
-  return position.every(Number.isFinite) && Math.abs(position[0]) < 8.4
-    && position[1] >= 0.85 && position[1] <= 2 && position[2] > -6.4 && position[2] < 8.4
+  const floor = shop.props.find(prop => prop.id === "floor")!;
+  return position.every(Number.isFinite)
+    && Math.abs(position[0] - floor.position[0]) <= floor.size[0] / 2
+    && Math.abs(position[2] - floor.position[2]) <= floor.size[2] / 2
+    && position[1] >= 0.85 && position[1] <= 2
     && !shop.props.some(prop => prop.solid && prop.id !== "floor" &&
       Math.abs(position[0] - prop.position[0]) < prop.size[0] / 2 + 0.29 &&
       Math.abs(position[2] - prop.position[2]) < prop.size[2] / 2 + 0.29);
