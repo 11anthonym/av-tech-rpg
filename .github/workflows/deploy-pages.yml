@@ -37,6 +37,7 @@ jobs:
         run: |
           pnpm --dir game3d test
           pnpm --dir game3d build
+          pnpm --dir game3d build:portable
       - name: Install browser
         run: pnpm --dir game3d exec playwright install --with-deps chromium
       - name: Verify production-subpath browser flow

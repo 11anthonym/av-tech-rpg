@@ -6,6 +6,9 @@ import type { Diagnostics } from "../src/app.ts";
 const legacyKey = "av-tech-rpg-save-v1";
 const legacyBytes = '{"legacy-preservation-sentinel":true}';
 const snapshot = (page: Page): Promise<Diagnostics> => page.evaluate(() => window.__AV3D__!.snapshot());
+// Stop the WebGL render loop before the recorder/context is finalized. This
+// avoids software-GPU ReadPixels teardown stalls, without skipping assertions.
+test.afterEach(async ({ page }) => { if (!page.isClosed()) await page.goto("about:blank"); });
 async function ready(page: Page) {
   await expect(page.locator("#app")).toHaveAttribute("data-ready", "true", { timeout: 30000 });
 }

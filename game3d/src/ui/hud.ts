@@ -38,7 +38,9 @@ export class GameHud {
     this.debug = get("#debug-panel");
     this.pauseDialog = get<HTMLDialogElement>("#pause-dialog");
     this.resultDialog = get<HTMLDialogElement>("#result-dialog");
-    get<HTMLAnchorElement>("#legacy-link").href = new URL("../", new URL(import.meta.env.BASE_URL, location.origin)).href;
+    get<HTMLAnchorElement>("#legacy-link").href = import.meta.env.BASE_URL.startsWith("/av-tech-rpg/")
+      ? new URL("../", new URL(import.meta.env.BASE_URL, location.origin)).href
+      : "https://11anthonym.github.io/av-tech-rpg/";
     const signal = this.abort.signal;
     this.prompt.addEventListener("click", () => callbacks.interact(), { signal });
     get("#pause-button").addEventListener("click", () => { callbacks.pause(true); this.pauseDialog.showModal(); }, { signal });

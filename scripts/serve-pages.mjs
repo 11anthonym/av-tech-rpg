@@ -3,10 +3,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = fileURLToPath(new URL("../.pages/", import.meta.url));
+const portable = process.argv.includes("--portable");
+const root = fileURLToPath(new URL(portable ? "../game3d/dist-portable/" : "../.pages/", import.meta.url));
 const portIndex = process.argv.indexOf("--port");
 const port = portIndex < 0 ? 4174 : Number(process.argv[portIndex + 1]);
-const prefix = "/av-tech-rpg";
+const prefix = portable ? "" : "/av-tech-rpg";
 const mime = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json",
   ".glb": "model/gltf-binary", ".wasm": "application/wasm", ".png": "image/png", ".svg": "image/svg+xml" };
 const server = http.createServer((request, response) => {
@@ -22,5 +23,5 @@ const server = http.createServer((request, response) => {
     response.end(request.method === "HEAD" ? undefined : fs.readFileSync(target));
   } catch { response.writeHead(400); response.end("Invalid request"); }
 });
-server.listen(port, "127.0.0.1", () => console.log(`Pages preview: http://127.0.0.1:${port}${prefix}/3d/`));
+server.listen(port, "127.0.0.1", () => console.log(`Static preview: http://127.0.0.1:${port}${prefix}/${portable ? "" : "3d/"}`));
 for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => server.close());
