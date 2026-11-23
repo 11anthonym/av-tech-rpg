@@ -124,7 +124,7 @@ export function createShopArt(scene: Scene, root: TransformNode) {
   }
   for (let y = 0.12; y <= 2.02; y += 0.62) {
     box("shelf-pan", [-5.5, y, 5], [2.85, 0.045, 0.75], aluminium);
-    for (let i = 0; i < 3; i++) cartonAt([-6.4 + i * 0.9, y + 0.23, 5], [0.7, 0.42, 0.6]);
+    if (y > .2) for (let i = 0; i < 3; i++) cartonAt([-6.4 + i * 0.9, y + 0.23, 5], [0.7, 0.42, 0.6]);
   }
   label("staging-sign", "STAGING  /  CHECK BEFORE LOADING", [-5.5, 2.84, 8.84], 4, 0.32);
   // Dispatch/supply counter stays within the authored footprint.
@@ -178,13 +178,13 @@ export function createShopArt(scene: Scene, root: TransformNode) {
   for (const x of [0.71, 0.89]) box("case-handle-mount", [x, 1.315, 0], [0.025, 0.06, 0.035], black);
   for (const x of [0.68, 0.92]) box("toolcase-latch", [x, 1.2, -0.155], [0.05, 0.07, 0.02], aluminium);
   // Van #3: shaped body/cab, glazing, tyres, hubs, bumpers and rear hardware.
-  const van = new TransformNode("van3-art", scene); van.parent = root; van.position.set(5.8, 0, 4.5);
+  const van = new TransformNode("van3-art", scene); van.parent = root; van.position.set(5.8, 0, 4);
   const profile: [number, number][] = [[0.5,-2.4],[1,-2.4],[1.12,-1.85],[2.05,-1.15],[2.18,-0.7],[2.18,2.2],[2.02,2.4],[0.5,2.4]];
   const positions: number[] = []; const indices: number[] = [];
   for (const x of [-1.02, 1.02]) for (const [y,z] of profile) positions.push(x,y,z);
   const n = profile.length;
   for (let i = 1; i < n - 1; i++) { indices.push(0,i+1,i,n,n+i,n+i+1); }
-  for (let i = 0; i < n; i++) { const j = (i+1)%n; indices.push(i,j,n+j,i,n+j,n+i); }
+  for (let i = 0; i < n; i++) { if (i === 6) continue; const j = (i+1)%n; indices.push(i,j,n+j,i,n+j,n+i); }
   const body = new Mesh("van-shaped-body", scene); const data = new VertexData(); const normals: number[] = [];
   VertexData.ComputeNormals(positions, indices, normals); data.positions=positions; data.indices=indices; data.normals=normals;
   data.uvs = Array.from({ length: positions.length / 3 * 2 }, () => 0); data.applyToMesh(body);
@@ -211,11 +211,14 @@ export function createShopArt(scene: Scene, root: TransformNode) {
     box("rear-light", [x, 1, 2.409], [0.14, 0.38, 0.02], material(`rear-lamp-${x}`, "#a33e2b", 0.28), van);
     for (const y of [0.94, 1.76]) box("rear-door-hinge", [x, y, 2.414], [0.11, 0.06, 0.04], aluminium, van);
   }
-  box("rear-door-division", [0, 1.36, 2.412], [0.012, 1.47, 0.016], steel, van);
-  label("van-rear-number", "VAN 3  /  AV SERVICE", [0, 1.57, 2.425], 1.5, 0.24, van, Math.PI);
-  box("rear-lock", [0.1, 1.17, 2.432], [0.2, 0.05, 0.025], black, van);
+  // Rear doors fold against the sides, within the existing broad collider.
+  for (const x of [-1.045, 1.045]) box("open-rear-door", [x, 1.35, 1.91], [.035, 1.5, .9], white, van);
+  box("cargo-floor", [0, .56, 1.2], [1.94, .08, 2.3], steel, van);
+  for (const x of [-.96,.96]) box("cargo-side-lining", [x,1.3,1.2], [.035,1.35,2.25], steel, van);
+  box("cargo-bulkhead", [0,1.3,.08], [1.94,1.35,.035], steel, van);
+  box("cargo-headlining", [0,2,1.2], [1.94,.035,2.25], steel, van);
   for (const x of [-0.7, 0, 0.7]) box("van-roof-rib", [x, 2.19, 0.8], [0.035, 0.02, 2.65], white, van);
-  // Clear, marked loading aisle (decorative, no new loading action in M2).
+  // Clear rear loading approach, outside the van collision envelope.
   for (const x of [4.35, 7.25]) box("loading-lane", [x, 0.006, 4.45], [0.055, 0.008, 7.4], yellow);
   label("loading-bay-sign", "VAN 3  /  LOADING BAY", [5.8, 2.7, 8.84], 3.2, 0.32);
   const focusedMaterial = yellow.clone("bench-focus-yellow"); focusStrip.material = focusedMaterial;

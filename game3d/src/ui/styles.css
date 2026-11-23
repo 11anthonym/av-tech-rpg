@@ -26,6 +26,7 @@ kbd { font-family: inherit; font-weight: 700; }
 .interaction p { margin: .5rem 0; }
 .interaction button { min-width: 14rem; border-color: #e6ae55; pointer-events: auto; }
 #save-status { margin: .35rem 0 0; font-size: .8rem; color: #c8d4cf; }
+#loadout { margin: .2rem 0; font-size: .85rem; color: #e7d6ac; }
 #debug-panel { position: absolute; top: 8rem; right: 1rem; max-width: min(30rem, 90vw); max-height: 60vh; overflow: auto; margin: 0; padding: 1rem; background: #0c161deb; font-size: .8rem; pointer-events: none; }
 dialog { color: #edf3f0; background: #182d34; border: 1px solid #759696; border-radius: 10px; padding: 1.5rem; width: min(32rem, calc(100vw - 2rem)); box-shadow: 0 15px 90px #0008; }
 dialog::backdrop { background: #061015b8; }

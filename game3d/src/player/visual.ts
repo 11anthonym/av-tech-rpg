@@ -3,12 +3,15 @@ import type { Scene } from "@babylonjs/core/scene";
 import { loadModel } from "../render/assets.ts";
 import { Material } from "@babylonjs/core/Materials/material";
 import { cameraOpacity } from "./camera-boom.ts";
+import { applyCarryPose } from "./carry-pose.ts";
 
 export interface TechnicianVisual {
   root: TransformNode;
   setMotion(speed: number, delta: number): void;
   setCameraDistance(distance: number): void;
-  snapshot(): { model: string; joints: number; height: number; opacity: number; speed: number; walkWeight: number; idleFrame: number; walkFrame: number; pose: number[] };
+  setCarrying(value: boolean): void;
+  createSupervisor(): { snapshot(): { meshes: number; joints: number; position: number[] }; dispose(): void };
+  snapshot(): { model: string; joints: number; height: number; opacity: number; carryPoseError: number | null; speed: number; walkWeight: number; idleFrame: number; walkFrame: number; pose: number[] };
   dispose(): void;
 }
 
@@ -43,8 +46,34 @@ export async function createTechnicianVisual(scene: Scene): Promise<TechnicianVi
   let weight = 0;
   let speed = 0;
   let opacity = 1;
+  let carrying = false;
+  let carryPoseError: number | null = null;
+  const carryObserver = scene.onAfterAnimationsObservable.add(() => { carryPoseError = carrying ? applyCarryPose(asset.transformNodes, root) : null; });
   return {
     root,
+    setCarrying(value) { carrying = value; },
+    createSupervisor() {
+      const npc = new TransformNode("supervisor-visual", scene);
+      npc.position.set(-5, 0, -1); npc.rotation.y = Math.PI;
+      const npcModel = new TransformNode("supervisor-model", scene); npcModel.parent = npc;
+      npcModel.scaling.copyFrom(model.scaling); npcModel.position.copyFrom(model.position);
+      // AssetContainer discovers hierarchy roots by parent===null. The player's
+      // imported roots already belong to its visual adapter, so detach only for
+      // this synchronous clone and restore them before the next rendered frame.
+      const parents = asset.rootNodes.map(node => node.parent);
+      let entries;
+      try {
+        asset.rootNodes.forEach(node => { node.parent = null; });
+        entries = asset.instantiateModelsToScene(name => `supervisor/${name}`, false, { doNotInstantiate: true });
+      } finally { asset.rootNodes.forEach((node,i) => { node.parent = parents[i] ?? null; }); }
+      for (const node of entries.rootNodes) node.parent = npcModel;
+      for (const group of entries.animationGroups) { group.stop(); if (group.name.endsWith("Idle")) group.start(true, 1); }
+      for (const mesh of npc.getChildMeshes()) { mesh.isPickable = false; mesh.receiveShadows = true; }
+      const snapshot = () => ({ meshes: npc.getChildMeshes().filter(mesh => mesh.getTotalVertices()>0).length,
+        joints: entries.skeletons[0]?.bones.length ?? 0, position: npc.position.asArray() });
+      if (snapshot().meshes !== 5 || snapshot().joints !== 80) throw new Error("Supervisor requires the complete technician rig");
+      return { snapshot, dispose() { entries.dispose(); npc.dispose(); } };
+    },
     setCameraDistance(distance) {
       opacity = cameraOpacity(distance);
       for (const mesh of asset.meshes) mesh.visibility = opacity;
@@ -59,9 +88,9 @@ export async function createTechnicianVisual(scene: Scene): Promise<TechnicianVi
       // Native stride travels 1.213m in 1.2s, scaled with this model.
       walk.speedRatio = Math.max(0.1, speed / (1.213 / 1.2 * scale));
     },
-    snapshot: () => ({ model: "Rocketbox Andre / tee", joints: skeleton.bones.length, height: 1.78, opacity, speed,
+    snapshot: () => ({ model: "Rocketbox Andre / tee", joints: skeleton.bones.length, height: 1.78, opacity, carryPoseError, speed,
       walkWeight: weight, idleFrame: idle.getCurrentFrame(), walkFrame: walk.getCurrentFrame(),
       pose: Array.from(skeleton.bones.find(bone => bone.name === "mixamorig:LeftLeg")?.getLocalMatrix().asArray().slice(0, 12) ?? []) }),
-    dispose() { asset.dispose(); root.dispose(false, true); },
+    dispose() { scene.onAfterAnimationsObservable.remove(carryObserver); asset.dispose(); root.dispose(false, true); },
   };
 }

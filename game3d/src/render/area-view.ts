@@ -53,7 +53,7 @@ export async function createAreaView(scene: Scene, area: AreaDefinition) {
       if (next === focused) return;
       if (focused?.material instanceof StandardMaterial) focused.material.emissiveColor.set(0, 0, 0);
       focused = next;
-      art.focus(Boolean(next));
+      art.focus(meshId === "workbench");
       if (focused?.material instanceof StandardMaterial) focused.material.emissiveColor.set(0.18, 0.12, 0.025);
     },
     dispose() { caseAsset.dispose(); root.dispose(false, true); },

@@ -1,0 +1,18 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://127.0.0.1:4174",
+      "localStorage": [
+        {
+          "name": "av-tech-rpg-3d-dev-v2",
+          "value": "{\"version\":2,\"session\":{\"areaId\":\"shop\",\"technicianId\":\"prototype-tech\",\"completedActions\":[\"shop.brief-supervisor\"],\"flags\":{\"shopBrief\":true},\"carry\":[],\"loaded\":[\"Cart frame boxes\",\"Display boxes\",\"Accessory tote\"],\"tools\":[\"screwdriver\"],\"energy\":94},\"position\":[5.824583333333499,0.92,7.73666666666722],\"camera\":{\"yaw\":0,\"pitch\":0.35,\"distance\":5.5}}"
+        },
+        {
+          "name": "av-tech-rpg-3d-settings-v1",
+          "value": "{\"version\":1,\"quality\":\"low\",\"sensitivity\":1}"
+        }
+      ]
+    }
+  ]
+}

@@ -7,7 +7,8 @@ export function selectInteraction(scene: Scene, player: Vector3, interactions: I
   const eye = player.add(new Vector3(0, 0.5, 0));
   const candidates = interactions.map(definition => ({ definition,
     distance: Vector3.Distance(player, Vector3.FromArray(definition.anchor)) }))
-    .filter(candidate => candidate.distance <= candidate.definition.radius)
+    .filter(candidate => candidate.distance <= candidate.definition.radius &&
+      (candidate.definition.minApproachZ === undefined || player.z >= candidate.definition.minApproachZ))
     .sort((a, b) => b.definition.priority - a.definition.priority || a.distance - b.distance ||
       a.definition.id.localeCompare(b.definition.id));
   return candidates.find(({ definition }) => {

@@ -46,6 +46,11 @@ cartons, dispatch counter, fixtures and Van #3. No vendor logos, paid packs,
 image-generation service or third-party shop meshes/textures are included.
 These additions do not grant a blanket license to the existing project;
 the third-party asset grants above remain applicable.
+
+M3 also reuses the same licensed human for the supervisor (shared materials and
+textures, separately cloned skeleton). Labelled cargo packaging, open rear-door
+lining and the two-bone carry hold solver are original project code. The hold
+pose is layered onto native Idle/Walk; no native carry/pickup/tool clip is claimed.
 `engineering-toolcase.glb` is the original M1 engineering import fixture,
 retained on the bench and in its load-failure test, not sourced production kit.
 
