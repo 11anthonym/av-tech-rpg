@@ -1,7 +1,10 @@
+import type { GraphicsQuality, Settings } from "../persistence/settings.ts";
+
 interface HudCallbacks {
   interact(): void;
   pause(paused: boolean): void;
   sensitivity(value: number): void;
+  quality(value: GraphicsQuality): void;
 }
 
 export class GameHud {
@@ -13,7 +16,7 @@ export class GameHud {
   private resultDialog: HTMLDialogElement;
   private abort = new AbortController();
 
-  constructor(root: HTMLElement, callbacks: HudCallbacks) {
+  constructor(root: HTMLElement, callbacks: HudCallbacks, settings: Settings) {
     this.root = root;
     root.innerHTML = `
       <canvas id="game-view" tabindex="0" aria-label="3D shop. Use WASD or arrow keys to walk, drag to orbit, wheel to zoom, and E to interact."></canvas>
@@ -26,7 +29,10 @@ export class GameHud {
         <p id="save-status" role="status">3D session only</p></footer>
       <pre id="debug-panel" hidden aria-label="3D diagnostics"></pre>
       <dialog id="pause-dialog"><h2>Paused</h2><p>Movement and camera controls are paused while this panel is open.</p>
-        <label>Camera sensitivity <input id="sensitivity" type="range" min="0.4" max="2" step="0.1" value="1"></label>
+        <label>Graphics quality <select id="graphics-quality"><option value="high">High · full resolution</option>
+          <option value="balanced">Balanced · 85% resolution</option><option value="low">Low · 65% resolution</option></select></label>
+        <p class="settings-help">Lower settings draw fewer pixels and simpler shadows. Use Low if walking or camera movement feels choppy.</p>
+        <label>Camera sensitivity <input id="sensitivity" type="range" min="0.4" max="2" step="0.1" value="${settings.sensitivity}"></label>
         <label class="checkbox"><input id="show-debug" type="checkbox"> Show diagnostics</label>
         <button id="resume-button">Resume</button></dialog>
       <dialog id="result-dialog"><h2 id="result-title">Workbench</h2><p id="result-copy"></p><button id="close-result">Back to shop</button></dialog>
@@ -42,6 +48,9 @@ export class GameHud {
       ? new URL("../", new URL(import.meta.env.BASE_URL, location.origin)).href
       : "https://11anthonym.github.io/av-tech-rpg/";
     const signal = this.abort.signal;
+    const quality = get<HTMLSelectElement>("#graphics-quality");
+    quality.value = settings.quality;
+    quality.addEventListener("change", () => callbacks.quality(quality.value as GraphicsQuality), { signal });
     this.prompt.addEventListener("click", () => callbacks.interact(), { signal });
     get("#pause-button").addEventListener("click", () => { callbacks.pause(true); this.pauseDialog.showModal(); }, { signal });
     get("#resume-button").addEventListener("click", () => this.pauseDialog.close(), { signal });

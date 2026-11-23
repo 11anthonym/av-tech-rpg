@@ -1,11 +1,14 @@
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
 import { loadModel } from "../render/assets.ts";
+import { Material } from "@babylonjs/core/Materials/material";
+import { cameraOpacity } from "./camera-boom.ts";
 
 export interface TechnicianVisual {
   root: TransformNode;
   setMotion(speed: number, delta: number): void;
-  snapshot(): { model: string; joints: number; height: number; speed: number; walkWeight: number; idleFrame: number; walkFrame: number; pose: number[] };
+  setCameraDistance(distance: number): void;
+  snapshot(): { model: string; joints: number; height: number; opacity: number; speed: number; walkWeight: number; idleFrame: number; walkFrame: number; pose: number[] };
   dispose(): void;
 }
 
@@ -24,6 +27,9 @@ export async function createTechnicianVisual(scene: Scene): Promise<TechnicianVi
     mesh.receiveShadows = true;
     mesh.computeWorldMatrix(true);
   }
+  for (const material of asset.materials) {
+    if (material.transparencyMode === Material.MATERIAL_OPAQUE) material.transparencyMode = null;
+  }
   const bounds = model.getHierarchyBoundingVectors(true);
   const height = bounds.max.y - bounds.min.y;
   if (!Number.isFinite(height) || height < 1 || height > 3) throw new Error(`Unexpected technician height ${height}`);
@@ -36,8 +42,13 @@ export async function createTechnicianVisual(scene: Scene): Promise<TechnicianVi
   walk.setWeightForAllAnimatables(0);
   let weight = 0;
   let speed = 0;
+  let opacity = 1;
   return {
     root,
+    setCameraDistance(distance) {
+      opacity = cameraOpacity(distance);
+      for (const mesh of asset.meshes) mesh.visibility = opacity;
+    },
     setMotion(metresPerSecond, delta) {
       speed = metresPerSecond;
       const target = speed > 0.08 ? 1 : 0;
@@ -48,7 +59,7 @@ export async function createTechnicianVisual(scene: Scene): Promise<TechnicianVi
       // Native stride travels 1.213m in 1.2s, scaled with this model.
       walk.speedRatio = Math.max(0.1, speed / (1.213 / 1.2 * scale));
     },
-    snapshot: () => ({ model: "Rocketbox Andre / tee", joints: skeleton.bones.length, height: 1.78, speed,
+    snapshot: () => ({ model: "Rocketbox Andre / tee", joints: skeleton.bones.length, height: 1.78, opacity, speed,
       walkWeight: weight, idleFrame: idle.getCurrentFrame(), walkFrame: walk.getCurrentFrame(),
       pose: Array.from(skeleton.bones.find(bone => bone.name === "mixamorig:LeftLeg")?.getLocalMatrix().asArray().slice(0, 12) ?? []) }),
     dispose() { asset.dispose(); root.dispose(false, true); },

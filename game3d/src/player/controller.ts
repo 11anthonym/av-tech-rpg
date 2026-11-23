@@ -20,6 +20,7 @@ export class CharacterController {
   }
   get position() { return this.body.position; }
   get character() { return this.visual.snapshot(); }
+  updateCamera(distance: number) { this.visual.setCameraDistance(distance); }
   step(input: MoveInput, yaw: number, delta: number) {
     const direction = movementVector(input, yaw);
     // This shop is flat. Slopes/stairs need a separately qualified movement

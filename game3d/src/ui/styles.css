@@ -1,7 +1,9 @@
 :root { font-family: system-ui, sans-serif; color: #edf3f0; background: #172329; font-synthesis: none; color-scheme: dark; }
 * { box-sizing: border-box; }
 body { margin: 0; overflow: hidden; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
+select { padding: .6rem; color: #edf3f0; background: #20383f; border: 1px solid #7d999c; border-radius: 4px; }
+.settings-help { font-size: .85rem; color: #c8d4cf; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button { color: #f5f5e9; border: 1px solid #7d999c; background: #20383f; border-radius: 6px; padding: .65rem .9rem; cursor: pointer; }
 button:hover:not(:disabled) { background: #32535a; }
