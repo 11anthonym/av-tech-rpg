@@ -45,6 +45,9 @@ async function clickButton(page, name) {
   page.on("console", (message) => {
     if (message.type() === "error") pageErrors.push(message.text());
   });
+  page.on("response", (response) => {
+    if (response.status() >= 400) pageErrors.push(`${response.status()} ${response.url()}`);
+  });
 
   try {
     await page.goto(url);
