@@ -1,9 +1,10 @@
 import { LoadAssetContainerAsync } from "@babylonjs/core/Loading/sceneLoader";
 import type { Scene } from "@babylonjs/core/scene";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-// Register only the glTF 2 loader. Optional compressed/advanced extensions can
-// be registered when an accepted M2 asset actually needs them.
+// The pinned technician embeds WebP. Register only its required extension;
+// no remote decoder, runtime model CDN or optional compression service.
 import "@babylonjs/loaders/glTF/2.0/glTFLoader";
+import "@babylonjs/loaders/glTF/2.0/Extensions/EXT_texture_webp";
 
 // Asset ownership is explicit: callers retain/dispose the returned container.
 // M2 character rigs/animation groups can use this same import boundary.

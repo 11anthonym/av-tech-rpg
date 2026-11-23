@@ -26,7 +26,7 @@ export class FollowCamera {
     this.state.distance = Math.max(2.2, Math.min(8.5, this.state.distance + input.zoom));
   }
   update(player: Vector3) {
-    const target = player.add(new Vector3(0, 0.55, 0));
+    const target = player.add(new Vector3(0, 0.2, 0));
     const direction = new Vector3(Math.sin(this.state.yaw) * Math.cos(this.state.pitch),
       Math.sin(this.state.pitch), -Math.cos(this.state.yaw) * Math.cos(this.state.pitch));
     const hit = this.scene.pickWithRay(new Ray(target, direction, this.state.distance + 0.25),

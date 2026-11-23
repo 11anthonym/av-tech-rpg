@@ -19,18 +19,25 @@ export class CharacterController {
     this.syncVisual(0, 0);
   }
   get position() { return this.body.position; }
+  get character() { return this.visual.snapshot(); }
   step(input: MoveInput, yaw: number, delta: number) {
     const direction = movementVector(input, yaw);
-    // M1's authored shop is flat. Avoid a partial gravity/stair solver here;
-    // the movement adapter can gain qualified slope/step handling in M2.
-    this.body.moveWithCollisions(new Vector3(direction.x * 3.4 * delta, 0, direction.z * 3.4 * delta));
-    const speed = Math.hypot(direction.x, direction.z);
-    if (speed) this.visual.root.rotation.y = Math.atan2(direction.x, direction.z);
+    // This shop is flat. Slopes/stairs need a separately qualified movement
+    // adapter; importing a human rig does not change collision or save rules.
+    const before = this.body.position.clone();
+    this.body.moveWithCollisions(new Vector3(direction.x * 1.4 * delta, 0, direction.z * 1.4 * delta));
+    const speed = Vector3.Distance(before, this.body.position) / delta;
+    if (Math.hypot(direction.x, direction.z)) {
+      const difference = Math.atan2(Math.sin(Math.atan2(direction.x, direction.z) - this.visual.root.rotation.y),
+        Math.cos(Math.atan2(direction.x, direction.z) - this.visual.root.rotation.y));
+      this.visual.root.rotation.y += Math.max(-8 * delta, Math.min(8 * delta, difference));
+    }
     this.syncVisual(speed, delta);
   }
   private syncVisual(speed: number, delta: number) {
     this.visual.root.position.copyFrom(this.body.position);
-    this.visual.root.position.y -= 0.9;
+    // Capsule has 2cm flat-floor clearance; visible soles rest on the floor.
+    this.visual.root.position.y -= 0.92;
     this.visual.setMotion(speed, delta);
   }
   dispose() { this.body.dispose(); this.visual.dispose(); }

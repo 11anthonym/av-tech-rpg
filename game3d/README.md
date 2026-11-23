@@ -1,9 +1,14 @@
 # AV Tech RPG — production 3D client
 
-M1 is the engineering foundation for the browser game. It contains a shop
-qualification scene, third-person movement/camera, one workbench interaction
-and isolated 3D persistence. The capsule, room blocks and imported toolcase cube
-are engineering proxies. They do not pass the realistic/PBR art gate in M2.
+The M1 engineering foundation now has an M2 art trial: a realistic clothed,
+rigged human with native idle/walk clips and a furnished PBR AV shop/Van #3.
+Third-person input, camera, the workbench interaction and isolated 3D saves
+remain. The hidden capsule owns collision; the visible human is an independent
+adapter. M2 visual quality remains awaiting human review.
+
+See [M2 evidence and limitations](../docs/qa/m2/README.md) and the shipping
+[asset rights/provenance](public/assets/ASSET_LICENSES.md). Committed assets are
+self-contained; normal installation/build does not download or regenerate art.
 
 ## Setup and commands
 
@@ -25,7 +30,7 @@ are off by default; enable them in settings or append `?debug=1`.
 | Command | Purpose |
 | --- | --- |
 | `pnpm typecheck` | Strict TypeScript checks, including tests/config |
-| `pnpm test` | Native Node deterministic domain, ID, movement and save contracts |
+| `pnpm test` | Domain/save contracts plus asset hashes, rig inventory and glTF validation |
 | `pnpm build` | Typecheck and produce the static `dist/` client |
 | `pnpm build:portable` | Produce `dist-portable/` with root `/` asset URLs for independent hosting |
 | `pnpm preview` | Serve that production build at `http://127.0.0.1:4173/av-tech-rpg/3d/` |
@@ -138,9 +143,8 @@ See [M1 evidence and remaining gates](../docs/qa/M1_PRODUCTION_3D.md) for execut
 checks and current deployment status. The [production roadmap](../docs/PRODUCTION_ROADMAP.md)
 remains authoritative.
 
-The next art task is **P0.4 / M2: one naturally proportioned, clothed, rigged
-human and a furnished realistic/PBR AV shop with Van #3**. Record asset rights,
-scale/rig/clip conventions and demonstrate idle, walk, turn, carry and interact
-in the browser. Review screenshots and motion from the normal following camera;
-profile real assets on declared hardware. Include doorway/ramp/step and swept
-camera tests. The engineering proxy is not art acceptance.
+M2's first implementation is tracked in [Issue #3](https://github.com/11anthonym/av-tech-rpg/issues/3).
+Native Idle/Walk are integrated; carrying, tool interaction, turn-in-place clips,
+work boots, slope/stair and swept-camera qualification remain open. See the M2
+record before extending the adapter or claiming art acceptance. Keep M3 gameplay
+deferred until the moving character/shop have been reviewed.

@@ -1,6 +1,6 @@
 import { createRenderer } from "./render/renderer.ts";
 import { createAreaView } from "./render/area-view.ts";
-import { createPlaceholderVisual } from "./player/visual.ts";
+import { createTechnicianVisual } from "./player/visual.ts";
 import { CharacterController } from "./player/controller.ts";
 import { FollowCamera } from "./player/camera.ts";
 import { PlayerInput } from "./player/input.ts";
@@ -18,6 +18,8 @@ export interface Diagnostics {
   build: string; areaId: string; position: number[]; camera: SaveData["camera"];
   cameraPosition: number[]; actualCameraDistance: number; actionId: string | null;
   completedActions: string[]; paused: boolean; frames: number; activeMeshes: number; webgl: number; errors: string[];
+  character: CharacterController["character"] | null;
+  performance: { readyMs: number; sampledFrames: number; frameMs: { p50: number; p95: number; p99: number; max: number }; drawCalls: number; vertices: number; graphics: { vendor: string; renderer: string; version: string } } | null;
 }
 declare global { interface Window { __AV3D__?: { snapshot(): Diagnostics } } }
 
@@ -26,6 +28,9 @@ export async function startGame(root: HTMLElement) {
   let failed = false;
   let contextLost = false;
   let frames = 0;
+  const started = performance.now();
+  let readyMs = 0;
+  const frameTimes: number[] = [];
   let active: InteractionDefinition | undefined;
   let lastAction = "";
   const errors: string[] = [];
@@ -74,6 +79,8 @@ export async function startGame(root: HTMLElement) {
     position: controller?.position.asArray() ?? [], camera: { ...(camera?.state ?? loaded.data.camera) },
     cameraPosition: camera?.camera.position.asArray() ?? [], actualCameraDistance: camera?.actualDistance ?? 0,
     actionId: active?.actionId ?? null, completedActions: [...session.completedActions], paused,
+    character: controller?.character ?? null,
+    performance: renderer ? { readyMs, sampledFrames: frameTimes.length, frameMs: percentiles(frameTimes), ...renderer.metrics() } : null,
     frames, activeMeshes: renderer?.scene.getActiveMeshes().length ?? 0,
     webgl: renderer?.engine.webGLVersion ?? 0, errors: [...errors] });
   // Read-only observability is available on explicit debug URLs, never a state setter.
@@ -89,10 +96,13 @@ export async function startGame(root: HTMLElement) {
   try {
     renderer = createRenderer(hud.canvas);
     input = new PlayerInput(hud.canvas);
+    await renderer.ready;
     area = await createAreaView(renderer.scene, shop);
-    controller = new CharacterController(renderer.scene, loaded.data.position, createPlaceholderVisual(renderer.scene));
+    hud.notice("Loading technician and movement clips…");
+    controller = new CharacterController(renderer.scene, loaded.data.position, await createTechnicianVisual(renderer.scene));
     camera = new FollowCamera(renderer.scene, loaded.data.camera);
     camera.update(controller.position);
+    renderer.prepareShadows();
     await renderer.scene.whenReadyAsync();
     renderer.engine.onContextLostObservable.add(() => {
       contextLost = true; input?.setEnabled(false); save(); hud.notice("Graphics interrupted. Waiting for the browser to recover…");
@@ -106,7 +116,9 @@ export async function startGame(root: HTMLElement) {
     renderer.engine.runRenderLoop(() => {
       if (failed || contextLost || !renderer || !input || !controller || !camera || !area) return;
       try {
-        const delta = Math.min(renderer.engine.getDeltaTime() / 1000, 0.1);
+        const rawDelta = Math.max(renderer.engine.getDeltaTime() / 1000, 0.001);
+        const delta = Math.min(rawDelta, 0.1);
+        if (frames > 3) { frameTimes.push(renderer.engine.getDeltaTime()); if (frameTimes.length > 180) frameTimes.shift(); }
         if (!paused && !document.hidden) {
           camera.orbit(input.consumeCamera());
           accumulator += delta;
@@ -124,9 +136,15 @@ export async function startGame(root: HTMLElement) {
           sinceUi = 0;
         }
         if (input.consumeInteraction()) interact();
+        // Keep the animation clock on the same capped time as movement. At
+        // low FPS a real-time gait otherwise runs ahead of collision travel.
+        // A zero scale also keeps Babylon's timestamp current during pause,
+        // preventing a clip jump when the scene resumes.
+        renderer.scene.animationTimeScale = paused || document.hidden ? 0 : delta / rawDelta;
         renderer.scene.render();
         frames += 1;
         if (frames === 3) {
+          readyMs = performance.now() - started;
           if (renderer.scene.getActiveMeshes().length === 0) throw new Error("The shop has no visible active geometry");
           hud.ready(loaded.message);
         }
@@ -136,4 +154,9 @@ export async function startGame(root: HTMLElement) {
     });
   } catch (error) { fatal(error); }
   return { dispose };
+}
+
+function percentiles(values: number[]) {
+  const sorted = [...values].sort((a, b) => a - b);
+  return { p50: sorted[Math.floor(sorted.length * 0.5)] ?? 0, p95: sorted[Math.floor(sorted.length * 0.95)] ?? 0, p99: sorted[Math.floor(sorted.length * 0.99)] ?? 0, max: sorted.at(-1) ?? 0 };
 }
