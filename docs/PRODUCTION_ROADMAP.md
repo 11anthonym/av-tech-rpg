@@ -285,7 +285,9 @@ These are the **next actionable implementation tickets** after this planning com
 | 11/21/2026 | Prioritize shop/human visual gate, first day, then Conshohocken | Proves appearance, playable workflow and RPG depth before adding breadth |
 | 11/21/2026 | Treat engine probes and passing 2D QA as feasibility evidence, not 3D completion | No production 3D client, real art qualification or performance/player acceptance yet |
 
-**Next action:** Start **P0.1** in a bounded implementation PR. Deliver the actual `game3d/` workspace and independent build/deployment proof, then proceed through the acceptance gates rather than repeating engine research.
+**Next action:** Review the M3 shop/van preparation build, then implement M4's
+Center City East first workday. Publish the 3D client only through the existing
+approved dependency merges and main-only Pages workflow.
 
 **Execution update — 11/22/2026:** M1 PR #2 and M2 PR #4 are implemented and
 remain unmerged; `main` still serves the original career. The owner reviewed the

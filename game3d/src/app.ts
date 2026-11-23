@@ -74,7 +74,7 @@ export async function startGame(root: HTMLElement) {
   function save() {
     if (!controller || !camera) return;
     const ok = repository.save({ version: 2, session, position: controller.position.asArray() as unknown as Vec3, camera: { ...camera.state } });
-    hud.saving(ok ? "3D session saved" : "Saving unavailable · playing in this tab");
+    hud.saving(ok ? "3D session saved" : repository.problem ?? "Saving unavailable · playing in this tab");
   }
   function fatal(error: unknown) {
     if (failed) return;

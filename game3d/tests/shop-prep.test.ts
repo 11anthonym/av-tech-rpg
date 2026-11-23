@@ -4,7 +4,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import { newSession, resolveAction, vanReady } from "../src/domain/session.ts";
 import { shopLoad, shopRules } from "../src/content/ids.ts";
-import { freshSave, parseSave } from "../src/persistence/save.ts";
+import { freshSave, parseSave, SaveRepository, SAVE_KEY, PREVIOUS_SAVE_KEY } from "../src/persistence/save.ts";
 import { NullEngine } from "@babylonjs/core/Engines/nullEngine.js";
 import { Scene } from "@babylonjs/core/scene.js";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode.js";
@@ -59,6 +59,24 @@ test("v1 M1/M2 saves migrate without losing workbench, position or camera", () =
   assert.equal(migrated.version,2); assert.deepEqual(migrated.position,old.position); assert.deepEqual(migrated.camera,old.camera);
   assert.deepEqual(migrated.session.completedActions,old.session.completedActions);
   assert.deepEqual(migrated.session.carry,[]); assert.equal(migrated.session.flags.shopBrief,false);
+  const bytes=JSON.stringify(old), values=new Map([[PREVIOUS_SAVE_KEY,bytes]]);
+  const repository=new SaveRepository({getItem:key=>values.get(key)??null,setItem:(key,value)=>{values.set(key,value);}});
+  assert(repository.save(repository.load().data));
+  assert.equal(values.get(PREVIOUS_SAVE_KEY),bytes);
+  assert.equal(JSON.parse(values.get(SAVE_KEY)!).version,2);
+});
+
+test("a stale tab cannot overwrite newer saved cargo progress", () => {
+  const values=new Map<string,string>();
+  const port={getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>{values.set(key,value);}};
+  const first=new SaveRepository(port), stale=new SaveRepository(port);
+  const a=first.load().data, b=stale.load().data;
+  a.session=resolveAction(a.session,"shop.brief-supervisor").state;
+  a.session=resolveAction(a.session,"shop.pickup-equipment").state;
+  assert(first.save(a)); const newer=values.get(SAVE_KEY);
+  assert.equal(stale.save(b),false); assert.equal(values.get(SAVE_KEY),newer);
+  assert.match(stale.problem!,/Another tab/);
+  assert.deepEqual(new SaveRepository(port).load().data.session.carry,[shopLoad[0]]);
 });
 
 test("corrupt cargo, capacity, kit and briefing combinations are rejected", () => {

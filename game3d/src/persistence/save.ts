@@ -5,7 +5,8 @@ import type { Session } from "../domain/session.ts";
 import { isSafePosition, shop } from "../world/shop.ts";
 import type { Vec3 } from "../world/shop.ts";
 
-export const SAVE_KEY = "av-tech-rpg-3d-dev-v1";
+export const SAVE_KEY = "av-tech-rpg-3d-dev-v2";
+export const PREVIOUS_SAVE_KEY = "av-tech-rpg-3d-dev-v1";
 export interface SaveData {
   version: 2;
   session: Session;
@@ -53,22 +54,34 @@ export interface StoragePort { getItem(key: string): string | null; setItem(key:
 export class SaveRepository {
   private storage: StoragePort;
   private writable = true;
+  private lastRaw: string | null = null;
+  problem: string | undefined;
   constructor(storage: StoragePort) { this.storage = storage; }
 
   load(): { data: SaveData; message: string } {
     try {
-      const raw = this.storage.getItem(SAVE_KEY);
+      this.lastRaw = this.storage.getItem(SAVE_KEY);
+      const raw = this.lastRaw ?? this.storage.getItem(PREVIOUS_SAVE_KEY);
       return { data: raw ? parseSave(raw) : freshSave(), message: raw ? "3D session restored" : "New 3D session" };
     } catch {
       // Preserve damaged/unknown saves for recovery; do not overwrite them.
       this.writable = false;
+      this.problem = "Saving unavailable · existing data was retained.";
       return { data: freshSave(), message: "3D save unavailable. Playing without saving; existing data was retained." };
     }
   }
 
   save(data: SaveData): boolean {
     if (!this.writable) return false;
-    try { this.storage.setItem(SAVE_KEY, JSON.stringify(data)); return true; }
+    try {
+      if (this.storage.getItem(SAVE_KEY) !== this.lastRaw) {
+        this.writable = false;
+        this.problem = "Another tab saved this session. Reload to use its latest progress.";
+        return false;
+      }
+      const raw = JSON.stringify(data);
+      this.storage.setItem(SAVE_KEY, raw); this.lastRaw = raw; return true;
+    }
     catch { return false; }
   }
 }
