@@ -22,7 +22,7 @@ test("first shift: brief, three physical carry/load trips, constraints and reloa
   page.on("console",m=>{if(m.type()==="error") errors.push(m.text());});
   page.on("response",r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
   await page.goto("./?debug=1"); await ready(page);
-  await page.locator("#debug-panel").evaluate(e=>{e.hidden=true;});
+  await page.locator("#debug-panel").evaluate(e=>e.setAttribute("hidden",""));
   await page.getByRole("button",{name:"Pause / settings"}).click();
   await page.getByRole("combobox",{name:"Graphics quality"}).selectOption("low");
   await page.getByRole("button",{name:"Resume",exact:true}).click();
@@ -45,7 +45,7 @@ test("first shift: brief, three physical carry/load trips, constraints and reloa
     await page.screenshot({path:info.outputPath(`carry-${i}.png`)});
     if(i===0) {
       await page.reload(); await ready(page);
-      await page.locator("#debug-panel").evaluate(e=>{e.hidden=true;});
+      await page.locator("#debug-panel").evaluate(e=>e.setAttribute("hidden",""));
       expect((await snapshot(page)).session.carry).toEqual([shopLoad[0]]);
       expect((await snapshot(page)).session.energy).toBe(98);
     }
@@ -58,7 +58,7 @@ test("first shift: brief, three physical carry/load trips, constraints and reloa
     await expect(page.getByRole("heading",{name:"Van #3 cargo"})).toBeVisible();
     await page.getByRole("button",{name:"Back to shop"}).click();
     await page.reload(); await ready(page);
-    await page.locator("#debug-panel").evaluate(e=>{e.hidden=true;});
+    await page.locator("#debug-panel").evaluate(e=>e.setAttribute("hidden",""));
     expect((await snapshot(page)).session.loaded).toEqual(shopLoad.slice(0,i+1));
     if(i<2) {
       await go(page,"a",0,2.5,false); await go(page,"s",2,6.7,false); await go(page,"a",0,-2,false);
