@@ -21,12 +21,15 @@ export class CharacterController {
   get position() { return this.body.position; }
   get character() { return this.visual.snapshot(); }
   updateCamera(distance: number) { this.visual.setCameraDistance(distance); }
-  step(input: MoveInput, yaw: number, delta: number) {
+  step(input: MoveInput, yaw: number, delta: number, carrying = false) {
+    this.visual.setCarrying(carrying);
     const direction = movementVector(input, yaw);
     // This shop is flat. Slopes/stairs need a separately qualified movement
     // adapter; importing a human rig does not change collision or save rules.
     const before = this.body.position.clone();
-    this.body.moveWithCollisions(new Vector3(direction.x * 1.4 * delta, 0, direction.z * 1.4 * delta));
+    // Prototype PLAYER_SPEED=8, one carried group contributes speedDelta=-1.
+    const pace = carrying ? 1.4 * (7 / 8) : 1.4;
+    this.body.moveWithCollisions(new Vector3(direction.x * pace * delta, 0, direction.z * pace * delta));
     const speed = Vector3.Distance(before, this.body.position) / delta;
     if (Math.hypot(direction.x, direction.z)) {
       const difference = Math.atan2(Math.sin(Math.atan2(direction.x, direction.z) - this.visual.root.rotation.y),

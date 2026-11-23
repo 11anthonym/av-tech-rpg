@@ -39,12 +39,16 @@ export const shop: AreaDefinition = {
     { id: "staging", position: [-5.5, 1, 5], size: [3, 2, 0.8], material: "steel", solid: true },
     { id: "staging-cartons", position: [-5.5, 2.25, 5], size: [2.5, 0.5, 0.6], material: "carton", solid: false },
     { id: "supply-counter", position: [-5.5, 0.6, -2], size: [2.5, 1.2, 1], material: "wood", solid: true },
+    { id: "supervisor", position: [-5.5, .9, -1], size: [.6, 1.8, .6], material: "steel", solid: true },
     { id: "equipment-racks", position: [-0.85, 1, 7.9], size: [1.5, 2, 0.9], material: "steel", solid: true },
     { id: "display-cart", position: [-3.1, 0.95, 1.6], size: [1.25, 1.9, 0.7], material: "steel", solid: true },
-    { id: contentIds.vehicle, position: [5.8, 1.1, 4.5], size: [2.2, 2.2, 4.8], material: "steel", solid: true },
+    { id: contentIds.vehicle, position: [5.8, 1.1, 4], size: [2.2, 2.2, 4.8], material: "steel", solid: true },
   ],
   interactions: [{ id: "shop.workbench", actionId: "shop.inspect-workbench", anchor: [0, 1.05, -0.55],
-    meshId: "workbench", radius: 2.1, priority: 1 }],
+    meshId: "workbench", radius: 2.1, priority: 1 },
+    { id: "shop.supervisor", actionId: "shop.brief-supervisor", anchor: [-5.5, 1.15, -2.55], meshId: "supply-counter", radius: 1.8, priority: 2 },
+    { id: "shop.staging", actionId: "shop.pickup-equipment", anchor: [-5.5, 1, 4.54], meshId: "staging", radius: 1.6, priority: 2 },
+    { id: "shop.van3", actionId: "shop.load-van", anchor: [5.8, 1.1, 6.6], meshId: "van3", radius: 1.4, priority: 2 }],
 };
 
 export function isSafePosition(position: Vec3): boolean {

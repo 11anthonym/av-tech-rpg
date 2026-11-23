@@ -1,4 +1,5 @@
 import type { GraphicsQuality, Settings } from "../persistence/settings.ts";
+import type { Session } from "../domain/session.ts";
 
 interface HudCallbacks {
   interact(): void;
@@ -20,12 +21,13 @@ export class GameHud {
     this.root = root;
     root.innerHTML = `
       <canvas id="game-view" tabindex="0" aria-label="3D shop. Use WASD or arrow keys to walk, drag to orbit, wheel to zoom, and E to interact."></canvas>
-      <header class="topbar"><div><span class="eyebrow">AV TECH RPG · M2 ART TRIAL</span><h1>Trunkslammer Shop</h1>
+      <header class="topbar"><div><span class="eyebrow">AV TECH RPG · FIRST SHIFT</span><h1>Radnor Rack &amp; Wire</h1>
         <p class="stage-note">Service bench · systems test · Van 3 loading bay</p></div>
         <nav><a id="legacy-link">Original 2D career</a><button id="pause-button">Pause / settings</button></nav></header>
       <div id="notice" role="status" class="notice">Loading shop…</div>
       <footer><div class="controls"><span><kbd>WASD</kbd> / arrows · Walk</span><span>Drag · Orbit</span><span>Wheel · Zoom</span></div>
-        <div class="interaction"><p id="objective">Walk to the highlighted workbench.</p><button id="interact-button" disabled>Approach workbench</button></div>
+        <div class="interaction"><p id="objective">Talk to the supervisor.</p><button id="interact-button" disabled>Approach equipment</button></div>
+        <p id="loadout" role="status"></p>
         <p id="save-status" role="status">3D session only</p></footer>
       <pre id="debug-panel" hidden aria-label="3D diagnostics"></pre>
       <dialog id="pause-dialog"><h2>Paused</h2><p>Movement and camera controls are paused while this panel is open.</p>
@@ -72,16 +74,18 @@ export class GameHud {
   }
   notice(message: string) { this.root.querySelector("#notice")!.textContent = message; }
   saving(message: string) { this.root.querySelector("#save-status")!.textContent = message; }
-  interaction(label: string | undefined, completed: boolean) {
-    const text = label ? `${label} · E` : "Approach workbench";
+  interaction(label: string | undefined, available: boolean, objective: string) {
+    const text = label ? `${label} · E` : "Approach equipment";
     if (this.prompt.textContent !== text) this.prompt.textContent = text;
-    this.prompt.disabled = !label;
-    const objective = completed ? "Workbench checked. You can return to review it." : "Walk to the workbench and inspect it.";
+    this.prompt.disabled = !label || !available;
     const node = this.root.querySelector("#objective")!;
     if (node.textContent !== objective) node.textContent = objective;
   }
-  result(message: string, reviewed: boolean) {
-    this.root.querySelector("#result-title")!.textContent = reviewed ? "Workbench already checked" : "Workbench checked";
+  loadout(state: Session) {
+    this.root.querySelector("#loadout")!.textContent = `Hands ${state.carry.length}/1: ${state.carry[0] ?? "Empty"} · Van ${state.loaded.length}/3 · Energy ${state.energy}/100 · Kit: screwdriver`;
+  }
+  result(message: string, reviewed: boolean, title?: string) {
+    this.root.querySelector("#result-title")!.textContent = title ?? (reviewed ? "Workbench already checked" : "Workbench checked");
     this.root.querySelector("#result-copy")!.textContent = message;
     this.resultDialog.showModal();
   }

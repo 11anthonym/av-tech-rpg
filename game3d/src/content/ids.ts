@@ -9,12 +9,19 @@ export const contentIds = {
 
 export type AreaId = typeof contentIds.area;
 export type TechnicianId = typeof contentIds.technician;
-export type ActionId = "shop.inspect-workbench";
+export type ActionId = "shop.inspect-workbench" | "shop.brief-supervisor" | "shop.pickup-equipment" | "shop.load-van";
+// Canonical saved cargo labels from GAME_CONTENT.tutorial.shopLoad.
+export const shopLoad = ["Cart frame boxes", "Display boxes", "Accessory tote"] as const;
+export type CargoId = typeof shopLoad[number];
+export const shopRules = { carryCapacity: 1, vanCapacity: 3, pickupEnergy: 2 } as const;
 
 export const actions: Record<ActionId, { label: string; reviewLabel: string; message: string }> = {
   "shop.inspect-workbench": {
     label: "Inspect workbench",
     reviewLabel: "Review workbench",
-    message: "The workbench is clear. This is where the first-day tool kit will be prepared.",
+    message: "Personal kit: screwdriver. You already own it. The staged cart hardware goes in Van #3 after the supervisor briefing.",
   },
+  "shop.brief-supervisor": { label: "Talk to supervisor", reviewLabel: "Review assignment", message: '"You must be the new tech. Grab those cart boxes and load Van #3. We have a simple two-cart build downtown. I’ll show you everything onsite."' },
+  "shop.pickup-equipment": { label: "Pick up staged equipment", reviewLabel: "Review staging", message: "" },
+  "shop.load-van": { label: "Load Van #3", reviewLabel: "Review Van #3 cargo", message: "" },
 };
