@@ -1,5 +1,10 @@
 # Static Browser Architecture
 
+The production 3D implementation now lives alongside this prototype in
+[`game3d/`](../game3d/README.md). Its domain/content/world/render/player/UI/save
+ownership, production subpath and lifecycle are documented there. The new
+client does not load this prototype's globals or write its career save key.
+
 This document describes the existing no-build 2D browser prototype. Its code
 is split by ownership and loaded as ordered classic browser scripts from
 `index.html`. It remains the behavioral reference during the 3D transition.

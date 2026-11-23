@@ -16,20 +16,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: game3d/package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: game3d/pnpm-lock.yaml
+      - name: Verify legacy contracts
+        run: node scripts/qa-all.js --fast
+      - name: Install locked 3D dependencies
+        run: pnpm --dir game3d install --frozen-lockfile
+      - name: Test and build 3D client
+        run: |
+          pnpm --dir game3d test
+          pnpm --dir game3d build
+          pnpm --dir game3d build:portable
+      - name: Install browser
+        run: pnpm --dir game3d exec playwright install --with-deps chromium
+      - name: Verify production-subpath browser flow
+        run: pnpm --dir game3d test:browser --project=chromium
+      - name: Stage original game and separate 3D client
+        run: node scripts/build-pages.mjs
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload static site
         uses: actions/upload-pages-artifact@v4
         with:
-          path: .
+          path: .pages
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

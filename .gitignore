@@ -10,3 +10,13 @@ Thumbs.db
 *.tmp
 *.log
 
+# Production 3D client and generated Pages staging
+node_modules/
+game3d/dist/
+game3d/dist-portable/
+game3d/test-results/
+game3d/playwright-report/
+game3d/motion-results/
+game3d/motion-report/
+.pages/
+

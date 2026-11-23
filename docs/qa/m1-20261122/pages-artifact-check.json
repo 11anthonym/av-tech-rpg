@@ -1,0 +1,13 @@
+{
+  "run": "https://github.com/11anthonym/av-tech-rpg/actions/runs/45049020842",
+  "sourceHead": "d32054baa65abd95a6590d33f192e597544e431c",
+  "entryCount": 193,
+  "legacyHtmlMatchesGitBlob": true,
+  "legacyHtmlMatchesLiveRoot": true,
+  "liveRootStatus": 200,
+  "compiled3dSubpath": true,
+  "hasGlb": true,
+  "excludedSourceMaps": true,
+  "excludedDependencies": true,
+  "deployment": "skipped: development branch is not main"
+}

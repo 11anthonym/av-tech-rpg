@@ -11,6 +11,12 @@ works when the client walks in.
 
 ## Current Status
 
+The M1 production 3D client is implemented on its development branch in
+[`game3d/`](game3d/README.md), with independent install/build/test commands and
+an engineering shop scene. See [M1 qualification evidence](docs/qa/M1_PRODUCTION_3D.md)
+for executed checks and the hosted-deployment gate. The original 2D game and
+save key remain intact. M1 placeholders do not meet the M2 realistic/PBR art bar.
+
 This repository is the shared home for brainstorming and prototype development.
 The initial concept notes live in [docs/GAME_CONCEPT.md](docs/GAME_CONCEPT.md).
 

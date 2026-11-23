@@ -1,0 +1,36 @@
+:root { font-family: system-ui, sans-serif; color: #edf3f0; background: #172329; font-synthesis: none; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; overflow: hidden; }
+button, input { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { color: #f5f5e9; border: 1px solid #7d999c; background: #20383f; border-radius: 6px; padding: .65rem .9rem; cursor: pointer; }
+button:hover:not(:disabled) { background: #32535a; }
+button:disabled { opacity: .6; cursor: default; }
+:focus-visible { outline: 3px solid #f9be58; outline-offset: 3px; }
+[hidden] { display: none !important; }
+#app, canvas { width: 100%; height: 100dvh; }
+canvas { display: block; touch-action: none; outline: none; }
+.topbar { position: absolute; inset: 0 0 auto; display: flex; justify-content: space-between; gap: 1.5rem; padding: 1.1rem 1.5rem; background: linear-gradient(#102127f0, #102127c9); pointer-events: none; }
+.topbar nav { pointer-events: auto; display: flex; gap: 1rem; align-items: center; }
+a { color: #d3e8e8; font-size: .9rem; text-underline-offset: 3px; }
+.eyebrow { color: #efb75a; letter-spacing: .12em; font-size: .8rem; font-weight: 750; }
+h1 { font-size: 1.55rem; margin: .25rem 0; }
+.stage-note { color: #becbcb; font-size: .85rem; margin: .3rem 0 0; }
+.notice { position: absolute; top: 8.2rem; left: 1.5rem; max-width: 36rem; background: #102127e8; padding: .5rem .8rem; border-radius: 4px; font-size: .9rem; pointer-events: none; }
+footer { position: absolute; inset: auto 0 0; padding: 1rem 1.5rem; background: linear-gradient(transparent, #102127ed 30%); pointer-events: none; }
+.controls { display: flex; gap: 1.3rem; color: #cad6d6; font-size: .9rem; }
+kbd { font-family: inherit; font-weight: 700; }
+.interaction { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: .5rem; }
+.interaction p { margin: .5rem 0; }
+.interaction button { min-width: 14rem; border-color: #e6ae55; pointer-events: auto; }
+#save-status { margin: .35rem 0 0; font-size: .8rem; color: #c8d4cf; }
+#debug-panel { position: absolute; top: 8rem; right: 1rem; max-width: min(30rem, 90vw); max-height: 60vh; overflow: auto; margin: 0; padding: 1rem; background: #0c161deb; font-size: .8rem; pointer-events: none; }
+dialog { color: #edf3f0; background: #182d34; border: 1px solid #759696; border-radius: 10px; padding: 1.5rem; width: min(32rem, calc(100vw - 2rem)); box-shadow: 0 15px 90px #0008; }
+dialog::backdrop { background: #061015b8; }
+dialog h2 { margin: 0 0 .8rem; }
+dialog p { line-height: 1.6; }
+dialog label { display: flex; flex-direction: column; gap: .8rem; margin: 1.5rem 0; }
+dialog label.checkbox { flex-direction: row; }
+dialog input[type=range] { width: 100%; }
+#error-panel { position: absolute; inset: 15% auto auto 50%; transform: translateX(-50%); width: min(40rem, 90vw); border: 2px solid #f0aa70; border-radius: 8px; background: #172a32; padding: 1.5rem; z-index: 10; }
+@media (max-width: 760px) { .topbar { padding: .8rem; } .topbar nav { flex-direction: column; align-items: end; gap: .6rem; } h1 { font-size: 1.2rem; } .stage-note { max-width: 18rem; } footer { padding: .8rem; } .controls { gap: .8rem; flex-wrap: wrap; } .interaction { align-items: stretch; flex-direction: column; gap: .25rem; } .notice { left: .8rem; top: 10rem; max-width: calc(100vw - 1.6rem); } }
