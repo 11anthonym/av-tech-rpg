@@ -1,0 +1,17 @@
+{
+  "name": "av-tech-rpg",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "engines": { "node": ">=24.22.3 <25", "pnpm": "11.25.0" },
+  "scripts": {
+    "bootstrap": "pnpm --dir game3d install --frozen-lockfile",
+    "build": "pnpm --dir game3d build && node scripts/build-pages.mjs",
+    "preview": "node scripts/serve-pages.mjs",
+    "dev": "pnpm --dir game3d dev",
+    "test": "pnpm --dir game3d test && node scripts/qa-all.js --fast",
+    "test:browser": "pnpm --dir game3d test:browser",
+    "test:preview": "node --test scripts/tests/local-preview.test.mjs",
+    "test:legacy": "node scripts/qa-all.js",
+    "build:portable": "pnpm --dir game3d build:portable"
+  }
+}

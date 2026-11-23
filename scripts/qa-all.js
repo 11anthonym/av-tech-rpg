@@ -31,7 +31,7 @@ if (args.has("--help") || args.has("-h")) {
     "  node scripts/qa-all.js --fast   Run static and unit QA only.",
     "",
     "The smoke pass requires Playwright to be resolvable by Node.",
-    "Set NODE_PATH if Playwright is installed outside this repository.",
+    "Run pnpm bootstrap, then pnpm --dir game3d exec playwright install chromium.",
   ].join("\n"));
   process.exit(0);
 }
