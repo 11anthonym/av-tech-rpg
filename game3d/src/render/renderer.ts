@@ -9,8 +9,10 @@ import { CubeTexture } from "@babylonjs/core/Materials/Textures/cubeTexture";
 import { ImageProcessingConfiguration } from "@babylonjs/core/Materials/imageProcessingConfiguration";
 import { SceneInstrumentation } from "@babylonjs/core/Instrumentation/sceneInstrumentation";
 import "@babylonjs/core/Collisions/collisionCoordinator";
+import { graphicsPresets } from "../persistence/settings.ts";
+import type { GraphicsQuality } from "../persistence/settings.ts";
 
-export function createRenderer(canvas: HTMLCanvasElement) {
+export function createRenderer(canvas: HTMLCanvasElement, initialQuality: GraphicsQuality = "high") {
   const engine = new Engine(canvas, true, { stencil: true });
   const scene = new Scene(engine);
   const instrumentation = new SceneInstrumentation(scene);
@@ -28,6 +30,16 @@ export function createRenderer(canvas: HTMLCanvasElement) {
   shadows.filteringQuality = ShadowGenerator.QUALITY_LOW;
   shadows.bias = 0.001; shadows.normalBias = 0.035;
   shadows.setDarkness(0.25);
+  let quality = initialQuality;
+  const applyQuality = (value: GraphicsQuality) => {
+    quality = value;
+    const preset = graphicsPresets[value];
+    engine.setHardwareScalingLevel(1 / preset.resolution);
+    shadows.mapSize = preset.shadowSize;
+    shadows.usePercentageCloserFiltering = preset.filteredShadows;
+    engine.resize();
+  };
+  applyQuality(initialQuality);
   const ready = new Promise<void>((resolve, reject) => {
     scene.environmentTexture = new CubeTexture(`${import.meta.env.BASE_URL}assets/shop-lighting.env`, scene, null, false, null,
       resolve, message => reject(new Error(`Shop lighting could not load: ${message ?? "environment texture failed"}`)), undefined, true);
@@ -38,7 +50,9 @@ export function createRenderer(canvas: HTMLCanvasElement) {
   scene.imageProcessingConfiguration.exposure = 1.1;
   const resize = new ResizeObserver(() => engine.resize());
   resize.observe(canvas);
-  return { engine, scene, ready, metrics: () => ({ drawCalls: instrumentation.drawCallsCounter.current, vertices: scene.getTotalVertices(), graphics: engine.getGlInfo() }), prepareShadows() {
+  return { engine, scene, ready, applyQuality, metrics: () => ({ drawCalls: instrumentation.drawCallsCounter.current,
+    vertices: scene.getTotalVertices(), graphics: engine.getGlInfo(), quality, resolution: graphicsPresets[quality].resolution,
+    renderWidth: engine.getRenderWidth(), renderHeight: engine.getRenderHeight(), shadowSize: shadows.mapSize }), prepareShadows() {
     for (const mesh of scene.meshes) if (mesh.isVisible && mesh.getTotalVertices() > 0 && mesh.name !== "player-collision") shadows.addShadowCaster(mesh, false);
   }, dispose: () => { resize.disconnect(); instrumentation.dispose(); scene.dispose(); engine.dispose(); } };
 }

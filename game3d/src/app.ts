@@ -12,6 +12,7 @@ import { actions } from "./content/ids.ts";
 import { shop } from "./world/shop.ts";
 import { selectInteraction } from "./world/interactions.ts";
 import type { InteractionDefinition, Vec3 } from "./world/shop.ts";
+import { SettingsRepository, graphicsPresets } from "./persistence/settings.ts";
 
 declare const __BUILD_VERSION__: string;
 export interface Diagnostics {
@@ -19,7 +20,7 @@ export interface Diagnostics {
   cameraPosition: number[]; actualCameraDistance: number; actionId: string | null;
   completedActions: string[]; paused: boolean; frames: number; activeMeshes: number; webgl: number; errors: string[];
   character: CharacterController["character"] | null;
-  performance: { readyMs: number; sampledFrames: number; frameMs: { p50: number; p95: number; p99: number; max: number }; drawCalls: number; vertices: number; graphics: { vendor: string; renderer: string; version: string } } | null;
+  performance: ({ readyMs: number; sampledFrames: number; frameMs: { p50: number; p95: number; p99: number; max: number } } & ReturnType<ReturnType<typeof createRenderer>["metrics"]>) | null;
 }
 declare global { interface Window { __AV3D__?: { snapshot(): Diagnostics } } }
 
@@ -44,6 +45,8 @@ export async function startGame(root: HTMLElement) {
   const storage: StoragePort = { getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value) };
   const repository = new SaveRepository(storage);
   const loaded = repository.load();
+  const settingsRepository = new SettingsRepository(storage);
+  let settings = settingsRepository.load();
   let session = loaded.data.session;
   const pause = (value: boolean) => {
     paused = value;
@@ -51,7 +54,17 @@ export async function startGame(root: HTMLElement) {
     if (value) save();
   };
   const hud = new GameHud(root, { interact: () => interact(), pause,
-    sensitivity: value => { if (camera) camera.sensitivity = value; } });
+    sensitivity: value => {
+      settings = { ...settings, sensitivity: value };
+      if (camera) camera.sensitivity = value;
+      if (!settingsRepository.save(settings)) hud.notice("Settings apply in this tab; preference saving is unavailable.");
+    },
+    quality: value => {
+      settings = { ...settings, quality: value };
+      renderer?.applyQuality(value);
+      frameTimes.length = 0;
+      hud.notice(settingsRepository.save(settings) ? `Graphics: ${graphicsPresets[value].label}` : "Settings apply in this tab; preference saving is unavailable.");
+    } }, settings);
   function save() {
     if (!controller || !camera) return;
     const ok = repository.save({ version: 1, session, position: controller.position.asArray() as unknown as Vec3, camera: { ...camera.state } });
@@ -94,14 +107,16 @@ export async function startGame(root: HTMLElement) {
     area?.dispose(); renderer?.dispose(); hud.dispose(); delete window.__AV3D__;
   };
   try {
-    renderer = createRenderer(hud.canvas);
+    renderer = createRenderer(hud.canvas, settings.quality);
     input = new PlayerInput(hud.canvas);
     await renderer.ready;
     area = await createAreaView(renderer.scene, shop);
     hud.notice("Loading technician and movement clips…");
     controller = new CharacterController(renderer.scene, loaded.data.position, await createTechnicianVisual(renderer.scene));
-    camera = new FollowCamera(renderer.scene, loaded.data.camera);
+    camera = new FollowCamera(renderer.scene, loaded.data.camera, shop.props.filter(prop => prop.solid));
+    camera.sensitivity = settings.sensitivity;
     camera.update(controller.position);
+    controller.updateCamera(camera.actualDistance);
     renderer.prepareShadows();
     await renderer.scene.whenReadyAsync();
     renderer.engine.onContextLostObservable.add(() => {
@@ -124,7 +139,8 @@ export async function startGame(root: HTMLElement) {
           accumulator += delta;
           while (accumulator >= 1 / 60) { controller.step(input.movement(), camera.state.yaw, 1 / 60); accumulator -= 1 / 60; }
         } else accumulator = 0;
-        camera.update(controller.position);
+        camera.update(controller.position, paused || document.hidden ? 0 : delta);
+        controller.updateCamera(camera.actualDistance);
         sinceUi += delta;
         if (sinceUi >= 0.1 || frames === 0) {
           active = paused ? undefined : selectInteraction(renderer.scene, controller.position, shop.interactions);
