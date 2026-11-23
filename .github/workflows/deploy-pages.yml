@@ -26,7 +26,7 @@ jobs:
           package_json_file: game3d/package.json
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version-file: .node-version
           cache: pnpm
           cache-dependency-path: game3d/pnpm-lock.yaml
       - name: Verify legacy contracts

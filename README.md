@@ -9,18 +9,70 @@ commissioning. The fantasy is not just wiring equipment: it is diagnosing rooms,
 managing constraints, making judgment calls, and leaving behind a system that
 works when the client walks in.
 
+## Quick Start
+
+Install [Git](https://git-scm.com/downloads) and [Node.js **24.22.3**](https://nodejs.org/dist/v24.22.3/)
+(includes npm). Node is pinned in `.node-version` and `.nvmrc`; pnpm is pinned
+to **11.25.0** in the package manifests. Use these commands in PowerShell,
+macOS Terminal or a Linux shell:
+
+```sh
+git clone https://github.com/11anthonym/av-tech-rpg.git
+cd av-tech-rpg
+npm install --global pnpm@11.25.0
+pnpm bootstrap
+pnpm build
+pnpm preview
+```
+
+Open **http://127.0.0.1:4174/av-tech-rpg/** for the original 2D game or
+**http://127.0.0.1:4174/av-tech-rpg/3d/** for the 3D game. Stop with Ctrl+C.
+The preview serves the same path structure as GitHub Pages. Re-run `pnpm build`
+after changes; compiled files are generated locally and never committed.
+Until this setup PR is merged, clone its review branch with
+`git clone --branch codex/local-pages-readiness https://github.com/11anthonym/av-tech-rpg.git`.
+
+If global npm installation is restricted, use `npx --yes pnpm@11.25.0 bootstrap`,
+`npx --yes pnpm@11.25.0 build` and `npx --yes pnpm@11.25.0 preview` instead.
+If `pnpm` is not recognized after installing it, reopen the terminal or use
+those npx commands. No Codex runtime, Python, cloud credentials or asset service
+is needed. The first dependency installation needs npm-registry access;
+runtime assets, rigs, animations and environment lighting are committed locally.
+
+For another computer on your LAN, run `pnpm preview --host 0.0.0.0 --port 4174`,
+allow Node through your computer's private-network firewall, and replace
+`127.0.0.1` with the server computer's LAN IP. Keep the `/av-tech-rpg/` paths.
+`0.0.0.0` is a bind address, not the address to enter in the other browser.
+
+For hot-reload development use `pnpm dev` and open
+`http://127.0.0.1:5173/av-tech-rpg/3d/`; this Vite server serves only 3D.
+Use the combined production preview above to test both games together.
+
+Verification: `pnpm test`, `pnpm test:preview` (after building). For browser QA,
+install browsers with `pnpm --dir game3d exec playwright install chromium firefox`,
+then run `pnpm build:portable` and `pnpm test:browser`. Linux browser QA also
+requires Playwright system dependencies and Xvfb; see [3D setup](game3d/README.md).
+`pnpm test:legacy` runs the full original-game smoke test using the same local
+Playwright dependency; no globally installed test packages are required.
+
+Saves are browser/origin-local. Localhost, a LAN IP and GitHub Pages have separate
+saves; changing server ports also changes the save origin. The 2D career key
+remains `av-tech-rpg-save-v1`; 3D uses a separate namespace. Deployment does not
+clear browser storage. Do not use `file://` to test the combined game.
+
 ## Current Status
 
-The M1 production 3D client is implemented on its development branch in
-[`game3d/`](game3d/README.md), with independent install/build/test commands and
-an engineering shop scene. See [M1 qualification evidence](docs/qa/M1_PRODUCTION_3D.md)
-for executed checks and the hosted-deployment gate. The original 2D game and
-save key remain intact. M1 placeholders do not meet the M2 realistic/PBR art bar.
+The production client in [`game3d/`](game3d/README.md) includes a rigged human,
+third-person controls, a furnished AV shop and the first preparation loop:
+supervisor briefing, carrying equipment and loading Van #3. See
+[M3 evidence and limitations](docs/qa/m3/README.md). M1/M2/M3 ship through the
+reviewed dependency stack; a passing preview is not proof that a branch is live.
+The original 2D game and its saved-career key remain intact.
 
 This repository is the shared home for brainstorming and prototype development.
 The initial concept notes live in [docs/GAME_CONCEPT.md](docs/GAME_CONCEPT.md).
 
-The next development priority is a **3D browser game with a third-person camera
+The production direction is a **3D browser game with a third-person camera
 following the technician**, with realistic/PBR art, natural human proportions,
 detailed surfaces and lighting. Characters must look and move like people, and
 the shop must be a recognizable, furnished AV workplace. The existing RPG does not
@@ -28,8 +80,8 @@ need to be finished before that work begins. The engine/asset comparison,
 repository inventory, feasibility QA and staged implementation plan live in
 [docs/3D_FOUNDATION_ASSESSMENT.md](docs/3D_FOUNDATION_ASSESSMENT.md).
 The recommendation is Babylon.js, TypeScript and Vite, with Blender/GLB assets.
-The current hosted career remains the 2D prototype; the new probes establish
-capability and do not constitute a production 3D game or accepted artwork.
+The old probes are retained as experiments; they are separate from the playable
+production client. Final art and hardware-performance acceptance remain open.
 
 The active studio-level **production roadmap and milestone acceptance gates** are in
 [docs/PRODUCTION_ROADMAP.md](docs/PRODUCTION_ROADMAP.md). Use that plan to sequence
@@ -148,9 +200,9 @@ The current playtest questions and deliberately small next-step roadmap live in
 
 ## Play Locally
 
-No Python installation or local server is required. For ordinary playtesting,
-use the hosted GitHub Pages link below. If you download or clone the repository,
-you can also open `index.html` directly in a modern browser on any platform.
+Use the Quick Start above to serve both games over HTTP. Opening `index.html`
+directly can run portions of the old 2D prototype, but does not load the 3D game
+and is not the supported combined-game preview.
 
 The prototype autosaves the active career in the browser's local storage. Use
 `Continue Career` on the title screen to restore progress or `Clear Saved
@@ -167,11 +219,12 @@ intentional save migration or save-key change should reset prototype progress.
 Play the hosted version at
 [https://11anthonym.github.io/av-tech-rpg/](https://11anthonym.github.io/av-tech-rpg/).
 
-The game is a static website: `index.html`, `styles.css`, content in
-`src/content/`, core startup/orchestration in `src/core/`, and no-build browser
-systems in `src/systems/`. It can be hosted without a build step on GitHub
-Pages, Netlify, Cloudflare Pages, or any ordinary static web host. GitHub Pages
-is the simplest repository-based option for a public play link.
+GitHub Actions builds and tests the 3D client, stages the original 2D files at
+the root and 3D at `3d/`, then deploys `.pages/` through GitHub Pages after an
+approved merge to `main`. Do not copy build output into source control or upload
+files manually. The public 3D address is
+[https://11anthonym.github.io/av-tech-rpg/3d/](https://11anthonym.github.io/av-tech-rpg/3d/).
+Publishing and rollback checks are recorded in [local/Pages delivery](docs/qa/LOCAL_AND_PAGES.md).
 
 ## Development
 

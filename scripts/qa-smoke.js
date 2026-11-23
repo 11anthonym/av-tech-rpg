@@ -1,34 +1,17 @@
 #!/usr/bin/env node
 
-const fs = require("fs");
 const path = require("path");
 const { pathToFileURL } = require("url");
 
 function loadPlaywright() {
   try {
-    return require("playwright");
+    return require(require.resolve("@playwright/test", { paths: [path.join(__dirname, "../game3d")] }));
   } catch (error) {
     console.error("Playwright is required for this smoke test.");
-    console.error("Run from a Codex runtime with Playwright on NODE_PATH, or install Playwright outside the repo.");
+    console.error("Run pnpm bootstrap, then pnpm --dir game3d exec playwright install chromium.");
     console.error(error.message);
     process.exit(1);
   }
-}
-
-function getChromeExecutablePath() {
-  if (process.env.CHROME_EXECUTABLE_PATH) return process.env.CHROME_EXECUTABLE_PATH;
-  const candidates = process.platform === "win32"
-    ? [
-        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-        "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-      ]
-    : [
-        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-        "/usr/bin/google-chrome",
-        "/usr/bin/chromium-browser",
-        "/usr/bin/chromium",
-      ];
-  return candidates.find((candidate) => fs.existsSync(candidate));
 }
 
 function assert(condition, message) {
@@ -50,8 +33,8 @@ async function clickButton(page, name) {
 (async () => {
   const { chromium } = loadPlaywright();
   const projectRoot = path.resolve(__dirname, "..");
-  const url = `${pathToFileURL(path.join(projectRoot, "index.html")).href}?debug`;
-  const executablePath = getChromeExecutablePath();
+  const url = `${process.env.LEGACY_BASE_URL || pathToFileURL(path.join(projectRoot, "index.html")).href}?debug`;
+  const executablePath = process.env.CHROME_EXECUTABLE_PATH;
   const browser = await chromium.launch({
     headless: true,
     ...(executablePath ? { executablePath } : {}),

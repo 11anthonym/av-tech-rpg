@@ -18,7 +18,8 @@ self-contained; normal installation/build does not download or regenerate art.
 
 ## Setup and commands
 
-Use Node **24.x** and **pnpm 11.25.0**. All direct package versions and the pnpm
+Use Node **24.22.3** and **pnpm 11.25.0**. The root [Quick Start](../README.md#quick-start)
+builds and serves both games together. All direct package versions and the pnpm
 lockfile are committed. If needed, install that pnpm version with your Node
 installation's package manager, for example `npm install --global pnpm@11.25.0`.
 Run from `game3d/`:
