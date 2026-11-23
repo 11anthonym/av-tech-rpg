@@ -22,6 +22,7 @@ test("first shift: brief, three physical carry/load trips, constraints and reloa
   page.on("console",m=>{if(m.type()==="error") errors.push(m.text());});
   page.on("response",r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
   await page.goto("./?debug=1"); await ready(page);
+  expect((await snapshot(page)).supervisor).toMatchObject({meshes:5,joints:80,position:[-5,0,-1]});
   await page.locator("#debug-panel").evaluate(e=>e.setAttribute("hidden",""));
   await page.getByRole("button",{name:"Pause / settings"}).click();
   await page.getByRole("combobox",{name:"Graphics quality"}).selectOption("low");

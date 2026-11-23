@@ -10,7 +10,7 @@ export interface TechnicianVisual {
   setMotion(speed: number, delta: number): void;
   setCameraDistance(distance: number): void;
   setCarrying(value: boolean): void;
-  createSupervisor(): { dispose(): void };
+  createSupervisor(): { snapshot(): { meshes: number; joints: number; position: number[] }; dispose(): void };
   snapshot(): { model: string; joints: number; height: number; opacity: number; carryPoseError: number | null; speed: number; walkWeight: number; idleFrame: number; walkFrame: number; pose: number[] };
   dispose(): void;
 }
@@ -54,14 +54,25 @@ export async function createTechnicianVisual(scene: Scene): Promise<TechnicianVi
     setCarrying(value) { carrying = value; },
     createSupervisor() {
       const npc = new TransformNode("supervisor-visual", scene);
-      npc.position.set(-5.5, 0, -1); npc.rotation.y = Math.PI;
+      npc.position.set(-5, 0, -1); npc.rotation.y = Math.PI;
       const npcModel = new TransformNode("supervisor-model", scene); npcModel.parent = npc;
       npcModel.scaling.copyFrom(model.scaling); npcModel.position.copyFrom(model.position);
-      const entries = asset.instantiateModelsToScene(name => `supervisor/${name}`, false, { doNotInstantiate: true });
+      // AssetContainer discovers hierarchy roots by parent===null. The player's
+      // imported roots already belong to its visual adapter, so detach only for
+      // this synchronous clone and restore them before the next rendered frame.
+      const parents = asset.rootNodes.map(node => node.parent);
+      let entries;
+      try {
+        asset.rootNodes.forEach(node => { node.parent = null; });
+        entries = asset.instantiateModelsToScene(name => `supervisor/${name}`, false, { doNotInstantiate: true });
+      } finally { asset.rootNodes.forEach((node,i) => { node.parent = parents[i] ?? null; }); }
       for (const node of entries.rootNodes) node.parent = npcModel;
       for (const group of entries.animationGroups) { group.stop(); if (group.name.endsWith("Idle")) group.start(true, 1); }
       for (const mesh of npc.getChildMeshes()) { mesh.isPickable = false; mesh.receiveShadows = true; }
-      return { dispose() { entries.dispose(); npc.dispose(); } };
+      const snapshot = () => ({ meshes: npc.getChildMeshes().filter(mesh => mesh.getTotalVertices()>0).length,
+        joints: entries.skeletons[0]?.bones.length ?? 0, position: npc.position.asArray() });
+      if (snapshot().meshes !== 5 || snapshot().joints !== 80) throw new Error("Supervisor requires the complete technician rig");
+      return { snapshot, dispose() { entries.dispose(); npc.dispose(); } };
     },
     setCameraDistance(distance) {
       opacity = cameraOpacity(distance);

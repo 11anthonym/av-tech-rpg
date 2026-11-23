@@ -1,0 +1,126 @@
+{
+  "capturedAt": "2026-11-22T23:15:48.3529979-05:00",
+  "branch": "codex/m3-shop-van",
+  "parent": "4b8ec565cd7d530b9d949946cf3127a98d844e9e",
+  "url": "http://127.0.0.1:4174/av-tech-rpg/3d/?debug=1",
+  "browser": "Firefox 159.0",
+  "host": {
+    "platform": "win32",
+    "release": "10.0.26100",
+    "cpu": "QEMU Virtual CPU version 2.5+",
+    "cores": 4
+  },
+  "renderer": {
+    "vendor": "Google Inc. (Microsoft)",
+    "renderer": "ANGLE (Microsoft, Microsoft Basic Render Driver (0x0000008C) Direct3D11 vs_5_0 ps_5_0), or similar",
+    "version": "WebGL 2.0"
+  },
+  "goldenPath": {
+    "command": "RECORD_VIDEO=1 pnpm exec playwright test e2e/shop-prep.spec.ts --project=firefox --output=motion-results --reporter=list",
+    "result": "1 passed (1.8m)",
+    "input": "Normal keyboard and mouse from fresh storage; no state injection; all three trips, carried reload, three loaded-count reloads, duplicate actions and visible rig/grip checks.",
+    "durationSeconds": 105.64,
+    "encodedSize": [
+      960,
+      540
+    ],
+    "encodedFps": 25,
+    "graphics": "Low, 65% render scale, 512 shadow map",
+    "note": "VP9 recompression without time scaling. Encoded frame rate includes repeated frames and is not render FPS."
+  },
+  "supplementalReplay": {
+    "command": "node scripts/capture-m3-replay.mjs",
+    "seed": "Actual completed checkpoint output from a successful golden-path run",
+    "result": "No JavaScript errors; 5 supervisor meshes and 80 joints; all three loaded groups restored",
+    "graphics": "High, 1280x720, 2048 shadow map",
+    "readyMs": 2858,
+    "drawCalls": 94,
+    "vertices": 24738,
+    "frameSamples": 18,
+    "frameMs": {
+      "p50": 68,
+      "p95": 1262,
+      "p99": 1262,
+      "max": 1262
+    },
+    "note": "Short sample includes quality-switch shader warmup; not a steady-state hardware benchmark. Capture source includes the final supervisor clone and interaction highlight corrections."
+  },
+  "checks": [
+    {
+      "command": "pnpm test",
+      "result": "21 passed, 0 failed, 0 skipped"
+    },
+    {
+      "command": "pnpm typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm build",
+      "result": "passed; large-chunk warning remains"
+    },
+    {
+      "command": "pnpm build:portable",
+      "result": "passed; large-chunk warning remains"
+    },
+    {
+      "command": "node scripts/qa-all.js",
+      "result": "43 static-script checks, 43 unit checks and complete legacy browser smoke passed"
+    }
+  ],
+  "productionSuite": "25 checks across Chromium, Firefox and portable root; final source result and artifacts in PR #6 CI checks.",
+  "limits": [
+    "Windows VM software WebGL; physical-GPU performance unverified",
+    "Procedural carry pose, instantaneous pickup/place, no native carry/reach clip",
+    "Supervisor shares the player model appearance",
+    "One labelled package represents each logical cargo group",
+    "One active gameplay tab recommended; origin-local progress only",
+    "No M4 route or site gameplay; no novice-player acceptance claimed"
+  ],
+  "files": [
+    {
+      "file": "supervisor-briefing.png",
+      "bytes": 142446,
+      "sha256": "281cb41855640d70cbd065b0b1e2f3f5054929f16a20bb166d073bb97365a062"
+    },
+    {
+      "file": "supervisor.png",
+      "bytes": 195688,
+      "sha256": "14560f0f0e88299cd25239ca18b0dec830e8714dcdbcdeab969c9e08d39385dd"
+    },
+    {
+      "file": "carry-0.png",
+      "bytes": 206802,
+      "sha256": "b9c9a534ab535acf0f1fb23b9b7d734739de72f452b713b392aca084e3fda4ae"
+    },
+    {
+      "file": "carry-1.png",
+      "bytes": 205971,
+      "sha256": "c1b9d6434408a0eaaa20d2bcd9f8a85753dff2444c69bf67466a5cda415e2669"
+    },
+    {
+      "file": "carry-2.png",
+      "bytes": 205443,
+      "sha256": "e018578d21b0e223e68ed72f48f4aed55b2bfec050af98c40346d6520eef6e11"
+    },
+    {
+      "file": "van-ready.png",
+      "bytes": 240236,
+      "sha256": "3ff9bcd6f88abb2e7182cd9d8ba08a2f64369ed915b8ef3b5e021e25d4f952fb"
+    },
+    {
+      "file": "gameplay.webm",
+      "bytes": 8415771,
+      "sha256": "8f25d85b4cd54c6171480d1667bdac5b2e55e411a6363457cf64e68c258206fe"
+    },
+    {
+      "file": "saved-session.json",
+      "bytes": 754,
+      "sha256": "d1f0bc9938b8416ba96d4df0701aa3a05833536bcb98a91a4762ca31d7bc9cb9"
+    },
+    {
+      "file": "replay-diagnostics.json",
+      "bytes": 5401,
+      "sha256": "0669f345c5242d86cf8162357ed221f4202334379393c5211c6e8ebef3754230"
+    }
+  ]
+}

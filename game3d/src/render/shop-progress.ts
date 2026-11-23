@@ -29,7 +29,7 @@ export function createShopProgress(scene: Scene, character: TransformNode) {
     return group;
   });
   const markers = [
-    { name: "SUPERVISOR", position: [-5.5, 2.02, -1] },
+    { name: "SUPERVISOR", position: [-5, 2.02, -1] },
     { name: "STAGING", position: [-5.5, 1.52, 4.5] },
     { name: "VAN 3 · LOAD HERE", position: [5.8, 2.1, 6.52] },
   ].map(({ name, position }) => {
@@ -54,6 +54,12 @@ export function createShopProgress(scene: Scene, character: TransformNode) {
       markers[1]!.setEnabled(state.loaded.length < 3);
     },
     cameraOpacity(opacity: number) { boxes.forEach((box, i) => box.getChildMeshes().forEach(mesh => { mesh.visibility = i === carrying ? opacity : 1; })); },
+    focus(meshId: string | undefined) {
+      ["supply-counter","staging","van3"].forEach((id,i)=>{
+        const material=markers[i]!.material as PBRMaterial;
+        material.emissiveColor.set(meshId===id ? .8 : .3,meshId===id ? .65 : .3,meshId===id ? .35 : .3);
+      });
+    },
     snapshot: () => boxes.map((box, i) => ({ id: shopLoad[i], place: box.parent === character ? "carried" : box.position.z > 5.5 ? "loaded" : "staged" })),
     dispose() { for (const box of boxes) box.parent = root; root.dispose(false, true); },
   };

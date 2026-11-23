@@ -21,6 +21,7 @@ export interface Diagnostics {
   cameraPosition: number[]; actualCameraDistance: number; actionId: string | null;
   completedActions: string[]; paused: boolean; frames: number; activeMeshes: number; webgl: number; errors: string[];
   session: Session;
+  supervisor: { meshes: number; joints: number; position: number[] } | null;
   cargo: ReturnType<ReturnType<typeof createShopProgress>["snapshot"]>;
   character: CharacterController["character"] | null;
   performance: ({ readyMs: number; sampledFrames: number; frameMs: { p50: number; p95: number; p99: number; max: number } } & ReturnType<ReturnType<typeof createRenderer>["metrics"]>) | null;
@@ -45,7 +46,7 @@ export async function startGame(root: HTMLElement) {
   let camera: FollowCamera | undefined;
   let area: Awaited<ReturnType<typeof createAreaView>> | undefined;
   let progress: ReturnType<typeof createShopProgress> | undefined;
-  let supervisor: { dispose(): void } | undefined;
+  let supervisor: ReturnType<Awaited<ReturnType<typeof createTechnicianVisual>>["createSupervisor"]> | undefined;
   let technician: Awaited<ReturnType<typeof createTechnicianVisual>> | undefined;
   // Accessing localStorage itself can throw, so defer it through this port.
   const storage: StoragePort = { getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value) };
@@ -102,7 +103,7 @@ export async function startGame(root: HTMLElement) {
     position: controller?.position.asArray() ?? [], camera: { ...(camera?.state ?? loaded.data.camera) },
     cameraPosition: camera?.camera.position.asArray() ?? [], actualCameraDistance: camera?.actualDistance ?? 0,
     actionId: active?.actionId ?? null, completedActions: [...session.completedActions], paused,
-    session: structuredClone(session), cargo: progress?.snapshot() ?? [],
+    session: structuredClone(session), supervisor: supervisor?.snapshot() ?? null, cargo: progress?.snapshot() ?? [],
     character: controller?.character ?? null,
     performance: renderer ? { readyMs, sampledFrames: frameTimes.length, frameMs: percentiles(frameTimes), ...renderer.metrics() } : null,
     frames, activeMeshes: renderer?.scene.getActiveMeshes().length ?? 0,
@@ -162,6 +163,7 @@ export async function startGame(root: HTMLElement) {
         if (sinceUi >= 0.1 || frames === 0) {
           active = paused ? undefined : selectInteraction(renderer.scene, controller.position, shop.interactions);
           area.focus(active?.meshId);
+          progress?.focus(active?.meshId);
           const action = active ? describeAction(session, active.actionId) : undefined;
           hud.interaction(action?.label, action?.available ?? false, objective(session));
           hud.diagnostics({ ...snapshot(), lastAction });
