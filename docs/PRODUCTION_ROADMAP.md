@@ -105,6 +105,7 @@ We are making a **workplace RPG, not a wiring simulator or a generic 3D walking 
 - Build a repeatable Blender/GLB import and optimization path; record asset sources, licenses, material conventions, naming, animation skeleton, polygon/texture budgets and any rig-retarget process.
 - Inspect daylight/fluorescent PBR look, readable materials, believable proportions and visible AV-specific props from the **normal follow camera**, not hero renders alone.
 - Capture in-browser screenshots and short motion video in ordinary play. Profile startup, transfers, frame-time percentiles, draw calls, memory and browser/GPU information on declared hardware.
+- **Performance is part of the visual gate:** qualify the rig, shop, van, lighting and shadows on at least one **hardware-accelerated, ordinary integrated-GPU computer**, not only CI/software rendering. Record which quality preset and render scale were used. If hardware access is unavailable, mark this portion of M2 explicitly unverified and track the blocker before additional art/content expansion.
 - If believable visuals cannot be achieved with the proposed low-cost asset workflow, stop and revise art sourcing or scope before porting jobs. Do not silently lower the promised visual bar to primitives.
 
 **Gate M2:** Product/art review explicitly accepts the character, animation, shop and controls in the browser; collisions/camera do not routinely obstruct play; asset rights are documented; measured performance has a mitigation plan. **A capsule, cube, empty room, or attractive screenshot without animation does not pass.**
@@ -118,6 +119,7 @@ We are making a **workplace RPG, not a wiring simulator or a generic 3D walking 
 - Enforce carrying/cargo capacity; display carried/loaded objects; persist inventory and job-object state across save/reload; prevent repeat pickups, duplicate rewards or item loss.
 - Extend the domain/save model with explicit inventory, task/briefing state and stable transition results; keep future choice/consequence history extensible rather than relying solely on a `completedActions` array or one-off mesh/UI flags.
 - Provide clear objective cues, task review, cancel/back behavior, keyboard-focus handling and nonexpert-friendly action language.
+- Test the shop-to-van cargo path for frame-time spikes, allocations, animated carry models and collision/picking overhead; optimize hot spots before duplicating interactive props across more areas.
 
 **Gate M3:** A first-time player can physically obtain equipment, load the correct items and understand why the van is ready. Save/continue at multiple shop checkpoints reproduces the same inventory and task state without duplication.
 
@@ -155,7 +157,7 @@ We are making a **workplace RPG, not a wiring simulator or a generic 3D walking 
 - Conduct observed, unassisted first-time sessions covering tutorial and one follow-up decision. Record blockers, confusion points and what players think the tradeoffs mean; test with both AV-experienced and nonexpert players.
 - Rework onboarding, object readability, job pacing, status/ledger text and UI until the core loop is understandable. Keep story/tutorial copy concise and human.
 - Complete supported Chrome/Edge and Firefox checks; actually test Safari before claiming support. Handle WebGL unavailable/context loss and browser resizing without corrupting saves.
-- Establish measured performance targets from real shop/room content on a declared baseline device. **60 FPS desktop is an initial aspiration, not a proven result.** Set loading, transfer, frame-time and memory budgets from measurements, then enforce budgets in CI/release review where feasible.
+- Enforce the **Browser 3D performance contract** below on realistic shop and first-workday builds, including real integrated-GPU measurements, cold/warm hosted loading and low/medium/high graphics presets. **60 FPS is a target for capable devices, not an unverified default claim.** Block alpha approval for unmitigated failure of the declared minimum-device experience.
 - Add keyboard remapping or accessible alternatives, readable contrast, scalable text, caption/subtitle controls, camera sensitivity, reduced-motion setting, pause/focus correctness and sensible audio mute defaults.
 - Verify asset/audio provenance and license attribution, avoid real client/company confidential material, and decide whether analytics are needed before introducing telemetry. No surprise third-party tracking.
 - Run end-to-end save migrations, corrupt-save recovery and duplicate-action regression. Separate 3D development saves from the legacy key; support **explicit, tested import** from `av-tech-rpg-save-v1` before touching the 2D default.
@@ -240,9 +242,45 @@ These are the **next actionable implementation tickets** after this planning com
 - 3D PRs must pass typecheck/build, deterministic domain tests and browser smoke for boot, movement/interact, saving and a real player flow relevant to the change.
 - For visual or spatial changes, attach in-browser screenshots and short video at the actual following-camera distance, with target browser/device noted. Review normal gameplay, not only staged beauty shots.
 - For performance claims, report machine/GPU/browser, scene build, resolution, frame-time percentiles, load/transfer size and observed bottlenecks. "Runs at 60 FPS" without a test context is not evidence.
+- For 3D visual/gameplay PRs, retain a comparable hardware performance trace or explicitly mark performance unqualified; green headless Playwright/software-renderer tests establish function, **not FPS**.
 - For game-design claims, run focused manual replays and short observed first-time playtests. Tests cannot prove a joke landed, navigation was obvious or consequences felt fair.
 - Each PR must include: scope and files, user-visible change, tests actually run, test outputs, screenshots/recording when relevant, known limitations, save/deployment risk, and a rollback note.
 - Prefer small branches/PRs, one gameplay or technical objective at a time. Do not use passing tests to justify unbounded cleanup, new framework adoption or content sprawl.
+
+### Browser 3D performance contract — active from M2
+
+**Product promise:** The game should be enjoyable on a normal modern laptop without a dedicated gaming GPU. Define, measure and maintain supported-device tiers rather than assuming that new hardware, a modern engine, small GLB download or green browser tests guarantees real-time performance.
+
+**Provisional targets, to be adjusted only with recorded player-device measurements:**
+
+| Tier | Candidate test hardware / settings | Proposed experience goal |
+| --- | --- | --- |
+| **Minimum supported desktop** | Approximately 2020–2023 Windows laptop with Intel Iris Xe-class integrated GPU **or** base Apple M1 Mac, 8 GB system RAM; current Chrome/Edge or Safari; medium/low preset at 1280×720–1600×900 internal render resolution | **Sustained 30 FPS** during normal shop movement/camera/interaction: warmed p95 frame interval **≤33.3 ms** without repeated large hitches; controls remain responsive |
+| **Mainstream / preferred** | Current ordinary desktop/laptop with more capable integrated graphics or modest discrete GPU; medium preset, roughly 1080p internal render resolution | **Target 60 FPS** (p95 ≤16.7 ms when display refresh supports it); if not met, qualify and disclose the 30 FPS quality fallback |
+| **Stretch / compatibility** | Older integrated GPUs such as Intel UHD 620 and nondefault browsers | Record behavior and provide a lower-quality option if viable; do not promise compatibility until tested |
+
+The hardware descriptions are **test-class proposals**, not demonstrated specifications or guarantees. A physical device, exact GPU/driver, CPU, browser/version, OS, RAM, power mode, CSS viewport, backing-buffer pixels/DPR and game build must be recorded before a performance tier is considered supported. Do not use a cloud software-rendered VM as substitute evidence. Set cold/warm startup and asset/memory **numeric budgets after the first reproducible hardware + hosted network baseline**, not from a synthetic engine demo.
+
+**Measurement protocol:** Start from a clean cloned production build **and** the deployed GitHub Pages build. Use an ordinary user route (spawn, walk past racks, orbit around van, approach/interact with bench, save/reload, repeat with M3 cargo). Allow shader/loading warmup, then record at least three comparable unrecorded 60-second gameplay runs with the same viewport/preset. Keep separate cold-cache and warm-cache navigation runs. Report p50/p95/p99 frame interval, stutter events (e.g. >50 ms), rendered resolution, draw calls, visible triangles, JavaScript/main-thread or GPU breakdown where instrumentation permits, download bytes and readiness time. Account for throttling, background tabs, capture overhead, battery power and browser differences. Report actual measured memory only when supported; model-decoded RGBA or gzip sums are **estimates**, not telemetry. Save an anonymized, reproducible measurement artifact and compare against the previous accepted build.
+
+**Optimization decision order — profile first, change one lever at a time:**
+
+1. **Fill rate / lighting:** Quantify shadow cost. Review the present 2048 shadow map and broad shadow-caster list; benchmark selective static/dynamic casters, 1024/512 shadow options, quality tiers and engine hardware-scaling/render-resolution changes, preserving readable human/AV details.
+2. **Texture/GPU memory:** Audit dimensions, mipmaps, material count and decoded footprint. WebP reduces *download bytes*, not necessarily GPU texture allocation. If memory/bandwidth is a measured problem, test a **KTX2/Basis Universal** variant with correct Babylon loader/decoder packaging and WebP fallback; compare visual quality, startup cost and format compatibility on target hardware.
+3. **CPU/draw calls:** Preserve existing material-baked static AV shop geometry; consider instancing/thin instances for repetitive fixed details, selective culling/LOD as scene count grows, and stable cached materials. Never freeze/merge moving cargo, interactable objects or animated humans in ways that break state/picking/culling.
+4. **Asset transfer/loading:** Evaluate glTF Transform resize/dedupe/prune, and Meshopt/Draco only with tested decoder availability. **Geometry compression usually improves transmission/startup, not steady-state FPS**; don't claim a faster game solely because the GLB became smaller. Avoid heavy new runtime dependencies without a measured win.
+5. **Backend choice:** Keep proven WebGL2 as compatibility baseline. WebGPU is an optional, controlled A/B experiment only if the same game/rig/shop on the same machine shows materially better frame-time or reliability and maintains fallback. Do not switch engines or backends based on third-party aggregate benchmarks.
+
+**Quality controls:** Expose sensible **Low / Medium / High** presets (and optional measured Auto mode); tune internal render scale, shadow resolution/casters, optional effects and texture complexity. Defaults should be conservative for unknown hardware, with a clear manual override and safe persistence. Avoid a quality change that causes blurry task labels, camera artifacts or unreadable equipment. Protect domain correctness: rendering degradation must never change choice outcomes, movement distance, interaction range or save behavior.
+
+**Release rule:** Document supported device/browser/preset combinations and unqualified platforms. M2 needs at least one actual GPU baseline or a clearly open blocker; M4 needs a repeated integrated-GPU gameplay route including real interactions and scene transitions; M6 requires performance that passes the declared minimum supported-device tier and a reproducible regression comparison. No "optimized" or "60 FPS" claims on CI-only evidence.
+
+**Primary research references:**
+- [Babylon.js scene optimization / instrumentation](https://doc.babylonjs.com/features/featuresDeepDive/scene/optimize_your_scene/) and [scene optimizer](https://doc.babylonjs.com/features/featuresDeepDive/scene/sceneOptimizer/) — shadow, matrices, draw calls, scaling and quality tradeoffs.
+- [Babylon.js real-time asset planning](https://doc.babylonjs.com/preparingArtForBabylon/planningRealTimeAssets) and [MDN WebGL best practices](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices) — GPU budgets, draw calls and asset discipline.
+- [Chrome Performance panel](https://developer.chrome.com/docs/devtools/performance/reference) — frame timing, GPU activity and main-thread profiling.
+- [glTF Transform](https://gltf-transform.dev/) / [Meshopt compression guidance](https://gltf-transform.dev/modules/extensions/classes/EXTMeshoptCompression) / [Khronos KTX2 WebGL guidelines](https://github.com/KhronosGroup/3D-Formats-Guidelines/blob/main/KTXDeveloperGuideWebGL.md) — download size versus GPU memory and runtime costs.
+- [MDN WebGPU availability](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API) — don't require WebGPU without verified cross-browser support.
 
 ## 9. Top risks and mitigation
 
@@ -252,7 +290,7 @@ These are the **next actionable implementation tickets** after this planning com
 | Big-bang 2D rewrite breaks the RPG | UI and job logic coupled, lost flags, repeated payouts | Explicit domain action contracts; M3/M4 checkpoint parity; one job at a time |
 | Save loss during migration | Reusing the old storage key or silently resetting unknown data | Separate 3D namespace; explicit import and backups; corrupt-save/migration tests; delayed cutover |
 | Third-person movement feels bad indoors | Camera clips shelves, stuck doors, prompts select wrong object | Test real compact shop geometry, camera obstruction and priority; qualify controller before expansion |
-| Browser performance collapses with real assets | Works in a blank probe, stalls with rigs/textures/lights | Declare hardware; profile real M2 assets; optimize before adding areas |
+| Browser performance collapses with real assets | Software-CI passes while integrated-GPU p95 frame time misses target; expensive 2048 shadows or high decoded texture memory | Enforce hardware-performance contract and quality presets; use one-variable shadow/texture/render-scale experiments before adding areas |
 | Too much content, too little fun | More job cards but no physical agency or replay | Freeze unrelated jobs; M4 first workday then M5 branching, observed playtests |
 | Agents report progress without proof | "Passed" only means lint/build or a synthetic state injection | Require live browser replay, visible artifacts, acceptance checklist and stated untested work |
 | Licensing, privacy or platform surprises | Unknown model/music rights, published confidential marks, unsupported browsers | Asset manifest, fictionalized brands, early browser matrix and release audit |
