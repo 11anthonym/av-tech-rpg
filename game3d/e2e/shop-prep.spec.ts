@@ -72,7 +72,7 @@ test("first shift: brief, three physical carry/load trips, constraints and reloa
   expect(final.cargo.every(c=>c.place==="loaded")).toBe(true);
   expect(final.session.tools).toEqual(["screwdriver"]); expect(final.errors).toEqual([]); expect(errors).toEqual([]);
   await page.mouse.move(900,400); await page.mouse.down(); await page.mouse.move(540,400,{steps:16}); await page.mouse.up();
-  await page.waitForFunction(()=>window.__AV3D__!.snapshot().camera.yaw>1.7 && window.__AV3D__!.snapshot().actualCameraDistance>3);
+  await page.waitForFunction(()=>window.__AV3D__!.snapshot().camera.yaw>1.7 && window.__AV3D__!.snapshot().character?.opacity===1);
   await page.screenshot({path:info.outputPath("van-ready.png")});
   await page.context().storageState({path:info.outputPath("saved-session.json")});
   await info.attach("shop-checkpoints",{body:JSON.stringify(final,null,2),contentType:"application/json"});

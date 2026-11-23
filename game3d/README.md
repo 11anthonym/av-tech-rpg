@@ -6,6 +6,12 @@ Third-person input, camera, the workbench interaction and isolated 3D saves
 remain. The hidden capsule owns collision; the visible human is an independent
 adapter. M2 visual quality remains awaiting human review.
 
+M3 adds the first playable preparation loop: talk to the supervisor at dispatch,
+pick up one staged group, carry it to Van #3's open rear, and load all three.
+The starter Alex profile already owns a screwdriver. Carrying costs 2 energy per
+pickup and uses the prototype's 7/8 movement ratio. The objective, hand capacity,
+cargo count and kit stay visible. See [M3 evidence](../docs/qa/m3/README.md).
+
 See [M2 evidence and limitations](../docs/qa/m2/README.md) and the shipping
 [asset rights/provenance](public/assets/ASSET_LICENSES.md). Committed assets are
 self-contained; normal installation/build does not download or regenerate art.
@@ -77,8 +83,8 @@ at `/av-tech-rpg/3d/`. The Vite-only preview does not serve the legacy root.
 | `src/render/` | Engine/scene, area views and owned GLB containers |
 | `src/player/` | Input ownership, fixed-step flat-plane controller, follow/orbit/obstruction camera, replaceable visual adapter |
 | `src/ui/` | DOM HUD, accessible controls, pause/results, optional diagnostics and error recovery |
-| `src/persistence/` | Validated version-1 save format, safe spawn and storage-failure handling |
-| `public/assets/` | Original engineering GLB and provenance manifest; M2 production assets replace these |
+| `src/persistence/` | Version-2 shop saves, read-only v1 migration, preferences and storage-failure handling |
+| `public/assets/` | Licensed human, prefiltered lighting, engineering fixture and shipping rights notices |
 
 The view never awards progress. It maps an authored anchor to a stable action
 ID; the domain resolves that action and returns an event. The application owns
@@ -86,25 +92,29 @@ the session, passes changes to UI and saves them. There is no complete career
 port, hidden runtime model API or dependency on the old shared globals.
 
 Collision is independent of visible geometry. `TechnicianVisual` is the seam
-for the future human model and animation adapter. `loadModel` owns GLB container
-creation/disposal. The current loader registers glTF 2 only; accepted M2 assets
-that need compressed/advanced extensions must register and self-host the
-required decoders deliberately.
+for the human model and animation adapter. `loadModel` owns GLB container
+creation/disposal. The loader registers glTF 2 and the human's embedded WebP
+extension. No external decoder or model CDN is needed. The supervisor clones
+the same source rig with shared textures. The carry hold is original procedural
+two-bone posing layered over native Idle/Walk, not a native carry clip.
 
 Movement runs in fixed 1/60-second steps, caps catch-up after a stall and
 normalizes diagonal input. It is a **flat-floor controller**, with no gravity,
-stairs or jumping. The camera uses an obstruction ray and a 0.25-metre margin;
-a swept camera volume and tight-corner feel still need M2 qualification.
+stairs or jumping. The camera conservatively sweeps an 18cm volume against
+authored boxes, retracts immediately, eases recovery and fades the near avatar.
 The scene updates highlights/prompts at 10 Hz, while rendering and movement
 remain independent of DOM refresh. Resizing, blur, form focus, pointer capture,
 modal pause, HMR disposal and browser graphics-context interruption have owners.
 
 ## Save safety
 
-Only `av-tech-rpg-3d-dev-v1` is read/written by this client. It does not access,
-clear, migrate or overwrite `av-tech-rpg-save-v1`. Typed IDs, completed action
-IDs, player position and camera state are saved on interactions, periodically,
-and on page hide/blur. Repeated inspection adds no duplicate completion.
+M3 writes `av-tech-rpg-3d-dev-v2`. It copies supported older 3D progress from
+`av-tech-rpg-3d-dev-v1` without modifying that key, so an older M2 tab cannot
+overwrite M3 cargo. It never accesses the legacy career `av-tech-rpg-save-v1`.
+Cargo, tools, briefing, energy, position and camera save after every action,
+periodically and on page hide/blur. A stale M3 tab detects another tab's write
+and refuses to replace it; reload to use newer progress. This optimistic check
+is not a cross-tab transaction lock; use one active gameplay tab.
 
 Invalid/unknown 3D saves are retained; that tab plays without writing them.
 Denied storage is nonfatal. Out-of-bounds/inside-obstacle positions use the
@@ -144,7 +154,7 @@ checks and current deployment status. The [production roadmap](../docs/PRODUCTIO
 remains authoritative.
 
 M2's first implementation is tracked in [Issue #3](https://github.com/11anthonym/av-tech-rpg/issues/3).
-Native Idle/Walk are integrated; carrying, tool interaction, turn-in-place clips,
-work boots, slope/stair and swept-camera qualification remain open. See the M2
-record before extending the adapter or claiming art acceptance. Keep M3 gameplay
-deferred until the moving character/shop have been reviewed.
+Native Idle/Walk and the procedural carry hold are integrated. Native pickup,
+place, tool and turn-in-place clips, work boots, slope/stair qualification and
+real-GPU acceptance remain open. M3 ends at a loaded, ready van. Next is M4:
+route, garage/lobby access, two-cart assembly, closeout choice and return/recovery.
