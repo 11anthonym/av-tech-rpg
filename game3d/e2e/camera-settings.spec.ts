@@ -57,6 +57,7 @@ test("normal walk to van: camera volume stays outside bodywork, near avatar hide
   await page.mouse.move(586, 400, { steps: 12 }); await page.mouse.up();
   await expect.poll(async () => (await snapshot(page)).actualCameraDistance).toBeLessThan(.3);
   const near = await snapshot(page);
+  expect(near.actionId).not.toBe("shop.load-van"); // Side access cannot load cargo through bodywork.
   expect(near.cameraPosition[0]).toBeLessThan(4.52); // Van begins at x=4.7; sweep radius .18.
   expect(near.character?.opacity).toBe(0);
   await page.screenshot({ path: info.outputPath("van-tight-orbit.png") });

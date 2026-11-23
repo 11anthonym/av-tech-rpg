@@ -48,7 +48,7 @@ export function createShopProgress(scene: Scene, character: TransformNode) {
       boxes.forEach((box, i) => {
         const id = shopLoad[i]!;
         if (state.carry.includes(id)) { box.parent = character; box.position.set(0, 1.15, .35); box.rotation.y = 0; box.scaling.setAll(1); }
-        else if (state.loaded.includes(id)) { box.parent = root; box.position.set(5.15 + i * .65, .60 + [.4,.5,.3][i]! * .85/2, 5.75); box.rotation.y = Math.PI; box.scaling.setAll(.85); }
+        else if (state.loaded.includes(id)) { box.parent = root; box.position.set(5.15 + i * .65, .60 + [.4,.5,.3][i]! * .85/2, 6.15); box.rotation.y = Math.PI; box.scaling.setAll(.85); }
         else { box.parent = root; box.position.set(-6.4 + i * .9, [.34,.39,.29][i]!, 4.9); box.rotation.y = 0; box.scaling.setAll(1); }
       });
       markers[1]!.setEnabled(state.loaded.length < 3);

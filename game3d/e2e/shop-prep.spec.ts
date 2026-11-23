@@ -52,6 +52,7 @@ test("first shift: brief, three physical carry/load trips, constraints and reloa
     await go(page,"d",0,-2,true); await go(page,"w",2,6.7,true); await go(page,"d",0,2.5,true);
     await go(page,"w",2,7.7,true); await go(page,"d",0,5.8,true);
     await interact(page,"shop.load-van");
+    expect((await snapshot(page)).position[1]).toBeCloseTo(.92,5);
     await expect.poll(async()=>(await snapshot(page)).session.loaded.length).toBe(i+1);
     expect((await snapshot(page)).session.carry).toEqual([]);
     await interact(page,"shop.load-van"); // Review is idempotent.
@@ -70,9 +71,9 @@ test("first shift: brief, three physical carry/load trips, constraints and reloa
   expect(final.session.loaded).toEqual([...shopLoad]); expect(final.session.energy).toBe(94);
   expect(final.cargo.every(c=>c.place==="loaded")).toBe(true);
   expect(final.session.tools).toEqual(["screwdriver"]); expect(final.errors).toEqual([]); expect(errors).toEqual([]);
-  await go(page,"a",0,3,false);
   await page.mouse.move(900,400); await page.mouse.down(); await page.mouse.move(540,400,{steps:16}); await page.mouse.up();
   await page.waitForFunction(()=>window.__AV3D__!.snapshot().camera.yaw>1.7 && window.__AV3D__!.snapshot().actualCameraDistance>3);
   await page.screenshot({path:info.outputPath("van-ready.png")});
+  await page.context().storageState({path:info.outputPath("saved-session.json")});
   await info.attach("shop-checkpoints",{body:JSON.stringify(final,null,2),contentType:"application/json"});
 });

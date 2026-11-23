@@ -16,6 +16,7 @@ export interface InteractionDefinition {
   meshId: string;
   radius: number;
   priority: number;
+  minApproachZ?: number;
 }
 export interface AreaDefinition {
   id: AreaId;
@@ -48,7 +49,7 @@ export const shop: AreaDefinition = {
     meshId: "workbench", radius: 2.1, priority: 1 },
     { id: "shop.supervisor", actionId: "shop.brief-supervisor", anchor: [-5.5, 1.15, -2.55], meshId: "supply-counter", radius: 1.8, priority: 2 },
     { id: "shop.staging", actionId: "shop.pickup-equipment", anchor: [-5.5, 1, 4.54], meshId: "staging", radius: 1.6, priority: 2 },
-    { id: "shop.van3", actionId: "shop.load-van", anchor: [5.8, 1.1, 6.6], meshId: "van3", radius: 1.4, priority: 2 }],
+    { id: "shop.van3", actionId: "shop.load-van", anchor: [5.8, 1.1, 6.6], meshId: "van3", radius: 2.1, priority: 2, minApproachZ: 6.7 }],
 };
 
 export function isSafePosition(position: Vec3): boolean {
