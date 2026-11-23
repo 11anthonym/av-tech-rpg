@@ -33,6 +33,19 @@ We are making a **workplace RPG, not a wiring simulator or a generic 3D walking 
 
 **First-time player contract:** Within a short onboarding, players can identify where to go, what to interact with, what is at stake and why one choice differs from another. A 3D scene with beautiful assets but no understandable work is not an accepted slice.
 
+### RPG decision and consequence contract — applies to all 3D milestones
+
+**3D is the interface to the RPG, not its replacement.** Babylon scenes, animation and interactive objects present decisions; a testable domain/career layer determines which options are available, why, and what state changes. Do not let mesh callbacks, dialogue UI or one-off scene scripts become independent sources of career truth.
+
+- **Choices have real alternatives.** A substantial decision offers at least two distinguishable, plausible approaches under the current circumstances. Some options may require a tool, training, evidence, budget or authorization; show the prerequisite and allow reasonable recovery. Do not present two differently worded buttons with the same outcome as a major RPG choice.
+- **Trade-offs must make causal sense.** Model immediate costs and benefits (time, energy, cash, quality, client/coworker/manager standing) and deferred effects (rework, callback debt, trust, access to later jobs). Foreshadow material risks without revealing every outcome. A responsible delay may be costly now and beneficial later; a shortcut may succeed today without an automatic failure tomorrow.
+- **Avoid fake morality or arbitrary punishment.** Not every situation is a safe-but-slow choice versus reckless incompetence. Prefer defensible professional alternatives with conflicting incentives and context-sensitive consequences. Uncertainty can affect outcomes, but seeded/reproducible rules must explain the result; don't secretly punish the player to force drama.
+- **Career memory matters.** Save the chosen approach, relevant evidence/conditions, immediate effects and any pending future consequence with a source/cause. Later shifts or customer interactions must be able to read that history, not only a generic reputation score. One-time effects, callbacks, XP and payouts must be idempotent across revisits/reloads.
+- **Players must understand what happened.** After a decision, provide concise feedback connecting action to observable result. When a deferred consequence surfaces, reference its earlier cause where possible. Balance transparency with surprise; a hidden callback is only fair when the preceding workmanship risk was understandable.
+- **Test decisions as systems.** Run multiple choices from equivalent seeded starting states, assert different meaningful outcomes, check unavailable-option reasons, reload before/after resolution, and replay a later consequence. A passing dialogue click or updated flag alone is insufficient acceptance.
+
+**Do not collapse the original 2D career into a list of completed 3D interactions.** Reuse existing content IDs, rules and career dimensions where practical; explicitly map or document any intentional balance change.
+
 ## 3. Starting point and known unknowns
 
 **Already implemented in 2D:** Five premade technicians plus a creator; shop hub; tools and van; region/area/route/portal definitions; tutorial cart job; Conshohocken service diagnosis; survey, commissioning, warehouse, secure access, handoff, warranty, systems and retrofit work; fatigue/burnout; career XP, training, standing, Josh relationship, callback/return-trip risk, save migration. The existing runtime uses ordered browser scripts with shared globals. At the `fa7a33e` assessment the inventory identified 40 system files, 12 playable scene definitions, nine routes and a version-30 save payload under `av-tech-rpg-save-v1`.
@@ -103,6 +116,7 @@ We are making a **workplace RPG, not a wiring simulator or a generic 3D walking 
 - Adapt the existing supervisor briefing, screwdriver, staged cart components and Van #3 loadout into spatial interactions.
 - Implement one consistent pipeline: detect nearby interactable -> check distance/line of sight and task priority -> present prompt -> dispatch stable action ID -> domain state transition -> visual/UI feedback.
 - Enforce carrying/cargo capacity; display carried/loaded objects; persist inventory and job-object state across save/reload; prevent repeat pickups, duplicate rewards or item loss.
+- Extend the domain/save model with explicit inventory, task/briefing state and stable transition results; keep future choice/consequence history extensible rather than relying solely on a `completedActions` array or one-off mesh/UI flags.
 - Provide clear objective cues, task review, cancel/back behavior, keyboard-focus handling and nonexpert-friendly action language.
 
 **Gate M3:** A first-time player can physically obtain equipment, load the correct items and understand why the van is ready. Save/continue at multiple shop checkpoints reproduces the same inventory and task state without duplication.
@@ -114,10 +128,13 @@ We are making a **workplace RPG, not a wiring simulator or a generic 3D walking 
 - Travel with the existing route-choice abstraction to Center City East; use compact garage, lobby/entry and cart-install room. Correct portals and return flow matter more than map size.
 - Build the two mobile conferencing carts with a few legible staged actions, a workmanship/time tradeoff and a verification/closeout decision.
 - Return to the shop, end the shift, apply pay/XP/energy/burnout/standing and show recovery/prep. Keep Josh and the company's dysfunction present in authored dialogue and environment cues.
-- Test two differing choices, their immediately visible consequences and the next-day state. Keep the first loop short and replayable; polish pacing and cues before adding scope.
+- Include **at least three consequential decision points** across the first-day sequence, using existing route/access friction, conditional installation-pressure/recovery options and workmanship/closeout where they naturally fit. They must not be cosmetic dialogue, three copies of one choice, or invented technical chores solely to meet a count. Each decision has at least two legitimate approaches where its prerequisites are satisfied.
+- Show the immediate cost/benefit of different approaches and carry **at least one attributable consequence into a later shift, follow-up interaction or job condition**. Record choice, cause and deferred state in the persistent career model, not only in HUD text or a generic completed-action flag.
+- Make decisions understandable without simplistic moral scoring: two defensible approaches can trade time, energy, pay, client trust, workmanship and future callback risk differently. Risk is conditional, never an automatic punishment simply because the player chose the faster option.
+- Compare alternate choices from equivalent seeded fixtures; assert availability/prerequisites, immediate effects, later consequence and idempotent payouts/XP on replay. Test reload before choice, after choice and when the delayed effect resolves.
 - Compare defined 3D state results with 2D reference fixtures at equivalent checkpoints. Keep exact numeric parity where rules are reused; document deliberate differences.
 
-**Gate M4:** A fresh player can finish **shop -> van -> route -> site -> two carts -> handoff -> return -> next shift**, using ordinary input rather than injected test state. Full replay and save/reload pass. One obvious tradeoff is understood in a playtest, not just stored in flags.
+**Gate M4:** A fresh player can finish **shop -> van -> route -> site -> two carts -> handoff -> return -> next shift**, using ordinary input rather than injected test state. Full replay and save/reload pass. **At least three meaningful decision points** produce distinguishable, causally believable results; the player can explain an important tradeoff during unassisted testing; and **at least one choice changes a later shift or interaction** with a verifiable persisted cause. A changed flag or reward counter without player-visible consequence does not pass.
 
 ### M5 — RPG depth: Conshohocken diagnostic replay
 
@@ -126,7 +143,7 @@ We are making a **workplace RPG, not a wiring simulator or a generic 3D walking 
 - Port the existing Conshohocken service room before adding a new dispatch. Keep findings, optional evidence collection, build/tool-specific repair methods, appointment pressure, incidents, verification, client closeout and callback/return-trip debt.
 - Tie meaningful evidence to physical AV objects, test points and job conditions. The player must be able to approach/inspect relevant gear; avoid reducing diagnosis to a menu slideshow.
 - Preserve the proven replay classes: careful signal-path diagnosis, faster hardware path with recovery, and negotiated/documented unresolved risk.
-- Surface why an option is available/unavailable, what changed, and how a consequence returns on a later workday. Keep hidden calculations explainable without dumping formulas.
+- Surface why an option is available/unavailable, what changed, and how a consequence returns on a later workday. Link callback/return-trip and trust consequences to prior evidence and decisions rather than random scripted punishment; keep hidden calculations explainable without dumping formulas.
 - Reuse action IDs, domain outcomes and UI patterns established in M3/M4; stop job-specific branching from recreating shared engine code.
 
 **Gate M5:** At least three meaningfully different saved replays, each reproducible through normal UI and checkpoint tests; outcomes affect time, skill usage, reputation or callback state and survive reload without double payouts.
