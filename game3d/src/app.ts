@@ -14,12 +14,13 @@ import { shop } from "./world/shop.ts";
 import { selectInteraction } from "./world/interactions.ts";
 import type { InteractionDefinition, Vec3 } from "./world/shop.ts";
 import { SettingsRepository, graphicsPresets } from "./persistence/settings.ts";
+import { FrameClock, MAX_FRAME_SECONDS } from "./player/frame-clock.ts";
 
 declare const __BUILD_VERSION__: string;
 export interface Diagnostics {
   build: string; areaId: string; position: number[]; camera: SaveData["camera"];
   cameraPosition: number[]; actualCameraDistance: number; actionId: string | null;
-  completedActions: string[]; paused: boolean; frames: number; activeMeshes: number; webgl: number; errors: string[];
+  completedActions: string[]; paused: boolean; frames: number; loopTicks: number; activeMeshes: number; webgl: number; errors: string[];
   session: Session;
   supervisor: { meshes: number; joints: number; position: number[] } | null;
   cargo: ReturnType<ReturnType<typeof createShopProgress>["snapshot"]>;
@@ -33,6 +34,8 @@ export async function startGame(root: HTMLElement) {
   let failed = false;
   let contextLost = false;
   let frames = 0;
+  let loopTicks = 0;
+  let renderDirty = true;
   const started = performance.now();
   let readyMs = 0;
   const frameTimes: number[] = [];
@@ -57,6 +60,7 @@ export async function startGame(root: HTMLElement) {
   let session = loaded.data.session;
   const pause = (value: boolean) => {
     paused = value;
+    renderDirty = true;
     input?.setEnabled(!paused && !failed && !contextLost);
     if (value) save();
   };
@@ -106,7 +110,7 @@ export async function startGame(root: HTMLElement) {
     session: structuredClone(session), supervisor: supervisor?.snapshot() ?? null, cargo: progress?.snapshot() ?? [],
     character: controller?.character ?? null,
     performance: renderer ? { readyMs, sampledFrames: frameTimes.length, frameMs: percentiles(frameTimes), ...renderer.metrics() } : null,
-    frames, activeMeshes: renderer?.scene.getActiveMeshes().length ?? 0,
+    frames, loopTicks, activeMeshes: renderer?.scene.getActiveMeshes().length ?? 0,
     webgl: renderer?.engine.webGLVersion ?? 0, errors: [...errors] });
   // Read-only observability is available on explicit debug URLs, never a state setter.
   if (new URLSearchParams(location.search).has("debug")) window.__AV3D__ = { snapshot };
@@ -119,7 +123,7 @@ export async function startGame(root: HTMLElement) {
     area?.dispose(); renderer?.dispose(); hud.dispose(); delete window.__AV3D__;
   };
   try {
-    renderer = createRenderer(hud.canvas, settings.quality);
+    renderer = createRenderer(hud.canvas, settings.quality, () => { renderDirty = true; });
     input = new PlayerInput(hud.canvas);
     await renderer.ready;
     area = await createAreaView(renderer.scene, shop);
@@ -142,20 +146,22 @@ export async function startGame(root: HTMLElement) {
     renderer.engine.onContextRestoredObservable.add(() => {
       contextLost = false; input?.setEnabled(!paused && !failed); hud.notice("Graphics restored");
     });
-    let accumulator = 0;
+    const clock = new FrameClock();
     let sinceUi = 0;
     let sinceSave = 0;
+    let lastRenderedAt = performance.now();
     renderer.engine.runRenderLoop(() => {
+      loopTicks += 1;
       if (failed || contextLost || !renderer || !input || !controller || !camera || !area) return;
       try {
+        if (document.hidden || (paused && !renderDirty)) { clock.reset(); return; }
         const rawDelta = Math.max(renderer.engine.getDeltaTime() / 1000, 0.001);
-        const delta = Math.min(rawDelta, 0.1);
-        if (frames > 3) { frameTimes.push(renderer.engine.getDeltaTime()); if (frameTimes.length > 180) frameTimes.shift(); }
+        const delta = Math.min(rawDelta, MAX_FRAME_SECONDS);
+        if (frames > 3 && !paused) { frameTimes.push(renderer.engine.getDeltaTime()); if (frameTimes.length > 180) frameTimes.shift(); }
         if (!paused && !document.hidden) {
           camera.orbit(input.consumeCamera());
-          accumulator += delta;
-          while (accumulator >= 1 / 60) { controller.step(input.movement(), camera.state.yaw, 1 / 60, Boolean(session.carry.length)); accumulator -= 1 / 60; }
-        } else accumulator = 0;
+          clock.advance(rawDelta, step => controller!.step(input!.movement(), camera!.state.yaw, step, Boolean(session.carry.length)));
+        } else clock.reset();
         camera.update(controller.position, paused || document.hidden ? 0 : delta);
         controller.updateCamera(camera.actualDistance);
         progress?.cameraOpacity(controller.character.opacity);
@@ -166,16 +172,18 @@ export async function startGame(root: HTMLElement) {
           progress?.focus(active?.meshId);
           const action = active ? describeAction(session, active.actionId) : undefined;
           hud.interaction(action?.label, action?.available ?? false, objective(session));
-          hud.diagnostics({ ...snapshot(), lastAction });
+          if (hud.diagnosticsVisible) hud.diagnostics({ ...snapshot(), lastAction });
           sinceUi = 0;
         }
         if (input.consumeInteraction()) interact();
-        // Keep the animation clock on the same capped time as movement. At
-        // low FPS a real-time gait otherwise runs ahead of collision travel.
-        // A zero scale also keeps Babylon's timestamp current during pause,
-        // preventing a clip jump when the scene resumes.
-        renderer.scene.animationTimeScale = paused || document.hidden ? 0 : delta / rawDelta;
+        // Babylon measures animation time between scene renders, while the
+        // engine loop keeps ticking during a static menu. Match the gait to
+        // simulation time on resume instead of advancing across the pause.
+        const renderedAt = performance.now();
+        renderer.scene.animationTimeScale = paused ? 0 : delta * 1000 / Math.max(1, renderedAt - lastRenderedAt);
         renderer.scene.render();
+        lastRenderedAt = renderedAt;
+        renderDirty = false;
         frames += 1;
         if (frames === 3) {
           readyMs = performance.now() - started;

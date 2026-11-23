@@ -90,6 +90,7 @@ export class GameHud {
     this.resultDialog.showModal();
   }
   diagnostics(snapshot: unknown) { if (!this.debug.hidden) this.debug.textContent = JSON.stringify(snapshot, null, 2); }
+  get diagnosticsVisible() { return !this.debug.hidden; }
   fatal(error: unknown) {
     this.root.dataset.ready = "false";
     this.pauseDialog.close();

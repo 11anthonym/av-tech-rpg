@@ -12,7 +12,7 @@ import "@babylonjs/core/Collisions/collisionCoordinator";
 import { graphicsPresets } from "../persistence/settings.ts";
 import type { GraphicsQuality } from "../persistence/settings.ts";
 
-export function createRenderer(canvas: HTMLCanvasElement, initialQuality: GraphicsQuality = "high") {
+export function createRenderer(canvas: HTMLCanvasElement, initialQuality: GraphicsQuality = "high", invalidate = () => {}) {
   const engine = new Engine(canvas, true, { stencil: true });
   const scene = new Scene(engine);
   const instrumentation = new SceneInstrumentation(scene);
@@ -38,6 +38,7 @@ export function createRenderer(canvas: HTMLCanvasElement, initialQuality: Graphi
     shadows.mapSize = preset.shadowSize;
     shadows.usePercentageCloserFiltering = preset.filteredShadows;
     engine.resize();
+    invalidate();
   };
   applyQuality(initialQuality);
   const ready = new Promise<void>((resolve, reject) => {
@@ -48,7 +49,7 @@ export function createRenderer(canvas: HTMLCanvasElement, initialQuality: Graphi
   scene.imageProcessingConfiguration.toneMappingEnabled = true;
   scene.imageProcessingConfiguration.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
   scene.imageProcessingConfiguration.exposure = 1.1;
-  const resize = new ResizeObserver(() => engine.resize());
+  const resize = new ResizeObserver(() => { engine.resize(); invalidate(); });
   resize.observe(canvas);
   return { engine, scene, ready, applyQuality, metrics: () => ({ drawCalls: instrumentation.drawCallsCounter.current,
     vertices: scene.getTotalVertices(), graphics: engine.getGlInfo(), quality, resolution: graphicsPresets[quality].resolution,

@@ -5,8 +5,8 @@ import type { Diagnostics } from "../src/app.ts";
 const snapshot = (page: Page): Promise<Diagnostics> => page.evaluate(() => window.__AV3D__!.snapshot());
 async function ready(page: Page) { await expect(page.locator("#app")).toHaveAttribute("data-ready", "true", { timeout: 30000 }); }
 async function frames(page: Page, count = 8) {
-  const prior = (await snapshot(page)).frames;
-  await page.waitForFunction(({ prior, count }) => window.__AV3D__!.snapshot().frames >= prior + count, { prior, count });
+  const prior = (await snapshot(page)).loopTicks;
+  await page.waitForFunction(({ prior, count }) => window.__AV3D__!.snapshot().loopTicks >= prior + count, { prior, count });
 }
 async function walk(page: Page, key: string, axis: number, target: number) {
   await page.keyboard.down(key);
