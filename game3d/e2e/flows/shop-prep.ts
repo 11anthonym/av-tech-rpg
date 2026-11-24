@@ -5,10 +5,17 @@ import { shopLoad } from "../../src/content/ids.ts";
 export const snapshot = (page: Page): Promise<Diagnostics> => page.evaluate(() => window.__AV3D__!.snapshot());
 export async function ready(page: Page) { await expect(page.locator("#app")).toHaveAttribute("data-ready","true",{timeout:30000}); }
 export async function go(page: Page, key: string, axis: number, target: number, greater: boolean) {
-  await page.keyboard.down(key);
-  try { await page.waitForFunction(({axis,target,greater}) => {
-    const value=window.__AV3D__!.snapshot().position[axis]!; return greater ? value>target : value<target;
-  },{axis,target,greater},{timeout:30000}); } finally { await page.keyboard.up(key); }
+  // Release each ordinary key hold before reading position. Waiting on an RAF
+  // predicate with a key held let slow software rendering delay the key-up IPC
+  // until after the player had walked beyond the waypoint into a nearby rack.
+  // Bounded holds preserve collision and the original 30s movement deadline.
+  await expect(async()=>{
+    const value=(await snapshot(page)).position[axis]!;
+    if(greater ? value>target : value<target)return;
+    await page.keyboard.press(key,{delay:200});
+    const position=(await snapshot(page)).position[axis]!;
+    expect(greater ? position>target : position<target).toBe(true);
+  }).toPass({timeout:30000,intervals:[0]});
 }
 export async function interact(page: Page, actionId: string) {
   await expect.poll(async()=>(await snapshot(page)).actionId).toBe(actionId);
