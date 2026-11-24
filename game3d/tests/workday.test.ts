@@ -4,7 +4,7 @@ import {newSession,resolveAction,describeAction} from '../src/domain/session.ts'
 import type {Session} from '../src/domain/session.ts';
 import type {ActionId} from '../src/content/ids.ts';
 import {workdayContent} from '../src/content/workday.ts';
-import {pressureDefinition,seededUnit,canUseWorkaround} from '../src/domain/workday.ts';
+import {pressureDefinition,seededUnit,canUseWorkaround,getShiftPrepSkillBonus} from '../src/domain/workday.ts';
 import {freshSave,parseSave,SaveRepository,SAVE_KEY,M4A_SAVE_KEY} from '../src/persistence/save.ts';
 import {getArea} from '../src/world/areas.ts';
 import {legacyReference} from './legacy-reference.ts';
@@ -66,8 +66,8 @@ test('cart checks, pressure responses and closeout numerics agree with the actua
       s=checkpoint(s);
     }
     s=act(act(s,'conference.verify'),`finish.${finish}`);ref.runGame(`finishJob('${finish}');`);
-    const old=ref.readGameJson('({cash:state.cash,xp:state.xp,reputation:state.reputation,energy:state.energy,burnout:state.burnout,callbacks:state.stats.callbacks})');
-    assert.deepEqual({cash:s.career.cash,xp:s.career.xp,reputation:s.career.reputation,energy:s.energy,burnout:s.burnout,callbacks:s.career.callbacks},old,`${seed}/${response}/${finish}`);
+    const old=ref.readGameJson('({cash:state.cash,xp:state.xp,reputation:state.reputation,energy:state.energy,burnout:state.burnout,callbacks:state.stats.callbacks,overtimeDays:state.stats.overtimeDays})');
+    assert.deepEqual({cash:s.career.cash,xp:s.career.xp,reputation:s.career.reputation,energy:s.energy,burnout:s.burnout,callbacks:s.career.callbacks,overtimeDays:s.career.overtimeDays},old,`${seed}/${response}/${finish}`);
     s=checkpoint(s);assert.equal(act(s,`finish.${finish}`),s);
   }
 });
@@ -113,6 +113,9 @@ test('overnight recovery, stayed-late fatigue and skipped-day costs match the le
     assert.equal(next.energy,ref.readGameJson('state.energy'),choice);assert.equal(next.burnout,ref.readGameJson('state.burnout'),choice);
     assert.deepEqual(next.career.reputation,ref.readGameJson('state.reputation'),choice);
     assert.equal(next.career.callbacks,ref.readGameJson('state.stats.callbacks'),choice);
+    for(const key of ['stayLatePrepDays','recoveryDays','overnightRests'] as const)assert.equal(next.career[key],ref.readGameJson(`state.stats.${key}`),`${choice}/${key}`);
+    assert.equal(next.career.nextShiftPrep,ref.readGameJson('Boolean(state.flags.shiftPrepActive)'),choice);
+    for(const skill of ['documentation','fieldcraft','installation'])assert.equal(getShiftPrepSkillBonus(next,skill),ref.readGameJson(`getShiftPrepSkillBonus('${skill}')`),`${choice}/${skill}`);
     if(choice==='prep')assert.equal(next.career.risks[0]!.id,'exhaustion-service');
     assert.equal(next.career.fatigue,choice==='prep'?56:0);
     assert.equal(next.career.day,choice==='recovery-day'?3:2);

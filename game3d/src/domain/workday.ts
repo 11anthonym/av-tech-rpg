@@ -15,6 +15,7 @@ export interface Workday {
   reward:ToolId|null;shiftClosed:boolean;morningBriefed:boolean;
 }
 export interface Career {
+  overtimeDays:number;stayLatePrepDays:number;recoveryDays:number;overnightRests:number;nextShiftPrep:boolean;
   installSkill:number;improvisation:number;traits:string[];carefulFinishes:number;
   cash:number;xp:number;reputation:Reputation;craftsmanship:number;fatigue:number;day:number;shiftsCompleted:number;
   callbacks:number;workmanship:'unassessed'|'controlled'|'watch'|'temporary';
@@ -22,7 +23,8 @@ export interface Career {
   shiftSummary:null|{choice:string;netPay:number;xp:number;energyBefore:number;energyAfter:number;burnoutBefore:number;burnoutAfter:number;recovered:number;fatigueCap:number};
 }
 export const newWorkday=():Workday=>({assembled:[],carriedPart:null,checks:[],pressure:null,verified:false,handedOff:false,finishChoice:null,reward:null,shiftClosed:false,morningBriefed:false});
-export const newCareer=():Career=>({installSkill:2,improvisation:1,traits:['balancedStarter','calmUnderFire'],carefulFinishes:0,cash:0,xp:0,reputation:{clients:0,coworkers:0,management:0},craftsmanship:2,fatigue:0,day:1,shiftsCompleted:0,callbacks:0,workmanship:'unassessed',risks:[],nextAssignment:null,shiftSummary:null});
+export const newCareer=():Career=>({overtimeDays:0,stayLatePrepDays:0,recoveryDays:0,overnightRests:0,nextShiftPrep:false,installSkill:2,improvisation:1,traits:['balancedStarter','calmUnderFire'],carefulFinishes:0,cash:0,xp:0,reputation:{clients:0,coworkers:0,management:0},craftsmanship:2,fatigue:0,day:1,shiftsCompleted:0,callbacks:0,workmanship:'unassessed',risks:[],nextAssignment:null,shiftSummary:null});
+export const getShiftPrepSkillBonus=(s:Session,skill:string)=>s.career.nextShiftPrep&&['fieldcraft','documentation'].includes(skill)?1:0;
 export const canUseWorkaround=(s:Session)=>s.career.traits.includes('makeThatWork')&&s.career.improvisation>=4;
 const tidyEnergy=(s:Session)=>13-(s.career.traits.includes('measureTwice')||s.career.carefulFinishes>=2?1:0);
 export const carrying=(s:Session)=>Boolean(s.carry.length||s.workday.carriedPart);
@@ -120,7 +122,7 @@ export function resolveWorkday(state:Session,id:ActionId):ActionResult|undefined
     if(tidy){if(open)w.pressure={pressureId:p.id,actionId:'tidy-closeout',previousActionId:w.pressure?.actionId,controlled:true,incident:Boolean(w.pressure?.incident),roll:w.pressure?.roll??null,detail:`${p.label} caught during careful cable dressing and final cart cleanup.`};c.workmanship='controlled';}
     else if(workaround){c.workmanship='temporary';c.callbacks=1;c.risks.push({id:'usedTemporaryAdapterPermanently',source:'Two Quick Carts',cause:'A temporary adapter workaround was left as the final installed path.'});}
     else {c.workmanship=strained||open?'watch':'controlled';if(strained||open)c.callbacks=1;if(open)c.risks.push({id:'centerCityCartPressure',source:'Two Quick Carts',cause:`${p.label} was left unresolved after ${w.pressure?.incident?'a failed quick repair':'deferring the pressure'} and rushed through closeout.`});else if(strained)c.risks.push({id:'cartAssemblyStrained',source:'Two Quick Carts',cause:'Strained assembly checks were closed quickly without careful final cleanup.'});}
-    c.cash+=tidy?152:141;c.xp+=40;rep(tidy?{clients:2,coworkers:1,management:-1}:workaround?{clients:1,coworkers:-1,management:1}:{management:1});
+    c.cash+=tidy?152:141;c.xp+=40;c.overtimeDays++;rep(tidy?{clients:2,coworkers:1,management:-1}:workaround?{clients:1,coworkers:-1,management:1}:{management:1});
     s.flags.finished=true;s.flags.tutorialPaid=true;s.flags.tutorialProgressAwarded=true;s.flags.tutorialStatsRecorded=true;
     return result(s,`Net pay +$${tidy?152:141} ($128 wages + $${tidy?42:31} overtime − $18 parking); +40 XP. ${tidy?'Extra effort protected client/coworker standing, but management noticed the clock.':c.risks.length?`${c.risks[0]!.cause} A callback note will affect tomorrow's briefing.`:'Quick closeout held: no named callback risk because the installation was controlled.'} Review the work order for the client handoff and your starter upgrade.`,'Two Quick Carts: complete');
   }
@@ -148,12 +150,14 @@ export function resolveWorkday(state:Session,id:ActionId):ActionResult|undefined
     const fatigueCap=recovery?100:Math.min(late?80:100,exhaustionCap),recovered=recovery?100:Math.max(late?16:28,65-s.burnout*10-(late?10:0));
     const afterChoice=s.energy;s.energy=Math.min(fatigueCap,recovery?100:s.energy+recovered);
     if(recovery)s.burnout=Math.max(0,s.burnout-2);else if(!late&&s.energy>=75)s.burnout=Math.max(0,s.burnout-1);
-    c.fatigue=100-fatigueCap;c.day=recovery?3:2;c.shiftsCompleted=1;w.shiftClosed=true;s.flags.endShiftPending=false;
+    c.fatigue=100-fatigueCap;c.day=recovery?3:2;c.shiftsCompleted=1;c.nextShiftPrep=late;
+    c.stayLatePrepDays=Number(late);c.recoveryDays=Number(recovery);c.overnightRests=Number(!recovery);
+    w.shiftClosed=true;s.flags.endShiftPending=false;
     c.shiftSummary={choice,netPay:w.finishChoice==='tidy'?152:141,xp:40,energyBefore:beforeEnergy,energyAfter:s.energy,burnoutBefore:beforeBurnout,burnoutAfter:s.burnout,recovered:s.energy-afterChoice,fatigueCap};
     s.travel.clockMinutes=438;return result(s,shiftSummary(s),'Shift complete — next morning');
   }
   if(id==='shop.brief-supervisor')return result(state,`${w.morningBriefed?`Assignment already accepted: ${c.nextAssignment==='callbackCleanupDispatch'?'callback cleanup':'Conshohocken service'}. `:''}${c.risks.length?`${c.risks.some(r=>r.source==='Two Quick Carts')?'The client reported a follow-up concern from Two Quick Carts.':'Coordination flagged the exhausted next-shift preparation.'} ${c.risks.map(r=>r.cause).join(' ')} The return-trip ledger takes priority over a clean new service assignment.`:`The client and crew have a clean first-day handoff. ${c.workmanship==='controlled'?'Your controlled closeout protected the next technician. ':''}A Conshohocken service assignment is available.`}`, 'Morning briefing',w.morningBriefed?[]:[{actionId:'morning.accept',label:c.risks.length?'Accept callback cleanup assignment':'Accept Conshohocken service briefing',detail:c.risks.length?'This return-trip opportunity exists because of the saved first-day cause. The callback debt remains visible.':'The next service opportunity is available without first-day callback debt.'}]);
-  if(id==='morning.accept'){w.morningBriefed=true;c.nextAssignment=c.risks.length?'callbackCleanupDispatch':'serviceDispatch';return result(s,`${c.nextAssignment==='callbackCleanupDispatch'?'Callback cleanup':'Conshohocken service'} assigned for shift ${c.day}. ${c.risks.map(r=>r.cause).join(' ')||'The first install leaves no named callback risk.'} ${c.shiftSummary?.choice==='prep'?'Previous-shift preparation is recorded for documentation and fieldcraft checks.':''}`,'Next shift started');}
+  if(id==='morning.accept'){w.morningBriefed=true;c.nextAssignment=c.risks.length?'callbackCleanupDispatch':'serviceDispatch';return result(s,`${c.nextAssignment==='callbackCleanupDispatch'?'Callback cleanup':'Conshohocken service'} assigned for shift ${c.day}. ${c.risks.map(r=>r.cause).join(' ')||'The first install leaves no named callback risk.'} ${c.nextShiftPrep?`Previous-shift preparation grants +${getShiftPrepSkillBonus(s,'documentation')} to documentation and fieldcraft checks on the next job.`:''}`,'Next shift started');}
   return;
 }
 export const handoffSummary=(s:Session)=>`Two Quick Carts · ${s.workday.finishChoice??'pending'} closeout. Cash $${s.career.cash}; XP ${s.career.xp}. Standing: client ${s.career.reputation.clients}, coworker ${s.career.reputation.coworkers}, management ${s.career.reputation.management}. Workmanship ${s.career.workmanship}; open callbacks ${s.career.callbacks}.`;
@@ -169,7 +173,7 @@ export function validWorkday(s:Session):boolean {
     !['verified','handedOff','shiftClosed','morningBriefed'].every(key=>typeof w[key as keyof Workday]==='boolean')||
     ![null,'tidy','rush','wiley-workaround'].includes(w.finishChoice)||
     ![null,'toolBag','drill','handTruck'].includes(w.reward)||
-    !['cash','xp','craftsmanship','fatigue','day','shiftsCompleted','callbacks','installSkill','improvisation','carefulFinishes'].every(key=>Number.isInteger(c[key as keyof Career])&&Number(c[key as keyof Career])>=0)||
+    !['cash','xp','craftsmanship','fatigue','day','shiftsCompleted','callbacks','installSkill','improvisation','carefulFinishes','overtimeDays','stayLatePrepDays','recoveryDays','overnightRests'].every(key=>Number.isInteger(c[key as keyof Career])&&Number(c[key as keyof Career])>=0)||
     !Array.isArray(c.traits)||!c.traits.every(t=>typeof t==='string')||
     !['clients','coworkers','management'].every(key=>Number.isInteger(c.reputation?.[key as keyof Reputation]))||
     !Array.isArray(c.risks)||new Set(c.risks.map(r=>r.id)).size!==c.risks.length||
@@ -183,7 +187,11 @@ export function validWorkday(s:Session):boolean {
     (w.shiftClosed&&(!w.handedOff||s.areaId!=='shop'))||(w.morningBriefed&&!w.shiftClosed)||
     Boolean(s.flags.endShiftPending)!==(s.areaId==='shop'&&w.handedOff&&!w.shiftClosed)||
     c.cash!==(w.finishChoice?w.finishChoice==='tidy'?152:141:0)||c.xp!==(w.finishChoice?40:0)||
-    c.shiftsCompleted!==(w.shiftClosed?1:0)||(!w.shiftClosed&&c.day!==1)||
+    c.shiftsCompleted!==(w.shiftClosed?1:0)||c.overtimeDays!==Number(Boolean(w.finishChoice))||
+    c.nextShiftPrep!==(w.shiftClosed&&c.shiftSummary?.choice==='prep')||
+    c.stayLatePrepDays!==Number(w.shiftClosed&&c.shiftSummary?.choice==='prep')||
+    c.recoveryDays!==Number(w.shiftClosed&&c.shiftSummary?.choice==='recovery-day')||
+    c.overnightRests!==Number(w.shiftClosed&&c.shiftSummary?.choice!=='recovery-day')||(!w.shiftClosed&&c.day!==1)||
     (w.shiftClosed&&![2,3].includes(c.day))||Boolean(c.shiftSummary)!==w.shiftClosed||
     c.callbacks!==c.risks.length||c.carefulFinishes!==(w.finishChoice==='tidy'?1:0)||
     c.nextAssignment!==(w.morningBriefed?c.risks.length?'callbackCleanupDispatch':'serviceDispatch':null))return false;
