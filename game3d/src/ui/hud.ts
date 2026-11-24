@@ -55,10 +55,17 @@ export class GameHud {
     quality.addEventListener("change", () => callbacks.quality(quality.value as GraphicsQuality), { signal });
     this.prompt.addEventListener("click", () => callbacks.interact(), { signal });
     get("#pause-button").addEventListener("click", () => { callbacks.pause(true); this.pauseDialog.showModal(); }, { signal });
-    get("#resume-button").addEventListener("click", () => this.pauseDialog.close(), { signal });
-    get("#close-result").addEventListener("click", () => this.resultDialog.close(), { signal });
+    const resumeIfClosed=()=>{
+      if(!this.pauseDialog.open&&!this.resultDialog.open){callbacks.pause(false);this.canvas.focus();}
+    };
+    const close=(dialog:HTMLDialogElement)=>{dialog.close();resumeIfClosed();};
+    // The native close event is queued. Restore focus/input in the initiating
+    // event too, so an immediate next key is not lost against the old button.
+    get("#resume-button").addEventListener("click", () => close(this.pauseDialog), { signal });
+    get("#close-result").addEventListener("click", () => close(this.resultDialog), { signal });
     for (const dialog of [this.pauseDialog, this.resultDialog]) {
-      dialog.addEventListener("close", () => { callbacks.pause(false); this.canvas.focus(); }, { signal });
+      dialog.addEventListener("close", resumeIfClosed, { signal });
+      dialog.addEventListener('cancel',event=>{event.preventDefault();close(dialog);},{signal});
     }
     get<HTMLInputElement>("#sensitivity").addEventListener("input", event => callbacks.sensitivity(Number((event.target as HTMLInputElement).value)), { signal });
     const debugToggle = get<HTMLInputElement>("#show-debug");

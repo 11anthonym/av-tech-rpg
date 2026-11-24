@@ -37,6 +37,13 @@ ticks and additionally verify that scene rendering stops. Failure state is
 captured before cleanup. The cargo test remains at 240 seconds, with no retries
 or injected gameplay state.
 
+The first candidate exposed a Chromium dialog race: the close event was queued,
+so an immediate next key could arrive while input still belonged to the closed
+button. Input/focus are now restored synchronously by the close button or Escape;
+the queued close event also checks that no newer dialog is open. The unchanged
+replays caught this regression. That failed candidate is retained as evidence,
+not treated as an intermittent pass.
+
 Repeat the focused production replay with:
 
 ```sh
