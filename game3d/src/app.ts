@@ -16,6 +16,8 @@ import { selectInteraction } from "./world/interactions.ts";
 import type { InteractionDefinition, Vec3 } from "./world/shop.ts";
 import { SettingsRepository, graphicsPresets } from "./persistence/settings.ts";
 import { FrameClock, MAX_FRAME_SECONDS } from "./player/frame-clock.ts";
+import {carrying,supervisorPresent} from './domain/workday.ts';
+import {createWorkdayView} from './render/workday-view.ts';
 
 declare const __BUILD_VERSION__: string;
 export interface Diagnostics {
@@ -23,7 +25,8 @@ export interface Diagnostics {
   cameraPosition: number[]; actualCameraDistance: number; actionId: string | null;
   completedActions: string[]; paused: boolean; transitioning:boolean; frames: number; loopTicks: number; activeMeshes: number; webgl: number; errors: string[];
   session: Session;
-  supervisor: { meshes: number; joints: number; position: number[] } | null;
+  supervisor: { meshes: number; joints: number; position: number[];visible:boolean } | null;
+  installation:ReturnType<ReturnType<typeof createWorkdayView>['snapshot']>|null;
   cargo: ReturnType<ReturnType<typeof createShopProgress>["snapshot"]>;
   character: CharacterController["character"] | null;
   performance: ({ readyMs: number; sampledFrames: number; frameMs: { p50: number; p95: number; p99: number; max: number } } & ReturnType<ReturnType<typeof createRenderer>["metrics"]>) | null;
@@ -55,6 +58,7 @@ export async function startGame(root: HTMLElement) {
   let progress: ReturnType<typeof createShopProgress> | undefined;
   let supervisor: ReturnType<Awaited<ReturnType<typeof createTechnicianVisual>>["createSupervisor"]> | undefined;
   let technician: Awaited<ReturnType<typeof createTechnicianVisual>> | undefined;
+  let workdayView:ReturnType<typeof createWorkdayView>|undefined;
   // Accessing localStorage itself can throw, so defer it through this port.
   const storage: StoragePort = { getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value) };
   const repository = new SaveRepository(storage);
@@ -85,7 +89,7 @@ export async function startGame(root: HTMLElement) {
     } }, settings);
   function save() {
     if (!controller || !camera) return;
-    const ok = repository.save({ version: 3, session, position: pendingSpawn??controller.position.asArray() as unknown as Vec3,
+    const ok = repository.save({ version: 4, session, position: pendingSpawn??controller.position.asArray() as unknown as Vec3,
       camera: pendingSpawn?{yaw:0,pitch:.35,distance:5.5}:{ ...camera.state } });
     hud.saving(ok ? "3D session saved" : repository.problem ?? "Saving unavailable · playing in this tab");
   }
@@ -117,18 +121,23 @@ export async function startGame(root: HTMLElement) {
     try {
       const previousArea=session.areaId,result=resolveAction(session,actionId);session=result.state;
       if(session.areaId!==previousArea){pendingSpawn=getArea(session.areaId).spawn;save();await changeArea(session.areaId);}
-      technician?.setCarrying(Boolean(session.carry.length));progress?.update(session);hud.loadout(session);save();
+      technician?.setCarrying(carrying(session));progress?.update(session);workdayView?.update(session);
+      updateSupervisor();renderer?.prepareShadows();hud.loadout(session);save();
       lastAction=`${actionId}:${result.event.outcome}`;renderDirty=true;
       if(result.event.dialog){pendingChoices=result.event.choices?.map(choice=>choice.actionId)??[];pause(true);
         hud.result(result.event.message,result.event.outcome==='reviewed',result.event.title,result.event.choices);}
       else hud.notice(result.event.message);
     } finally {applying=false;input?.setEnabled(!paused&&!failed&&!contextLost);}
   }
+  function updateSupervisor(){
+    const visible=supervisorPresent(session);supervisor?.setVisible(visible);area?.setPropEnabled('supervisor',visible);
+    camera?.setObstacles(currentArea.props.filter(prop=>prop.solid&&(prop.id!=='supervisor'||visible)));
+  }
   const snapshot = (): Diagnostics => ({ build: __BUILD_VERSION__, areaId: session.areaId,
     position: controller?.position.asArray() ?? [], camera: { ...(camera?.state ?? loaded.data.camera) },
     cameraPosition: camera?.camera.position.asArray() ?? [], actualCameraDistance: camera?.actualDistance ?? 0,
     actionId: active?.actionId ?? null, completedActions: [...session.completedActions], paused,transitioning:applying,
-    session: structuredClone(session), supervisor: supervisor?.snapshot() ?? null, cargo: progress?.snapshot() ?? [],
+    session: structuredClone(session), supervisor: supervisor?.snapshot() ?? null, cargo: progress?.snapshot() ?? [],installation:workdayView?.snapshot()??null,
     character: controller?.character ?? null,
     performance: renderer ? { readyMs, sampledFrames: frameTimes.length, frameMs: percentiles(frameTimes), ...renderer.metrics() } : null,
     frames, loopTicks, activeMeshes: renderer?.scene.getActiveMeshes().length ?? 0,
@@ -140,7 +149,7 @@ export async function startGame(root: HTMLElement) {
   window.addEventListener("pagehide", save, { signal: abort.signal });
   window.addEventListener("blur", save, { signal: abort.signal });
   const dispose = () => {
-    save(); abort.abort(); input?.dispose(); camera?.dispose(); progress?.dispose(); supervisor?.dispose(); controller?.dispose();
+    save(); abort.abort(); input?.dispose(); camera?.dispose(); progress?.dispose();workdayView?.dispose();supervisor?.dispose(); controller?.dispose();
     area?.dispose(); renderer?.dispose(); hud.dispose(); delete window.__AV3D__;
   };
   try {
@@ -151,13 +160,15 @@ export async function startGame(root: HTMLElement) {
     hud.notice("Loading technician and movement clips…");
     technician = await createTechnicianVisual(renderer.scene);
     controller = new CharacterController(renderer.scene, loaded.data.position, technician);
-    technician.setCarrying(Boolean(session.carry.length));
+    technician.setCarrying(carrying(session));
     supervisor = technician.createSupervisor();
     supervisor.place(npcPlacement[session.areaId]);
     progress = createShopProgress(renderer.scene, technician.root);
+    workdayView=createWorkdayView(renderer.scene,technician.root);workdayView.update(session);
     progress.update(session); hud.loadout(session);
     camera = new FollowCamera(renderer.scene, loaded.data.camera, currentArea.props.filter(prop => prop.solid));
     camera.sensitivity = settings.sensitivity;
+    updateSupervisor();
     camera.update(controller.position);
     controller.updateCamera(camera.actualDistance);
     renderer.prepareShadows();
@@ -183,11 +194,12 @@ export async function startGame(root: HTMLElement) {
         if (frames > 3 && !paused) { frameTimes.push(renderer.engine.getDeltaTime()); if (frameTimes.length > 180) frameTimes.shift(); }
         if (!paused && !document.hidden) {
           camera.orbit(input.consumeCamera());
-          clock.advance(rawDelta, step => controller!.step(input!.movement(), camera!.state.yaw, step, Boolean(session.carry.length)));
+          clock.advance(rawDelta, step => controller!.step(input!.movement(), camera!.state.yaw, step, carrying(session)));
         } else clock.reset();
         camera.update(controller.position, paused || document.hidden ? 0 : delta);
         controller.updateCamera(camera.actualDistance);
         progress?.cameraOpacity(controller.character.opacity);
+        workdayView?.cameraOpacity(controller.character.opacity);
         sinceUi += delta;
         if (sinceUi >= 0.1 || frames === 0) {
           active = paused ? undefined : selectInteraction(renderer.scene, controller.position, currentArea.interactions);

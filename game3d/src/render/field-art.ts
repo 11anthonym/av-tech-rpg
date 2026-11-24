@@ -50,13 +50,8 @@ export function createFieldArt(scene:Scene,root:TransformNode,area:AreaDefinitio
   } else {
     box('work-order-table',[-3,.9,1],[1.6,.1,.8],wood);for(const x of [-3.65,-2.35])box('table-leg',[x,.43,1],[.07,.86,.65],steel);
     box('work-order',[-3,.96,1],[.4,.02,.3],white);label('assignment-sign','TWO QUICK CARTS',[-3,2.6,2.7],3,.4);
-    for(const x of [1,4]) {
-      for(const side of [-.5,.5]){box('cart-upright',[x+side,1.05,2],[.045,1.9,.045],aluminium);
-        for(const z of [1.7,2.3]){const wheel=cylinder('caster',[x+side,.14,z],.2,.09,rubber);wheel.rotation.z=Math.PI/2;}}
-      box('cart-base',[x,.24,2],[1.2,.08,.7],steel);box('cart-crossbar',[x,1.65,2],[1,.055,.055],aluminium);
-      box('cart-shelf',[x,.8,2],[1,.06,.5],steel);label(`cart-${x}`,x===1?'CART 1':'CART 2',[x,2.2,2],1.4,.3);
-    }
-    label('staging-sign','DELIVERED EQUIPMENT',[-4,2.65,1.8],2.8,.35);
+    for(const x of [1,4]){box('cart-pallet',[x,.1,2],[1.25,.2,.8],wood);label(`cart-${x}`,x===1?'CART 1':'CART 2',[x,2.5,2.5],1.4,.3);}
+    box('return-door',[0,1.3,-5.85],[2.4,2.6,.1],steel);label('return-sign','RETURN TO SHOP',[0,2.8,-5.75],2.4,.3,root,Math.PI);
     box('client-table',[2,.72,4.4],[3.7,.1,1.1],wood);
   }
   for(const [m,parts] of batches) {

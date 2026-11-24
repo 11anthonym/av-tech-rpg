@@ -31,7 +31,13 @@ export const conference:AreaDefinition={id:'centerCityConferenceRoom',label:'Cli
     {id:'supervisor',position:[-3,.9,2],size:[.6,1.8,.6],material:'steel',solid:true},
     {id:'cart1',position:[1,1,2],size:[1.2,2,.7],material:'steel',solid:true},
     {id:'cart2',position:[4,1,2],size:[1.2,2,.7],material:'steel',solid:true}],
-  interactions:[{id:'client.assignment',actionId:'conference.review-assignment',anchor:[-3,1,.55],meshId:'work-order',radius:1.7,priority:2}],};
+  interactions:[{id:'client.assignment',actionId:'conference.review-assignment',anchor:[-3,1,.55],meshId:'work-order',radius:1.7,priority:2},
+    {id:'client.parts',actionId:'conference.pickup-part',anchor:[-4.7,1,-1.3],meshId:'parts',radius:1.7,priority:2},
+    {id:'client.cart1',actionId:'install.cart1',anchor:[1,1,1.2],meshId:'cart1',radius:1.8,priority:2},
+    {id:'client.cart2',actionId:'install.cart2',anchor:[4,1,1.2],meshId:'cart2',radius:1.8,priority:2},
+    {id:'client.return',actionId:'centerCityConferenceRoomToShop',anchor:[0,1,-4.7],meshId:'exit',radius:1.4,priority:2}],};
+conference.props.push({id:'parts',position:[-4.7,.3,-1.3],size:[.1,.1,.1],material:'carton',solid:false},
+  {id:'exit',position:[0,1.3,-5.85],size:[2.4,2.6,.1],material:'steel',solid:true});
 export const areas:Record<AreaId,AreaDefinition>={shop,centerCityGarage:garage,centerCityLobby:lobby,centerCityConferenceRoom:conference};
 export const getArea=(id:AreaId)=>areas[id];
 export const npcPlacement:Record<AreaId,readonly[number,number,number]>={shop:[-5,0,-1],centerCityGarage:[-3.8,0,-1],centerCityLobby:[-3,0,1],centerCityConferenceRoom:[-3,0,2]};

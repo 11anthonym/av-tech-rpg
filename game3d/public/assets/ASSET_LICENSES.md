@@ -60,6 +60,9 @@ same licensed technician, supervisor and lighting. Garage, security lobby and
 client-room furniture/signage in `game3d/src/render/field-art.ts` are original
 repository-authored geometry and text. No new external art, texture, animation
 or license grant was added. Existing third-party notices remain applicable.
+M4-B's switchable cart frames, mounted displays, cable dressing and carried
+component packaging in `src/render/workday-view.ts` are original geometry;
+they introduce no external models, images, animation clips or new licenses.
 No external model, texture or decoder request occurs during normal gameplay.
 Development dependency licenses reside in their packages; glTF Transform and
 MikkTSpace run only during conversion.

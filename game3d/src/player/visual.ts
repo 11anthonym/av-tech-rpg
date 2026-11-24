@@ -10,7 +10,7 @@ export interface TechnicianVisual {
   setMotion(speed: number, delta: number): void;
   setCameraDistance(distance: number): void;
   setCarrying(value: boolean): void;
-  createSupervisor(): { place(position:readonly[number,number,number]):void; snapshot(): { meshes: number; joints: number; position: number[] }; dispose(): void };
+  createSupervisor(): { place(position:readonly[number,number,number]):void;setVisible(visible:boolean):void; snapshot(): { meshes: number; joints: number; position: number[];visible:boolean }; dispose(): void };
   snapshot(): { model: string; joints: number; height: number; opacity: number; carryPoseError: number | null; speed: number; walkWeight: number; idleFrame: number; walkFrame: number; pose: number[] };
   dispose(): void;
 }
@@ -70,9 +70,9 @@ export async function createTechnicianVisual(scene: Scene): Promise<TechnicianVi
       for (const group of entries.animationGroups) { group.stop(); if (group.name.endsWith("Idle")) group.start(true, 1); }
       for (const mesh of npc.getChildMeshes()) { mesh.isPickable = false; mesh.receiveShadows = true; }
       const snapshot = () => ({ meshes: npc.getChildMeshes().filter(mesh => mesh.getTotalVertices()>0).length,
-        joints: entries.skeletons[0]?.bones.length ?? 0, position: npc.position.asArray() });
+        joints: entries.skeletons[0]?.bones.length ?? 0, position: npc.position.asArray(),visible:npc.isEnabled() });
       if (snapshot().meshes !== 5 || snapshot().joints !== 80) throw new Error("Supervisor requires the complete technician rig");
-      return { snapshot,place(position){npc.position.set(...position);}, dispose() { entries.dispose(); npc.dispose(); } };
+      return { snapshot,place(position){npc.position.set(...position);},setVisible(visible){npc.setEnabled(visible);}, dispose() { entries.dispose(); npc.dispose(); } };
     },
     setCameraDistance(distance) {
       opacity = cameraOpacity(distance);

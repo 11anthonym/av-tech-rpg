@@ -24,7 +24,7 @@ export class GameHud {
     this.root = root;
     root.innerHTML = `
       <canvas id="game-view" tabindex="0" aria-label="3D shop. Use WASD or arrow keys to walk, drag to orbit, wheel to zoom, and E to interact."></canvas>
-      <header class="topbar"><div><span class="eyebrow">AV TECH RPG · FIRST SHIFT</span><h1 id="area-title">Radnor Rack &amp; Wire</h1>
+      <header class="topbar"><div><span id="shift-label" class="eyebrow">AV TECH RPG · FIRST SHIFT</span><h1 id="area-title">Radnor Rack &amp; Wire</h1>
         <p id="area-note" class="stage-note">Service bench · systems test · Van 3 loading bay</p></div>
         <nav><a id="legacy-link">Original 2D career</a><button id="pause-button">Pause / settings</button></nav></header>
       <div id="notice" role="status" class="notice">Loading shop…</div>
@@ -96,7 +96,9 @@ export class GameHud {
     if (node.textContent !== objective) node.textContent = objective;
   }
   loadout(state: Session) {
-    this.root.querySelector("#loadout")!.textContent = `Hands ${state.carry.length}/1: ${state.carry[0] ?? "Empty"} · Van ${state.loaded.length}/3${state.areaId==='shop'?'':` · Delivered ${state.delivered.length}/3`} · Energy ${state.energy}/100 · Burnout ${state.burnout} · Kit: screwdriver · ${workdayClock(state.travel.clockMinutes)}${state.travel.parkingExpense?' · $18 receipt pending':''}`;
+    this.root.querySelector('#shift-label')!.textContent=`AV TECH RPG · SHIFT ${state.career.day}`;
+    const held=state.workday.carriedPart??state.carry[0];
+    this.root.querySelector("#loadout")!.textContent = `Hands ${held?1:0}/1: ${held??"Empty"} · Van ${state.loaded.length}/3${state.areaId==='shop'?'':` · Delivered ${state.delivered.length}/3`} · Energy ${state.energy}/100 · Burnout ${state.burnout} · Kit: ${state.tools.join(', ')} · ${workdayClock(state.travel.clockMinutes,state.career.day)}${state.career.xp?` · $${state.career.cash} · ${state.career.xp} XP · Callbacks ${state.career.callbacks}`:state.travel.parkingExpense?' · $18 receipt pending':''}`;
   }
   place(id:AreaId,title:string) {
     this.root.dataset.area=id;

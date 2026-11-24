@@ -92,13 +92,13 @@ export function validTravelProgress(state:Session):boolean {
   const expected=routeOutcome(saved.choiceId,travel.seed);
   if(Object.keys(expected).some(key=>saved[key as keyof typeof saved]!==expected[key as keyof typeof expected])||
     !flags.shopBrief||travel.parkingExpense!==18||state.burnout<expected.burnoutGain||
-    state.carry.length+state.loaded.length+delivered.length!==3||state.areaId==='shop'||
+    state.carry.length+state.loaded.length+delivered.length!==3||(state.areaId==='shop'&&!state.workday.handedOff)||
     (!flags.garageBrief&&(state.loaded.length!==3||delivered.length||state.carry.length))||
     (flags.securityChecked&&!flags.centerCityEquipmentDelivered)||
-    (flags.roomBrief&&state.areaId!=='centerCityConferenceRoom'))return false;
+    (flags.roomBrief&&state.areaId!=='centerCityConferenceRoom'&&!state.workday.handedOff))return false;
   if(state.areaId!=='centerCityGarage'&&!equipmentDelivered(state))return false;
   if(state.areaId==='centerCityGarage'&&flags.securityChecked)return false;
   if(state.areaId==='centerCityConferenceRoom'&&!flags.securityChecked)return false;
   const expectedClock=expected.arrival+(3-state.loaded.length)*6+delivered.length*6+(flags.securityChecked?13:0)+(state.areaId==='centerCityConferenceRoom'?14:0);
-  return travel.clockMinutes===expectedClock;
+  return state.workday.assembled.length?Number.isInteger(travel.clockMinutes):travel.clockMinutes===expectedClock;
 }

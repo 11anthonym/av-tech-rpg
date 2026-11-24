@@ -27,6 +27,7 @@ export class FollowCamera {
     this.state.pitch = Math.max(0.15, Math.min(1.05, this.state.pitch + input.y * 0.004 * this.sensitivity));
     this.state.distance = Math.max(2.2, Math.min(8.5, this.state.distance + input.zoom));
   }
+  setObstacles(obstacles:readonly CameraObstacle[]){this.obstacles=obstacles;}
   update(player: Vector3, delta = 0) {
     const target = player.add(new Vector3(0, 0.2, 0));
     const direction = new Vector3(Math.sin(this.state.yaw) * Math.cos(this.state.pitch),

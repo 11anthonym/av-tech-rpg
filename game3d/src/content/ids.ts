@@ -14,7 +14,14 @@ export type ShopActionId = "shop.inspect-workbench" | "shop.brief-supervisor" | 
 export const travelActions = ['shop.choose-route','route.garageRoute','route.loadingZoneGamble','route.circleForCurb',
   'garage.brief-supervisor','garage.unload-equipment','garageToLobby','security.check-in','lobbyToConferenceRoom','conference.review-assignment'] as const;
 export type TravelActionId = typeof travelActions[number];
-export type ActionId = ShopActionId | TravelActionId;
+export const workdayActions = ['conference.pickup-part','install.cart1','install.cart2','conference.verify',
+  'pressure.sort-labels','pressure.match-by-memory','pressure.square-caster','pressure.snug-caster-fast','pressure.leave',
+  'finish.tidy','finish.rush','finish.wiley-workaround','reward.toolBag','reward.drill','reward.handTruck',
+  'centerCityConferenceRoomToShop','shift.clock-out','shift.prep','shift.recovery-day','morning.accept'] as const;
+export type WorkdayActionId=typeof workdayActions[number];
+export type ActionId = ShopActionId | TravelActionId | WorkdayActionId;
+export const isWorkdayAction=(id:ActionId):id is WorkdayActionId=>(workdayActions as readonly string[]).includes(id);
+export type ToolId='screwdriver'|'toolBag'|'drill'|'handTruck';
 export const isTravelAction = (id:ActionId):id is TravelActionId => (travelActions as readonly string[]).includes(id);
 // Canonical saved cargo labels from GAME_CONTENT.tutorial.shopLoad.
 export const shopLoad = ["Cart frame boxes", "Display boxes", "Accessory tote"] as const;
