@@ -11,13 +11,17 @@ on:
         description: Run only three normal-input Chromium cargo replays
         type: boolean
         default: false
+      workday_replay:
+        description: Run only the existing fresh-career Chromium full-workday replay
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 jobs:
   fast-qa:
-    if: ${{ !inputs.shop_stress }}
+    if: ${{ !inputs.shop_stress && !inputs.workday_replay }}
     name: Static and unit QA
     runs-on: ubuntu-latest
     steps:
@@ -32,7 +36,7 @@ jobs:
         run: node scripts/qa-all.js --fast
 
   game3d:
-    if: ${{ !inputs.shop_stress }}
+    if: ${{ !inputs.shop_stress && !inputs.workday_replay }}
     name: 3D production build and browser QA
     runs-on: ubuntu-latest
     defaults:
@@ -74,7 +78,7 @@ jobs:
           if-no-files-found: error
 
   local-setup:
-    if: ${{ !inputs.shop_stress }}
+    if: ${{ !inputs.shop_stress && !inputs.workday_replay }}
     name: Fresh local setup (${{ matrix.os }})
     strategy:
       fail-fast: false
@@ -96,7 +100,7 @@ jobs:
       - run: node --test scripts/tests/local-preview.test.mjs
 
   shop-stress:
-    if: ${{ inputs.shop_stress }}
+    if: ${{ inputs.shop_stress && !inputs.workday_replay }}
     name: Repeated Chromium shop replay
     runs-on: ubuntu-latest
     defaults:
@@ -123,6 +127,39 @@ jobs:
         if: always()
         with:
           name: repeated-shop-evidence
+          path: |
+            game3d/test-results/
+            game3d/playwright-report/
+
+  workday-replay:
+    if: ${{ inputs.workday_replay }}
+    name: Focused Chromium workday replay
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: game3d
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: game3d/package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: game3d/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm build:portable
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: xvfb-run --auto-servernum pnpm exec playwright test e2e/workday.spec.ts --project=chromium
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: focused-workday-evidence
           path: |
             game3d/test-results/
             game3d/playwright-report/
