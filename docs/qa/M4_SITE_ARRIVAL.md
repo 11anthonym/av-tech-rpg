@@ -98,6 +98,14 @@ the opacity assertions and 240-second limit. This test correction is also
 backported to parent PR #9. Actual final CI results belong in the PR; this
 document does not count cancelled runs or incomplete tests as passing.
 
+The next focused parent-branch stress run (`45301260371`) passed one replay and
+failed two waiting for the staging prompt. Captured positions were x=-6.29/-6.38,
+z=2.552: coarse waypoint overshoot left the player just outside pickup range,
+with correctly saved cargo. The replay now walks forward until the contextual
+pickup prompt is actually available before pressing E, instead of assuming a
+coordinate waypoint necessarily exposes it. No reach radius or assertions were
+relaxed for this correction. The PR records the subsequent repeat results.
+
 Review/merge PR #9 first. Retarget PR #10 to `main` after that merge, rerun its
 checks and review it before merging. The unchanged main-only Pages workflow
 then publishes the approved combined site. For rollback, revert the approved
