@@ -33,6 +33,11 @@ export async function prepareVan(page:Page,info:Pick<TestInfo,"outputPath"|"atta
   expect((await snapshot(page)).session.energy).toBe(100);
   await go(page,"d",0,options.wideApproach?2.5:-2.7,true); await go(page,"w",2,3.4,true); await go(page,"a",0,-5.5,false);
   for(let i=0;i<3;i++) {
+    // Finish the approach using the same prompt a player sees. Slow browser
+    // key-up delivery can leave a coarse waypoint just outside arm's reach.
+    await page.keyboard.down('w');
+    try {await page.waitForFunction(()=>window.__AV3D__!.snapshot().actionId==='shop.pickup-equipment',undefined,{timeout:15000});}
+    finally {await page.keyboard.up('w');}
     await interact(page,"shop.pickup-equipment");
     await expect.poll(async()=>(await snapshot(page)).session.carry).toEqual([shopLoad[i]]);
     // Repeated pickup cannot duplicate a group or charge energy twice.
