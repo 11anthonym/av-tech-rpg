@@ -1,7 +1,15 @@
 import { test,expect } from '@playwright/test';
 import { prepareVan,go,interact,ready,snapshot } from './flows/shop-prep.ts';
 
-test.afterEach(async({page})=>{if(!page.isClosed())await page.goto('about:blank');});
+test.afterEach(async({page},info)=>{
+  if(page.isClosed())return;
+  if(info.status!==info.expectedStatus){
+    const state=await page.evaluate(()=>window.__AV3D__?.snapshot()).catch(()=>undefined);
+    await info.attach('failure-state',{body:JSON.stringify(state??{unavailable:true}),contentType:'application/json'});
+    await page.screenshot({path:info.outputPath('failure-before-cleanup.png'),timeout:5000}).catch(()=>{});
+  }
+  await page.goto('about:blank');
+});
 test('first workday arrival: fresh preparation, route, three deliveries, security and client floor',async({page},info)=>{
   test.setTimeout(600000);
   const errors:string[]=[];let humanLoads=0,lightingLoads=0;
