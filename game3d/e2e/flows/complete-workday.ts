@@ -52,7 +52,8 @@ export async function completeWorkday(page:Page,info:TestInfo,finish:'tidy'|'rus
   expect(morning.career.cash).toBe(paid.career.cash);expect(morning.career.xp).toBe(40);
   expect(morning.career.callbacks).toBe(finish==='rush'?1:0);expect(morning.career.risks.length).toBe(finish==='rush'?1:0);
   const saved=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)!),SAVE_KEY);expect(saved.version).toBe(4);
-  await go(page,'s',2,-4,false);await go(page,'a',0,-5.5,false);await interact(page,'shop.brief-supervisor');
+  // Approach the counter inside its prompt radius with room for key-up delay.
+  await go(page,'s',2,-3.5,false);await go(page,'a',0,-5.5,false);await interact(page,'shop.brief-supervisor');
   await expect(page.locator('#result-copy')).toContainText(finish==='rush'?'rushed through closeout':'clean first-day handoff');
   await choose(page,'morning.accept');await page.screenshot({path:info.outputPath('later-shift-consequence.png')});await close(page);
   await page.reload();await restored(page);
