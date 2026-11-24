@@ -60,3 +60,16 @@ v2 migration. `game3d/e2e/site-arrival.spec.ts` plays from a new career using
 keyboard/mouse only, including three delivery trips and several reloads. Its
 new longer workday budget does not alter M3's existing 240-second replay limit.
 Actual run results and evidence are recorded below after execution.
+
+Initial Windows production-browser candidate: Firefox 159 passed the complete
+normal-input arrival replay (11.4 minutes including recording teardown).
+The recorded [garage-to-client clip](evidence/m4-arrival/garage-to-client.webm)
+is actual gameplay from that run. The debug overlay visible after reload was
+subsequently hidden in evidence captures, and the staging sign was moved above
+head height after reviewing the screenshot. This footage is not a performance
+benchmark or evidence of completed cart installation.
+
+All 32 3D unit/domain checks pass locally; original static and unit QA each
+pass 43 checks. Final production builds, browser matrix and portable HTTP
+verification are reported in the PR with their exact run links. Superseded CI
+runs that were cancelled are not counted as passing runs.

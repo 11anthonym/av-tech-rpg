@@ -356,3 +356,15 @@ two-cart workday. Preserve the canonical first-workday contract and complete one
 day before adding unrelated jobs or driving.
 
 **Research diminishing-returns rule (11/22/2026):** Preproduction is sufficiently specified for implementation. Do not add more general research documents, broad engine comparisons, third-party host plans or speculative art catalogs. Reopen research only for a reproducible issue involving: (a) a real human/animation import, (b) shop scene authoring productivity, (c) production browser performance, (d) save/migration parity, (e) verified deployment, or (f) an observed playtest blocker. Make the smallest evidence-backed update that resolves it, then return to implementation. Any recurring research review should use the same rule and avoid repetitive commits with no practical change.
+
+**Execution update — 11/23/2026:** The owner merged PRs #2, #4, #5, #6 and #8;
+`main` at `0a39aa0` publishes both games on GitHub Pages. Its integrated Chromium
+cargo replay failed twice. PR #9 fixes frame pacing, collision substeps, dialog
+input and the staging aisle; it passed 27 production-browser cases and three
+consecutive focused Chromium cargo replays at the unchanged 240-second limit.
+PR #10 stacks **M4-A** on that fix: route selection, garage delivery, security
+and arrival at the client installation room. This is an independently playable
+slice, **not the completed M4 gate**. Next is M4-B: both cart assemblies,
+installation pressure and closeout decisions, return, one-time shift rewards
+and a saved later-shift consequence. See [M4-A acceptance](qa/M4_SITE_ARRIVAL.md).
+Human art/fun review and real-GPU performance qualification remain open.
