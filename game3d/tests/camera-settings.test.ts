@@ -16,8 +16,9 @@ test("camera volume catches a corner the old centre ray missed", () => {
 
 test("orbit endpoints clear authored walls, bench, shelf, cart and van at resting positions", () => {
   const boxes = shop.props.filter(p => p.solid);
+  const cart = boxes.find(p => p.id === "display-cart")!;
   const positions: Vec3[] = [[0, .92, -4], [0, .92, -.7806628815], [4.419, .92, 4.5],
-    [8.60, .92, 0], [-7.3, .92, 5], [-4.1, .92, 1.6]];
+    [8.60, .92, 0], [-7.3, .92, 5], [cart.position[0]-cart.size[0]/2-.35, .92, 1.6]];
   for (const p of positions) for (const pitch of [.15, .35, 1.05]) for (let i = 0; i < 72; i++) {
     const yaw = i / 72 * Math.PI * 2;
     const direction: Vec3 = [Math.sin(yaw)*Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw)*Math.cos(pitch)];
