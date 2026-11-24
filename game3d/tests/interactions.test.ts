@@ -18,5 +18,9 @@ test('the work order keeps focus near its table; the parts bay remains independe
   try {
     for(const x of [-3.6,-3.4,-3])assert.equal(selectInteraction(scene,new Vector3(x,.92,-.6),conference.interactions)?.actionId,'conference.review-assignment');
     assert.equal(selectInteraction(scene,new Vector3(-4.9,.92,-1.4),conference.interactions)?.actionId,'conference.pickup-part');
+    // A real obstruction before the anchor must still block the action.
+    const blocker=MeshBuilder.CreateBox('temporary-obstruction',{width:2,height:3,depth:.12},scene);
+    blocker.position.set(-4.7,1.5,-1.9);blocker.metadata={blocksSight:true};blocker.computeWorldMatrix(true);
+    assert.equal(selectInteraction(scene,new Vector3(-4.9,.92,-2.4),conference.interactions),undefined);
   }finally{scene.dispose();engine.dispose();}
 });

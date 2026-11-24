@@ -91,7 +91,7 @@ export function validTravelProgress(state:Session):boolean {
   if(!routeApproaches.some(choice=>choice.id===saved?.choiceId))return false;
   const expected=routeOutcome(saved.choiceId,travel.seed);
   if(Object.keys(expected).some(key=>saved[key as keyof typeof saved]!==expected[key as keyof typeof expected])||
-    !flags.shopBrief||travel.parkingExpense!==18||state.burnout<expected.burnoutGain||
+    !flags.shopBrief||travel.parkingExpense!==18||(!state.workday.shiftClosed&&state.burnout<expected.burnoutGain)||
     state.carry.length+state.loaded.length+delivered.length!==3||(state.areaId==='shop'&&!state.workday.handedOff)||
     (!flags.garageBrief&&(state.loaded.length!==3||delivered.length||state.carry.length))||
     (flags.securityChecked&&!flags.centerCityEquipmentDelivered)||

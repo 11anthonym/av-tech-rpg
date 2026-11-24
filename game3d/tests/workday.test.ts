@@ -10,9 +10,9 @@ import {getArea} from '../src/world/areas.ts';
 import {legacyReference} from './legacy-reference.ts';
 
 const act=(s:Session,id:ActionId)=>resolveAction(s,id).state;
-function arrival(seed=173){let s=newSession();s.travel.seed=seed;s=act(s,'shop.brief-supervisor');
+function arrival(seed=173,route:'route.garageRoute'|'route.loadingZoneGamble'|'route.circleForCurb'='route.garageRoute'){let s=newSession();s.travel.seed=seed;s=act(s,'shop.brief-supervisor');
   for(let i=0;i<3;i++){s=act(s,'shop.pickup-equipment');s=act(s,'shop.load-van');}
-  for(const id of ['route.garageRoute','garage.brief-supervisor'] as const)s=act(s,id);
+  for(const id of [route,'garage.brief-supervisor'] as const)s=act(s,id);
   for(let i=0;i<3;i++){s=act(s,'garage.unload-equipment');s=act(s,'garageToLobby');}
   for(const id of ['garageToLobby','security.check-in','lobbyToConferenceRoom','conference.review-assignment'] as const)s=act(s,id);
   return s;
@@ -113,6 +113,16 @@ test('overnight recovery, stayed-late fatigue and skipped-day costs match the le
     assert.equal(next.energy,ref.readGameJson('state.energy'),choice);assert.equal(next.burnout,ref.readGameJson('state.burnout'),choice);
     assert.equal(next.career.fatigue,choice==='prep'?48:0);
     assert.equal(next.career.day,choice==='recovery-day'?3:2);
+  }
+});
+
+test('every route can complete a saved workday even when overnight recovery removes route burnout',()=>{
+  for(const route of ['route.garageRoute','route.loadingZoneGamble','route.circleForCurb'] as const){
+    const first=arrival(173,route);let s=close(assemble(first,'careful'),'rush');
+    s=checkpoint(act(s,'shift.clock-out'));s=checkpoint(act(s,'morning.accept'));
+    assert.equal(s.career.day,2);assert.equal(s.career.xp,40);assert.equal(s.career.cash,141);
+    assert.deepEqual(s.travel.route,first.travel.route);
+    assert.equal(s.burnout,0);assert.equal(s.travel.clockMinutes,438);
   }
 });
 

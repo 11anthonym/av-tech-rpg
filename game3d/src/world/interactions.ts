@@ -14,8 +14,11 @@ export function selectInteraction(scene: Scene, player: Vector3, interactions: I
   return candidates.find(({ definition }) => {
     const anchor = Vector3.FromArray(definition.anchor);
     const offset = anchor.subtract(eye);
-    const hit = scene.pickWithRay(new Ray(eye, offset.normalizeToNew(), offset.length()),
+    const length=offset.length();
+    const hit = scene.pickWithRay(new Ray(eye, offset.normalizeToNew(), length),
       mesh => Boolean(mesh.metadata?.blocksSight || mesh.metadata?.interactionId));
-    return !hit?.hit || hit.pickedMesh?.metadata?.interactionId === definition.id;
+    // Babylon's mesh picking can report a triangle beyond the short ray's end.
+    // Geometry behind the anchor must not hide a reachable contextual action.
+    return !hit?.hit || hit.distance>=length-.001 || hit.pickedMesh?.metadata?.interactionId === definition.id;
   })?.definition;
 }
