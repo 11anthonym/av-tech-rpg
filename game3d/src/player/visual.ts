@@ -1,3 +1,5 @@
+import {createNpcVisual} from './npc.ts';
+import type {NpcVisual} from './npc.ts';
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
 import { loadModel } from "../render/assets.ts";
@@ -10,7 +12,7 @@ export interface TechnicianVisual {
   setMotion(speed: number, delta: number): void;
   setCameraDistance(distance: number): void;
   setCarrying(value: boolean): void;
-  createSupervisor(): { place(position:readonly[number,number,number]):void;setVisible(visible:boolean):void; snapshot(): { meshes: number; joints: number; position: number[];visible:boolean }; dispose(): void };
+  createSupervisor(): Promise<NpcVisual>;
   snapshot(): { model: string; joints: number; height: number; opacity: number; carryPoseError: number | null; speed: number; walkWeight: number; idleFrame: number; walkFrame: number; pose: number[] };
   dispose(): void;
 }
@@ -52,28 +54,7 @@ export async function createTechnicianVisual(scene: Scene): Promise<TechnicianVi
   return {
     root,
     setCarrying(value) { carrying = value; },
-    createSupervisor() {
-      const npc = new TransformNode("supervisor-visual", scene);
-      npc.position.set(-5, 0, -1); npc.rotation.y = Math.PI;
-      const npcModel = new TransformNode("supervisor-model", scene); npcModel.parent = npc;
-      npcModel.scaling.copyFrom(model.scaling); npcModel.position.copyFrom(model.position);
-      // AssetContainer discovers hierarchy roots by parent===null. The player's
-      // imported roots already belong to its visual adapter, so detach only for
-      // this synchronous clone and restore them before the next rendered frame.
-      const parents = asset.rootNodes.map(node => node.parent);
-      let entries;
-      try {
-        asset.rootNodes.forEach(node => { node.parent = null; });
-        entries = asset.instantiateModelsToScene(name => `supervisor/${name}`, false, { doNotInstantiate: true });
-      } finally { asset.rootNodes.forEach((node,i) => { node.parent = parents[i] ?? null; }); }
-      for (const node of entries.rootNodes) node.parent = npcModel;
-      for (const group of entries.animationGroups) { group.stop(); if (group.name.endsWith("Idle")) group.start(true, 1); }
-      for (const mesh of npc.getChildMeshes()) { mesh.isPickable = false; mesh.receiveShadows = true; }
-      const snapshot = () => ({ meshes: npc.getChildMeshes().filter(mesh => mesh.getTotalVertices()>0).length,
-        joints: entries.skeletons[0]?.bones.length ?? 0, position: npc.position.asArray(),visible:npc.isEnabled() });
-      if (snapshot().meshes !== 5 || snapshot().joints !== 80) throw new Error("Supervisor requires the complete technician rig");
-      return { snapshot,place(position){npc.position.set(...position);},setVisible(visible){npc.setEnabled(visible);}, dispose() { entries.dispose(); npc.dispose(); } };
-    },
+    createSupervisor() { return createNpcVisual(scene); },
     setCameraDistance(distance) {
       opacity = cameraOpacity(distance);
       for (const mesh of asset.meshes) mesh.visibility = opacity;

@@ -27,6 +27,25 @@ The reproducible conversion and original/runtime hashes are recorded in
 `game3d/scripts/prepare-technician.mjs` and `docs/qa/m2/character-build.json`.
 The original is fetched on demand, avoiding a duplicate raw asset in Git.
 
+## supervisor.glb — Marcus / original formal outfit
+
+Source: [Avatar Studio Marcus](https://github.com/memoriesrohit/avatar-studio/blob/2fd9ec82fbe1613d40ae38aadcca3f410725f740/models/marcus_formal.glb),
+revision `2fd9ec82fbe1613d40ae38aadcca3f410725f740`. The pinned third-party notice
+explicitly licenses the models and native Rocketbox animations under Microsoft
+Rocketbox MIT (copyright Microsoft 2020), as above. The existing Rocketbox and
+Avatar Studio license texts ship with this derivative. Marcus is a distinct
+source head/skin and formal jacket outfit, not an Andre recolor.
+
+Modifications: preserve Body/Outfit_original/Shoes/Skin_original; remove unused
+clothing, morph targets and every animation except native Idle; flatten identity
+mesh parenting, deduplicate/resample, generate MikkTSpace tangents with bounded
+degenerate fallbacks; resize embedded maps to 512px WebP. No AI images, Mixamo
+clips, new decoder or runtime asset service. Reproduction/hashes and estimated
+decoded RGBA8+mipmap budget: `scripts/prepare-supervisor.mjs` and
+`docs/qa/npc-identity/supervisor-build.json`. One retained supervisor actor uses
+one independent 80-joint skeleton across scenes; it does not clone player maps
+or load a new person for every portal.
+
 ## shop-lighting.env — Studio Small 09
 
 Source: [Studio Small 09](https://polyhaven.com/a/studio_small_09),
@@ -47,8 +66,8 @@ image-generation service or third-party shop meshes/textures are included.
 These additions do not grant a blanket license to the existing project;
 the third-party asset grants above remain applicable.
 
-M3 also reuses the same licensed human for the supervisor (shared materials and
-textures, separately cloned skeleton). Labelled cargo packaging, open rear-door
+M3 originally cloned the technician for its supervisor; this release replaces
+that clone with the separately licensed Marcus identity above. Labelled cargo packaging, open rear-door
 lining and the two-bone carry hold solver are original project code. The hold
 pose is layered onto native Idle/Walk; no native carry/pickup/tool clip is claimed.
 `engineering-toolcase.glb` is the original M1 engineering import fixture,

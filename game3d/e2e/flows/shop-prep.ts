@@ -2,6 +2,7 @@ import { expect } from "@playwright/test";
 import type { Page, TestInfo } from "@playwright/test";
 import type { Diagnostics } from "../../src/app.ts";
 import { shopLoad } from "../../src/content/ids.ts";
+import {characterCast} from '../../src/content/cast.ts';
 export const snapshot = (page: Page): Promise<Diagnostics> => page.evaluate(() => window.__AV3D__!.snapshot());
 export async function ready(page: Page) { await expect(page.locator("#app")).toHaveAttribute("data-ready","true",{timeout:30000}); }
 export async function go(page: Page, key: string, axis: number, target: number, greater: boolean) {
@@ -26,7 +27,7 @@ export async function prepareVan(page:Page,info:Pick<TestInfo,"outputPath"|"atta
   page.on("console",m=>{if(m.type()==="error") errors.push(m.text());});
   page.on("response",r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
   await page.goto("./?debug=1"); await ready(page);
-  expect((await snapshot(page)).supervisor).toMatchObject({meshes:5,joints:80,position:[-5,0,-1]});
+  expect((await snapshot(page)).supervisor).toMatchObject({identity:characterCast.supervisor.identity,meshes:characterCast.supervisor.meshes,joints:characterCast.supervisor.joints,position:[-5,0,-1]});
   await page.locator("#debug-panel").evaluate(e=>e.setAttribute("hidden",""));
   await page.getByRole("button",{name:"Pause / settings"}).click();
   await page.getByRole("combobox",{name:"Graphics quality"}).selectOption("low");
