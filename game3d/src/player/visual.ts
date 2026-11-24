@@ -10,7 +10,7 @@ export interface TechnicianVisual {
   setMotion(speed: number, delta: number): void;
   setCameraDistance(distance: number): void;
   setCarrying(value: boolean): void;
-  createSupervisor(): { snapshot(): { meshes: number; joints: number; position: number[] }; dispose(): void };
+  createSupervisor(): { place(position:readonly[number,number,number]):void; snapshot(): { meshes: number; joints: number; position: number[] }; dispose(): void };
   snapshot(): { model: string; joints: number; height: number; opacity: number; carryPoseError: number | null; speed: number; walkWeight: number; idleFrame: number; walkFrame: number; pose: number[] };
   dispose(): void;
 }
@@ -72,7 +72,7 @@ export async function createTechnicianVisual(scene: Scene): Promise<TechnicianVi
       const snapshot = () => ({ meshes: npc.getChildMeshes().filter(mesh => mesh.getTotalVertices()>0).length,
         joints: entries.skeletons[0]?.bones.length ?? 0, position: npc.position.asArray() });
       if (snapshot().meshes !== 5 || snapshot().joints !== 80) throw new Error("Supervisor requires the complete technician rig");
-      return { snapshot, dispose() { entries.dispose(); npc.dispose(); } };
+      return { snapshot,place(position){npc.position.set(...position);}, dispose() { entries.dispose(); npc.dispose(); } };
     },
     setCameraDistance(distance) {
       opacity = cameraOpacity(distance);

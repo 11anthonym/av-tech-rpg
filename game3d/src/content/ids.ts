@@ -7,15 +7,21 @@ export const contentIds = {
   route: "centerCityTutorial",
 } as const;
 
-export type AreaId = typeof contentIds.area;
+export const areaIds = ['shop','centerCityGarage','centerCityLobby','centerCityConferenceRoom'] as const;
+export type AreaId = typeof areaIds[number];
 export type TechnicianId = typeof contentIds.technician;
-export type ActionId = "shop.inspect-workbench" | "shop.brief-supervisor" | "shop.pickup-equipment" | "shop.load-van";
+export type ShopActionId = "shop.inspect-workbench" | "shop.brief-supervisor" | "shop.pickup-equipment" | "shop.load-van";
+export const travelActions = ['shop.choose-route','route.garageRoute','route.loadingZoneGamble','route.circleForCurb',
+  'garage.brief-supervisor','garage.unload-equipment','garageToLobby','security.check-in','lobbyToConferenceRoom','conference.review-assignment'] as const;
+export type TravelActionId = typeof travelActions[number];
+export type ActionId = ShopActionId | TravelActionId;
+export const isTravelAction = (id:ActionId):id is TravelActionId => (travelActions as readonly string[]).includes(id);
 // Canonical saved cargo labels from GAME_CONTENT.tutorial.shopLoad.
 export const shopLoad = ["Cart frame boxes", "Display boxes", "Accessory tote"] as const;
 export type CargoId = typeof shopLoad[number];
 export const shopRules = { carryCapacity: 1, vanCapacity: 3, pickupEnergy: 2 } as const;
 
-export const actions: Record<ActionId, { label: string; reviewLabel: string; message: string }> = {
+export const actions: Record<ShopActionId, { label: string; reviewLabel: string; message: string }> = {
   "shop.inspect-workbench": {
     label: "Inspect workbench",
     reviewLabel: "Review workbench",

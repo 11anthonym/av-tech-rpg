@@ -37,3 +37,6 @@ dialog label.checkbox { flex-direction: row; }
 dialog input[type=range] { width: 100%; }
 #error-panel { position: absolute; inset: 15% auto auto 50%; transform: translateX(-50%); width: min(40rem, 90vw); border: 2px solid #f0aa70; border-radius: 8px; background: #172a32; padding: 1.5rem; z-index: 10; }
 @media (max-width: 760px) { .topbar { padding: .8rem; } .topbar nav { flex-direction: column; align-items: end; gap: .6rem; } h1 { font-size: 1.2rem; } .stage-note { max-width: 18rem; } footer { padding: .8rem; } .controls { gap: .8rem; flex-wrap: wrap; } .interaction { align-items: stretch; flex-direction: column; gap: .25rem; } .notice { left: .8rem; top: 10rem; max-width: calc(100vw - 1.6rem); } }
+#decision-options { display:grid;gap:.65rem;margin:1rem 0; }
+#decision-options button { display:grid;gap:.35rem;text-align:left; }
+#decision-options span { font-size:.88rem;font-weight:normal;line-height:1.45; }

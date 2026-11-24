@@ -54,6 +54,7 @@ export function createRenderer(canvas: HTMLCanvasElement, initialQuality: Graphi
   return { engine, scene, ready, applyQuality, metrics: () => ({ drawCalls: instrumentation.drawCallsCounter.current,
     vertices: scene.getTotalVertices(), graphics: engine.getGlInfo(), quality, resolution: graphicsPresets[quality].resolution,
     renderWidth: engine.getRenderWidth(), renderHeight: engine.getRenderHeight(), shadowSize: shadows.mapSize }), prepareShadows() {
-    for (const mesh of scene.meshes) if (mesh.isVisible && mesh.getTotalVertices() > 0 && mesh.name !== "player-collision") shadows.addShadowCaster(mesh, false);
+    shadows.getShadowMap()!.renderList=[];
+    for (const mesh of scene.meshes) if (mesh.isVisible && mesh.isEnabled() && !mesh.metadata?.noShadow && mesh.getTotalVertices() > 0 && mesh.name !== "player-collision") shadows.addShadowCaster(mesh, false);
   }, dispose: () => { resize.disconnect(); instrumentation.dispose(); scene.dispose(); engine.dispose(); } };
 }

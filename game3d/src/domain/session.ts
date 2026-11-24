@@ -1,36 +1,48 @@
 import { actions, contentIds, shopLoad, shopRules } from "../content/ids.ts";
 import type { CargoId } from "../content/ids.ts";
 import type { ActionId, AreaId, TechnicianId } from "../content/ids.ts";
+import { isTravelAction } from '../content/ids.ts';
+import { newTravel } from '../content/travel.ts';
+import type { TravelProgress } from '../content/travel.ts';
+import { describeTravel, resolveTravel, travelObjective } from './travel.ts';
 
 export interface Session {
   areaId: AreaId;
   technicianId: TechnicianId;
   completedActions: ActionId[];
-  flags: { shopBrief: boolean };
+  flags: { shopBrief: boolean; garageBrief:boolean; centerCityEquipmentDelivered:boolean; securityChecked:boolean; roomBrief:boolean };
   carry: CargoId[];
   loaded: CargoId[];
   tools: (typeof contentIds.tool)[];
   energy: number;
+  burnout: number;
+  delivered: CargoId[];
+  travel: TravelProgress;
 }
 
 export function newSession(): Session {
   return { areaId: contentIds.area, technicianId: contentIds.technician, completedActions: [],
-    flags: { shopBrief: false }, carry: [], loaded: [], tools: [contentIds.tool], energy: 100 };
+    flags: { shopBrief: false,garageBrief:false,centerCityEquipmentDelivered:false,securityChecked:false,roomBrief:false },
+    carry: [], loaded: [], delivered:[], tools: [contentIds.tool], energy: 100,burnout:0,travel:newTravel() };
 }
 
 export interface ActionResult {
   state: Session;
-  event: { actionId: ActionId; outcome: "completed" | "reviewed" | "blocked"; message: string; title?: string; dialog?: boolean };
+  event: { actionId: ActionId; outcome: "completed" | "reviewed" | "blocked"; message: string; title?: string; dialog?: boolean;
+    choices?:{actionId:ActionId;label:string;detail:string}[] };
 }
 
 export const vanReady = (state: Session) => state.flags.shopBrief && shopLoad.every(id => state.loaded.includes(id)) && !state.carry.length;
 export function objective(state: Session) {
+  if(state.areaId!=='shop')return travelObjective(state);
   if (!state.flags.shopBrief) return "Talk to the supervisor at the dispatch counter.";
   if (state.carry.length) return `Carry ${state.carry[0]} to Van #3’s open rear doors.`;
   if (vanReady(state)) return "Van #3 ready for Center City East · two video carts.";
   return `Pick up staged equipment, then load Van #3 (${state.loaded.length}/3).`;
 }
 export function describeAction(state: Session, actionId: ActionId) {
+  if(isTravelAction(actionId))return describeTravel(state,actionId);
+  if(state.areaId!=='shop')return {label:'This action belongs at the shop',available:false};
   if (actionId === "shop.pickup-equipment") {
     if (!state.flags.shopBrief) return { label: "Ask supervisor first", available: false };
     if (state.carry.length) return { label: "Hands full · load Van #3", available: false };
@@ -43,6 +55,8 @@ export function describeAction(state: Session, actionId: ActionId) {
 }
 
 export function resolveAction(state: Session, actionId: ActionId): ActionResult {
+  if(isTravelAction(actionId))return resolveTravel(state,actionId);
+  if(state.areaId!=='shop')return {state,event:{actionId,outcome:'blocked',message:'This action belongs at the shop.'}};
   const result = (next: Session, outcome: ActionResult["event"]["outcome"], message: string, title?: string, dialog = false): ActionResult =>
     ({ state: next, event: { actionId, outcome, message, title, dialog } });
   if (actionId === "shop.pickup-equipment") {

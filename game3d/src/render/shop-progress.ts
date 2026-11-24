@@ -32,6 +32,7 @@ export function createShopProgress(scene: Scene, character: TransformNode) {
     { name: "SUPERVISOR", position: [-5, 2.02, -1] },
     { name: "STAGING", position: [-5.5, 1.52, 4.5] },
     { name: "VAN 3 · LOAD HERE", position: [5.8, 2.1, 6.52] },
+    { name: 'DRIVER · ROUTE', position:[7.3,1.85,4] },
   ].map(({ name, position }) => {
     const material = new PBRMaterial(`marker/${name}`, scene); material.roughness = 1; material.metallic = 0;
     const texture = new DynamicTexture(`marker-print/${name}`, { width: 512, height: 128 }, scene, true);
@@ -42,16 +43,24 @@ export function createShopProgress(scene: Scene, character: TransformNode) {
     mesh.billboardMode = 7; return mesh;
   });
   let carrying = -1;
+  const places:('staged'|'carried'|'loaded'|'delivered')[]=shopLoad.map(()=>'staged');
   return {
     update(state: Session) {
       carrying = shopLoad.findIndex(id => state.carry.includes(id));
       boxes.forEach((box, i) => {
         const id = shopLoad[i]!;
-        if (state.carry.includes(id)) { box.parent = character; box.position.set(0, 1.15, .35); box.rotation.y = 0; box.scaling.setAll(1); }
-        else if (state.loaded.includes(id)) { box.parent = root; box.position.set(5.15 + i * .65, .60 + [.4,.5,.3][i]! * .85/2, 6.15); box.rotation.y = Math.PI; box.scaling.setAll(.85); }
-        else { box.parent = root; box.position.set(-6.4 + i * .9, [.34,.39,.29][i]!, 4.9); box.rotation.y = 0; box.scaling.setAll(1); }
+        box.setEnabled(true);
+        if (state.carry.includes(id)) { places[i]='carried';box.parent = character; box.position.set(0, 1.15, .35); box.rotation.y = 0; box.scaling.setAll(1); }
+        else if (state.loaded.includes(id)) { places[i]='loaded';box.parent = root;
+          const garage=state.areaId==='centerCityGarage';box.position.set((garage?-2.65:5.15)+i*.65,.60+[.4,.5,.3][i]!*.85/2,garage?-1.15:6.15);
+          box.rotation.y=garage?0:Math.PI;box.scaling.setAll(.85); }
+        else if(state.delivered.includes(id)) { places[i]='delivered';box.parent=root;box.scaling.setAll(1);box.rotation.y=0;
+          const p=state.areaId==='centerCityGarage'?[1+i*.65,.3,.1]:state.areaId==='centerCityLobby'?[-4.7+i*.65,.3,2.3]:[-4.7,.3,-1+i*.8];
+          box.position.set(p[0]!,p[1]!,p[2]!);
+        } else { places[i]='staged';box.parent = root; box.position.set(-6.4 + i * .9, [.34,.39,.29][i]!, 4.9); box.rotation.y = 0; box.scaling.setAll(1); box.setEnabled(state.areaId==='shop'); }
       });
-      markers[1]!.setEnabled(state.loaded.length < 3);
+      markers.forEach(marker=>marker.setEnabled(state.areaId==='shop'));
+      markers[1]!.setEnabled(state.areaId==='shop'&&state.loaded.length<3);
     },
     cameraOpacity(opacity: number) { boxes.forEach((box, i) => box.getChildMeshes().forEach(mesh => { mesh.visibility = i === carrying ? opacity : 1; })); },
     focus(meshId: string | undefined) {
@@ -60,7 +69,7 @@ export function createShopProgress(scene: Scene, character: TransformNode) {
         material.emissiveColor.set(meshId===id ? .8 : .3,meshId===id ? .65 : .3,meshId===id ? .35 : .3);
       });
     },
-    snapshot: () => boxes.map((box, i) => ({ id: shopLoad[i], place: box.parent === character ? "carried" : box.position.z > 5.5 ? "loaded" : "staged" })),
+    snapshot: () => boxes.map((_box, i) => ({ id: shopLoad[i], place: places[i]! })),
     dispose() { for (const box of boxes) box.parent = root; root.dispose(false, true); },
   };
 }

@@ -55,6 +55,11 @@ pose is layered onto native Idle/Walk; no native carry/pickup/tool clip is claim
 retained on the bench and in its load-failure test, not sourced production kit.
 
 Rights verified 2026-11-22. These notices ship with both build variants.
+M4-A reuses that same van geometry through `game3d/src/render/van.ts` and the
+same licensed technician, supervisor and lighting. Garage, security lobby and
+client-room furniture/signage in `game3d/src/render/field-art.ts` are original
+repository-authored geometry and text. No new external art, texture, animation
+or license grant was added. Existing third-party notices remain applicable.
 No external model, texture or decoder request occurs during normal gameplay.
 Development dependency licenses reside in their packages; glTF Transform and
 MikkTSpace run only during conversion.

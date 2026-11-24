@@ -44,21 +44,23 @@ export const shop: AreaDefinition = {
     { id: "equipment-racks", position: [-0.85, 1, 7.9], size: [1.5, 2, 0.9], material: "steel", solid: true },
     { id: "display-cart", position: [-4.2, 0.95, 1.6], size: [1.25, 1.9, 0.7], material: "steel", solid: true },
     { id: contentIds.vehicle, position: [5.8, 1.1, 4], size: [2.2, 2.2, 4.8], material: "steel", solid: true },
+    { id: 'driver-door', position:[7.3,1,4],size:[.1,.1,.1],material:'steel',solid:false },
   ],
   interactions: [{ id: "shop.workbench", actionId: "shop.inspect-workbench", anchor: [0, 1.05, -0.55],
     meshId: "workbench", radius: 2.1, priority: 1 },
     { id: "shop.supervisor", actionId: "shop.brief-supervisor", anchor: [-5.5, 1.15, -2.55], meshId: "supply-counter", radius: 1.8, priority: 2 },
     { id: "shop.staging", actionId: "shop.pickup-equipment", anchor: [-5.5, 1, 4.54], meshId: "staging", radius: 2.1, priority: 2 },
-    { id: "shop.van3", actionId: "shop.load-van", anchor: [5.8, 1.1, 6.6], meshId: "van3", radius: 2.1, priority: 2, minApproachZ: 6.7 }],
+    { id: "shop.van3", actionId: "shop.load-van", anchor: [5.8, 1.1, 6.6], meshId: "van3", radius: 2.1, priority: 2, minApproachZ: 6.7 },
+    { id:'shop.departure',actionId:'shop.choose-route',anchor:[7.3,1.1,4],meshId:'driver-door',radius:1.5,priority:2 }],
 };
 
-export function isSafePosition(position: Vec3): boolean {
-  const floor = shop.props.find(prop => prop.id === "floor")!;
+export function isSafePosition(position: Vec3, area:AreaDefinition=shop): boolean {
+  const floor = area.props.find(prop => prop.id === "floor")!;
   return position.every(Number.isFinite)
     && Math.abs(position[0] - floor.position[0]) <= floor.size[0] / 2
     && Math.abs(position[2] - floor.position[2]) <= floor.size[2] / 2
     && position[1] >= 0.85 && position[1] <= 2
-    && !shop.props.some(prop => prop.solid && prop.id !== "floor" &&
+    && !area.props.some(prop => prop.solid && prop.id !== "floor" &&
       // Babylon swept collision can settle ~2cm inside its nominal 0.3m
       // radius at walking speed. Accept those real resting points on reload.
       Math.abs(position[0] - prop.position[0]) < prop.size[0] / 2 + 0.27 &&

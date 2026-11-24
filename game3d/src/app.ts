@@ -10,7 +10,8 @@ import type { SaveData, StoragePort } from "./persistence/save.ts";
 import { resolveAction, describeAction, objective } from "./domain/session.ts";
 import type { Session } from "./domain/session.ts";
 import { createShopProgress } from "./render/shop-progress.ts";
-import { shop } from "./world/shop.ts";
+import { getArea,npcPlacement } from './world/areas.ts';
+import type { ActionId,AreaId } from './content/ids.ts';
 import { selectInteraction } from "./world/interactions.ts";
 import type { InteractionDefinition, Vec3 } from "./world/shop.ts";
 import { SettingsRepository, graphicsPresets } from "./persistence/settings.ts";
@@ -20,7 +21,7 @@ declare const __BUILD_VERSION__: string;
 export interface Diagnostics {
   build: string; areaId: string; position: number[]; camera: SaveData["camera"];
   cameraPosition: number[]; actualCameraDistance: number; actionId: string | null;
-  completedActions: string[]; paused: boolean; frames: number; loopTicks: number; activeMeshes: number; webgl: number; errors: string[];
+  completedActions: string[]; paused: boolean; transitioning:boolean; frames: number; loopTicks: number; activeMeshes: number; webgl: number; errors: string[];
   session: Session;
   supervisor: { meshes: number; joints: number; position: number[] } | null;
   cargo: ReturnType<ReturnType<typeof createShopProgress>["snapshot"]>;
@@ -36,6 +37,9 @@ export async function startGame(root: HTMLElement) {
   let frames = 0;
   let loopTicks = 0;
   let renderDirty = true;
+  let applying=false;
+  let pendingSpawn:Vec3|undefined;
+  let pendingChoices:ActionId[]=[];
   const started = performance.now();
   let readyMs = 0;
   const frameTimes: number[] = [];
@@ -58,13 +62,16 @@ export async function startGame(root: HTMLElement) {
   const settingsRepository = new SettingsRepository(storage);
   let settings = settingsRepository.load();
   let session = loaded.data.session;
+  let currentArea=getArea(session.areaId);
   const pause = (value: boolean) => {
     paused = value;
     renderDirty = true;
-    input?.setEnabled(!paused && !failed && !contextLost);
+    input?.setEnabled(!paused && !failed && !contextLost && !applying);
+    if(!value)pendingChoices=[];
     if (value) save();
   };
   const hud = new GameHud(root, { interact: () => interact(), pause,
+    choose:actionId=>{if(paused&&pendingChoices.includes(actionId))void applyAction(actionId).catch(fatal);},
     sensitivity: value => {
       settings = { ...settings, sensitivity: value };
       if (camera) camera.sensitivity = value;
@@ -78,7 +85,8 @@ export async function startGame(root: HTMLElement) {
     } }, settings);
   function save() {
     if (!controller || !camera) return;
-    const ok = repository.save({ version: 2, session, position: controller.position.asArray() as unknown as Vec3, camera: { ...camera.state } });
+    const ok = repository.save({ version: 3, session, position: pendingSpawn??controller.position.asArray() as unknown as Vec3,
+      camera: pendingSpawn?{yaw:0,pitch:.35,distance:5.5}:{ ...camera.state } });
     hud.saving(ok ? "3D session saved" : repository.problem ?? "Saving unavailable · playing in this tab");
   }
   function fatal(error: unknown) {
@@ -90,23 +98,36 @@ export async function startGame(root: HTMLElement) {
     hud.fatal(error);
   }
   function interact() {
-    if (paused || failed || contextLost || !controller || !renderer) return;
-    const target = selectInteraction(renderer.scene, controller.position, shop.interactions);
+    if (paused || failed || contextLost || applying || !controller || !renderer) return;
+    const target = selectInteraction(renderer.scene, controller.position, currentArea.interactions);
     if (!target) return;
-    const result = resolveAction(session, target.actionId);
-    session = result.state;
-    technician?.setCarrying(Boolean(session.carry.length));
-    progress?.update(session);
-    hud.loadout(session);
-    save();
-    lastAction = `${target.actionId}:${result.event.outcome}`;
-    if (result.event.dialog) { pause(true); hud.result(result.event.message, result.event.outcome === "reviewed", result.event.title); }
-    else hud.notice(result.event.message);
+    void applyAction(target.actionId).catch(fatal);
+  }
+  async function changeArea(id:AreaId) {
+    if(!renderer||!controller)return;
+    input?.setEnabled(false);area?.dispose();currentArea=getArea(id);
+    area=await createAreaView(renderer.scene,currentArea);
+    controller.relocate(currentArea.spawn);supervisor?.place(npcPlacement[id]);
+    camera?.dispose();camera=new FollowCamera(renderer.scene,{yaw:0,pitch:.35,distance:5.5},currentArea.props.filter(prop=>prop.solid));
+    camera.sensitivity=settings.sensitivity;camera.update(controller.position);controller.updateCamera(camera.actualDistance);
+    renderer.prepareShadows();await renderer.scene.whenReadyAsync();hud.place(id,currentArea.label);pendingSpawn=undefined;renderDirty=true;
+  }
+  async function applyAction(actionId:ActionId) {
+    if(applying||failed||contextLost)return;applying=true;
+    try {
+      const previousArea=session.areaId,result=resolveAction(session,actionId);session=result.state;
+      if(session.areaId!==previousArea){pendingSpawn=getArea(session.areaId).spawn;save();await changeArea(session.areaId);}
+      technician?.setCarrying(Boolean(session.carry.length));progress?.update(session);hud.loadout(session);save();
+      lastAction=`${actionId}:${result.event.outcome}`;renderDirty=true;
+      if(result.event.dialog){pendingChoices=result.event.choices?.map(choice=>choice.actionId)??[];pause(true);
+        hud.result(result.event.message,result.event.outcome==='reviewed',result.event.title,result.event.choices);}
+      else hud.notice(result.event.message);
+    } finally {applying=false;input?.setEnabled(!paused&&!failed&&!contextLost);}
   }
   const snapshot = (): Diagnostics => ({ build: __BUILD_VERSION__, areaId: session.areaId,
     position: controller?.position.asArray() ?? [], camera: { ...(camera?.state ?? loaded.data.camera) },
     cameraPosition: camera?.camera.position.asArray() ?? [], actualCameraDistance: camera?.actualDistance ?? 0,
-    actionId: active?.actionId ?? null, completedActions: [...session.completedActions], paused,
+    actionId: active?.actionId ?? null, completedActions: [...session.completedActions], paused,transitioning:applying,
     session: structuredClone(session), supervisor: supervisor?.snapshot() ?? null, cargo: progress?.snapshot() ?? [],
     character: controller?.character ?? null,
     performance: renderer ? { readyMs, sampledFrames: frameTimes.length, frameMs: percentiles(frameTimes), ...renderer.metrics() } : null,
@@ -126,19 +147,21 @@ export async function startGame(root: HTMLElement) {
     renderer = createRenderer(hud.canvas, settings.quality, () => { renderDirty = true; });
     input = new PlayerInput(hud.canvas);
     await renderer.ready;
-    area = await createAreaView(renderer.scene, shop);
+    area = await createAreaView(renderer.scene, currentArea);
     hud.notice("Loading technician and movement clips…");
     technician = await createTechnicianVisual(renderer.scene);
     controller = new CharacterController(renderer.scene, loaded.data.position, technician);
     technician.setCarrying(Boolean(session.carry.length));
     supervisor = technician.createSupervisor();
+    supervisor.place(npcPlacement[session.areaId]);
     progress = createShopProgress(renderer.scene, technician.root);
     progress.update(session); hud.loadout(session);
-    camera = new FollowCamera(renderer.scene, loaded.data.camera, shop.props.filter(prop => prop.solid));
+    camera = new FollowCamera(renderer.scene, loaded.data.camera, currentArea.props.filter(prop => prop.solid));
     camera.sensitivity = settings.sensitivity;
     camera.update(controller.position);
     controller.updateCamera(camera.actualDistance);
     renderer.prepareShadows();
+    hud.place(session.areaId,currentArea.label);
     await renderer.scene.whenReadyAsync();
     renderer.engine.onContextLostObservable.add(() => {
       contextLost = true; input?.setEnabled(false); save(); hud.notice("Graphics interrupted. Waiting for the browser to recover…");
@@ -152,7 +175,7 @@ export async function startGame(root: HTMLElement) {
     let lastRenderedAt = performance.now();
     renderer.engine.runRenderLoop(() => {
       loopTicks += 1;
-      if (failed || contextLost || !renderer || !input || !controller || !camera || !area) return;
+      if (failed || contextLost || applying || !renderer || !input || !controller || !camera || !area) return;
       try {
         if (document.hidden || (paused && !renderDirty)) { clock.reset(); return; }
         const rawDelta = Math.max(renderer.engine.getDeltaTime() / 1000, 0.001);
@@ -167,7 +190,7 @@ export async function startGame(root: HTMLElement) {
         progress?.cameraOpacity(controller.character.opacity);
         sinceUi += delta;
         if (sinceUi >= 0.1 || frames === 0) {
-          active = paused ? undefined : selectInteraction(renderer.scene, controller.position, shop.interactions);
+          active = paused ? undefined : selectInteraction(renderer.scene, controller.position, currentArea.interactions);
           area.focus(active?.meshId);
           progress?.focus(active?.meshId);
           const action = active ? describeAction(session, active.actionId) : undefined;

@@ -1,26 +1,31 @@
-import { contentIds, actions, shopLoad, shopRules } from "../content/ids.ts";
+import { contentIds, actions, shopLoad, shopRules,areaIds } from "../content/ids.ts";
 import type { ActionId } from "../content/ids.ts";
 import { newSession } from "../domain/session.ts";
 import type { Session } from "../domain/session.ts";
 import { isSafePosition, shop } from "../world/shop.ts";
 import type { Vec3 } from "../world/shop.ts";
+import { getArea } from '../world/areas.ts';
+import { validTravelProgress } from '../domain/travel.ts';
 
-export const SAVE_KEY = "av-tech-rpg-3d-dev-v2";
-export const PREVIOUS_SAVE_KEY = "av-tech-rpg-3d-dev-v1";
+export const SAVE_KEY = "av-tech-rpg-3d-dev-v3";
+export const PREVIOUS_SAVE_KEY = "av-tech-rpg-3d-dev-v2";
+export const M1_SAVE_KEY = "av-tech-rpg-3d-dev-v1";
 export interface SaveData {
-  version: 2;
+  version: 3;
   session: Session;
   position: Vec3;
   camera: { yaw: number; pitch: number; distance: number };
 }
-export function freshSave(): SaveData {
-  return { version: 2, session: newSession(), position: shop.spawn,
+export function freshSave(seed=173): SaveData {
+  const session=newSession();session.travel.seed=seed;
+  return { version: 3, session, position: shop.spawn,
     camera: { yaw: 0, pitch: 0.35, distance: 5.5 } };
 }
 
 export function parseSave(raw: string): SaveData {
-  const data = JSON.parse(raw) as SaveData;
-  if (![1, 2].includes(data?.version) || data.session?.areaId !== contentIds.area ||
+  const data = JSON.parse(raw) as Omit<SaveData,'version'> & {version:number};
+  if (![1, 2,3].includes(data?.version) || !areaIds.includes(data.session?.areaId) ||
+    (data.version<3&&data.session.areaId!==contentIds.area) ||
     data.session.technicianId !== contentIds.technician ||
     !Array.isArray(data.session.completedActions) ||
     !data.session.completedActions.every((id: unknown) => typeof id === "string" && Object.hasOwn(actions, id)) ||
@@ -31,8 +36,8 @@ export function parseSave(raw: string): SaveData {
   }
   let session = { ...newSession(), completedActions: [...new Set(data.session.completedActions)] as ActionId[] };
   if (session.completedActions.some(id => id !== "shop.inspect-workbench" && id !== "shop.brief-supervisor") ||
-    (data.version !== 2 && session.completedActions.some(id => id !== "shop.inspect-workbench"))) throw new Error("Invalid action history");
-  if (data.version === 2) {
+    (data.version === 1 && session.completedActions.some(id => id !== "shop.inspect-workbench"))) throw new Error("Invalid action history");
+  if (data.version >= 2) {
     const s = data.session;
     const validCargo = (value: unknown): value is Session["carry"] => Array.isArray(value) && value.every(id => shopLoad.includes(id)) && new Set(value).size === value.length;
     if (typeof s.flags?.shopBrief !== "boolean" || !validCargo(s.carry) || !validCargo(s.loaded) || s.carry.length > shopRules.carryCapacity ||
@@ -40,11 +45,17 @@ export function parseSave(raw: string): SaveData {
       (!s.flags.shopBrief && (s.carry.length || s.loaded.length)) || s.flags.shopBrief !== s.completedActions.includes("shop.brief-supervisor") ||
       !Array.isArray(s.tools) || s.tools.length !== 1 || s.tools[0] !== contentIds.tool ||
       !Number.isInteger(s.energy) || s.energy < 0 || s.energy > 100) throw new Error("Invalid shop progress");
-    session = { ...session, flags: { shopBrief: s.flags.shopBrief }, carry: [...s.carry], loaded: [...s.loaded], tools: [...s.tools], energy: s.energy };
+    session = { ...session, flags: { ...session.flags,shopBrief: s.flags.shopBrief }, carry: [...s.carry], loaded: [...s.loaded], tools: [...s.tools], energy: s.energy };
   }
-  return { version: 2,
+  if(data.version===3) {
+    session={...session,areaId:data.session.areaId,flags:{...data.session.flags},burnout:data.session.burnout,
+      delivered:data.session.delivered,travel:data.session.travel};
+    if(!validTravelProgress(session))throw new Error('Invalid travel progress');
+    session=structuredClone(session);
+  }
+  return { version: 3,
     session,
-    position: isSafePosition(data.position) ? data.position : shop.spawn,
+    position: isSafePosition(data.position,getArea(session.areaId)) ? data.position : getArea(session.areaId).spawn,
     camera: { yaw: data.camera.yaw % (Math.PI * 2), pitch: Math.max(0.15, Math.min(1.05, data.camera.pitch)),
       distance: Math.max(2.2, Math.min(8.5, data.camera.distance)) } };
 }
@@ -61,8 +72,8 @@ export class SaveRepository {
   load(): { data: SaveData; message: string } {
     try {
       this.lastRaw = this.storage.getItem(SAVE_KEY);
-      const raw = this.lastRaw ?? this.storage.getItem(PREVIOUS_SAVE_KEY);
-      return { data: raw ? parseSave(raw) : freshSave(), message: raw ? "3D session restored" : "New 3D session" };
+      const raw = this.lastRaw ?? this.storage.getItem(PREVIOUS_SAVE_KEY) ?? this.storage.getItem(M1_SAVE_KEY);
+      return { data: raw ? parseSave(raw) : freshSave(crypto.getRandomValues(new Uint32Array(1))[0]!), message: raw ? "3D session restored" : "New 3D session" };
     } catch {
       // Preserve damaged/unknown saves for recovery; do not overwrite them.
       this.writable = false;

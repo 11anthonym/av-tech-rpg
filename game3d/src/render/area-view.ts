@@ -8,6 +8,7 @@ import type { Scene } from "@babylonjs/core/scene";
 import type { AreaDefinition } from "../world/shop.ts";
 import { loadModel } from "./assets.ts";
 import { createShopArt } from "./shop-art.ts";
+import { createFieldArt } from './field-art.ts';
 
 export async function createAreaView(scene: Scene, area: AreaDefinition) {
   const root = new TransformNode(area.id, scene);
@@ -35,6 +36,10 @@ export async function createAreaView(scene: Scene, area: AreaDefinition) {
     const mesh = meshes.get(interaction.meshId)!;
     mesh.metadata.interactionId = interaction.id;
     mesh.material = (mesh.material as StandardMaterial).clone(`${interaction.id}-focus`);
+  }
+  if(area.id!=='shop') {
+    createFieldArt(scene,root,area);
+    return {root,meshes,focus:(_meshId:string|undefined)=>{},dispose(){root.dispose(false,true);}};
   }
   const caseRoot = new TransformNode("engineering-toolcase", scene);
   caseRoot.parent = root;
