@@ -1,5 +1,5 @@
-import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder.js";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector.js";
 import type { Scene } from "@babylonjs/core/scene";
 import type { TechnicianVisual } from "./visual.ts";
 import { movementVector } from "./movement.ts";
@@ -30,6 +30,9 @@ export class CharacterController {
     const before = this.body.position.clone();
     // Prototype PLAYER_SPEED=8, one carried group contributes speedDelta=-1.
     const pace = carrying ? 1.4 * (7 / 8) : 1.4;
+    // Babylon caches the absolute position between renders. Multiple fixed
+    // collision steps must each start from the preceding step's transform.
+    this.body.computeWorldMatrix(true);
     this.body.moveWithCollisions(new Vector3(direction.x * pace * delta, 0, direction.z * pace * delta));
     // Horizontal ellipsoid contacts can introduce a small upward slide even
     // with zero vertical input. This authored shop has one flat floor.

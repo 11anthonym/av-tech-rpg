@@ -18,5 +18,6 @@ game3d/test-results/
 game3d/playwright-report/
 game3d/motion-results/
 game3d/motion-report/
+game3d/live-release-results/
 .pages/
 

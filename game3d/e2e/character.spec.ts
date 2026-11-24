@@ -32,11 +32,12 @@ test("real human animates through keyboard travel, blends to idle at collision a
   expect(Math.hypot(...reloaded.position.map((n, i) => n - resting.position[i]!))).toBeLessThan(0.03);
   await page.getByRole("button", { name: "Pause / settings" }).click();
   const paused = await snapshot(page);
-  await page.waitForFunction(frame => window.__AV3D__!.snapshot().frames > frame + 5, paused.frames);
+  await page.waitForFunction(tick => window.__AV3D__!.snapshot().loopTicks > tick + 5, paused.loopTicks);
   const still = await snapshot(page);
   expect(still.character?.idleFrame).toBe(paused.character?.idleFrame);
   expect(still.character?.pose).toEqual(paused.character?.pose);
   expect(still.position).toEqual(paused.position);
+  expect(still.frames).toBeLessThanOrEqual(paused.frames + 1);
   expect(still.errors).toEqual([]);
 });
 

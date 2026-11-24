@@ -14,7 +14,17 @@ async function interact(page: Page, actionId: string) {
   await expect.poll(async()=>(await snapshot(page)).actionId).toBe(actionId);
   await page.keyboard.press("e");
 }
-test.afterEach(async({page})=>{ if(!page.isClosed()) await page.goto("about:blank"); });
+test.afterEach(async({page},info)=>{
+  if(page.isClosed()) return;
+  // Preserve the failing game before stopping WebGL. The automatic screenshot
+  // runs later; navigating first can erase the scene and its diagnostics.
+  if(info.status!==info.expectedStatus) {
+    const state=await page.evaluate(()=>window.__AV3D__?.snapshot()).catch(()=>undefined);
+    await info.attach("failure-state",{body:JSON.stringify(state??{unavailable:true}),contentType:"application/json"});
+    await page.screenshot({path:info.outputPath("failure-before-cleanup.png"),timeout:5000}).catch(()=>{});
+  }
+  await page.goto("about:blank");
+});
 
 test("first shift: brief, three physical carry/load trips, constraints and reload checkpoints", async({page},info)=>{
   test.setTimeout(240000);
@@ -34,8 +44,13 @@ test("first shift: brief, three physical carry/load trips, constraints and reloa
   await page.getByRole("button",{name:"Back to shop"}).click();
   await interact(page,"shop.brief-supervisor"); await page.getByRole("button",{name:"Back to shop"}).click();
   expect((await snapshot(page)).session.energy).toBe(100);
-  await go(page,"d",0,-2,true); await go(page,"w",2,3.4,true); await go(page,"a",0,-5.5,false);
+  await go(page,"d",0,-2.7,true); await go(page,"w",2,3.4,true); await go(page,"a",0,-5.5,false);
   for(let i=0;i<3;i++) {
+    // Finish the approach using the same prompt a player sees. Slow browser
+    // key-up delivery can leave a coarse waypoint just outside arm's reach.
+    await page.keyboard.down('w');
+    try {await page.waitForFunction(()=>window.__AV3D__!.snapshot().actionId==='shop.pickup-equipment',undefined,{timeout:15000});}
+    finally {await page.keyboard.up('w');}
     await interact(page,"shop.pickup-equipment");
     await expect.poll(async()=>(await snapshot(page)).session.carry).toEqual([shopLoad[i]]);
     // Repeated pickup cannot duplicate a group or charge energy twice.
@@ -50,7 +65,7 @@ test("first shift: brief, three physical carry/load trips, constraints and reloa
       expect((await snapshot(page)).session.carry).toEqual([shopLoad[0]]);
       expect((await snapshot(page)).session.energy).toBe(98);
     }
-    await go(page,"d",0,-2,true); await go(page,"w",2,6.7,true); await go(page,"d",0,2.5,true);
+    await go(page,"d",0,-2.7,true); await go(page,"w",2,6.7,true); await go(page,"d",0,2.5,true);
     await go(page,"w",2,7.7,true); await go(page,"d",0,5.8,true);
     await interact(page,"shop.load-van");
     expect((await snapshot(page)).position[1]).toBeCloseTo(.92,5);
@@ -63,7 +78,7 @@ test("first shift: brief, three physical carry/load trips, constraints and reloa
     await page.locator("#debug-panel").evaluate(e=>e.setAttribute("hidden",""));
     expect((await snapshot(page)).session.loaded).toEqual(shopLoad.slice(0,i+1));
     if(i<2) {
-      await go(page,"a",0,2.5,false); await go(page,"s",2,6.7,false); await go(page,"a",0,-2,false);
+      await go(page,"a",0,2.5,false); await go(page,"s",2,6.7,false); await go(page,"a",0,-2.7,false);
       await go(page,"s",2,3.4,false); await go(page,"a",0,-5.5,false);
     }
   }
@@ -72,6 +87,10 @@ test("first shift: brief, three physical carry/load trips, constraints and reloa
   expect(final.session.loaded).toEqual([...shopLoad]); expect(final.session.energy).toBe(94);
   expect(final.cargo.every(c=>c.place==="loaded")).toBe(true);
   expect(final.session.tools).toEqual(["screwdriver"]); expect(final.errors).toEqual([]); expect(errors).toEqual([]);
+  // A delayed key release can leave the player against the back wall. Walk
+  // into the open aisle before testing camera recovery; retraction at that
+  // wall is correct, not a failure to restore opacity.
+  await go(page,'s',2,7.2,false);await go(page,'a',0,2.5,false);
   await page.mouse.move(900,400); await page.mouse.down(); await page.mouse.move(540,400,{steps:16}); await page.mouse.up();
   await page.waitForFunction(()=>window.__AV3D__!.snapshot().camera.yaw>1.7 && window.__AV3D__!.snapshot().character?.opacity===1);
   await page.screenshot({path:info.outputPath("van-ready.png")});

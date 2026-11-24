@@ -13,8 +13,8 @@ async function ready(page: Page) {
   await expect(page.locator("#app")).toHaveAttribute("data-ready", "true", { timeout: 30000 });
 }
 async function frames(page: Page, count = 8) {
-  const prior = (await snapshot(page)).frames;
-  await page.waitForFunction(({ prior, count }) => window.__AV3D__!.snapshot().frames >= prior + count, { prior, count });
+  const prior = (await snapshot(page)).loopTicks;
+  await page.waitForFunction(({ prior, count }) => window.__AV3D__!.snapshot().loopTicks >= prior + count, { prior, count });
 }
 
 test("normal keyboard/mouse play: follow, collision, orbit, interaction, focus and reload", async ({ page }, testInfo) => {
