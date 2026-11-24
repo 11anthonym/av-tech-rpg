@@ -6,21 +6,10 @@ import {characterCast} from '../../src/content/cast.ts';
 export const snapshot = (page: Page): Promise<Diagnostics> => page.evaluate(() => window.__AV3D__!.snapshot());
 export async function ready(page: Page) { await expect(page.locator("#app")).toHaveAttribute("data-ready","true",{timeout:30000}); }
 export async function go(page: Page, key: string, axis: number, target: number, greater: boolean) {
-  // Release each ordinary key hold before reading position. Waiting on an RAF
-  // predicate with a key held let slow software rendering delay the key-up IPC
-  // until after the player had walked beyond the waypoint into a nearby rack.
-  // Bounded holds preserve collision and the original 30s movement deadline.
-  await expect(async()=>{
-    const value=(await snapshot(page)).position[axis]!;
-    if(greater ? value>target : value<target)return;
-    // Traverse open space efficiently, then use short holds for the final metre.
-    // Every hold ends before another browser round trip, including under load.
-    const distance=Math.abs(target-value);
-    const delay=distance>1.5?Math.min(1500,(distance-1)/1.4*1000):200;
-    await page.keyboard.press(key,{delay});
-    const position=(await snapshot(page)).position[axis]!;
-    expect(greater ? position>target : position<target).toBe(true);
-  }).toPass({timeout:30000,intervals:[0]});
+  await page.keyboard.down(key);
+  try { await page.waitForFunction(({axis,target,greater}) => {
+    const value=window.__AV3D__!.snapshot().position[axis]!; return greater ? value>target : value<target;
+  },{axis,target,greater},{timeout:30000}); } finally { await page.keyboard.up(key); }
 }
 export async function interact(page: Page, actionId: string) {
   await expect.poll(async()=>(await snapshot(page)).actionId).toBe(actionId);
@@ -65,7 +54,9 @@ export async function prepareVan(page:Page,info:Pick<TestInfo,"outputPath"|"atta
       expect((await snapshot(page)).session.energy).toBe(98);
     }
     if(options.wideApproach)await go(page,'d',0,2.5,true);
-    else {await go(page,"d",0,-2.7,true); await go(page,"w",2,6.7,true); await go(page,"d",0,2.5,true);}
+    // Cross below the rack row. Its collision face begins at z=7.15 after
+    // player radius; z=6.1 leaves room for a slow browser's key-up delivery.
+    else {await go(page,"d",0,-2.7,true); await go(page,"w",2,6.1,true); await go(page,"d",0,2.5,true);}
     await go(page,"w",2,7.7,true); await go(page,"d",0,5.8,true);
     await interact(page,"shop.load-van");
     expect((await snapshot(page)).position[1]).toBeCloseTo(.92,5);
@@ -79,7 +70,7 @@ export async function prepareVan(page:Page,info:Pick<TestInfo,"outputPath"|"atta
     expect((await snapshot(page)).session.loaded).toEqual(shopLoad.slice(0,i+1));
     if(i<2) {
       await go(page,"a",0,2.5,false);
-      if(!options.wideApproach){await go(page,"s",2,6.7,false); await go(page,"a",0,-2.7,false);}
+      if(!options.wideApproach){await go(page,"s",2,6.1,false); await go(page,"a",0,-2.7,false);}
       await go(page,"s",2,3.4,false); await go(page,"a",0,-5.5,false);
     }
   }
