@@ -71,6 +71,10 @@ export async function prepareVan(page:Page,info:Pick<TestInfo,"outputPath"|"atta
   expect(final.session.loaded).toEqual([...shopLoad]); expect(final.session.energy).toBe(94);
   expect(final.cargo.every(c=>c.place==="loaded")).toBe(true);
   expect(final.session.tools).toEqual(["screwdriver"]); expect(final.errors).toEqual([]); expect(errors).toEqual([]);
+  // A delayed key release can leave the player against the back wall. Walk
+  // into the open aisle before testing camera recovery; retraction at that
+  // wall is correct, not a failure to restore opacity.
+  await go(page,'s',2,7.2,false);await go(page,'a',0,2.5,false);
   await page.mouse.move(900,400); await page.mouse.down(); await page.mouse.move(540,400,{steps:16}); await page.mouse.up();
   await page.waitForFunction(()=>window.__AV3D__!.snapshot().camera.yaw>1.7 && window.__AV3D__!.snapshot().character?.opacity===1);
   await page.screenshot({path:info.outputPath("van-ready.png")});
