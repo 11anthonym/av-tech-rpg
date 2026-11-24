@@ -56,7 +56,7 @@ export function createFieldArt(scene:Scene,root:TransformNode,area:AreaDefinitio
       box('cart-base',[x,.24,2],[1.2,.08,.7],steel);box('cart-crossbar',[x,1.65,2],[1,.055,.055],aluminium);
       box('cart-shelf',[x,.8,2],[1,.06,.5],steel);label(`cart-${x}`,x===1?'CART 1':'CART 2',[x,2.2,2],1.4,.3);
     }
-    label('staging-sign','DELIVERED EQUIPMENT',[-4,1.8,-.8],2.8,.35);
+    label('staging-sign','DELIVERED EQUIPMENT',[-4,2.65,1.8],2.8,.35);
     box('client-table',[2,.72,4.4],[3.7,.1,1.1],wood);
   }
   for(const [m,parts] of batches) {

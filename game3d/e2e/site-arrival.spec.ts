@@ -5,6 +5,9 @@ async function restored(page:Page){
   await ready(page);
   await page.locator('#debug-panel').evaluate(element=>element.setAttribute('hidden',''));
 }
+// Keep exportable footage on the Linux production-browser runner. Windows
+// Firefox recording teardown is tracked separately from gameplay assertions.
+test.use({video:process.platform==='linux'?{mode:'on',size:{width:960,height:540}}:'off'});
 
 test.afterEach(async({page},info)=>{
   if(page.isClosed())return;
