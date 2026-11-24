@@ -31,7 +31,7 @@ export const conference:AreaDefinition={id:'centerCityConferenceRoom',label:'Cli
     {id:'supervisor',position:[-3,.9,2],size:[.6,1.8,.6],material:'steel',solid:true},
     {id:'cart1',position:[1,1,2],size:[1.2,2,.7],material:'steel',solid:true},
     {id:'cart2',position:[4,1,2],size:[1.2,2,.7],material:'steel',solid:true}],
-  interactions:[{id:'client.assignment',actionId:'conference.review-assignment',anchor:[-3,1,.55],meshId:'work-order',radius:1.7,priority:2},
+  interactions:[{id:'client.assignment',actionId:'conference.review-assignment',anchor:[-3,1,.55],meshId:'work-order',radius:1.7,priority:3},
     {id:'client.parts',actionId:'conference.pickup-part',anchor:[-4.7,1,-1.3],meshId:'parts',radius:1.7,priority:2},
     {id:'client.cart1',actionId:'install.cart1',anchor:[1,1,1.2],meshId:'cart1',radius:1.8,priority:2},
     {id:'client.cart2',actionId:'install.cart2',anchor:[4,1,1.2],meshId:'cart2',radius:1.8,priority:2},

@@ -1,5 +1,5 @@
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { Ray } from "@babylonjs/core/Culling/ray";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector.js";
+import { Ray } from "@babylonjs/core/Culling/ray.js";
 import type { Scene } from "@babylonjs/core/scene";
 import type { InteractionDefinition } from "./shop.ts";
 

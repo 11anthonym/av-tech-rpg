@@ -68,5 +68,6 @@ export async function arriveAtClient(page:Page,info:TestInfo){
   await page.screenshot({path:info.outputPath('client-floor-ready.png')});
   expect(await page.evaluate(()=>localStorage.getItem('av-tech-rpg-save-v1'))).toBe(career);expect(errors).toEqual([]);
   await info.attach('arrival-checkpoint',{body:JSON.stringify(await snapshot(page),null,2),contentType:'application/json'});
+  await page.context().storageState({path:info.outputPath('client-arrival-save.json')});
 return {career,errors};
 }

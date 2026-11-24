@@ -8,6 +8,7 @@ test.use({video:process.platform==='linux'||process.env.RECORD_VIDEO==='1'?{mode
 test.afterEach(async({page},info)=>{
   if(page.isClosed())return;
   if(info.status!==info.expectedStatus){
+    await page.context().storageState({path:info.outputPath('failure-browser-state.json')}).catch(()=>{});
     const state=await page.evaluate(()=>window.__AV3D__?.snapshot()).catch(()=>undefined);
     await info.attach('failure-state',{body:JSON.stringify(state??{unavailable:true}),contentType:'application/json'});
     await page.screenshot({path:info.outputPath('failure-before-cleanup.png'),timeout:5000}).catch(()=>{});
