@@ -2,6 +2,7 @@ import type { GraphicsQuality, Settings } from "../persistence/settings.ts";
 import type { Session } from "../domain/session.ts";
 import type { ActionId,AreaId } from '../content/ids.ts';
 import { workdayClock } from '../content/travel.ts';
+import {workdayContent} from '../content/workday.ts';
 
 interface HudCallbacks {
   interact(): void;
@@ -97,8 +98,9 @@ export class GameHud {
   }
   loadout(state: Session) {
     this.root.querySelector('#shift-label')!.textContent=`AV TECH RPG · SHIFT ${state.career.day}`;
-    const held=state.workday.carriedPart??state.carry[0];
-    this.root.querySelector("#loadout")!.textContent = `Hands ${held?1:0}/1: ${held??"Empty"} · Van ${state.loaded.length}/3${state.areaId==='shop'?'':` · Delivered ${state.delivered.length}/3`} · Energy ${state.energy}/100 · Burnout ${state.burnout} · Kit: ${state.tools.join(', ')} · ${workdayClock(state.travel.clockMinutes,state.career.day)}${state.career.xp?` · $${state.career.cash} · ${state.career.xp} XP · Callbacks ${state.career.callbacks}`:state.travel.parkingExpense?' · $18 receipt pending':''}`;
+    const held=state.workday.carriedPart?workdayContent.assembly.find(p=>p.id===state.workday.carriedPart)?.label:state.carry[0];
+    const kit=state.tools.map(id=>workdayContent.rewardTools.find(tool=>tool.id===id)?.name??id).join(', ');
+    this.root.querySelector("#loadout")!.textContent = `Hands ${held?1:0}/1: ${held??"Empty"} · Van ${state.loaded.length}/3${state.areaId==='shop'?'':` · Delivered ${state.delivered.length}/3`} · Energy ${state.energy}/100 · Burnout ${state.burnout} · Kit: ${kit} · ${workdayClock(state.travel.clockMinutes,state.career.day)}${state.career.xp?` · $${state.career.cash} · ${state.career.xp} XP · Callbacks ${state.career.callbacks}`:state.travel.parkingExpense?' · $18 receipt pending':''}`;
   }
   place(id:AreaId,title:string) {
     this.root.dataset.area=id;

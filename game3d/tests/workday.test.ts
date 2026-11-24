@@ -41,7 +41,7 @@ test('physical components require the briefing, free hands, correct cart and fra
   for(const id of ['install.cart1','conference.verify','finish.rush','centerCityConferenceRoomToShop','pressure.leave'] as const)assert.equal(act(s,id),s,id);
   s=act(s,'conference.pickup-part');assert.equal(s.workday.carriedPart,'cart-1-frame');
   assert.equal(act(s,'conference.pickup-part'),s);assert.equal(act(s,'install.cart2'),s);
-  s=act(s,'install.cart1');assert.equal(s.energy,63);assert.deepEqual(s.workday.assembled,['cart-1-frame']);
+  s=act(s,'install.cart1');assert.equal(s.energy,61);assert.deepEqual(s.workday.assembled,['cart-1-frame']);
   assert.equal(act(s,'install.cart1'),s);s=checkpoint(s);
   s=act(act(s,'conference.pickup-part'),'install.cart1');assert.equal(s.flags.supervisorLeft,true);
   assert.equal(act(s,'conference.pickup-part'),s); // handle the newly discovered pressure first
@@ -59,7 +59,7 @@ test('cart checks, pressure responses and closeout numerics agree with the actua
         ref.runGame(`resolveTutorialInstallPressureResponse(${JSON.stringify(p.id)},${JSON.stringify(choice)},${roll});`);
       }
       const part=workdayContent.assembly[i]!;s=act(act(s,'conference.pickup-part'),i<2?'install.cart1':'install.cart2');
-      ref.runGame(`state.carry=[${JSON.stringify(part.id)}];installCartPart(${JSON.stringify(part.destination)});`);
+      ref.runGame(`getInteractions().find(item=>item.label==='Pick up next cart component').action();installCartPart(${JSON.stringify(part.destination)});`);
       assert.equal(s.energy,ref.readGameJson('state.energy'),`${seed}/${response}/${part.id}`);
       assert.equal(s.workday.checks[i]!.score,ref.readGameJson(`state.flags.skillChecks['cart-${part.id}'].score`));
       assert.equal(s.workday.checks[i]!.difficulty,ref.readGameJson(`state.flags.skillChecks['cart-${part.id}'].difficulty`));
@@ -108,12 +108,23 @@ test('one complete day reloads, pays/rewards exactly once and changes the follow
 
 test('overnight recovery, stayed-late fatigue and skipped-day costs match the legacy shift rules',()=>{
   for(const choice of ['clock-out','prep','recovery-day'] as const){const start=close(assemble(arrival(),'careful'),'tidy');
-    const ref=legacyReference();ref.runGame(`state.energy=${start.energy};state.burnout=${start.burnout};state.flags.endShiftPending=true;state.flags.endShiftSource='Two Quick Carts';completeShift('${choice}');`);
+    const ref=legacyReference();ref.runGame(`state.energy=${start.energy};state.burnout=${start.burnout};state.cash=${start.career.cash};state.xp=${start.career.xp};state.reputation=${JSON.stringify(start.career.reputation)};state.flags.finished=true;state.flags.reward='drill';state.sceneId='shop';state.flags.currentAreaId='shop';state.flags.endShiftPending=true;state.flags.endShiftSource='Two Quick Carts';completeShift('${choice}');`);
     const next=checkpoint(act(start,`shift.${choice}`));
     assert.equal(next.energy,ref.readGameJson('state.energy'),choice);assert.equal(next.burnout,ref.readGameJson('state.burnout'),choice);
-    assert.equal(next.career.fatigue,choice==='prep'?48:0);
+    assert.deepEqual(next.career.reputation,ref.readGameJson('state.reputation'),choice);
+    assert.equal(next.career.callbacks,ref.readGameJson('state.stats.callbacks'),choice);
+    if(choice==='prep')assert.equal(next.career.risks[0]!.id,'exhaustion-service');
+    assert.equal(next.career.fatigue,choice==='prep'?56:0);
     assert.equal(next.career.day,choice==='recovery-day'?3:2);
   }
+});
+
+test('shift previews show exhaustion costs without changing the saved career',()=>{
+  const s=close(assemble(arrival(),'careful'),'tidy'),before=structuredClone(s),menu=resolveAction(s,'shop.inspect-workbench');
+  assert.equal(menu.state,s);assert.deepEqual(s,before);
+  const preview=menu.event.choices!.find(choice=>choice.actionId==='shift.prep')!.detail;
+  const actual=act(s,'shift.prep');assert.match(preview,new RegExp(`morning energy ${actual.energy}`));
+  assert.match(preview,/Overexertion adds a callback/);
 });
 
 test('every route can complete a saved workday even when overnight recovery removes route burnout',()=>{

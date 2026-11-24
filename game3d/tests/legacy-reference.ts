@@ -13,6 +13,6 @@ export function legacyReference(){
   vm.runInContext(prefix+'\nglobalThis.reference={runGame,readGameJson,resetGameState};',context,{filename});
   const ref=context.reference as {runGame:(s:string)=>any;readGameJson:(s:string)=>any;resetGameState:()=>void};
   ref.resetGameState();
-  ref.runGame(`showModal=()=>{};render=()=>{};notify=()=>{};showResults=()=>{};state.energy=71;state.clock='MON 9:06 AM';state.flags.tutorialInstallPressureSeed=173;`);
+  ref.runGame(`showModal=()=>{};render=()=>{};notify=()=>{};showResults=()=>{};state.energy=71;state.clock='MON 9:06 AM';state.flags.tutorialInstallPressureSeed=173;state.flags.roomBrief=true;state.flags.centerCityEquipmentDelivered=true;state.flags.securityChecked=true;state.sceneId='client';state.flags.currentAreaId='centerCityConferenceRoom';`);
   return {...ref,readGameJson:(expression:string)=>JSON.parse(ref.runGame(`JSON.stringify(${expression})`))};
 }

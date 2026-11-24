@@ -37,7 +37,7 @@ export function workdayObjective(s:Session):string|undefined {
   if(s.workday.finishChoice)return 'Review the handoff at the work order and choose your starter upgrade.';
   if(s.workday.assembled.length===4)return s.workday.verified?'Review the work order and choose the closeout standard.':'Verify both carts at the work order before closeout.';
   if(s.flags.supervisorLeft&&!s.workday.pressure)return `The supervisor has left. Review ${pressureDefinition(s).label.toLowerCase()} at the work order.`;
-  if(s.workday.carriedPart)return `Carry ${s.workday.carriedPart} to ${nextPart(s)?.destination==='cart1'?'Cart 1':'Cart 2'} and install it.`;
+  if(s.workday.carriedPart)return `Carry ${nextPart(s)?.label} to ${nextPart(s)?.destination==='cart1'?'Cart 1':'Cart 2'} and install it.`;
   return `Pick up ${nextPart(s)?.label} from the delivered boxes. ${s.flags.supervisorLeft?'Cart 2 is yours.':'The supervisor is helping with Cart 1.'}`;
 }
 const owns=(s:Session,tool:ToolId)=>s.tools.includes(tool);
@@ -50,7 +50,7 @@ export function describeWorkday(s:Session,id:ActionId):{label:string;available:b
   if(id==='shop.brief-supervisor'&&s.workday.shiftClosed)return prompt('Morning briefing — last shift matters');
   if(id==='conference.review-assignment'&&inRoom(s))return prompt(s.workday.handedOff?'Review handoff':s.workday.finishChoice?'Client handoff / starter upgrade':s.workday.assembled.length===4?s.workday.verified?'Choose closeout standard':'Verify both carts':s.flags.supervisorLeft&&!s.workday.pressure?'Handle cart pressure':'Review installation assignment');
   if(!isWorkdayAction(id))return;
-  if(id==='conference.pickup-part')return prompt(carrying(s)?'Hands full — install the carried component':nextPart(s)?`Pick up ${nextPart(s)!.label}`:'All components installed',inRoom(s)&&!carrying(s)&&Boolean(nextPart(s))&&(!s.flags.supervisorLeft||Boolean(s.workday.pressure)));
+  if(id==='conference.pickup-part')return prompt(carrying(s)?'Hands full — install the carried component':s.flags.supervisorLeft&&!s.workday.pressure?'Review cart pressure at the work order first':nextPart(s)?`Pick up ${nextPart(s)!.label}`:'All components installed',inRoom(s)&&!carrying(s)&&Boolean(nextPart(s))&&(!s.flags.supervisorLeft||Boolean(s.workday.pressure)));
   if(id==='install.cart1'||id==='install.cart2'){
     const part=nextPart(s),correct=part?.destination===id.slice(8);
     return prompt(!owns(s,'screwdriver')?'Screwdriver required':!s.workday.carriedPart?'Pick up the next component first':!correct?'That component belongs on the other cart':`Install ${part?.label}`,inRoom(s)&&owns(s,'screwdriver')&&correct&&s.workday.carriedPart===part?.id);
@@ -71,7 +71,7 @@ export function resolveWorkday(state:Session,id:ActionId):ActionResult|undefined
   const s=structuredClone(state),w=s.workday,c=s.career;
   const rep=(delta:Partial<Reputation>)=>{for(const key of ['clients','coworkers','management'] as const)c.reputation[key]+=delta[key]??0;};
   const spend=(amount:number)=>{s.energy=Math.max(0,s.energy-amount);};
-  if(id==='conference.pickup-part'){w.carriedPart=nextPart(s)!.id;return result(s,`Picked up ${nextPart(s)!.label}. Hands 1/1.`);}
+  if(id==='conference.pickup-part'){const cost=Math.max(0,2-(owns(s,'toolBag')?1:0));spend(cost);w.carriedPart=nextPart(s)!.id;return result(s,`Picked up ${nextPart(s)!.label}. Hands 1/1; energy −${cost}.`);}
   if(id.startsWith('install.')){
     const part=nextPart(s)!,pressure=pressureDefinition(s);
     const modifiers=openPressure(s)?pressure.checkModifiers as Record<string,{difficulty:number;energy:number}>:{};
@@ -117,26 +117,31 @@ export function resolveWorkday(state:Session,id:ActionId):ActionResult|undefined
     s.travel.clockMinutes=(tidy?1101:workaround?1069:1074)+(s.travel.route!.arrival-483);
     if(tidy){if(open)w.pressure={pressureId:p.id,actionId:'tidy-closeout',previousActionId:w.pressure?.actionId,controlled:true,incident:Boolean(w.pressure?.incident),roll:w.pressure?.roll??null,detail:`${p.label} caught during careful cable dressing and final cart cleanup.`};c.workmanship='controlled';}
     else if(workaround){c.workmanship='temporary';c.callbacks=1;c.risks.push({id:'usedTemporaryAdapterPermanently',source:'Two Quick Carts',cause:'A temporary adapter workaround was left as the final installed path.'});}
-    else {c.workmanship=strained||open?'watch':'controlled';if(strained||open)c.callbacks=1;if(open)c.risks.push({id:'centerCityCartPressure',source:'Two Quick Carts',cause:`${p.label} was left unresolved by ${w.pressure?.actionId??'no pressure response'} and rushed through closeout.`});else if(strained)c.risks.push({id:'cartAssemblyStrained',source:'Two Quick Carts',cause:'Strained assembly checks were closed quickly without careful final cleanup.'});}
+    else {c.workmanship=strained||open?'watch':'controlled';if(strained||open)c.callbacks=1;if(open)c.risks.push({id:'centerCityCartPressure',source:'Two Quick Carts',cause:`${p.label} was left unresolved after ${w.pressure?.incident?'a failed quick repair':'deferring the pressure'} and rushed through closeout.`});else if(strained)c.risks.push({id:'cartAssemblyStrained',source:'Two Quick Carts',cause:'Strained assembly checks were closed quickly without careful final cleanup.'});}
     c.cash+=tidy?152:141;c.xp+=40;rep(tidy?{clients:2,coworkers:1,management:-1}:workaround?{clients:1,coworkers:-1,management:1}:{management:1});
     s.flags.finished=true;s.flags.tutorialPaid=true;s.flags.tutorialProgressAwarded=true;s.flags.tutorialStatsRecorded=true;
     return result(s,`Net pay +$${tidy?152:141} ($128 wages + $${tidy?42:31} overtime − $18 parking); +40 XP. ${tidy?'Extra effort protected client/coworker standing, but management noticed the clock.':c.risks.length?`${c.risks[0]!.cause} A callback note will affect tomorrow's briefing.`:'Quick closeout held: no named callback risk because the installation was controlled.'} Review the work order for the client handoff and your starter upgrade.`,'Two Quick Carts: complete');
   }
   if(id.startsWith('reward.')){const tool=id.slice(7) as ToolId;if(!workdayContent.rewardTools.some(t=>t.id===tool))return;
     w.reward=tool;w.handedOff=true;if(!s.tools.includes(tool))s.tools.push(tool);
-    return result(s,`${handoffSummary(s)} ${tool} added to your kit once. Client handoff accepted; use the room exit to return to the shop.`,'Client handoff complete');}
+    return result(s,`${handoffSummary(s)} ${workdayContent.rewardTools.find(t=>t.id===tool)!.name} added to your kit once. Client handoff accepted; use the room exit to return to the shop.`,'Client handoff complete');}
   if(id==='centerCityConferenceRoomToShop'){s.areaId='shop';s.flags.endShiftPending=true;return result(s,'Returned from Center City. Review your shift at the workbench.');}
   if(id==='shop.inspect-workbench'){
     if(w.shiftClosed)return result(state,`${shiftSummary(s)} ${c.risks.map(r=>r.cause).join(' ')||'No open first-day callback risk.'}`,'Previous shift / career ledger');
+    const prep=resolveWorkday(state,'shift.prep')!.state;
     return result(state,`${handoffSummary(s)} Choose how to close the shift. Recovery has a real cost; staying late can prepare tomorrow but reduce recovery.`, 'End of day',[
       {actionId:'shift.clock-out',label:'Clock out and go home',detail:'Ordinary recovery: max(28, 65 − 10 × burnout); no additional energy cost.'},
-      {actionId:'shift.prep',label:'Stay late to prep tomorrow',detail:'32 energy, +1 burnout, management −1. Tomorrow gains documentation/fieldcraft prep; fatigue caps morning energy at 80.'},
+      {actionId:'shift.prep',label:'Stay late to prep tomorrow',detail:`32 energy, +1 burnout, management −1 before any overexertion. Projected morning energy ${prep.energy}, burnout ${prep.burnout}, fatigue cap ${prep.career.shiftSummary!.fatigueCap}. ${prep.career.callbacks>c.callbacks?'Overexertion adds a callback/handoff concern. ':''}Documentation/fieldcraft prep is recorded for the next job.`},
       {actionId:'shift.recovery-day',label:'Take a recovery day',detail:'Skip an extra day. Full energy, burnout −2, management −1. Callback records remain in the ledger.'}]);
   }
   if(id.startsWith('shift.')){
     const choice=id.slice(6),late=choice==='prep',recovery=choice==='recovery-day',beforeEnergy=s.energy,beforeBurnout=s.burnout;
     const unpaid=late?Math.max(0,32-s.energy):0;
-    if(late){spend(32);s.burnout+=1+Math.floor(unpaid/10);rep({management:-1});}if(recovery)rep({management:-1});
+    if(late){spend(32);s.burnout+=1+Math.floor(unpaid/10);rep({management:-1});
+      const incidents=Math.floor(unpaid/8);
+      if(incidents>=1)rep({management:-1});if(incidents>=3)rep({coworkers:-1});if(incidents>=4)rep({management:-1});
+      if(incidents>=2){c.callbacks++;c.risks.push({id:'exhaustion-service',source:'Zero-energy overrun',cause:`Stayed-late preparation exceeded available energy by ${unpaid}; exhausted handoff/prep left a named concern for the next service shift.`});}
+    }if(recovery)rep({management:-1});
     const exhaustionCap=s.energy===0?Math.max(20,60-8*Math.floor(unpaid/8)):100;
     const fatigueCap=recovery?100:Math.min(late?80:100,exhaustionCap),recovered=recovery?100:Math.max(late?16:28,65-s.burnout*10-(late?10:0));
     const afterChoice=s.energy;s.energy=Math.min(fatigueCap,recovery?100:s.energy+recovered);
@@ -145,7 +150,7 @@ export function resolveWorkday(state:Session,id:ActionId):ActionResult|undefined
     c.shiftSummary={choice,netPay:w.finishChoice==='tidy'?152:141,xp:40,energyBefore:beforeEnergy,energyAfter:s.energy,burnoutBefore:beforeBurnout,burnoutAfter:s.burnout,recovered:s.energy-afterChoice,fatigueCap};
     s.travel.clockMinutes=438;return result(s,shiftSummary(s),'Shift complete — next morning');
   }
-  if(id==='shop.brief-supervisor')return result(state,`${w.morningBriefed?`Assignment already accepted: ${c.nextAssignment}. `:''}${c.risks.length?`The client reported a follow-up concern from Two Quick Carts. ${c.risks.map(r=>r.cause).join(' ')} The return-trip ledger takes priority over a clean new service assignment.`:`The client and crew have a clean first-day handoff. ${c.workmanship==='controlled'?'Your controlled closeout protected the next technician. ':''}A Conshohocken service assignment is available.`}`, 'Morning briefing',w.morningBriefed?[]:[{actionId:'morning.accept',label:c.risks.length?'Accept callback cleanup assignment':'Accept Conshohocken service briefing',detail:c.risks.length?'This return-trip opportunity exists because of the saved first-day cause. The callback debt remains visible.':'The next service opportunity is available without first-day callback debt.'}]);
+  if(id==='shop.brief-supervisor')return result(state,`${w.morningBriefed?`Assignment already accepted: ${c.nextAssignment}. `:''}${c.risks.length?`${c.risks.some(r=>r.source==='Two Quick Carts')?'The client reported a follow-up concern from Two Quick Carts.':'Coordination flagged the exhausted next-shift preparation.'} ${c.risks.map(r=>r.cause).join(' ')} The return-trip ledger takes priority over a clean new service assignment.`:`The client and crew have a clean first-day handoff. ${c.workmanship==='controlled'?'Your controlled closeout protected the next technician. ':''}A Conshohocken service assignment is available.`}`, 'Morning briefing',w.morningBriefed?[]:[{actionId:'morning.accept',label:c.risks.length?'Accept callback cleanup assignment':'Accept Conshohocken service briefing',detail:c.risks.length?'This return-trip opportunity exists because of the saved first-day cause. The callback debt remains visible.':'The next service opportunity is available without first-day callback debt.'}]);
   if(id==='morning.accept'){w.morningBriefed=true;c.nextAssignment=c.risks.length?'callbackCleanupDispatch':'serviceDispatch';return result(s,`${c.nextAssignment==='callbackCleanupDispatch'?'Callback cleanup':'Conshohocken service'} assigned for shift ${c.day}. ${c.risks.map(r=>r.cause).join(' ')||'The first install leaves no named callback risk.'} ${c.shiftSummary?.choice==='prep'?'Previous-shift preparation is recorded for documentation and fieldcraft checks.':''}`,'Next shift started');}
   return;
 }
@@ -157,7 +162,7 @@ export function validWorkday(s:Session):boolean {
   if(!w||!c||!Array.isArray(w.assembled)||!Array.isArray(w.checks)||w.assembled.length>4||
     !w.assembled.every((id,i)=>id===parts[i])||w.checks.length!==w.assembled.length||
     !w.checks.every((check,i)=>check.partId===w.assembled[i]&&[check.score,check.difficulty,check.energyCost].every(Number.isInteger)&&check.energyCost>=0&&check.successful===(check.score>=check.difficulty))||
-    !(w.carriedPart===null||w.carriedPart===parts[w.assembled.length])||
+    !(w.carriedPart===null||(typeof w.carriedPart==='string'&&w.carriedPart===parts[w.assembled.length]))||
     (w.carriedPart&&(s.carry.length||s.areaId!=='centerCityConferenceRoom'||!s.flags.roomBrief))||
     !['verified','handedOff','shiftClosed','morningBriefed'].every(key=>typeof w[key as keyof Workday]==='boolean')||
     ![null,'tidy','rush','wiley-workaround'].includes(w.finishChoice)||
@@ -166,7 +171,7 @@ export function validWorkday(s:Session):boolean {
     !Array.isArray(c.traits)||!c.traits.every(t=>typeof t==='string')||
     !['clients','coworkers','management'].every(key=>Number.isInteger(c.reputation?.[key as keyof Reputation]))||
     !Array.isArray(c.risks)||new Set(c.risks.map(r=>r.id)).size!==c.risks.length||
-    !c.risks.every(r=>['centerCityCartPressure','cartAssemblyStrained','usedTemporaryAdapterPermanently'].includes(r.id)&&r.source==='Two Quick Carts'&&typeof r.cause==='string'&&r.cause.length>0)||
+    !c.risks.every(r=>['centerCityCartPressure','cartAssemblyStrained','usedTemporaryAdapterPermanently','exhaustion-service'].includes(r.id)&&r.source===(r.id==='exhaustion-service'?'Zero-energy overrun':'Two Quick Carts')&&typeof r.cause==='string'&&r.cause.length>0)||
     !['unassessed','controlled','watch','temporary'].includes(c.workmanship))return false;
   if(Boolean(s.flags.supervisorLeft)!==(w.assembled.length>=2)||Boolean(s.flags.finished)!==Boolean(w.finishChoice)||
     ['tutorialPaid','tutorialProgressAwarded','tutorialStatsRecorded'].some(key=>Boolean(s.flags[key as keyof Session['flags']])!==Boolean(w.finishChoice))||
@@ -178,7 +183,7 @@ export function validWorkday(s:Session):boolean {
     c.cash!==(w.finishChoice?w.finishChoice==='tidy'?152:141:0)||c.xp!==(w.finishChoice?40:0)||
     c.shiftsCompleted!==(w.shiftClosed?1:0)||(!w.shiftClosed&&c.day!==1)||
     (w.shiftClosed&&![2,3].includes(c.day))||Boolean(c.shiftSummary)!==w.shiftClosed||
-    c.callbacks!==(c.risks.length?1:0)||c.carefulFinishes!==(w.finishChoice==='tidy'?1:0)||
+    c.callbacks!==c.risks.length||c.carefulFinishes!==(w.finishChoice==='tidy'?1:0)||
     c.nextAssignment!==(w.morningBriefed?c.risks.length?'callbackCleanupDispatch':'serviceDispatch':null))return false;
   if(w.pressure){const p=pressureDefinition(s),r=w.pressure;
     if(!s.flags.supervisorLeft||r.pressureId!==p.id||![p.carefulOption.id,p.quickOption.id,'leave','tidy-closeout'].includes(r.actionId)||
@@ -189,7 +194,15 @@ export function validWorkday(s:Session):boolean {
     if(r.actionId==='leave'&&(r.controlled||r.incident))return false;
   }
   if(w.assembled.length>=3&&!w.pressure)return false;
-  if(w.finishChoice==='tidy'&&(c.risks.length||c.workmanship!=='controlled'))return false;
+  if(!w.finishChoice&&(c.risks.length||c.workmanship!=='unassessed'))return false;
+  if(c.risks.some(r=>r.id==='exhaustion-service')&&(!w.shiftClosed||c.shiftSummary?.choice!=='prep'))return false;
+  if(w.shiftClosed){const summary=c.shiftSummary!;
+    if(!['clock-out','prep','recovery-day'].includes(summary.choice)||
+      ![summary.netPay,summary.xp,summary.energyBefore,summary.energyAfter,summary.burnoutBefore,summary.burnoutAfter,summary.recovered,summary.fatigueCap].every(Number.isInteger)||
+      summary.netPay!==c.cash||summary.xp!==40||summary.energyAfter!==s.energy||summary.burnoutAfter!==s.burnout||
+      summary.energyBefore<0||summary.energyBefore>100||summary.fatigueCap<20||summary.fatigueCap>100)return false;
+  }
+  if(w.finishChoice==='tidy'&&(c.risks.some(r=>r.source==='Two Quick Carts')||c.workmanship!=='controlled'))return false;
   if(w.assembled.length){const offset=s.travel.route!.arrival-483;
     const clock=w.shiftClosed?438:w.finishChoice?(w.finishChoice==='tidy'?1101:w.finishChoice==='rush'?1074:1069)+offset:[546,698,698,1066][w.assembled.length-1]!+offset;
     if(s.travel.clockMinutes!==clock)return false;
