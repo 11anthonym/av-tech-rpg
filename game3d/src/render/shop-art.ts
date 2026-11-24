@@ -158,6 +158,8 @@ export function createShopArt(scene: Scene, root: TransformNode) {
   }
   label("rack-zone-sign", "SYSTEMS TEST  /  19-INCH RACKS", [-0.8, 2.7, 8.84], 3.7, 0.32);
   // Mobile display cart and a cable reel: reusable AV kit at real scale.
+  const cartStart=scene.meshes.length;
+  const cartRoot=new TransformNode('display-cart-placement',scene);cartRoot.parent=root;cartRoot.position.x=-1.1;
   box("display-cart-base", [-3.1, 0.18, 1.6], [1.1, 0.06, 0.65], steel);
   for (const x of [-3.55, -2.65]) for (const z of [1.36, 1.84]) {
     const wheel = cylinder("cart-castor", [x, 0.075, z], 0.14, 0.045, rubber); wheel.rotation.z = Math.PI / 2;
@@ -173,6 +175,7 @@ export function createShopArt(scene: Scene, root: TransformNode) {
   }
   cylinder("reel-cable", [-3.1, 0.4, 1.5], 0.31, 0.37, rubber).rotation.z = Math.PI / 2;
   cylinder("reel-core", [-3.1, 0.4, 1.5], 0.08, 0.45, aluminium).rotation.z = Math.PI / 2;
+  for(const part of scene.meshes.slice(cartStart))part.parent=cartRoot;
   // Handle/latches give the retained imported M1 case a readable toolcase silhouette.
   box("case-handle-top", [0.8, 1.34, 0], [0.18, 0.025, 0.035], black);
   for (const x of [0.71, 0.89]) box("case-handle-mount", [x, 1.315, 0], [0.025, 0.06, 0.035], black);

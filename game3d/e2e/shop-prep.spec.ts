@@ -44,7 +44,7 @@ test("first shift: brief, three physical carry/load trips, constraints and reloa
   await page.getByRole("button",{name:"Back to shop"}).click();
   await interact(page,"shop.brief-supervisor"); await page.getByRole("button",{name:"Back to shop"}).click();
   expect((await snapshot(page)).session.energy).toBe(100);
-  await go(page,"d",0,-2,true); await go(page,"w",2,3.4,true); await go(page,"a",0,-5.5,false);
+  await go(page,"d",0,-2.7,true); await go(page,"w",2,3.4,true); await go(page,"a",0,-5.5,false);
   for(let i=0;i<3;i++) {
     await interact(page,"shop.pickup-equipment");
     await expect.poll(async()=>(await snapshot(page)).session.carry).toEqual([shopLoad[i]]);
@@ -60,7 +60,7 @@ test("first shift: brief, three physical carry/load trips, constraints and reloa
       expect((await snapshot(page)).session.carry).toEqual([shopLoad[0]]);
       expect((await snapshot(page)).session.energy).toBe(98);
     }
-    await go(page,"d",0,-2,true); await go(page,"w",2,6.7,true); await go(page,"d",0,2.5,true);
+    await go(page,"d",0,-2.7,true); await go(page,"w",2,6.7,true); await go(page,"d",0,2.5,true);
     await go(page,"w",2,7.7,true); await go(page,"d",0,5.8,true);
     await interact(page,"shop.load-van");
     expect((await snapshot(page)).position[1]).toBeCloseTo(.92,5);
@@ -73,7 +73,7 @@ test("first shift: brief, three physical carry/load trips, constraints and reloa
     await page.locator("#debug-panel").evaluate(e=>e.setAttribute("hidden",""));
     expect((await snapshot(page)).session.loaded).toEqual(shopLoad.slice(0,i+1));
     if(i<2) {
-      await go(page,"a",0,2.5,false); await go(page,"s",2,6.7,false); await go(page,"a",0,-2,false);
+      await go(page,"a",0,2.5,false); await go(page,"s",2,6.7,false); await go(page,"a",0,-2.7,false);
       await go(page,"s",2,3.4,false); await go(page,"a",0,-5.5,false);
     }
   }

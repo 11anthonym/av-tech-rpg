@@ -57,3 +57,11 @@ check on a fresh Linux runner. The PR reports actual candidate results and any
 remaining failures. Passing a retry alone does not resolve an intermittent
 failure. Software-rendered results remain regression evidence, not a physical
 GPU performance qualification; Issue #7 remains open.
+
+The repeat capture then exposed unsafe aisle assumptions: after a delayed key
+release the technician was at x=-1.54, stopped at the bench at z=-0.80. The
+previous pedestrian centre clearance between the cart and bench was only
+0.375m. The decorative cart and collider move left together, making 1.475m of
+centre clearance; the replay walks through its centre at x=-2.7. A real collision
+test verifies the path with 0.5m of release travel. The staging reach also covers
+the full three-metre bay, consistently with the existing bench/van zones.
