@@ -51,4 +51,9 @@ try {
     note:'Actual hosted normal-input functional audit, not the timed CI replay or a physical-GPU benchmark.',build:restored.build,prepared,restored,quality,errors};
   console.log(JSON.stringify({build:result.build,seconds:result.elapsedSeconds,loaded:restored.session.loaded,errors}));
 }catch(error){result={url,elapsedSeconds:(Date.now()-started)/1000,error:String(error),errors};await page.screenshot({path:path.join(out,'failed.png'),timeout:10000}).catch(()=>{});throw error;}
-finally {await fs.writeFile(path.join(out,'verification.json'),JSON.stringify(result,null,2));await page.goto('about:blank').catch(()=>{});await context.close();await browser.close();}
+finally {
+  await fs.writeFile(path.join(out,'verification.json'),JSON.stringify(result,null,2));
+  // Close the page directly. A second cross-origin navigation solely for
+  // cleanup can leave Firefox's recording context waiting on disposed handles.
+  try {await page.close();await context.close();} finally {await browser.close();}
+}

@@ -98,6 +98,27 @@ test('v2 shop progress migrates into a separate key, retaining the old 3D and 2D
   assert(repository.save(loaded));assert.equal(values.get(PREVIOUS_SAVE_KEY),bytes);assert.equal(values.get('av-tech-rpg-save-v1'),career);
   assert.equal(JSON.parse(values.get(SAVE_KEY)!).version,3);
 });
+
+test('alternative route costs and arrival differences remain observable after access and reload',()=>{
+  for(const choice of routeApproaches){
+    let state=resolveAction(ready(),`route.${choice.id}`).state;
+    const outcome=state.travel.route!;
+    state=resolveAction(state,'garage.brief-supervisor').state;
+    for(let trip=0;trip<3;trip++){
+      state=resolveAction(state,'garage.unload-equipment').state;
+      state=resolveAction(state,'garageToLobby').state;
+    }
+    for(const action of ['garageToLobby','security.check-in','lobbyToConferenceRoom','conference.review-assignment'] as const){
+      state=parseSave(JSON.stringify(checkpoint(resolveAction(state,action).state))).session;
+    }
+    assert.equal(state.energy,71-outcome.energyCost);
+    assert.equal(state.burnout,outcome.burnoutGain);
+    assert.equal(state.travel.clockMinutes,outcome.arrival+63);
+    assert.deepEqual(state.travel.route,outcome);
+    assert.equal(state.flags.roomBrief,true);
+    assert.deepEqual(state.delivered,shopLoad);
+  }
+});
 test('corrupt route outcomes, duplicate delivery and impossible area/flag combinations are retained as errors',()=>{
   const state=resolveAction(ready(),'route.loadingZoneGamble').state;
   const invalid=[{...state,areaId:'centerCityConferenceRoom'},
