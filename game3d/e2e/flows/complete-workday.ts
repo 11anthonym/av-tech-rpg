@@ -1,6 +1,6 @@
 import {expect} from '@playwright/test';
 import type {Page,TestInfo} from '@playwright/test';
-import {go,interact,snapshot} from './shop-prep.ts';
+import {go,interact,snapshot,approach} from './shop-prep.ts';
 import {restored} from './site-arrival.ts';
 import {SAVE_KEY} from '../../src/persistence/save.ts';
 async function stage(page:Page){await go(page,'s',2,-1.4,false);await go(page,'a',0,-4.7,false);}
@@ -30,13 +30,15 @@ export async function completeWorkday(page:Page,info:TestInfo,finish:'tidy'|'rus
     expect(state.installation?.carts[cart-1]?.frame).toBe(true);
     if(index%2===1)expect(state.installation?.carts[cart-1]?.display).toBe(true);
     if(index===1)expect(state.supervisor?.visible).toBe(false);
+    await expect(page.locator('#interact-button')).toBeDisabled();
     const energy=state.session.energy;await page.keyboard.press('e');expect((await snapshot(page)).session.energy).toBe(energy);
     if(index===1){await page.reload();await restored(page);expect((await snapshot(page)).supervisor?.visible).toBe(false);}
     await page.screenshot({path:info.outputPath(`installed-${index+1}.png`)});
   }
   await order(page);await choose(page,'conference.verify');await close(page);
   await page.reload();await restored(page);expect((await snapshot(page)).session.workday.verified).toBe(true);
-  await interact(page,'conference.review-assignment');await page.screenshot({path:info.outputPath('closeout-decision.png')});
+  await interact(page,'conference.review-assignment');await expect(page.locator('button[data-action="finish.tidy"]')).toBeVisible();
+  await page.screenshot({path:info.outputPath('closeout-decision.png')});
   await choose(page,`finish.${finish}`);await close(page);
   const paid=(await snapshot(page)).session;expect(paid.career.cash).toBe(finish==='tidy'?152:141);expect(paid.career.xp).toBe(40);
   await page.reload();await restored(page);expect((await snapshot(page)).session.career).toEqual(paid.career);
@@ -53,7 +55,8 @@ export async function completeWorkday(page:Page,info:TestInfo,finish:'tidy'|'rus
   expect(morning.career.callbacks).toBe(finish==='rush'?1:0);expect(morning.career.risks.length).toBe(finish==='rush'?1:0);
   const saved=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)!),SAVE_KEY);expect(saved.version).toBe(4);
   // Approach the counter inside its prompt radius with room for key-up delay.
-  await go(page,'s',2,-3.5,false);await go(page,'a',0,-5.5,false);await interact(page,'shop.brief-supervisor');
+  await go(page,'s',2,-3.5,false);await go(page,'a',0,-5.5,false);
+  await approach(page,'w','shop.brief-supervisor');await interact(page,'shop.brief-supervisor');
   await expect(page.locator('#result-copy')).toContainText(finish==='rush'?'rushed through closeout':'clean first-day handoff');
   await choose(page,'morning.accept');await page.screenshot({path:info.outputPath('later-shift-consequence.png')});await close(page);
   await page.reload();await restored(page);

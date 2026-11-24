@@ -15,6 +15,13 @@ export async function interact(page: Page, actionId: string) {
   await expect.poll(async()=>(await snapshot(page)).actionId).toBe(actionId);
   await page.keyboard.press("e");
 }
+export async function approach(page:Page,key:string,actionId:string){
+  // Follow the contextual prompt using ordinary held-key input. Approaching
+  // the counter head-on lets collision stop late key releases safely.
+  await page.keyboard.down(key);
+  try{await page.waitForFunction(id=>window.__AV3D__!.snapshot().actionId===id,actionId,{timeout:15000});}
+  finally{await page.keyboard.up(key);}
+}
 export async function prepareVan(page:Page,info:Pick<TestInfo,"outputPath"|"attach">,options:{wideApproach?:boolean}={}) {
   const errors:string[]=[]; page.on("pageerror",e=>errors.push(e.message));
   page.on("console",m=>{if(m.type()==="error") errors.push(m.text());});
