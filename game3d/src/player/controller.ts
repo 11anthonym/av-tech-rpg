@@ -21,6 +21,7 @@ export class CharacterController {
   }
   get position() { return this.body.position; }
   get character() { return this.visual.snapshot(); }
+  relocate(position:Vec3) { this.body.position.set(...position);this.body.position.y=.92;this.body.computeWorldMatrix(true);this.syncVisual(0,0); }
   updateCamera(distance: number) { this.visual.setCameraDistance(distance); }
   step(input: MoveInput, yaw: number, delta: number, carrying = false) {
     this.visual.setCarrying(carrying);

@@ -1,8 +1,11 @@
 import type { GraphicsQuality, Settings } from "../persistence/settings.ts";
 import type { Session } from "../domain/session.ts";
+import type { ActionId,AreaId } from '../content/ids.ts';
+import { workdayClock } from '../content/travel.ts';
 
 interface HudCallbacks {
   interact(): void;
+  choose(actionId:ActionId):void;
   pause(paused: boolean): void;
   sensitivity(value: number): void;
   quality(value: GraphicsQuality): void;
@@ -21,8 +24,8 @@ export class GameHud {
     this.root = root;
     root.innerHTML = `
       <canvas id="game-view" tabindex="0" aria-label="3D shop. Use WASD or arrow keys to walk, drag to orbit, wheel to zoom, and E to interact."></canvas>
-      <header class="topbar"><div><span class="eyebrow">AV TECH RPG · FIRST SHIFT</span><h1>Radnor Rack &amp; Wire</h1>
-        <p class="stage-note">Service bench · systems test · Van 3 loading bay</p></div>
+      <header class="topbar"><div><span class="eyebrow">AV TECH RPG · FIRST SHIFT</span><h1 id="area-title">Radnor Rack &amp; Wire</h1>
+        <p id="area-note" class="stage-note">Service bench · systems test · Van 3 loading bay</p></div>
         <nav><a id="legacy-link">Original 2D career</a><button id="pause-button">Pause / settings</button></nav></header>
       <div id="notice" role="status" class="notice">Loading shop…</div>
       <footer><div class="controls"><span><kbd>WASD</kbd> / arrows · Walk</span><span>Drag · Orbit</span><span>Wheel · Zoom</span></div>
@@ -37,7 +40,7 @@ export class GameHud {
         <label>Camera sensitivity <input id="sensitivity" type="range" min="0.4" max="2" step="0.1" value="${settings.sensitivity}"></label>
         <label class="checkbox"><input id="show-debug" type="checkbox"> Show diagnostics</label>
         <button id="resume-button">Resume</button></dialog>
-      <dialog id="result-dialog"><h2 id="result-title">Workbench</h2><p id="result-copy"></p><button id="close-result">Back to shop</button></dialog>
+      <dialog id="result-dialog"><h2 id="result-title">Workbench</h2><p id="result-copy"></p><div id="decision-options"></div><button id="close-result">Back to shop</button></dialog>
       <section id="error-panel" hidden role="alert"><h2>The 3D scene could not continue</h2><p id="error-copy"></p>
         <p>Your original 2D career has not been changed.</p><button id="reload-button">Reload 3D scene</button></section>`;
     const get = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
@@ -63,6 +66,10 @@ export class GameHud {
     // event too, so an immediate next key is not lost against the old button.
     get("#resume-button").addEventListener("click", () => close(this.pauseDialog), { signal });
     get("#close-result").addEventListener("click", () => close(this.resultDialog), { signal });
+    get('#decision-options').addEventListener('click',event=>{
+      const button=(event.target as HTMLElement).closest<HTMLButtonElement>('button[data-action]');
+      if(button)callbacks.choose(button.dataset.action as ActionId);
+    },{signal});
     for (const dialog of [this.pauseDialog, this.resultDialog]) {
       dialog.addEventListener("close", resumeIfClosed, { signal });
       dialog.addEventListener('cancel',event=>{event.preventDefault();close(dialog);},{signal});
@@ -89,12 +96,22 @@ export class GameHud {
     if (node.textContent !== objective) node.textContent = objective;
   }
   loadout(state: Session) {
-    this.root.querySelector("#loadout")!.textContent = `Hands ${state.carry.length}/1: ${state.carry[0] ?? "Empty"} · Van ${state.loaded.length}/3 · Energy ${state.energy}/100 · Kit: screwdriver`;
+    this.root.querySelector("#loadout")!.textContent = `Hands ${state.carry.length}/1: ${state.carry[0] ?? "Empty"} · Van ${state.loaded.length}/3${state.areaId==='shop'?'':` · Delivered ${state.delivered.length}/3`} · Energy ${state.energy}/100 · Burnout ${state.burnout} · Kit: screwdriver · ${workdayClock(state.travel.clockMinutes)}${state.travel.parkingExpense?' · $18 receipt pending':''}`;
   }
-  result(message: string, reviewed: boolean, title?: string) {
+  place(id:AreaId,title:string) {
+    this.root.dataset.area=id;
+    this.root.querySelector('#area-title')!.textContent=id==='shop'?'Radnor Rack & Wire':title;
+    this.root.querySelector('#area-note')!.textContent=id==='shop'?'Service bench · systems test · Van 3 loading bay':'Center City East · Two Quick Carts';
+    this.root.querySelector('#close-result')!.textContent=id==='shop'?'Back to shop':'Back to site';
+  }
+  result(message: string, reviewed: boolean, title?: string,choices:{actionId:ActionId;label:string;detail:string}[]=[]) {
     this.root.querySelector("#result-title")!.textContent = title ?? (reviewed ? "Workbench already checked" : "Workbench checked");
     this.root.querySelector("#result-copy")!.textContent = message;
-    this.resultDialog.showModal();
+    const options=this.root.querySelector('#decision-options')!;options.replaceChildren();
+    for(const choice of choices){const button=document.createElement('button');button.type='button';button.dataset.action=choice.actionId;
+      const label=document.createElement('strong'),detail=document.createElement('span');label.textContent=choice.label;detail.textContent=choice.detail;
+      button.append(label,detail);options.append(button);}
+    if(!this.resultDialog.open)this.resultDialog.showModal();
   }
   diagnostics(snapshot: unknown) { if (!this.debug.hidden) this.debug.textContent = JSON.stringify(snapshot, null, 2); }
   get diagnosticsVisible() { return !this.debug.hidden; }

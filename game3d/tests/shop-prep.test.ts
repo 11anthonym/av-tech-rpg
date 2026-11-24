@@ -4,7 +4,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import { newSession, resolveAction, vanReady } from "../src/domain/session.ts";
 import { shopLoad, shopRules } from "../src/content/ids.ts";
-import { freshSave, parseSave, SaveRepository, SAVE_KEY, PREVIOUS_SAVE_KEY } from "../src/persistence/save.ts";
+import { freshSave, parseSave, SaveRepository, SAVE_KEY, M1_SAVE_KEY } from "../src/persistence/save.ts";
 import { NullEngine } from "@babylonjs/core/Engines/nullEngine.js";
 import { Scene } from "@babylonjs/core/scene.js";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode.js";
@@ -56,14 +56,14 @@ test("brief, carry and load enforce gates and give each group exactly one home",
 test("v1 M1/M2 saves migrate without losing workbench, position or camera", () => {
   const old = {version:1,session:{areaId:"shop",technicianId:"prototype-tech",completedActions:["shop.inspect-workbench"]},position:[0,.92,-4],camera:{yaw:.4,pitch:.35,distance:5.5}};
   const migrated = parseSave(JSON.stringify(old));
-  assert.equal(migrated.version,2); assert.deepEqual(migrated.position,old.position); assert.deepEqual(migrated.camera,old.camera);
+  assert.equal(migrated.version,3); assert.deepEqual(migrated.position,old.position); assert.deepEqual(migrated.camera,old.camera);
   assert.deepEqual(migrated.session.completedActions,old.session.completedActions);
   assert.deepEqual(migrated.session.carry,[]); assert.equal(migrated.session.flags.shopBrief,false);
-  const bytes=JSON.stringify(old), values=new Map([[PREVIOUS_SAVE_KEY,bytes]]);
+  const bytes=JSON.stringify(old), values=new Map([[M1_SAVE_KEY,bytes]]);
   const repository=new SaveRepository({getItem:key=>values.get(key)??null,setItem:(key,value)=>{values.set(key,value);}});
   assert(repository.save(repository.load().data));
-  assert.equal(values.get(PREVIOUS_SAVE_KEY),bytes);
-  assert.equal(JSON.parse(values.get(SAVE_KEY)!).version,2);
+  assert.equal(values.get(M1_SAVE_KEY),bytes);
+  assert.equal(JSON.parse(values.get(SAVE_KEY)!).version,3);
 });
 
 test("a stale tab cannot overwrite newer saved cargo progress", () => {
