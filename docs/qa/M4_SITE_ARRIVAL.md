@@ -73,3 +73,32 @@ All 32 3D unit/domain checks pass locally; original static and unit QA each
 pass 43 checks. Final production builds, browser matrix and portable HTTP
 verification are reported in the PR with their exact run links. Superseded CI
 runs that were cancelled are not counted as passing runs.
+
+Final local gates: strict TypeScript/Pages and portable builds passed; the HTTP
+test verified both games and all 212 shipped files at the repository subpath.
+The existing large-entry-chunk warning remains (797 kB minified, 206 kB gzip).
+
+The actual [public release audit](evidence/live-public/verification.json) ran
+against `0.1.0+0a39aa0`, not this feature build. The normal-input three-trip
+cargo flow, save/reload, three graphics tiers, sensitivity persistence and a
+real Alex 2D career all completed without JavaScript/network errors in 389.5
+seconds; the audit exited successfully. The earlier video-enabled public audit
+completed its assertions but stalled in Firefox recording cleanup and was
+terminated; it is not counted as a successful test run. The standalone audit
+now closes its page directly and the successful rerun used no recording.
+Both observations are functional evidence on a QEMU Windows VM using Microsoft
+Basic Render Driver, **not** a physical-GPU benchmark. The public build has not
+been updated by these PRs.
+
+A cancelled M4 CI candidate also exposed the final shop camera check waiting
+for full opacity while standing against the back wall after a delayed key
+release. Inventory was correctly 3/3 and the camera correctly retracted.
+The shared replay now walks into the open aisle before orbiting; it retains
+the opacity assertions and 240-second limit. This test correction is also
+backported to parent PR #9. Actual final CI results belong in the PR; this
+document does not count cancelled runs or incomplete tests as passing.
+
+Review/merge PR #9 first. Retarget PR #10 to `main` after that merge, rerun its
+checks and review it before merging. The unchanged main-only Pages workflow
+then publishes the approved combined site. For rollback, revert the approved
+main merge through a reviewed PR and let Pages redeploy; preserve all save keys.

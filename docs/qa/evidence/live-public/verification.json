@@ -1,0 +1,319 @@
+{
+  "url": "https://11anthonym.github.io/av-tech-rpg/3d/",
+  "elapsedSeconds": 389.512,
+  "browser": "Firefox 159.0",
+  "host": {
+    "platform": "win32",
+    "release": "10.0.26100",
+    "cpu": "QEMU Virtual CPU version 2.5+"
+  },
+  "note": "Actual hosted normal-input functional audit, not the timed CI replay or a physical-GPU benchmark.",
+  "build": "0.1.0+0a39aa0",
+  "prepared": {
+    "build": "0.1.0+0a39aa0",
+    "areaId": "shop",
+    "position": [
+      5.836250000000228,
+      0.92,
+      7.783333333333417
+    ],
+    "camera": {
+      "yaw": 0,
+      "pitch": 0.35,
+      "distance": 5.5
+    },
+    "cameraPosition": [
+      5.836250000000228,
+      1.5523929992968657,
+      6.598787454256948
+    ],
+    "actualCameraDistance": 1.2609966873382277,
+    "actionId": "shop.load-van",
+    "completedActions": [
+      "shop.brief-supervisor"
+    ],
+    "paused": false,
+    "session": {
+      "areaId": "shop",
+      "technicianId": "prototype-tech",
+      "completedActions": [
+        "shop.brief-supervisor"
+      ],
+      "flags": {
+        "shopBrief": true
+      },
+      "carry": [],
+      "loaded": [
+        "Cart frame boxes",
+        "Display boxes",
+        "Accessory tote"
+      ],
+      "tools": [
+        "screwdriver"
+      ],
+      "energy": 94
+    },
+    "supervisor": {
+      "meshes": 5,
+      "joints": 80,
+      "position": [
+        -5,
+        0,
+        -1
+      ]
+    },
+    "cargo": [
+      {
+        "id": "Cart frame boxes",
+        "place": "loaded"
+      },
+      {
+        "id": "Display boxes",
+        "place": "loaded"
+      },
+      {
+        "id": "Accessory tote",
+        "place": "loaded"
+      }
+    ],
+    "character": {
+      "model": "Rocketbox Andre / tee",
+      "joints": 80,
+      "height": 1.78,
+      "opacity": 1,
+      "carryPoseError": null,
+      "speed": 0,
+      "walkWeight": 0,
+      "idleFrame": 30.036744158392295,
+      "walkFrame": 0,
+      "pose": [
+        0.9874616265296936,
+        -0.15785838663578033,
+        2.0003709266802616e-7,
+        0,
+        0.15785837173461914,
+        0.9874615669250488,
+        6.180901124253069e-8,
+        0,
+        -2.0728607807996013e-7,
+        -2.945650301455771e-8,
+        1,
+        0
+      ]
+    },
+    "performance": {
+      "readyMs": 16268,
+      "sampledFrames": 2,
+      "frameMs": {
+        "p50": 695,
+        "p95": 695,
+        "p99": 695,
+        "max": 695
+      },
+      "drawCalls": 62,
+      "vertices": 24738,
+      "graphics": {
+        "vendor": "Google Inc. (Microsoft)",
+        "renderer": "ANGLE (Microsoft, Microsoft Basic Render Driver (0x0000008C) Direct3D11 vs_5_0 ps_5_0), or similar",
+        "version": "WebGL 2.0"
+      },
+      "quality": "low",
+      "resolution": 0.65,
+      "renderWidth": 832,
+      "renderHeight": 468,
+      "shadowSize": 512
+    },
+    "frames": 6,
+    "activeMeshes": 17,
+    "webgl": 2,
+    "errors": []
+  },
+  "restored": {
+    "build": "0.1.0+0a39aa0",
+    "areaId": "shop",
+    "position": [
+      5.836250000000228,
+      0.92,
+      7.783333333333417
+    ],
+    "camera": {
+      "yaw": 1.8000000000000005,
+      "pitch": 0.35,
+      "distance": 5.5
+    },
+    "cameraPosition": [
+      8.67670388218164,
+      2.1846907918366147,
+      8.44602126463614
+    ],
+    "actualCameraDistance": 3.1049798764751135,
+    "actionId": null,
+    "completedActions": [
+      "shop.brief-supervisor"
+    ],
+    "paused": false,
+    "session": {
+      "areaId": "shop",
+      "technicianId": "prototype-tech",
+      "completedActions": [
+        "shop.brief-supervisor"
+      ],
+      "flags": {
+        "shopBrief": true
+      },
+      "carry": [],
+      "loaded": [
+        "Cart frame boxes",
+        "Display boxes",
+        "Accessory tote"
+      ],
+      "tools": [
+        "screwdriver"
+      ],
+      "energy": 94
+    },
+    "supervisor": {
+      "meshes": 5,
+      "joints": 80,
+      "position": [
+        -5,
+        0,
+        -1
+      ]
+    },
+    "cargo": [
+      {
+        "id": "Cart frame boxes",
+        "place": "loaded"
+      },
+      {
+        "id": "Display boxes",
+        "place": "loaded"
+      },
+      {
+        "id": "Accessory tote",
+        "place": "loaded"
+      }
+    ],
+    "character": {
+      "model": "Rocketbox Andre / tee",
+      "joints": 80,
+      "height": 1.78,
+      "opacity": 1,
+      "carryPoseError": null,
+      "speed": 0,
+      "walkWeight": 0,
+      "idleFrame": 53.82078452899601,
+      "walkFrame": 0,
+      "pose": [
+        0.9848071336746216,
+        -0.17365102469921112,
+        2.552541786826623e-7,
+        0,
+        0.17365102469921112,
+        0.9848070740699768,
+        1.250446590717047e-8,
+        0,
+        -2.5354762556162314e-7,
+        3.2010689210437704e-8,
+        1,
+        0
+      ]
+    },
+    "performance": {
+      "readyMs": 17860,
+      "sampledFrames": 9,
+      "frameMs": {
+        "p50": 256,
+        "p95": 701,
+        "p99": 701,
+        "max": 701
+      },
+      "drawCalls": 94,
+      "vertices": 24738,
+      "graphics": {
+        "vendor": "Google Inc. (Microsoft)",
+        "renderer": "ANGLE (Microsoft, Microsoft Basic Render Driver (0x0000008C) Direct3D11 vs_5_0 ps_5_0), or similar",
+        "version": "WebGL 2.0"
+      },
+      "quality": "low",
+      "resolution": 0.65,
+      "renderWidth": 832,
+      "renderHeight": 468,
+      "shadowSize": 512
+    },
+    "frames": 13,
+    "activeMeshes": 52,
+    "webgl": 2,
+    "errors": []
+  },
+  "quality": [
+    {
+      "readyMs": 16268,
+      "sampledFrames": 0,
+      "frameMs": {
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "drawCalls": 94,
+      "vertices": 24738,
+      "graphics": {
+        "vendor": "Google Inc. (Microsoft)",
+        "renderer": "ANGLE (Microsoft, Microsoft Basic Render Driver (0x0000008C) Direct3D11 vs_5_0 ps_5_0), or similar",
+        "version": "WebGL 2.0"
+      },
+      "quality": "balanced",
+      "resolution": 0.85,
+      "renderWidth": 1088,
+      "renderHeight": 612,
+      "shadowSize": 1024
+    },
+    {
+      "readyMs": 16268,
+      "sampledFrames": 1,
+      "frameMs": {
+        "p50": 389,
+        "p95": 389,
+        "p99": 389,
+        "max": 389
+      },
+      "drawCalls": 94,
+      "vertices": 24738,
+      "graphics": {
+        "vendor": "Google Inc. (Microsoft)",
+        "renderer": "ANGLE (Microsoft, Microsoft Basic Render Driver (0x0000008C) Direct3D11 vs_5_0 ps_5_0), or similar",
+        "version": "WebGL 2.0"
+      },
+      "quality": "high",
+      "resolution": 1,
+      "renderWidth": 1280,
+      "renderHeight": 720,
+      "shadowSize": 2048
+    },
+    {
+      "readyMs": 16268,
+      "sampledFrames": 0,
+      "frameMs": {
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "drawCalls": 94,
+      "vertices": 24738,
+      "graphics": {
+        "vendor": "Google Inc. (Microsoft)",
+        "renderer": "ANGLE (Microsoft, Microsoft Basic Render Driver (0x0000008C) Direct3D11 vs_5_0 ps_5_0), or similar",
+        "version": "WebGL 2.0"
+      },
+      "quality": "low",
+      "resolution": 0.65,
+      "renderWidth": 832,
+      "renderHeight": 468,
+      "shadowSize": 512
+    }
+  ],
+  "errors": []
+}
