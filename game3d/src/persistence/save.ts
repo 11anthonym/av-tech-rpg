@@ -6,7 +6,7 @@ import { isSafePosition, shop } from "../world/shop.ts";
 import type { Vec3 } from "../world/shop.ts";
 import { getArea } from '../world/areas.ts';
 import { validTravelProgress } from '../domain/travel.ts';
-import {validWorkday} from '../domain/workday.ts';
+import {validWorkday,supervisorPresent} from '../domain/workday.ts';
 
 export const SAVE_KEY = "av-tech-rpg-3d-dev-v4";
 export const M4A_SAVE_KEY = "av-tech-rpg-3d-dev-v3";
@@ -57,9 +57,11 @@ export function parseSave(raw: string): SaveData {
     if(!validTravelProgress(session)||!validWorkday(session))throw new Error('Invalid workday progress');
     session=structuredClone(session);
   }
+  const area=getArea(session.areaId);
+  const collisionArea=supervisorPresent(session)?area:{...area,props:area.props.filter(prop=>prop.id!=='supervisor')};
   return { version: 4,
     session,
-    position: isSafePosition(data.position,getArea(session.areaId)) ? data.position : getArea(session.areaId).spawn,
+    position: isSafePosition(data.position,collisionArea) ? data.position : area.spawn,
     camera: { yaw: data.camera.yaw % (Math.PI * 2), pitch: Math.max(0.15, Math.min(1.05, data.camera.pitch)),
       distance: Math.max(2.2, Math.min(8.5, data.camera.distance)) } };
 }

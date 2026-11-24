@@ -122,6 +122,15 @@ test('overnight recovery, stayed-late fatigue and skipped-day costs match the le
   }
 });
 
+test('reload preserves the walkable space left by the departing supervisor',()=>{
+  let s=arrival();const area=getArea(s.areaId),npc=area.props.find(prop=>prop.id==='supervisor')!;
+  const position:[number,number,number]=[npc.position[0],.92,npc.position[2]];
+  const saved=()=>parseSave(JSON.stringify({...freshSave(),session:s,position}));
+  assert.deepEqual(saved().position,area.spawn,'a present NPC remains a solid obstacle');
+  for(let i=0;i<2;i++)s=act(act(s,'conference.pickup-part'),'install.cart1');
+  assert.equal(s.flags.supervisorLeft,true);assert.deepEqual(saved().position,position,'the departed NPC must not teleport a saved player');
+});
+
 test('shift previews show exhaustion costs without changing the saved career',()=>{
   const s=close(assemble(arrival(),'careful'),'tidy'),before=structuredClone(s),menu=resolveAction(s,'shop.inspect-workbench');
   assert.equal(menu.state,s);assert.deepEqual(s,before);
