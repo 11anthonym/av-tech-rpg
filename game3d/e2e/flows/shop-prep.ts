@@ -13,7 +13,11 @@ export async function go(page: Page, key: string, axis: number, target: number, 
   await expect(async()=>{
     const value=(await snapshot(page)).position[axis]!;
     if(greater ? value>target : value<target)return;
-    await page.keyboard.press(key,{delay:200});
+    // Traverse open space efficiently, then use short holds for the final metre.
+    // Every hold ends before another browser round trip, including under load.
+    const distance=Math.abs(target-value);
+    const delay=distance>1.5?Math.min(1500,(distance-1)/1.4*1000):200;
+    await page.keyboard.press(key,{delay});
     const position=(await snapshot(page)).position[axis]!;
     expect(greater ? position>target : position<target).toBe(true);
   }).toPass({timeout:30000,intervals:[0]});
