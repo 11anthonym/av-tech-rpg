@@ -43,7 +43,9 @@ export async function arriveAtClient(page:Page,info:TestInfo){
     await go(page,'d',0,4,true);await interact(page,'garageToLobby');
     await expect.poll(async()=>(await snapshot(page)).session.delivered.length).toBe(i+1);
     expect((await snapshot(page)).session.carry).toEqual([]);
-    if(i<2)await go(page,'a',0,-2,false);
+    // Approach from the van's right half. A delayed key release at its centre
+    // could cross the midpoint to the supervisor and correctly select him.
+    if(i<2)await go(page,'a',0,-1.3,false);
   }
   const beforeLobby={human:humanLoads,lighting:lightingLoads,npc:npcLoads};
   expect(beforeLobby.human).toBe(bootAssets.human+1); // The explicit reload, never a portal.
