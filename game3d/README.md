@@ -29,10 +29,18 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open `http://127.0.0.1:5173/av-tech-rpg/3d/`. Use WASD/arrows to walk, drag on
+Open `http://127.0.0.1:5173/av-tech-rpg/3d/`. Use WASD/arrows to walk, hold either
+Shift key to move faster (also while carrying), drag on
 the scene to orbit, wheel to zoom, and E or the prompt button to inspect/review
 the workbench. Pause/settings suspends movement and camera controls. Diagnostics
 are off by default; enable them in settings or append `?debug=1`.
+
+After a clean first-day closeout, accept the next-morning Conshohocken briefing.
+Prepare at the workbench, approach Van #3's driver door, and inspect Conference
+Room 2B. Client context, display, coupler and replacement-kit findings persist
+through reloads and trips back to the shop. This M5-A slice ends at diagnosis;
+replacement installation, service verification and paid closeout follow next.
+An unresolved first-day callback still takes priority over new service work.
 
 | Command | Purpose |
 | --- | --- |

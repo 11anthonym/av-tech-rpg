@@ -57,7 +57,7 @@ export function createShopProgress(scene: Scene, character: TransformNode) {
         else if(state.delivered.includes(id)) { places[i]='delivered';box.parent=root;box.scaling.setAll(1);box.rotation.y=0;
           const assembled=state.workday.assembled;
           const unpacked=i===0?assembled.includes('cart-1-frame')&&assembled.includes('cart-2-frame'):i===1?assembled.includes('cart-1-display')&&assembled.includes('cart-2-display'):state.workday.verified;
-          box.setEnabled(state.areaId!=='shop'&&!(state.areaId==='centerCityConferenceRoom'&&unpacked));
+          box.setEnabled(state.areaId!=='shop'&&state.areaId!=='serviceOffice'&&!(state.areaId==='centerCityConferenceRoom'&&unpacked));
           const p=state.areaId==='centerCityGarage'?[1+i*.65,.3,.1]:state.areaId==='centerCityLobby'?[-4.7+i*.65,.3,2.3]:[-4.7,.3,-1+i*.8];
           box.position.set(p[0]!,p[1]!,p[2]!);
         } else { places[i]='staged';box.parent = root; box.position.set(-6.4 + i * .9, [.34,.39,.29][i]!, 4.9); box.rotation.y = 0; box.scaling.setAll(1); box.setEnabled(state.areaId==='shop'); }

@@ -2,7 +2,7 @@ import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder.js";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector.js";
 import type { Scene } from "@babylonjs/core/scene";
 import type { TechnicianVisual } from "./visual.ts";
-import { movementVector } from "./movement.ts";
+import { movementVector, movementSpeed } from "./movement.ts";
 import type { MoveInput } from "./movement.ts";
 import type { Vec3 } from "../world/shop.ts";
 
@@ -29,8 +29,7 @@ export class CharacterController {
     // This shop is flat. Slopes/stairs need a separately qualified movement
     // adapter; importing a human rig does not change collision or save rules.
     const before = this.body.position.clone();
-    // Prototype PLAYER_SPEED=8, one carried group contributes speedDelta=-1.
-    const pace = carrying ? 1.4 * (7 / 8) : 1.4;
+    const pace = movementSpeed(Boolean(input.sprint), carrying);
     // Babylon caches the absolute position between renders. Multiple fixed
     // collision steps must each start from the preceding step's transform.
     this.body.computeWorldMatrix(true);

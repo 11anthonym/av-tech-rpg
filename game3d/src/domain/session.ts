@@ -1,13 +1,15 @@
 import { actions, contentIds, shopLoad, shopRules } from "../content/ids.ts";
 import type { CargoId } from "../content/ids.ts";
 import type { ActionId, AreaId, TechnicianId } from "../content/ids.ts";
-import { isTravelAction,isWorkdayAction } from '../content/ids.ts';
+import { isTravelAction,isWorkdayAction,isServiceAction } from '../content/ids.ts';
 import type {ToolId} from '../content/ids.ts';
 import {newWorkday,newCareer,describeWorkday,resolveWorkday,workdayObjective} from './workday.ts';
 import type {Workday,Career} from './workday.ts';
 import { newTravel } from '../content/travel.ts';
 import type { TravelProgress } from '../content/travel.ts';
 import { describeTravel, resolveTravel, travelObjective } from './travel.ts';
+import {describeService,resolveService,serviceObjective} from './service.ts';
+import type {ServiceProgress} from './service.ts';
 
 export interface Session {
   areaId: AreaId;
@@ -24,12 +26,13 @@ export interface Session {
   burnout: number;
   delivered: CargoId[];
   travel: TravelProgress;
+  service:ServiceProgress|null;
 }
 
 export function newSession(): Session {
   return { areaId: contentIds.area, technicianId: contentIds.technician, completedActions: [],
     flags: { shopBrief: false,garageBrief:false,centerCityEquipmentDelivered:false,securityChecked:false,roomBrief:false },
-    carry: [], loaded: [], delivered:[], tools: [contentIds.tool], energy: 100,burnout:0,travel:newTravel(),workday:newWorkday(),career:newCareer() };
+    carry: [], loaded: [], delivered:[], tools: [contentIds.tool], energy: 100,burnout:0,travel:newTravel(),workday:newWorkday(),career:newCareer(),service:null };
 }
 
 export interface ActionResult {
@@ -40,6 +43,7 @@ export interface ActionResult {
 
 export const vanReady = (state: Session) => state.flags.shopBrief && shopLoad.every(id => state.loaded.includes(id)) && !state.carry.length;
 export function objective(state: Session) {
+  const service=serviceObjective(state);if(service)return service;
   const work=workdayObjective(state);if(work)return work;
   if(state.areaId!=='shop')return travelObjective(state);
   if (!state.flags.shopBrief) return "Talk to the supervisor at the dispatch counter.";
@@ -48,6 +52,8 @@ export function objective(state: Session) {
   return `Pick up staged equipment, then load Van #3 (${state.loaded.length}/3).`;
 }
 export function describeAction(state: Session, actionId: ActionId) {
+  const service=describeService(state,actionId);if(service)return service;
+  if(isServiceAction(actionId))return {label:'This service task is not ready',available:false};
   const work=describeWorkday(state,actionId);if(work)return work;
   if(isWorkdayAction(actionId))return {label:'This work is not ready',available:false};
   if(isTravelAction(actionId))return describeTravel(state,actionId);
@@ -64,6 +70,8 @@ export function describeAction(state: Session, actionId: ActionId) {
 }
 
 export function resolveAction(state: Session, actionId: ActionId): ActionResult {
+  const service=resolveService(state,actionId);if(service)return service;
+  if(isServiceAction(actionId))return {state,event:{actionId,outcome:'blocked',message:'This service task is not ready.'}};
   const work=resolveWorkday(state,actionId);if(work)return work;
   if(isWorkdayAction(actionId))return {state,event:{actionId,outcome:'blocked',message:'This work is not ready.'}};
   if(isTravelAction(actionId))return resolveTravel(state,actionId);

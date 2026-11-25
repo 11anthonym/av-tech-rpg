@@ -64,7 +64,11 @@ export async function prepareVan(page:Page,info:Pick<TestInfo,"outputPath"|"atta
     // Cross below the rack row. Its collision face begins at z=7.15 after
     // player radius; z=6.1 leaves room for a slow browser's key-up delivery.
     else {await go(page,"d",0,-2.7,true); await go(page,"w",2,6.1,true); await go(page,"d",0,2.5,true);}
-    await go(page,"w",2,7.7,true); await go(page,"d",0,5.8,true);
+    await go(page,"w",2,7.7,true); await go(page,"d",0,5.3,true);
+    // A delayed release can reach the back wall, just outside the diagonal
+    // load radius. Follow the visible prompt toward the rear doors; the van
+    // itself safely stops late releases. Keep the real radius/assertions.
+    if((await snapshot(page)).actionId!=='shop.load-van')await approach(page,'s','shop.load-van');
     await interact(page,"shop.load-van");
     expect((await snapshot(page)).position[1]).toBeCloseTo(.92,5);
     await expect.poll(async()=>(await snapshot(page)).session.loaded.length).toBe(i+1);

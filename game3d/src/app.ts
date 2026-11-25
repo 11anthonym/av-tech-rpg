@@ -89,7 +89,7 @@ export async function startGame(root: HTMLElement) {
     } }, settings);
   function save() {
     if (!controller || !camera) return;
-    const ok = repository.save({ version: 4, session, position: pendingSpawn??controller.position.asArray() as unknown as Vec3,
+    const ok = repository.save({ version: 5, session, position: pendingSpawn??controller.position.asArray() as unknown as Vec3,
       camera: pendingSpawn?{yaw:0,pitch:.35,distance:5.5}:{ ...camera.state } });
     hud.saving(ok ? "3D session saved" : repository.problem ?? "Saving unavailable · playing in this tab");
   }

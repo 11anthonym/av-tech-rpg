@@ -94,9 +94,9 @@ test('v2 shop progress migrates into a separate key, retaining the old 3D and 2D
   const bytes=JSON.stringify(old),career='{"version":30,"cash":125}';
   const values=new Map([[PREVIOUS_SAVE_KEY,bytes],['av-tech-rpg-save-v1',career]]);
   const repository=new SaveRepository({getItem:key=>values.get(key)??null,setItem:(key,value)=>{values.set(key,value);}});
-  const loaded=repository.load().data;assert.equal(loaded.version,4);assert.deepEqual(loaded.session.loaded,shopLoad);
+  const loaded=repository.load().data;assert.equal(loaded.version,5);assert.deepEqual(loaded.session.loaded,shopLoad);
   assert(repository.save(loaded));assert.equal(values.get(PREVIOUS_SAVE_KEY),bytes);assert.equal(values.get('av-tech-rpg-save-v1'),career);
-  assert.equal(JSON.parse(values.get(SAVE_KEY)!).version,4);
+  assert.equal(JSON.parse(values.get(SAVE_KEY)!).version,5);
 });
 
 test('alternative route costs and arrival differences remain observable after access and reload',()=>{

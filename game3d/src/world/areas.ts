@@ -38,6 +38,20 @@ export const conference:AreaDefinition={id:'centerCityConferenceRoom',label:'Cli
     {id:'client.return',actionId:'centerCityConferenceRoomToShop',anchor:[0,1,-4.7],meshId:'exit',radius:1.4,priority:2}],};
 conference.props.push({id:'parts',position:[-4.7,.3,-1.3],size:[.1,.1,.1],material:'carton',solid:false},
   {id:'exit',position:[0,1.3,-5.85],size:[2.4,2.6,.1],material:'steel',solid:true});
-export const areas:Record<AreaId,AreaDefinition>={shop,centerCityGarage:garage,centerCityLobby:lobby,centerCityConferenceRoom:conference};
+export const serviceOffice:AreaDefinition={id:'serviceOffice',label:'Conference Room 2B · Conshohocken',spawn:[0,.92,-4],
+  props:[...shell(),
+    {id:'service-client',position:[-3,.7,-2],size:[1.5,1.4,.7],material:'wood',solid:true},
+    {id:'service-display',position:[2,1.5,4],size:[2.2,1.4,.25],material:'steel',solid:true},
+    {id:'service-room-pressure',position:[-3,.5,3],size:[2,1,.8],material:'wood',solid:true},
+    {id:'service-pickup',position:[3,.35,-1],size:[1.5,.7,.6],material:'carton',solid:true},
+    {id:'meeting-table',position:[0,.7,1],size:[1.4,1.4,3],material:'wood',solid:true},
+    {id:'service-exit',position:[0,1.3,-5.85],size:[2.4,2.6,.1],material:'steel',solid:true}],
+  interactions:[
+    {id:'service-client',actionId:'service-client',anchor:[-3,1,-2.6],meshId:'service-client',radius:1.6,priority:2},
+    {id:'service-display',actionId:'service-display',anchor:[2,1,3.3],meshId:'service-display',radius:1.6,priority:2},
+    {id:'service-room-pressure',actionId:'service-room-pressure',anchor:[-3,1,2.35],meshId:'service-room-pressure',radius:1.6,priority:2},
+    {id:'service-pickup',actionId:'service-pickup',anchor:[3,1,-1.7],meshId:'service-pickup',radius:1.6,priority:2},
+    {id:'service-exit',actionId:'serviceOfficeToShop',anchor:[0,1,-4.7],meshId:'service-exit',radius:1.4,priority:2}],};
+export const areas:Record<AreaId,AreaDefinition>={shop,centerCityGarage:garage,centerCityLobby:lobby,centerCityConferenceRoom:conference,serviceOffice};
 export const getArea=(id:AreaId)=>areas[id];
-export const npcPlacement:Record<AreaId,readonly[number,number,number]>={shop:[-5,0,-1],centerCityGarage:[-3.8,0,-1],centerCityLobby:[-3,0,1],centerCityConferenceRoom:[-3,0,2]};
+export const npcPlacement:Record<AreaId,readonly[number,number,number]>={shop:[-5,0,-1],centerCityGarage:[-3.8,0,-1],centerCityLobby:[-3,0,1],centerCityConferenceRoom:[-3,0,2],serviceOffice:[-3,0,1]};

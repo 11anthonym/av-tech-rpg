@@ -12,7 +12,7 @@ import type { TechnicianVisual } from '../src/player/visual.ts';
 import { shop } from '../src/world/shop.ts';
 
 test('repeated collision substeps settle at the same bench with an idle gait', () => {
-  for(const stepsPerRender of [1,6,15]) {
+  for(const sprint of [false,true]) for(const stepsPerRender of [1,6,15]) {
     const engine=new NullEngine(), scene=new Scene(engine); scene.collisionsEnabled=true;
     new FreeCamera('test-camera',new Vector3(0,2,-6),scene);
     const bench=MeshBuilder.CreateBox('bench',{width:3,height:1,depth:1},scene);
@@ -22,12 +22,27 @@ test('repeated collision substeps settle at the same bench with an idle gait', (
     const player=new CharacterController(scene,[0,.92,-4],visual);
     try {
       for(let frame=0;frame<Math.ceil(360/stepsPerRender);frame++) {
-        for(let step=0;step<stepsPerRender;step++) player.step({x:0,z:1},0,1/60);
+        for(let step=0;step<stepsPerRender;step++) player.step({x:0,z:1,sprint},0,1/60);
         scene.render();
       }
       assert(player.position.z<-.7 && player.position.z>-.85,`${stepsPerRender} steps: ${player.position.asArray()}`);
       assert(speed<.08,`${stepsPerRender} steps: collision speed ${speed}`);
     } finally { scene.dispose();engine.dispose(); }
+  }
+});
+
+test('Shift covers more ground with normalized diagonals and a slower carrying pace',()=>{
+  for(const carrying of [false,true])for(const sprint of [false,true]) {
+    const engine=new NullEngine(),scene=new Scene(engine);scene.collisionsEnabled=true;
+    const root=new TransformNode('visual',scene);
+    const visual={root,setMotion:()=>{},setCarrying:()=>{},snapshot:()=>({})} as unknown as TechnicianVisual;
+    const player=new CharacterController(scene,[0,.92,0],visual);
+    try {
+      for(let step=0;step<60;step++)player.step({x:1,z:1,sprint},Math.PI/3,1/60,carrying);
+      const distance=Math.hypot(player.position.x,player.position.z);
+      const expected=sprint?(carrying?2:2.6):(carrying?1.225:1.4);
+      assert(Math.abs(distance-expected)<.001,`${carrying}/${sprint}: ${distance}`);
+    }finally{scene.dispose();engine.dispose();}
   }
 });
 
