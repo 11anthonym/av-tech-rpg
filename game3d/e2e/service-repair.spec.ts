@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 import path from 'node:path';
-import {go,interact,snapshot} from './flows/shop-prep.ts';
+import {go as walk,interact,snapshot} from './flows/shop-prep.ts';
 import {restored} from './flows/site-arrival.ts';
 
 // The dependency earns this through the full first shift and diagnosis with real input.
@@ -8,6 +8,11 @@ import {restored} from './flows/site-arrival.ts';
 test.use({storageState:process.env.SERVICE_REPLAY_SOURCE??path.resolve('test-results/service-ready.json'),
   video:process.platform==='linux'||process.env.RECORD_VIDEO==='1'?{mode:'on',size:{width:960,height:540}}:'off'});
 const close=(page:import('@playwright/test').Page)=>page.locator('#close-result').click();
+async function go(page:import('@playwright/test').Page,key:string,axis:number,target:number,greater:boolean){
+  // Exercise the shipped faster-travel control, including both carried components.
+  // Keep the original waypoint deadlines and all gameplay/collision assertions.
+  await page.keyboard.down('Shift');try{await walk(page,key,axis,target,greater);}finally{await page.keyboard.up('Shift');}
+}
 test.afterEach(async({page},info)=>{
   if(info.status!==info.expectedStatus&&!page.isClosed()){
     await page.context().storageState({path:info.outputPath('failure-browser-state.json')});
