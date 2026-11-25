@@ -19,14 +19,14 @@ export async function diagnoseService(page:Page,info:Pick<TestInfo,'outputPath'|
   await van();expect((await snapshot(page)).supervisor?.visible).toBe(false);
   await go(page,'a',0,-3,false);await approach(page,'w','service-client');await interact(page,'service-client');await close(page);
   await interact(page,'service-client');await page.locator('button[data-action="client-symptom-timeline"]').click();await close(page);
-  await go(page,'s',2,-3.8,false);await go(page,'d',0,3.8,true);await go(page,'w',2,2.8,true);await go(page,'a',0,2.3,false);
+  await go(page,'s',2,-3.8,false);await go(page,'d',0,4.7,true);await go(page,'w',2,2.8,true);await go(page,'a',0,2.3,false);
   await interact(page,'service-display');await page.screenshot({path:info.outputPath('service-display-finding.png')});await close(page);
-  await go(page,'s',2,-3.8,false);await go(page,'a',0,-3,false);await approach(page,'w','service-room-pressure');
+  await go(page,'d',0,4.7,true);await go(page,'s',2,-3.8,false);await go(page,'a',0,-3,false);await approach(page,'w','service-room-pressure');
   await interact(page,'service-room-pressure');await page.screenshot({path:info.outputPath('service-coupler-finding.png')});await close(page);
   await page.reload();await restored(page);const traced=(await snapshot(page)).session;
   expect(traced.service?.evidence.map(e=>e.id)).toContain('inline-coupler-path');
   await interact(page,'service-room-pressure');await close(page);expect((await snapshot(page)).session.energy).toBe(traced.energy);
-  await go(page,'s',2,-3.8,false);await go(page,'d',0,3.2,true);await approach(page,'w','service-pickup');
+  await go(page,'a',0,-4.8,false);await go(page,'s',2,-3.8,false);await go(page,'d',0,3.2,true);await approach(page,'w','service-pickup');
   await interact(page,'service-pickup');await page.screenshot({path:info.outputPath('service-kit-finding.png')});await close(page);
   const diagnosed=(await snapshot(page)).session;expect(diagnosed.service?.evidence).toHaveLength(4);
   expect(diagnosed.energy).toBe(start.energy-3);expect(diagnosed.career).toEqual(start.career);
