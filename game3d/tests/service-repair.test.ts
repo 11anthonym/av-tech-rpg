@@ -16,7 +16,7 @@ function act(s:Session,id:ActionId){const r=resolveAction(s,id);assert.notEqual(
 function room(seed=173){let s=morning('tidy',seed);for(const id of ['service.prep-review','service.depart','service-client','client-symptom-timeline','service-display','service-room-pressure','service-pickup'] as const)s=act(s,id);return s;}
 function install(s:Session){for(let i=0;i<2;i++){s=act(s,'service.take-item');assert.equal(resolveAction(s,'service.take-item').state,s);assert.equal(resolveAction(s,'serviceOfficeToShop').state,s);s=act(s,'service.install');assert.equal(resolveAction(s,'service.install').state,s);}return s;}
 function handlePressure(s:Session){for(const c of knownServiceConditions(s))if(!controlled(s,c.id)&&!s.service!.responses.some(r=>r.conditionId===c.id))s=act(s,`service.response.${c.id}.${responseOptions(c.id)[0]!.id}`);return s;}
-function recover(s:Session,choice='stabilize'){for(let i=0;i<s.service!.incidents.length;i++)if(!s.service!.incidents[i]!.recovery)s=act(s,`service.recover.${i}.${choice}`);return s;}
+function recover(s:Session,choice='stabilize'){for(let i=0;i<s.service!.incidents.length;i++)if(!s.service!.incidents[i]!.recovery){const selected=choice==='document'&&s.service!.incidents[i]!.conditionId!=='final-verification'?'carry':choice;s=act(s,`service.recover.${i}.${selected}`);}return s;}
 
 test('repair definitions, response and recovery costs come directly from the original rules',()=>{
   const ref=legacyReference();for(const key of ['checks','swapItems','finalVerification'] as const)assert.deepEqual(JSON.parse(JSON.stringify(content[key])),ref.readGameJson(`content.serviceDispatch.${key}`));
