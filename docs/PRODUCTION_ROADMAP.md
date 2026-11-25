@@ -376,4 +376,13 @@ first shift and causal next-morning assignment; human playtest and physical-GPU
 acceptance remain open. M5-A adds service preparation and physically gathered
 Conshohocken findings as a bounded continuation. M5 is not complete until
 repair, final verification, client closeout and three saved outcome classes
-meet the gate above. The next implementation slice is M5-B repair approaches.
+meet the gate above.
+
+**Execution update — 11/25/2026:** M5-B (#15) implements the paid service-job
+loop: repair methods, physical replacement installation, room pressure,
+incident recovery, final tests, client handoff and a causal shop follow-up.
+Three saved outcome classes have production-browser acceptance coverage; actual
+run results and scope limits belong with [M5 service acceptance](qa/M5_SERVICE_REPAIR.md).
+The second overnight cycle and a playable callback dispatch remain later work.
+M6 qualification still needs physical-GPU measurements and observed first-time
+playtests; these are not satisfied by software-rendered CI.
