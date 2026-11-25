@@ -24,7 +24,7 @@ test('repair definitions, response and recovery costs come directly from the ori
 });
 
 test('paid negotiated, hardware and unresolved replays retain actual 2D clock, check, energy, pay and XP behavior',()=>{
-  for(const method of ['negotiate-verification-window','stage-clean-swap'] as const)for(const final of ['full','skip'] as const){
+  for(const method of ['negotiate-verification-window','stage-clean-swap','ticket-swap'] as const)for(const final of ['full','skip'] as const){
     let s=room();const ref=legacyReference(),start=structuredClone(s);
     ref.runGame(`Object.assign(state,createInitialState());state.technician={...content.technicians[0],characterStats:${JSON.stringify({...content.baseSkills,install:s.career.installSkill})},traits:${JSON.stringify(s.career.traits)}};state.tools=${JSON.stringify(s.tools)};state.sceneId='serviceOffice';state.clock='TUE 10:49 AM';state.energy=${s.energy};state.burnout=${s.burnout};state.flags.currentAreaId='serviceOffice';state.flags.serviceBrief=true;state.flags.serviceInspected=true;state.flags.serviceClientContext=true;state.flags.servicePreparation='review';state.flags.serviceRoomSeed=${s.travel.seed};state.flags.serviceRoomConditions=${JSON.stringify(serviceConditions(s).map(c=>c.id))};state.flags.serviceKnownRoomConditions=${JSON.stringify(knownServiceConditions(s).map(c=>c.id))};state.flags.serviceDiagnosticEvidence=${JSON.stringify(s.service!.evidence.map(e=>({id:e.id,source:'normal room inspection',clock:'TUE 10:49 AM'})))};`);
     function compare(){assert.equal(s.energy,ref.runGame('state.energy'),`${method}/${final} energy: ${JSON.stringify({ours:s.service!.checks,legacy:ref.readGameJson('state.flags.fieldTaskResults || {}')})}`);assert.equal(serviceClock(s),ref.runGame('getServiceClockMinutes()'),`${method}/${final} clock`);}
@@ -68,6 +68,15 @@ test('skills, tool ownership and discovered evidence gate methods without silent
   assert.equal(resolveAction(s,'service.method.isolate-coupler').state,s);assert.equal(resolveAction(s,'service.method.invented').state,s);
   let t=act(s,'service.method.ticket-swap');assert.equal(resolveAction(t,'service.method.verify-path').state,t);assert.equal(resolveAction(t,'service.test.full').state,t);
   t=act(t,'service.take-item');const energy=t.energy;t=act(t,'service.put-item');assert.equal(t.energy,energy);assert.equal(t.service!.installed.length,0);
+});
+
+test('an honestly documented final-test dropout retains its cause, standing costs and callback assignment',()=>{
+  let s=install(act(room(),'service.method.ticket-swap'));s=act(s,'service.test.full');assert.equal(s.service!.finalTest!.status,'weak');
+  const before=structuredClone(s);s=recover(s,'document');assert.equal(s.service!.finalTest!.status,'documented');
+  assert.equal(s.energy,before.energy-1);assert.equal(serviceClock(s),serviceClock(before)+10);
+  assert.equal(s.career.reputation.coworkers,before.career.reputation.coworkers+1);assert.equal(s.career.reputation.clients,before.career.reputation.clients-1);
+  s=act(s,'service.closeout');assert.equal(s.service!.closeout!.risky,true);assert.match(s.career.risks.at(-1)!.cause,/documented/);assert.equal(s.career.nextAssignment,'callbackCleanupDispatch');
+  assert.equal(resolveAction(s,'service.recover.0.document').state,s);assert.equal(checkpoint(s).service!.finalTest!.status,'documented');
 });
 
 test('every deterministic room pressure can be recovered, or honestly documented, without rerolling on reload',()=>{
