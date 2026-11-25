@@ -68,7 +68,7 @@ export function describeService(s:Session,id:ActionId):{label:string;available:b
   if(id==='client-symptom-timeline')return prompt('Ask for the symptom timeline');
   if(id==='service-display')return prompt(!has(s,'display-failure-pattern')?'Inspect the failed display':p.carried?'Install carried component':p.installed.length===2?'Test / review repaired room':'Choose / review repair approach');
   if(id==='service-room-pressure')return prompt('Signal path / room pressure / incident recovery',has(s,'display-failure-pattern'));
-  if(id==='service-pickup')return prompt(p.carried?'Review / put down carried gear':p.method?'Replacement kit · take next component':'Inspect replacement kit',has(s,'display-failure-pattern'));
+  if(id==='service-pickup')return prompt(p.carried?'Review / put down carried gear':p.installed.length===2?'Replacement kit · all components installed':p.method?'Replacement kit · take next component':'Inspect replacement kit',has(s,'display-failure-pattern'));
   if(id==='service.methods')return prompt('Choose a repair approach',has(s,'display-failure-pattern')&&!p.method);
   if(id.startsWith('service.method.')){const m=content.repairApproaches.find(m=>m.id===id.slice(15));return prompt(m?methodStatus(s,m).reason||m.label:'Unknown repair method',Boolean(m&&has(s,'display-failure-pattern')&&!p.method&&methodStatus(s,m).available));}
   if(id==='service.take-item')return prompt('Carry next replacement component',Boolean(p.method&&!p.carried&&p.installed.length<2));

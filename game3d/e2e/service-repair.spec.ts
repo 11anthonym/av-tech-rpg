@@ -16,7 +16,13 @@ test.afterEach(async({page},info)=>{
   }
   if(!page.isClosed())await page.goto('about:blank');
 });
-async function display(page:import('@playwright/test').Page){await go(page,'s',2,-3.8,false);await go(page,'d',0,4.7,true);await go(page,'w',2,2.8,true);await go(page,'a',0,2.3,false);await interact(page,'service-display');}
+async function display(page:import('@playwright/test').Page){
+  if((await snapshot(page)).actionId!=='service-display'){
+    // Stay east of the staging bench; walking south from the display hits it.
+    await go(page,'d',0,4.7,true);await go(page,'w',2,2.8,true);await go(page,'a',0,2.3,false);
+  }
+  await interact(page,'service-display');
+}
 async function kit(page:import('@playwright/test').Page){await go(page,'d',0,4.7,true);await go(page,'s',2,-3.8,false);await go(page,'a',0,3.2,false);await go(page,'w',2,-2.3,true);await interact(page,'service-pickup');}
 async function pressure(page:import('@playwright/test').Page,document=false){
   await go(page,'d',0,4.7,true);await go(page,'s',2,-3.8,false);await go(page,'a',0,-4.8,false);await go(page,'w',2,1,true);await go(page,'d',0,-3,true);await go(page,'w',2,1.1,true);await interact(page,'service-room-pressure');
