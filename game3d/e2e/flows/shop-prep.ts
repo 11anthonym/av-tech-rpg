@@ -53,7 +53,9 @@ export async function prepareVan(page:Page,info:Pick<TestInfo,"outputPath"|"atta
       expect((await snapshot(page)).session.energy).toBe(98);
     }
     if(options.wideApproach)await go(page,'d',0,2.5,true);
-    else {await go(page,"d",0,-2.7,true); await go(page,"w",2,6.7,true); await go(page,"d",0,2.5,true);}
+    // Cross below the rack row. Its collision face begins at z=7.15 after
+    // player radius; z=6.1 leaves room for a slow browser's key-up delivery.
+    else {await go(page,"d",0,-2.7,true); await go(page,"w",2,6.1,true); await go(page,"d",0,2.5,true);}
     await go(page,"w",2,7.7,true); await go(page,"d",0,5.8,true);
     await interact(page,"shop.load-van");
     expect((await snapshot(page)).position[1]).toBeCloseTo(.92,5);
@@ -67,7 +69,7 @@ export async function prepareVan(page:Page,info:Pick<TestInfo,"outputPath"|"atta
     expect((await snapshot(page)).session.loaded).toEqual(shopLoad.slice(0,i+1));
     if(i<2) {
       await go(page,"a",0,2.5,false);
-      if(!options.wideApproach){await go(page,"s",2,6.7,false); await go(page,"a",0,-2.7,false);}
+      if(!options.wideApproach){await go(page,"s",2,6.1,false); await go(page,"a",0,-2.7,false);}
       await go(page,"s",2,3.4,false); await go(page,"a",0,-5.5,false);
     }
   }

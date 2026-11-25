@@ -27,6 +27,6 @@ export function routeOutcome(choiceId: RouteChoiceId, seed: number): RouteDecisi
   return {routeId:'centerCityTutorial',choiceId,roll,incident,energyCost:choice.energy+(incident?2:0),
     burnoutGain:choice.burnout+(incident?1:0),arrival:choice.arrival};
 }
-export function workdayClock(minutes:number) {
-  const hour=Math.floor(minutes/60); return `MON ${hour>12?hour-12:hour}:${String(minutes%60).padStart(2,'0')} ${hour>=12?'PM':'AM'}`;
+export function workdayClock(minutes:number,day=1) {
+  const hour=Math.floor(minutes/60); return `${['MON','TUE','WED','THU','FRI','SAT','SUN'][(day-1)%7]} ${hour>12?hour-12:hour}:${String(minutes%60).padStart(2,'0')} ${hour>=12?'PM':'AM'}`;
 }

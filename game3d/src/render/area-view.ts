@@ -39,7 +39,7 @@ export async function createAreaView(scene: Scene, area: AreaDefinition) {
   }
   if(area.id!=='shop') {
     createFieldArt(scene,root,area);
-    return {root,meshes,focus:(_meshId:string|undefined)=>{},dispose(){root.dispose(false,true);}};
+    return {root,meshes,setPropEnabled(id:string,enabled:boolean){meshes.get(id)?.setEnabled(enabled);},focus:(_meshId:string|undefined)=>{},dispose(){root.dispose(false,true);}};
   }
   const caseRoot = new TransformNode("engineering-toolcase", scene);
   caseRoot.parent = root;
@@ -53,6 +53,7 @@ export async function createAreaView(scene: Scene, area: AreaDefinition) {
   let focused: AbstractMesh | undefined;
   return {
     root, meshes,
+    setPropEnabled(id:string,enabled:boolean){meshes.get(id)?.setEnabled(enabled);},
     focus(meshId: string | undefined) {
       const next = meshId ? meshes.get(meshId) : undefined;
       if (next === focused) return;
