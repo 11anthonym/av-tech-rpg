@@ -51,10 +51,9 @@ export function createFieldArt(scene:Scene,root:TransformNode,area:AreaDefinitio
     // Original, material-batched conference equipment. No new downloaded art,
     // lights or shadow casters; each finding has a recognizable physical source.
     box('display-bezel',[2,1.7,4],[2.2,1.3,.14],black);
-    box('display-image',[2,1.7,3.92],[2.06,1.16,.02],glass);
     box('display-wall-mount',[2,1.4,4.15],[.8,.6,.14],steel);
     box('display-signal-line',[2,.9,4.05],[.03,1.2,.03],black);
-    label('display-sign','FAILED DISPLAY',[2,2.65,4],2.5,.3);
+    label('display-sign','DISPLAY / ROOM TEST',[2,2.65,4],2.5,.3);
     box('credenza',[-3,.48,3],[2,.95,.8],wood);
     for(const x of [-3.5,-2.5]){box('cabinet-door',[x,.48,2.58],[.94,.84,.035],steel);box('cabinet-pull',[x,.65,2.55],[.22,.025,.025],aluminium);}
     box('coupler',[-3,1.04,2.95],[.18,.08,.09],aluminium);
@@ -67,8 +66,8 @@ export function createFieldArt(scene:Scene,root:TransformNode,area:AreaDefinitio
     for(const x of [-3.6,-2.4])box('phone-table-leg',[x,.35,-2],[.06,.7,.55],steel);
     box('phone-base',[-3,.85,-2],[.4,.15,.24],black);box('phone-handset',[-3,.96,-2],[.42,.07,.1],steel);
     label('phone-sign','CLIENT / ROOM PHONE',[-3,1.8,-2],2.6,.3);
-    box('replacement-display-box',[3,.35,-1],[1.5,.7,.25],wood);
-    box('mount-kit',[3,.18,-1.35],[.55,.36,.25],steel);
+    box('kit-bench-top',[3,.72,-1],[1.5,.1,.6],wood);
+    for(const x of [2.4,3.6])box('kit-bench-leg',[x,.35,-1],[.06,.7,.5],steel);
     label('kit-sign','REPLACEMENT KIT',[3,1.4,-1],2.3,.3);
     box('meeting-table-top',[0,.72,1],[1.4,.1,3],wood);
     for(const z of [-.2,2.2])box('table-pedestal',[0,.35,z],[.6,.7,.4],steel);

@@ -99,9 +99,10 @@ export class GameHud {
   }
   loadout(state: Session) {
     this.root.querySelector('#shift-label')!.textContent=`AV TECH RPG · SHIFT ${state.career.day}`;
-    const held=state.workday.carriedPart?workdayContent.assembly.find(p=>p.id===state.workday.carriedPart)?.label:state.carry[0];
+    const held=state.service?.carried??(state.workday.carriedPart?workdayContent.assembly.find(p=>p.id===state.workday.carriedPart)?.label:state.carry[0]);
     const kit=state.tools.map(id=>workdayContent.rewardTools.find(tool=>tool.id===id)?.name??id).join(', ');
-    this.root.querySelector("#loadout")!.textContent = `Hands ${held?1:0}/1: ${held??"Empty"} · Van ${state.loaded.length}/3${state.areaId==='shop'?'':` · Delivered ${state.delivered.length}/3`} · Energy ${state.energy}/100 · Burnout ${state.burnout} · Kit: ${kit} · ${workdayClock(serviceClock(state),state.career.day)}${state.career.xp?` · $${state.career.cash} · ${state.career.xp} XP · Callbacks ${state.career.callbacks}`:state.travel.parkingExpense?' · $18 receipt pending':''}`;
+    const cargo=state.service?`Service ${state.service.installed.length}/2 installed · ${state.service.evidence.length}/4 findings`:`Van ${state.loaded.length}/3${state.areaId==='shop'?'':` · Delivered ${state.delivered.length}/3`}`;
+    this.root.querySelector("#loadout")!.textContent = `Hands ${held?1:0}/1: ${held??"Empty"} · ${cargo} · Energy ${state.energy}/100 · Burnout ${state.burnout} · Kit: ${kit} · ${workdayClock(serviceClock(state),state.career.day)}${state.career.xp?` · $${state.career.cash} · ${state.career.xp} XP · Callbacks ${state.career.callbacks}`:state.travel.parkingExpense?' · $18 receipt pending':''}`;
   }
   place(id:AreaId,title:string) {
     this.root.dataset.area=id;

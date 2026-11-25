@@ -21,8 +21,9 @@ export const workdayActions = ['conference.pickup-part','install.cart1','install
 export type WorkdayActionId=typeof workdayActions[number];
 export const serviceActions=['service.prepare','service.prep-review','service.prep-josh','service.prep-none','service.depart',
   'service-client','client-symptom-timeline','service-display','service-room-pressure','service-pickup','service.review-findings','serviceOfficeToShop'] as const;
-export type ServiceActionId=typeof serviceActions[number];
-export const isServiceAction=(id:ActionId):id is ServiceActionId=>(serviceActions as readonly string[]).includes(id);
+export type ServiceActionId=typeof serviceActions[number]|'service.methods'|'service.take-item'|'service.put-item'|'service.install'|'service.verify'|'service.closeout'|
+  `service.method.${string}`|`service.response.${string}.${string}`|`service.recover.${number}.${string}`|`service.test.${'full'|'quick'|'skip'}`;
+export const isServiceAction=(id:ActionId):id is ServiceActionId=>(serviceActions as readonly string[]).includes(id)||id.startsWith('service.');
 export type ActionId = ShopActionId | TravelActionId | WorkdayActionId | ServiceActionId;
 export const isWorkdayAction=(id:ActionId):id is WorkdayActionId=>(workdayActions as readonly string[]).includes(id);
 export type ToolId='screwdriver'|'toolBag'|'drill'|'handTruck';

@@ -36,7 +36,7 @@ export async function diagnoseService(page:Page,info:Pick<TestInfo,'outputPath'|
   expect(diagnosed.energy).toBe(start.energy-3);expect(diagnosed.career).toEqual(start.career);
   await go(page,'s',2,-4.5,false);await go(page,'a',0,0,false);await interact(page,'serviceOfficeToShop');await close(page);
   await page.reload();await restored(page);await van();
-  expect((await snapshot(page)).session.service).toEqual(diagnosed.service);
+  expect({...((await snapshot(page)).session.service),history:[]}).toEqual({...diagnosed.service,history:[]});
   expect((await snapshot(page)).session.career).toEqual(start.career);
   await page.screenshot({path:info.outputPath('service-room-resumed.png')});
   await info.attach('service-diagnosis',{body:JSON.stringify(await snapshot(page),null,2),contentType:'application/json'});

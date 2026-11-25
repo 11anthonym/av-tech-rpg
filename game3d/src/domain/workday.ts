@@ -3,7 +3,7 @@ import {workdayClock} from '../content/travel.ts';
 import {isWorkdayAction} from '../content/ids.ts';
 import type {ActionId,ToolId} from '../content/ids.ts';
 import type {Session,ActionResult} from './session.ts';
-import {serviceEnergySpent} from './service.ts';
+import {firstDaySnapshot} from './service.ts';
 
 export type PartId=typeof workdayContent.assembly[number]['id'];
 export type FinishChoice='tidy'|'rush'|'wiley-workaround';
@@ -28,7 +28,7 @@ export const newCareer=():Career=>({overtimeDays:0,stayLatePrepDays:0,recoveryDa
 export const getShiftPrepSkillBonus=(s:Session,skill:string)=>s.career.nextShiftPrep&&['fieldcraft','documentation'].includes(skill)?1:0;
 export const canUseWorkaround=(s:Session)=>s.career.traits.includes('makeThatWork')&&s.career.improvisation>=4;
 const tidyEnergy=(s:Session)=>13-(s.career.traits.includes('measureTwice')||s.career.carefulFinishes>=2?1:0);
-export const carrying=(s:Session)=>Boolean(s.carry.length||s.workday.carriedPart);
+export const carrying=(s:Session)=>Boolean(s.carry.length||s.workday.carriedPart||s.service?.carried);
 export const nextPart=(s:Session)=>workdayContent.assembly.find(p=>!s.workday.assembled.includes(p.id));
 export function seededUnit(seed:number,salt:string){let hash=2166136261;for(const c of `${seed}:${salt}`){hash^=c.charCodeAt(0);hash=Math.imul(hash,16777619);}return ((hash>>>0)%1000000)/1000000;}
 export const pressureDefinition=(s:Session)=>[...workdayContent.installPressures].sort((a,b)=>seededUnit(s.travel.seed,a.id)-seededUnit(s.travel.seed,b.id)||a.id.localeCompare(b.id))[0]!;
@@ -165,6 +165,7 @@ export const handoffSummary=(s:Session)=>`Two Quick Carts · ${s.workday.finishC
 export const shiftSummary=(s:Session)=>{const r=s.career.shiftSummary;return r?`${handoffSummary(s)} ${r.choice}: energy ${r.energyBefore} → ${r.energyAfter}; burnout ${r.burnoutBefore} → ${r.burnoutAfter}; fatigue cap ${r.fatigueCap}. Shift ${s.career.day} starts at 7:18 AM. ${s.career.risks.map(r=>r.cause).join(' ')}`:handoffSummary(s);};
 
 export function validWorkday(s:Session):boolean {
+  s=firstDaySnapshot(s);
   const w=s.workday,c=s.career,parts=workdayContent.assembly.map(p=>p.id);
   if(!w||!c||!Array.isArray(w.assembled)||!Array.isArray(w.checks)||w.assembled.length>4||
     !w.assembled.every((id,i)=>id===parts[i])||w.checks.length!==w.assembled.length||
@@ -210,7 +211,7 @@ export function validWorkday(s:Session):boolean {
   if(w.shiftClosed){const summary=c.shiftSummary!;
     if(!['clock-out','prep','recovery-day'].includes(summary.choice)||
       ![summary.netPay,summary.xp,summary.energyBefore,summary.energyAfter,summary.burnoutBefore,summary.burnoutAfter,summary.recovered,summary.fatigueCap].every(Number.isInteger)||
-      summary.netPay!==c.cash||summary.xp!==40||Math.max(0,summary.energyAfter-serviceEnergySpent(s))!==s.energy||summary.burnoutAfter!==s.burnout||
+      summary.netPay!==c.cash||summary.xp!==40||summary.energyAfter!==s.energy||summary.burnoutAfter!==s.burnout||
       summary.energyBefore<0||summary.energyBefore>100||summary.fatigueCap<20||summary.fatigueCap>100)return false;
   }
   if(w.finishChoice==='tidy'&&(c.risks.some(r=>r.source==='Two Quick Carts')||c.workmanship!=='controlled'))return false;

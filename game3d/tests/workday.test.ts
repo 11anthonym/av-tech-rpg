@@ -155,7 +155,7 @@ test('v3 arrival migration preserves all old bytes and rejects damaged v4 reward
   const bytes=JSON.stringify(old),values=new Map([[M4A_SAVE_KEY,bytes],['av-tech-rpg-save-v1','legacy career bytes']]);
   const repo=new SaveRepository({getItem:key=>values.get(key)??null,setItem:(key,value)=>{values.set(key,value);}});
   assert(repo.save(repo.load().data));assert.equal(values.get(M4A_SAVE_KEY),bytes);assert.equal(values.get('av-tech-rpg-save-v1'),'legacy career bytes');
-  assert.equal(JSON.parse(values.get(SAVE_KEY)!).version,5);
+  assert.equal(JSON.parse(values.get(SAVE_KEY)!).version,6);
   const complete=close(assemble(original),'rush');
   for(const damage of [(s:Session)=>s.career.cash++,(s:Session)=>s.workday.assembled.push('cart-1-frame'),
     (s:Session)=>{s.workday.carriedPart='cart-1-frame';},(s:Session)=>{s.career.nextAssignment='serviceDispatch';},

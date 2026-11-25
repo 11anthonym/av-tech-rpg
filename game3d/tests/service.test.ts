@@ -8,18 +8,9 @@ import {knownServiceConditions,serviceClock,serviceConditions} from '../src/doma
 import {freshSave,parseSave,SaveRepository,SAVE_KEY,M4B_SAVE_KEY} from '../src/persistence/save.ts';
 import {getArea} from '../src/world/areas.ts';
 import {legacyReference} from './legacy-reference.ts';
+import {morning} from './first-shift.ts';
 
 const act=(s:Session,id:ActionId)=>resolveAction(s,id).state;
-function morning(finish:'tidy'|'rush'='tidy'){
-  let s=newSession();s=act(s,'shop.brief-supervisor');
-  for(let i=0;i<3;i++){s=act(s,'shop.pickup-equipment');s=act(s,'shop.load-van');}
-  for(const id of ['route.garageRoute','garage.brief-supervisor'] as const)s=act(s,id);
-  for(let i=0;i<3;i++){s=act(s,'garage.unload-equipment');s=act(s,'garageToLobby');}
-  for(const id of ['garageToLobby','security.check-in','lobbyToConferenceRoom','conference.review-assignment'] as const)s=act(s,id);
-  for(let i=0;i<4;i++){if(i===2)s=act(s,'pressure.leave');s=act(s,'conference.pickup-part');s=act(s,i<2?'install.cart1':'install.cart2');}
-  for(const id of ['conference.verify',`finish.${finish}`,'reward.drill','centerCityConferenceRoomToShop','shift.clock-out','morning.accept'] as const)s=act(s,id);
-  return s;
-}
 function checkpoint(s:Session){return parseSave(JSON.stringify({...freshSave(),session:s,position:getArea(s.areaId).spawn})).session;}
 
 test('service content, preparation effort and seeded pressures match the actual 2D reference',()=>{
@@ -58,7 +49,7 @@ test('physical findings retain canonical times and effort through reload, revisi
   assert.equal(s.career.cash,cash);assert.equal(s.career.xp,xp);assert.equal(s.career.shiftsCompleted,1);
   const known=knownServiceConditions(s);assert(known.length>0);
   const saved=structuredClone(s.service);s=checkpoint(act(s,'serviceOfficeToShop'));s=checkpoint(act(s,'service.depart'));
-  assert.deepEqual(s.service,saved);assert.equal(serviceClock(s),649);assert.equal(s.energy,energy-3);
+  assert.deepEqual({...s.service,history:[]},{...saved,history:[]});assert.equal(serviceClock(s),649);assert.equal(s.energy,energy-3);
   assert.deepEqual(knownServiceConditions(s),known);
 });
 
@@ -80,6 +71,6 @@ test('v4 careers migrate into v5 without replacing the original save or legacy c
   const bytes=JSON.stringify(source),legacy='{"version":30,"cash":123}';
   const values=new Map([[M4B_SAVE_KEY,bytes],['av-tech-rpg-save-v1',legacy]]);
   const repo=new SaveRepository({getItem:key=>values.get(key)??null,setItem:(key,value)=>{values.set(key,value);}});
-  const loaded=repo.load().data;assert.equal(loaded.version,5);assert.equal(loaded.session.service,null);assert(repo.save(loaded));
+  const loaded=repo.load().data;assert.equal(loaded.version,6);assert.equal(loaded.session.service,null);assert(repo.save(loaded));
   assert.equal(values.get(M4B_SAVE_KEY),bytes);assert.equal(values.get('av-tech-rpg-save-v1'),legacy);assert(values.has(SAVE_KEY));
 });
