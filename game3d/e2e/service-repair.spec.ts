@@ -9,6 +9,8 @@ test.use({storageState:process.env.SERVICE_REPLAY_SOURCE??path.resolve('test-res
   video:process.platform==='linux'||process.env.RECORD_VIDEO==='1'?{mode:'on',size:{width:960,height:540}}:'off'});
 const close=(page:import('@playwright/test').Page)=>page.locator('#close-result').click();
 async function go(page:import('@playwright/test').Page,key:string,axis:number,target:number,greater:boolean){
+  const current=(await snapshot(page)).position[axis]!;
+  if(greater?current>target:current<target)return;
   // Exercise the shipped faster-travel control, including both carried components.
   // Keep the original waypoint deadlines and all gameplay/collision assertions.
   await page.keyboard.down('Shift');try{await walk(page,key,axis,target,greater);}finally{await page.keyboard.up('Shift');}
