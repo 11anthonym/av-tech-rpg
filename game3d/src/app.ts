@@ -25,7 +25,7 @@ export interface Diagnostics {
   cameraPosition: number[]; actualCameraDistance: number; actionId: string | null;
   completedActions: string[]; paused: boolean; transitioning:boolean; frames: number; loopTicks: number; activeMeshes: number; webgl: number; errors: string[];
   session: Session;
-  supervisor: { meshes: number; joints: number; position: number[];visible:boolean } | null;
+  supervisor: { meshes: number; joints: number; position: number[];visible:boolean;identity:string;asset:string;idleFrame:number;height:number } | null;
   installation:ReturnType<ReturnType<typeof createWorkdayView>['snapshot']>|null;
   cargo: ReturnType<ReturnType<typeof createShopProgress>["snapshot"]>;
   character: CharacterController["character"] | null;
@@ -56,7 +56,7 @@ export async function startGame(root: HTMLElement) {
   let camera: FollowCamera | undefined;
   let area: Awaited<ReturnType<typeof createAreaView>> | undefined;
   let progress: ReturnType<typeof createShopProgress> | undefined;
-  let supervisor: ReturnType<Awaited<ReturnType<typeof createTechnicianVisual>>["createSupervisor"]> | undefined;
+  let supervisor: Awaited<ReturnType<Awaited<ReturnType<typeof createTechnicianVisual>>["createSupervisor"]>> | undefined;
   let technician: Awaited<ReturnType<typeof createTechnicianVisual>> | undefined;
   let workdayView:ReturnType<typeof createWorkdayView>|undefined;
   // Accessing localStorage itself can throw, so defer it through this port.
@@ -161,7 +161,7 @@ export async function startGame(root: HTMLElement) {
     technician = await createTechnicianVisual(renderer.scene);
     controller = new CharacterController(renderer.scene, loaded.data.position, technician);
     technician.setCarrying(carrying(session));
-    supervisor = technician.createSupervisor();
+    supervisor = await technician.createSupervisor();
     supervisor.place(npcPlacement[session.areaId]);
     progress = createShopProgress(renderer.scene, technician.root);
     workdayView=createWorkdayView(renderer.scene,technician.root);workdayView.update(session);

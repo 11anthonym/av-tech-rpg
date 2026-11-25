@@ -2,6 +2,7 @@ import { expect } from "@playwright/test";
 import type { Page, TestInfo } from "@playwright/test";
 import type { Diagnostics } from "../../src/app.ts";
 import { shopLoad } from "../../src/content/ids.ts";
+import {characterCast} from '../../src/content/cast.ts';
 export const snapshot = (page: Page): Promise<Diagnostics> => page.evaluate(() => window.__AV3D__!.snapshot());
 export async function ready(page: Page) { await expect(page.locator("#app")).toHaveAttribute("data-ready","true",{timeout:30000}); }
 export async function go(page: Page, key: string, axis: number, target: number, greater: boolean) {
@@ -14,12 +15,19 @@ export async function interact(page: Page, actionId: string) {
   await expect.poll(async()=>(await snapshot(page)).actionId).toBe(actionId);
   await page.keyboard.press("e");
 }
+export async function approach(page:Page,key:string,actionId:string){
+  // Follow the contextual prompt using ordinary held-key input. Approaching
+  // the counter head-on lets collision stop late key releases safely.
+  await page.keyboard.down(key);
+  try{await page.waitForFunction(id=>window.__AV3D__!.snapshot().actionId===id,actionId,{timeout:15000});}
+  finally{await page.keyboard.up(key);}
+}
 export async function prepareVan(page:Page,info:Pick<TestInfo,"outputPath"|"attach">,options:{wideApproach?:boolean}={}) {
   const errors:string[]=[]; page.on("pageerror",e=>errors.push(e.message));
   page.on("console",m=>{if(m.type()==="error") errors.push(m.text());});
   page.on("response",r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
   await page.goto("./?debug=1"); await ready(page);
-  expect((await snapshot(page)).supervisor).toMatchObject({meshes:5,joints:80,position:[-5,0,-1]});
+  expect((await snapshot(page)).supervisor).toMatchObject({identity:characterCast.supervisor.identity,meshes:characterCast.supervisor.meshes,joints:characterCast.supervisor.joints,position:[-5,0,-1]});
   await page.locator("#debug-panel").evaluate(e=>e.setAttribute("hidden",""));
   await page.getByRole("button",{name:"Pause / settings"}).click();
   await page.getByRole("combobox",{name:"Graphics quality"}).selectOption("low");

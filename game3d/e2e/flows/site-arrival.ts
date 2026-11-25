@@ -1,17 +1,18 @@
 import {expect} from '@playwright/test';
 import type {Page,TestInfo} from '@playwright/test';
 import {prepareVan,go,interact,ready,snapshot} from './shop-prep.ts';
+import {characterCast} from '../../src/content/cast.ts';
 export async function restored(page:Page){
   await ready(page);
   await page.locator('#debug-panel').evaluate(element=>element.setAttribute('hidden',''));
 }
 
 export async function arriveAtClient(page:Page,info:TestInfo){
-  const errors:string[]=[];let humanLoads=0,lightingLoads=0;
+  const errors:string[]=[];let humanLoads=0,lightingLoads=0,npcLoads=0;
   page.on('pageerror',error=>errors.push(error.message));
   page.on('console',message=>{if(message.type()==='error')errors.push(message.text());});
   page.on('response',response=>{if(response.status()>=400)errors.push(`${response.status()} ${response.url()}`);});
-  page.on('request',request=>{if(request.url().endsWith('/technician.glb'))humanLoads++;if(request.url().endsWith('/shop-lighting.env'))lightingLoads++;});
+  page.on('request',request=>{if(request.url().endsWith('/technician.glb'))humanLoads++;if(request.url().endsWith('/shop-lighting.env'))lightingLoads++;if(request.url().endsWith('/supervisor.glb'))npcLoads++;});
   await page.goto('../');await page.waitForFunction(()=>(window as Window&{AV_TECH_RPG_READY?:boolean}).AV_TECH_RPG_READY===true);
   await page.getByRole('button',{name:'New Career',exact:true}).click();
   await page.locator('.technician-card').filter({has:page.getByRole('heading',{name:'Alex',exact:true})}).getByRole('button',{name:'Start First Day'}).click();
@@ -28,9 +29,11 @@ export async function arriveAtClient(page:Page,info:TestInfo){
   await expect(page.locator('#app')).toHaveAttribute('data-area','centerCityGarage');
   await expect(page.getByRole('heading',{name:'Garage First, Apparently'})).toBeVisible();
   await page.locator('#close-result').click();
-  const bootAssets={human:humanLoads,lighting:lightingLoads};
+  const bootAssets={human:humanLoads,lighting:lightingLoads,npc:npcLoads};
   expect((await snapshot(page)).session.travel.parkingExpense).toBe(18);
   await go(page,'a',0,-3.8,false);await go(page,'w',2,-2.2,true);
+  expect((await snapshot(page)).supervisor?.identity).toBe(characterCast.supervisor.identity);
+  await page.screenshot({path:info.outputPath('distinct-cast-garage.png')});
   await interact(page,'garage.brief-supervisor');await page.locator('#close-result').click();
   await go(page,'d',0,-2,true);
   for(let i=0;i<3;i++){
@@ -40,13 +43,16 @@ export async function arriveAtClient(page:Page,info:TestInfo){
     await go(page,'d',0,4,true);await interact(page,'garageToLobby');
     await expect.poll(async()=>(await snapshot(page)).session.delivered.length).toBe(i+1);
     expect((await snapshot(page)).session.carry).toEqual([]);
-    if(i<2)await go(page,'a',0,-2,false);
+    // Approach from the van's right half. A delayed key release at its centre
+    // could cross the midpoint to the supervisor and correctly select him.
+    if(i<2)await go(page,'a',0,-1.3,false);
   }
-  const beforeLobby={human:humanLoads,lighting:lightingLoads};
+  const beforeLobby={human:humanLoads,lighting:lightingLoads,npc:npcLoads};
   expect(beforeLobby.human).toBe(bootAssets.human+1); // The explicit reload, never a portal.
+  expect(beforeLobby.npc).toBe(bootAssets.npc+1);
   await page.screenshot({path:info.outputPath('garage-delivered.png')});
   await interact(page,'garageToLobby');await expect(page.locator('#app')).toHaveAttribute('data-area','centerCityLobby');
-  expect({human:humanLoads,lighting:lightingLoads}).toEqual(beforeLobby);
+  expect({human:humanLoads,lighting:lightingLoads,npc:npcLoads}).toEqual(beforeLobby);
   // Walk to the elevator before checking in: it must remain locked.
   await go(page,'d',0,3,true);await go(page,'w',2,1.5,true);await interact(page,'lobbyToConferenceRoom');
   expect((await snapshot(page)).areaId).toBe('centerCityLobby');expect((await snapshot(page)).session.flags.securityChecked).toBe(false);
@@ -56,14 +62,14 @@ export async function arriveAtClient(page:Page,info:TestInfo){
   await interact(page,'security.check-in');await page.locator('#close-result').click();expect((await snapshot(page)).session.energy).toBe(checked.energy);
   await page.reload();await restored(page);expect((await snapshot(page)).session.flags.securityChecked).toBe(true);
   await go(page,'s',2,-1.5,false);await go(page,'d',0,3,true);await go(page,'w',2,1.5,true);
-  const beforeLift={human:humanLoads,lighting:lightingLoads};
+  const beforeLift={human:humanLoads,lighting:lightingLoads,npc:npcLoads};
   await interact(page,'lobbyToConferenceRoom');await expect(page.locator('#app')).toHaveAttribute('data-area','centerCityConferenceRoom');
-  expect({human:humanLoads,lighting:lightingLoads}).toEqual(beforeLift);
+  expect({human:humanLoads,lighting:lightingLoads,npc:npcLoads}).toEqual(beforeLift);
   await go(page,'a',0,-3,false);await go(page,'w',2,-.4,true);await interact(page,'conference.review-assignment');
   await page.locator('#close-result').click();
   const final=await snapshot(page);expect(final.session.energy).toBe(71);expect(final.session.loaded).toEqual([]);expect(final.session.carry).toEqual([]);
   expect(final.session.delivered).toHaveLength(3);expect(final.session.travel.clockMinutes).toBe(546);expect(final.session.flags.roomBrief).toBe(true);
-  expect(Object.hasOwn(final.session.flags,'finished')).toBe(false);expect(final.supervisor?.joints).toBe(80);
+  expect(Object.hasOwn(final.session.flags,'finished')).toBe(false);expect(final.supervisor?.joints).toBe(characterCast.supervisor.joints);
   await page.reload();await restored(page);expect((await snapshot(page)).session).toEqual(final.session);
   await page.screenshot({path:info.outputPath('client-floor-ready.png')});
   expect(await page.evaluate(()=>localStorage.getItem('av-tech-rpg-save-v1'))).toBe(career);expect(errors).toEqual([]);

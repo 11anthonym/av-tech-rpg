@@ -1,0 +1,245 @@
+{
+  "identity": "supervisor-marcus-formal",
+  "source": {
+    "url": "https://raw.githubusercontent.com/memoriesrohit/avatar-studio/2fd9ec82fbe1613d40ae38aadcca3f410725f740/models/marcus_formal.glb",
+    "revision": "2fd9ec82fbe1613d40ae38aadcca3f410725f740",
+    "sha256": "0c8f874406273ca34df4c246ffc609ebf35b4d424911316ecf0154f7f07135d5",
+    "bytes": 11536204
+  },
+  "runtime": {
+    "file": "supervisor.glb",
+    "sha256": "1a9e16baac49e7e54424618f00f3ef5fd5cd6e73baa65d778019bac3b8c5ad1b",
+    "bytes": 712204,
+    "outfit": [
+      "Body",
+      "Outfit_original",
+      "Shoes",
+      "Skin_original"
+    ],
+    "meshes": 4,
+    "joints": 80,
+    "animations": [
+      "Idle"
+    ],
+    "bodyPositionSha256": "45917045b5099633c068784ecd421328f71698d0c3b7f50f119241d8ef7b9687",
+    "repairedTangents": 0,
+    "textures": [
+      {
+        "name": "m016_head_normal",
+        "width": 512,
+        "height": 512,
+        "bytes": 25838
+      },
+      {
+        "name": "m016_head_color",
+        "width": 512,
+        "height": 512,
+        "bytes": 32314
+      },
+      {
+        "name": "m016_head_rough",
+        "width": 512,
+        "height": 512,
+        "bytes": 8956
+      },
+      {
+        "name": "m016_body_normal",
+        "width": 512,
+        "height": 512,
+        "bytes": 22244
+      },
+      {
+        "name": "m016_body_color",
+        "width": 512,
+        "height": 512,
+        "bytes": 20644
+      },
+      {
+        "name": "m016_body_rough",
+        "width": 512,
+        "height": 512,
+        "bytes": 4340
+      },
+      {
+        "name": "m025_body_normal",
+        "width": 512,
+        "height": 512,
+        "bytes": 29390
+      },
+      {
+        "name": "m025_body_color",
+        "width": 512,
+        "height": 512,
+        "bytes": 20514
+      },
+      {
+        "name": "m025_body_rough",
+        "width": 512,
+        "height": 512,
+        "bytes": 3534
+      }
+    ],
+    "estimatedDecodedRgba8MipBytes": 12582912
+  },
+  "validation": {
+    "uri": "supervisor.glb",
+    "mimeType": "model/gltf-binary",
+    "validatorVersion": "2.0.0-dev.3.10",
+    "validatedAt": "2026-11-24T06:03:16.753Z",
+    "issues": {
+      "numErrors": 0,
+      "numWarnings": 0,
+      "numInfos": 0,
+      "numHints": 0,
+      "messages": [],
+      "truncated": false
+    },
+    "info": {
+      "version": "2.0",
+      "generator": "glTF-Transform v4.5.1",
+      "extensionsUsed": [
+        "EXT_texture_webp"
+      ],
+      "extensionsRequired": [
+        "EXT_texture_webp"
+      ],
+      "resources": [
+        {
+          "pointer": "/buffers/0",
+          "mimeType": "application/gltf-buffer",
+          "storage": "glb",
+          "byteLength": 638640
+        },
+        {
+          "pointer": "/images/0",
+          "mimeType": "image/webp",
+          "storage": "buffer-view",
+          "image": {
+            "width": 512,
+            "height": 512,
+            "format": "rgb",
+            "primaries": "srgb",
+            "transfer": "srgb",
+            "bits": 8
+          }
+        },
+        {
+          "pointer": "/images/1",
+          "mimeType": "image/webp",
+          "storage": "buffer-view",
+          "image": {
+            "width": 512,
+            "height": 512,
+            "format": "rgb",
+            "primaries": "srgb",
+            "transfer": "srgb",
+            "bits": 8
+          }
+        },
+        {
+          "pointer": "/images/2",
+          "mimeType": "image/webp",
+          "storage": "buffer-view",
+          "image": {
+            "width": 512,
+            "height": 512,
+            "format": "rgb",
+            "primaries": "srgb",
+            "transfer": "srgb",
+            "bits": 8
+          }
+        },
+        {
+          "pointer": "/images/3",
+          "mimeType": "image/webp",
+          "storage": "buffer-view",
+          "image": {
+            "width": 512,
+            "height": 512,
+            "format": "rgb",
+            "primaries": "srgb",
+            "transfer": "srgb",
+            "bits": 8
+          }
+        },
+        {
+          "pointer": "/images/4",
+          "mimeType": "image/webp",
+          "storage": "buffer-view",
+          "image": {
+            "width": 512,
+            "height": 512,
+            "format": "rgb",
+            "primaries": "srgb",
+            "transfer": "srgb",
+            "bits": 8
+          }
+        },
+        {
+          "pointer": "/images/5",
+          "mimeType": "image/webp",
+          "storage": "buffer-view",
+          "image": {
+            "width": 512,
+            "height": 512,
+            "format": "rgb",
+            "primaries": "srgb",
+            "transfer": "srgb",
+            "bits": 8
+          }
+        },
+        {
+          "pointer": "/images/6",
+          "mimeType": "image/webp",
+          "storage": "buffer-view",
+          "image": {
+            "width": 512,
+            "height": 512,
+            "format": "rgb",
+            "primaries": "srgb",
+            "transfer": "srgb",
+            "bits": 8
+          }
+        },
+        {
+          "pointer": "/images/7",
+          "mimeType": "image/webp",
+          "storage": "buffer-view",
+          "image": {
+            "width": 512,
+            "height": 512,
+            "format": "rgb",
+            "primaries": "srgb",
+            "transfer": "srgb",
+            "bits": 8
+          }
+        },
+        {
+          "pointer": "/images/8",
+          "mimeType": "image/webp",
+          "storage": "buffer-view",
+          "image": {
+            "width": 512,
+            "height": 512,
+            "format": "rgb",
+            "primaries": "srgb",
+            "transfer": "srgb",
+            "bits": 8
+          }
+        }
+      ],
+      "animationCount": 1,
+      "materialCount": 3,
+      "hasMorphTargets": false,
+      "hasSkins": true,
+      "hasTextures": true,
+      "hasDefaultScene": true,
+      "drawCallCount": 4,
+      "totalVertexCount": 4925,
+      "totalTriangleCount": 7778,
+      "maxUVs": 1,
+      "maxInfluences": 4,
+      "maxAttributes": 7
+    }
+  }
+}
