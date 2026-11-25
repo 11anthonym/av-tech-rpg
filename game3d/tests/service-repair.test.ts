@@ -70,6 +70,15 @@ test('skills, tool ownership and discovered evidence gate methods without silent
   t=act(t,'service.take-item');const energy=t.energy;t=act(t,'service.put-item');assert.equal(t.energy,energy);assert.equal(t.service!.installed.length,0);
 });
 
+test('a later field check cannot retroactively turn an old finding into a second room discovery',()=>{
+  const probe=morning();let seed=1;
+  while(seed<1000){probe.travel.seed=seed;const ids=serviceConditions(probe).map(c=>c.id);if(ids.includes('bad-ticket-notes')&&ids.includes('flaky-replacement-display'))break;seed++;}
+  assert(seed<1000);let s=morning('tidy',seed);
+  for(const id of ['service.prep-none','service.depart','service-client','service-display','service.method.verify-path'] as const)s=act(s,id);
+  assert.deepEqual(knownServiceConditions(s).map(c=>c.id),['bad-ticket-notes']);
+  s=act(s,'service-pickup');assert.equal(knownServiceConditions(s).length,2,'Inspecting the replacement kit can reveal the hardware fault');
+});
+
 test('an honestly documented final-test dropout retains its cause, standing costs and callback assignment',()=>{
   let s=install(act(room(),'service.method.ticket-swap'));s=act(s,'service.test.full');assert.equal(s.service!.finalTest!.status,'weak');
   const before=structuredClone(s);s=recover(s,'document');assert.equal(s.service!.finalTest!.status,'documented');

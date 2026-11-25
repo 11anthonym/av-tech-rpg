@@ -31,7 +31,6 @@ export function serviceConditions(s:Session) {
 export function knownServiceConditions(s:Session) {
   const active=serviceConditions(s),known=new Set<string>(s.service?.revealed??[]);
   for(const c of active)if('prepReveals' in c&&(c.prepReveals as readonly string[]).includes(s.service?.preparation??''))known.add(c.id);
-  for(const entry of s.service?.evidence??[]){const id=finding(entry.id).conditionIds.find(id=>active.some(c=>c.id===id)&&!known.has(id));if(id)known.add(id);}
   return active.filter(c=>known.has(c.id));
 }
 export function serviceObjective(s:Session):string|undefined {
@@ -82,7 +81,11 @@ export function describeService(s:Session,id:ActionId):{label:string;available:b
 }
 const result=(state:Session,id:ActionId,message:string,title:string,outcome:ActionResult['event']['outcome']='completed',choices:NonNullable<ActionResult['event']['choices']>=[]):ActionResult=>({state,event:{actionId:id,outcome,message,title,dialog:outcome!=='blocked',choices}});
 function findings(s:Session){const p=s.service!;return `${p.evidence.length}/4 findings. ${p.evidence.map(e=>`${finding(e.id).label}: ${finding(e.id).summary}`).join(' ')} ${knownServiceConditions(s).map(c=>`${c.label}: ${controlled(s,c.id)?'controlled':c.revealedSummary}`).join(' ')} ${p.installed.length}/2 components installed. ${servicePhase(s)==='calm'?'Room available':servicePhase(s)==='tight'?'Schedule tightening':'Meeting in progress'}. ${p.closeout?`Paid $${p.closeout.pay}; ${p.closeout.xp} XP. ${p.closeout.cause}`:'Client handoff pending; no service pay or XP awarded.'}`;}
-function addFinding(s:Session,id:EvidenceId,minutes:number){if(has(s,id))return;const p=s.service!;p.clock+=minutes;p.evidence.push({id,minute:p.clock});spendEnergy(s,id==='display-failure-pattern'?p.preparation==='review'?2:3:id==='client-symptom-timeline'?1:0);}
+function addFinding(s:Session,id:EvidenceId,minutes:number){
+  if(has(s,id))return;const p=s.service!,active=serviceConditions(s),known=knownServiceConditions(s);
+  const revealed=finding(id).conditionIds.find(id=>active.some(c=>c.id===id)&&!known.some(c=>c.id===id));if(revealed)p.revealed.push(revealed);
+  p.clock+=minutes;p.evidence.push({id,minute:p.clock});spendEnergy(s,id==='display-failure-pattern'?p.preparation==='review'?2:3:id==='client-symptom-timeline'?1:0);
+}
 function pressureChoices(s:Session):NonNullable<ActionResult['event']['choices']>{
   const p=s.service!;
   return [...p.incidents.flatMap((i,index)=>i.recovery?[]:recoveryOptions(i).map(o=>({actionId:`service.recover.${index}.${o.id}` as ActionId,label:`${i.label}: ${o.label}`,detail:`${o.detail} ${o.energyCost??0} energy; ${o.id==='stabilize'?20:o.id==='document'?10:o.id==='calm-client'?8:0} minutes.`}))),
