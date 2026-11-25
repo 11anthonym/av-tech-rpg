@@ -4,6 +4,32 @@ import type { Diagnostics } from "../src/app.ts";
 const snapshot = (page: Page): Promise<Diagnostics> => page.evaluate(() => window.__AV3D__!.snapshot());
 test.afterEach(async ({ page }) => { if (!page.isClosed()) await page.goto("about:blank"); });
 
+test('held Shift accelerates travel, releasing it restores walking, and pause clears held input',async({page},info)=>{
+  await page.goto('./?debug=1');
+  await expect(page.locator('#app')).toHaveAttribute('data-ready','true',{timeout:30000});
+  await page.keyboard.down('d');
+  await expect.poll(async()=>(await snapshot(page)).character?.speed).toBeGreaterThan(1.3);
+  await page.keyboard.down('Shift');
+  await expect.poll(async()=>(await snapshot(page)).character?.speed).toBeGreaterThan(2.4);
+  await expect.poll(async()=>(await snapshot(page)).character?.walkWeight).toBeGreaterThan(.8);
+  const fast=await snapshot(page);expect(fast.character?.walkWeight).toBeGreaterThan(.8);
+  await page.screenshot({path:info.outputPath('shift-faster.png')});
+  await page.keyboard.up('Shift');
+  await expect.poll(async()=>(await snapshot(page)).character?.speed).toBeLessThan(1.5);
+  await page.keyboard.down('Shift');
+  await page.getByRole('button',{name:'Pause / settings'}).click();
+  await page.keyboard.up('d');await page.keyboard.up('Shift');
+  const paused=await snapshot(page);
+  await page.getByRole('button',{name:'Resume',exact:true}).click();
+  await expect.poll(async()=>(await snapshot(page)).character?.speed).toBeLessThan(.08);
+  expect((await snapshot(page)).position).toEqual(paused.position);
+  await page.keyboard.down('a');
+  await expect.poll(async()=>(await snapshot(page)).character?.speed).toBeGreaterThan(1.3);
+  expect((await snapshot(page)).character!.speed).toBeLessThan(1.5);
+  await page.keyboard.up('a');expect((await snapshot(page)).session.energy).toBe(100);
+  expect((await snapshot(page)).errors).toEqual([]);
+});
+
 test("real human animates through keyboard travel, blends to idle at collision and freezes on pause", async ({ page }) => {
   await page.goto("./?debug=1");
   await expect(page.locator("#app")).toHaveAttribute("data-ready", "true", { timeout: 30000 });

@@ -3,6 +3,7 @@ import {workdayClock} from '../content/travel.ts';
 import {isWorkdayAction} from '../content/ids.ts';
 import type {ActionId,ToolId} from '../content/ids.ts';
 import type {Session,ActionResult} from './session.ts';
+import {serviceEnergySpent} from './service.ts';
 
 export type PartId=typeof workdayContent.assembly[number]['id'];
 export type FinishChoice='tidy'|'rush'|'wiley-workaround';
@@ -32,7 +33,7 @@ export const nextPart=(s:Session)=>workdayContent.assembly.find(p=>!s.workday.as
 export function seededUnit(seed:number,salt:string){let hash=2166136261;for(const c of `${seed}:${salt}`){hash^=c.charCodeAt(0);hash=Math.imul(hash,16777619);}return ((hash>>>0)%1000000)/1000000;}
 export const pressureDefinition=(s:Session)=>[...workdayContent.installPressures].sort((a,b)=>seededUnit(s.travel.seed,a.id)-seededUnit(s.travel.seed,b.id)||a.id.localeCompare(b.id))[0]!;
 export const openPressure=(s:Session)=>Boolean(s.flags.supervisorLeft&&!s.workday.pressure?.controlled);
-export const supervisorPresent=(s:Session)=>s.areaId!=='centerCityConferenceRoom'||!s.flags.supervisorLeft;
+export const supervisorPresent=(s:Session)=>s.areaId!=='serviceOffice'&&(s.areaId!=='centerCityConferenceRoom'||!s.flags.supervisorLeft);
 export function workdayObjective(s:Session):string|undefined {
   if(s.areaId==='shop'&&s.workday.shiftClosed)return s.workday.morningBriefed?`Shift ${s.career.day}: ${s.career.nextAssignment==='callbackCleanupDispatch'?'Callback cleanup assigned — review the named cause at the workbench.':'Conshohocken service assignment available. Review the briefing at the counter.'}`:'Next morning: meet the supervisor for the briefing. Your last closeout affects today.';
   if(s.areaId==='shop'&&s.flags.endShiftPending)return 'Back at the shop. Review the shift at the workbench and choose recovery or prep.';
@@ -184,7 +185,7 @@ export function validWorkday(s:Session):boolean {
     (w.assembled.length>0&&!s.flags.roomBrief)||(w.verified&&w.assembled.length!==4)||(w.finishChoice&&!w.verified)||
     w.handedOff!==Boolean(w.reward)||(w.reward&&(!w.finishChoice||!s.tools.includes(w.reward)))||
     s.tools.length!==(w.reward?2:1)||
-    (w.shiftClosed&&(!w.handedOff||s.areaId!=='shop'))||(w.morningBriefed&&!w.shiftClosed)||
+    (w.shiftClosed&&(!w.handedOff||!['shop','serviceOffice'].includes(s.areaId)))||(w.morningBriefed&&!w.shiftClosed)||
     Boolean(s.flags.endShiftPending)!==(s.areaId==='shop'&&w.handedOff&&!w.shiftClosed)||
     c.cash!==(w.finishChoice?w.finishChoice==='tidy'?152:141:0)||c.xp!==(w.finishChoice?40:0)||
     c.shiftsCompleted!==(w.shiftClosed?1:0)||c.overtimeDays!==Number(Boolean(w.finishChoice))||
@@ -209,7 +210,7 @@ export function validWorkday(s:Session):boolean {
   if(w.shiftClosed){const summary=c.shiftSummary!;
     if(!['clock-out','prep','recovery-day'].includes(summary.choice)||
       ![summary.netPay,summary.xp,summary.energyBefore,summary.energyAfter,summary.burnoutBefore,summary.burnoutAfter,summary.recovered,summary.fatigueCap].every(Number.isInteger)||
-      summary.netPay!==c.cash||summary.xp!==40||summary.energyAfter!==s.energy||summary.burnoutAfter!==s.burnout||
+      summary.netPay!==c.cash||summary.xp!==40||Math.max(0,summary.energyAfter-serviceEnergySpent(s))!==s.energy||summary.burnoutAfter!==s.burnout||
       summary.energyBefore<0||summary.energyBefore>100||summary.fatigueCap<20||summary.fatigueCap>100)return false;
   }
   if(w.finishChoice==='tidy'&&(c.risks.some(r=>r.source==='Two Quick Carts')||c.workmanship!=='controlled'))return false;

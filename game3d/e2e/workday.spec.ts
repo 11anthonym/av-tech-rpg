@@ -1,6 +1,7 @@
 import {test} from '@playwright/test';
 import {arriveAtClient} from './flows/site-arrival.ts';
 import {completeWorkday} from './flows/complete-workday.ts';
+import {diagnoseService} from './flows/service-diagnosis.ts';
 test.use({video:process.platform==='linux'||process.env.RECORD_VIDEO==='1'?{mode:'on',size:{width:960,height:540}}:'off'});
 test.afterEach(async({page},info)=>{
   if(page.isClosed())return;
@@ -16,5 +17,6 @@ test.afterEach(async({page},info)=>{
 test('complete workday: ordinary input through both carts, closeout, rewards, return and a consequential next shift',async({page},info)=>{
   test.setTimeout(900000);
   const {career,errors}=await arriveAtClient(page,info);
-  await completeWorkday(page,info,info.project.name==='firefox'?'rush':'tidy',career,errors);
+  await completeWorkday(page,info,info.project.name==='firefox'?'rush':'tidy',career,errors,
+    info.project.name==='chromium'?()=>diagnoseService(page,info):undefined);
 });

@@ -56,14 +56,14 @@ test("brief, carry and load enforce gates and give each group exactly one home",
 test("v1 M1/M2 saves migrate without losing workbench, position or camera", () => {
   const old = {version:1,session:{areaId:"shop",technicianId:"prototype-tech",completedActions:["shop.inspect-workbench"]},position:[0,.92,-4],camera:{yaw:.4,pitch:.35,distance:5.5}};
   const migrated = parseSave(JSON.stringify(old));
-  assert.equal(migrated.version,4); assert.deepEqual(migrated.position,old.position); assert.deepEqual(migrated.camera,old.camera);
+  assert.equal(migrated.version,5); assert.deepEqual(migrated.position,old.position); assert.deepEqual(migrated.camera,old.camera);
   assert.deepEqual(migrated.session.completedActions,old.session.completedActions);
   assert.deepEqual(migrated.session.carry,[]); assert.equal(migrated.session.flags.shopBrief,false);
   const bytes=JSON.stringify(old), values=new Map([[M1_SAVE_KEY,bytes]]);
   const repository=new SaveRepository({getItem:key=>values.get(key)??null,setItem:(key,value)=>{values.set(key,value);}});
   assert(repository.save(repository.load().data));
   assert.equal(values.get(M1_SAVE_KEY),bytes);
-  assert.equal(JSON.parse(values.get(SAVE_KEY)!).version,4);
+  assert.equal(JSON.parse(values.get(SAVE_KEY)!).version,5);
 });
 
 test("a stale tab cannot overwrite newer saved cargo progress", () => {

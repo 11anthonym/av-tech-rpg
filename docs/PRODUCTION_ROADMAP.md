@@ -368,3 +368,12 @@ slice, **not the completed M4 gate**. Next is M4-B: both cart assemblies,
 installation pressure and closeout decisions, return, one-time shift rewards
 and a saved later-shift consequence. See [M4-A acceptance](qa/M4_SITE_ARRIVAL.md).
 Human art/fun review and real-GPU performance qualification remain open.
+
+**Execution update — 11/24/2026:** M4-B (#12) and distinct supervisor identity
+(#13) have been merged using the existing main-only Pages process, following
+the owner's instruction to deploy completed work. M4-B implements the full
+first shift and causal next-morning assignment; human playtest and physical-GPU
+acceptance remain open. M5-A adds service preparation and physically gathered
+Conshohocken findings as a bounded continuation. M5 is not complete until
+repair, final verification, client closeout and three saved outcome classes
+meet the gate above. The next implementation slice is M5-B repair approaches.

@@ -1,6 +1,7 @@
 import type { MoveInput } from "./movement.ts";
 
 const movementCodes = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
+const sprintCodes = new Set(["ShiftLeft", "ShiftRight"]);
 const isUiTarget = (target: EventTarget | null) => target instanceof HTMLElement &&
   Boolean(target.closest("input, textarea, select, button, a, dialog, [contenteditable='true']"));
 
@@ -22,7 +23,7 @@ export class PlayerInput {
     window.addEventListener("keydown", event => {
       if (!this.enabled || isUiTarget(event.target)) return;
       if (movementCodes.has(event.code) || event.code === "KeyE") event.preventDefault();
-      if (movementCodes.has(event.code)) this.keys.add(event.code);
+      if (movementCodes.has(event.code) || sprintCodes.has(event.code)) this.keys.add(event.code);
       if (event.code === "KeyE" && !event.repeat) this.interaction = true;
     }, { signal });
     window.addEventListener("keyup", event => this.keys.delete(event.code), { signal });
@@ -58,7 +59,7 @@ export class PlayerInput {
   movement(): MoveInput {
     const has = (...codes: string[]) => codes.some(code => this.keys.has(code));
     return { x: Number(has("KeyD", "ArrowRight")) - Number(has("KeyA", "ArrowLeft")),
-      z: Number(has("KeyW", "ArrowUp")) - Number(has("KeyS", "ArrowDown")) };
+      z: Number(has("KeyW", "ArrowUp")) - Number(has("KeyS", "ArrowDown")), sprint: has("ShiftLeft", "ShiftRight") };
   }
   consumeCamera() {
     const result = { x: this.orbitX, y: this.orbitY, zoom: this.zoom };

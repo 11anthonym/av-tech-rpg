@@ -7,7 +7,7 @@ export const contentIds = {
   route: "centerCityTutorial",
 } as const;
 
-export const areaIds = ['shop','centerCityGarage','centerCityLobby','centerCityConferenceRoom'] as const;
+export const areaIds = ['shop','centerCityGarage','centerCityLobby','centerCityConferenceRoom','serviceOffice'] as const;
 export type AreaId = typeof areaIds[number];
 export type TechnicianId = typeof contentIds.technician;
 export type ShopActionId = "shop.inspect-workbench" | "shop.brief-supervisor" | "shop.pickup-equipment" | "shop.load-van";
@@ -19,7 +19,11 @@ export const workdayActions = ['conference.pickup-part','install.cart1','install
   'finish.tidy','finish.rush','finish.wiley-workaround','reward.toolBag','reward.drill','reward.handTruck',
   'centerCityConferenceRoomToShop','shift.clock-out','shift.prep','shift.recovery-day','morning.accept'] as const;
 export type WorkdayActionId=typeof workdayActions[number];
-export type ActionId = ShopActionId | TravelActionId | WorkdayActionId;
+export const serviceActions=['service.prepare','service.prep-review','service.prep-josh','service.prep-none','service.depart',
+  'service-client','client-symptom-timeline','service-display','service-room-pressure','service-pickup','service.review-findings','serviceOfficeToShop'] as const;
+export type ServiceActionId=typeof serviceActions[number];
+export const isServiceAction=(id:ActionId):id is ServiceActionId=>(serviceActions as readonly string[]).includes(id);
+export type ActionId = ShopActionId | TravelActionId | WorkdayActionId | ServiceActionId;
 export const isWorkdayAction=(id:ActionId):id is WorkdayActionId=>(workdayActions as readonly string[]).includes(id);
 export type ToolId='screwdriver'|'toolBag'|'drill'|'handTruck';
 export const isTravelAction = (id:ActionId):id is TravelActionId => (travelActions as readonly string[]).includes(id);

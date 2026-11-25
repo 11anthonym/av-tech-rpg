@@ -3,6 +3,7 @@ import type { Session } from "../domain/session.ts";
 import type { ActionId,AreaId } from '../content/ids.ts';
 import { workdayClock } from '../content/travel.ts';
 import {workdayContent} from '../content/workday.ts';
+import {serviceClock} from '../domain/service.ts';
 
 interface HudCallbacks {
   interact(): void;
@@ -24,12 +25,12 @@ export class GameHud {
   constructor(root: HTMLElement, callbacks: HudCallbacks, settings: Settings) {
     this.root = root;
     root.innerHTML = `
-      <canvas id="game-view" tabindex="0" aria-label="3D shop. Use WASD or arrow keys to walk, drag to orbit, wheel to zoom, and E to interact."></canvas>
+      <canvas id="game-view" tabindex="0" aria-label="3D shop. Use WASD or arrow keys to walk, hold Shift to move faster, drag to orbit, wheel to zoom, and E to interact."></canvas>
       <header class="topbar"><div><span id="shift-label" class="eyebrow">AV TECH RPG · FIRST SHIFT</span><h1 id="area-title">Radnor Rack &amp; Wire</h1>
         <p id="area-note" class="stage-note">Service bench · systems test · Van 3 loading bay</p></div>
         <nav><a id="legacy-link">Original 2D career</a><button id="pause-button">Pause / settings</button></nav></header>
       <div id="notice" role="status" class="notice">Loading shop…</div>
-      <footer><div class="controls"><span><kbd>WASD</kbd> / arrows · Walk</span><span>Drag · Orbit</span><span>Wheel · Zoom</span></div>
+      <footer><div class="controls"><span><kbd>WASD</kbd> / arrows · Walk</span><span>Hold <kbd>Shift</kbd> · Faster</span><span>Drag · Orbit</span><span>Wheel · Zoom</span></div>
         <div class="interaction"><p id="objective">Talk to the supervisor.</p><button id="interact-button" disabled>Approach equipment</button></div>
         <p id="loadout" role="status"></p>
         <p id="save-status" role="status">3D session only</p></footer>
@@ -100,12 +101,12 @@ export class GameHud {
     this.root.querySelector('#shift-label')!.textContent=`AV TECH RPG · SHIFT ${state.career.day}`;
     const held=state.workday.carriedPart?workdayContent.assembly.find(p=>p.id===state.workday.carriedPart)?.label:state.carry[0];
     const kit=state.tools.map(id=>workdayContent.rewardTools.find(tool=>tool.id===id)?.name??id).join(', ');
-    this.root.querySelector("#loadout")!.textContent = `Hands ${held?1:0}/1: ${held??"Empty"} · Van ${state.loaded.length}/3${state.areaId==='shop'?'':` · Delivered ${state.delivered.length}/3`} · Energy ${state.energy}/100 · Burnout ${state.burnout} · Kit: ${kit} · ${workdayClock(state.travel.clockMinutes,state.career.day)}${state.career.xp?` · $${state.career.cash} · ${state.career.xp} XP · Callbacks ${state.career.callbacks}`:state.travel.parkingExpense?' · $18 receipt pending':''}`;
+    this.root.querySelector("#loadout")!.textContent = `Hands ${held?1:0}/1: ${held??"Empty"} · Van ${state.loaded.length}/3${state.areaId==='shop'?'':` · Delivered ${state.delivered.length}/3`} · Energy ${state.energy}/100 · Burnout ${state.burnout} · Kit: ${kit} · ${workdayClock(serviceClock(state),state.career.day)}${state.career.xp?` · $${state.career.cash} · ${state.career.xp} XP · Callbacks ${state.career.callbacks}`:state.travel.parkingExpense?' · $18 receipt pending':''}`;
   }
   place(id:AreaId,title:string) {
     this.root.dataset.area=id;
     this.root.querySelector('#area-title')!.textContent=id==='shop'?'Radnor Rack & Wire':title;
-    this.root.querySelector('#area-note')!.textContent=id==='shop'?'Service bench · systems test · Van 3 loading bay':'Center City East · Two Quick Carts';
+    this.root.querySelector('#area-note')!.textContent=id==='shop'?'Service bench · systems test · Van 3 loading bay':id==='serviceOffice'?'Conshohocken · One Quick Display Swap':'Center City East · Two Quick Carts';
     this.root.querySelector('#close-result')!.textContent=id==='shop'?'Back to shop':'Back to site';
   }
   result(message: string, reviewed: boolean, title?: string,choices:{actionId:ActionId;label:string;detail:string}[]=[]) {

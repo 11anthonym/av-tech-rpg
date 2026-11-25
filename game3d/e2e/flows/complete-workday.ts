@@ -9,7 +9,7 @@ const close=(page:Page)=>page.locator('#close-result').click();
 const choose=(page:Page,action:string)=>page.locator(`button[data-action="${action}"]`).click();
 
 
-export async function completeWorkday(page:Page,info:TestInfo,finish:'tidy'|'rush',career:string|null,errors:string[]){
+export async function completeWorkday(page:Page,info:TestInfo,finish:'tidy'|'rush',career:string|null,errors:string[],afterMorning?:()=>Promise<void>){
   for(let index=0;index<4;index++){
     if(index===2){
       await order(page);await expect(page.locator('button[data-action="pressure.leave"]')).toBeVisible();
@@ -53,7 +53,7 @@ export async function completeWorkday(page:Page,info:TestInfo,finish:'tidy'|'rus
   const morning=(await snapshot(page)).session;expect(morning.career.shiftsCompleted).toBe(1);expect(morning.career.day).toBe(2);
   expect(morning.career.cash).toBe(paid.career.cash);expect(morning.career.xp).toBe(40);
   expect(morning.career.callbacks).toBe(finish==='rush'?1:0);expect(morning.career.risks.length).toBe(finish==='rush'?1:0);
-  const saved=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)!),SAVE_KEY);expect(saved.version).toBe(4);
+  const saved=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)!),SAVE_KEY);expect(saved.version).toBe(5);
   // Approach the counter inside its prompt radius with room for key-up delay.
   await go(page,'s',2,-3.5,false);await go(page,'a',0,-5.5,false);
   await approach(page,'w','shop.brief-supervisor');await interact(page,'shop.brief-supervisor');
@@ -63,6 +63,7 @@ export async function completeWorkday(page:Page,info:TestInfo,finish:'tidy'|'rus
   const final=(await snapshot(page)).session;
   expect(final.career.nextAssignment).toBe(finish==='rush'?'callbackCleanupDispatch':'serviceDispatch');
   expect(final.career.shiftsCompleted).toBe(1);expect(final.career.xp).toBe(40);expect(final.workday.assembled).toHaveLength(4);
+  if(afterMorning)await afterMorning();
   await info.attach('completed-day',{body:JSON.stringify(await snapshot(page),null,2),contentType:'application/json'});
   expect(await page.evaluate(()=>localStorage.getItem('av-tech-rpg-save-v1'))).toBe(career);expect(errors).toEqual([]);
   await page.getByRole('link',{name:'Original 2D career'}).click();await page.waitForFunction(()=>(window as Window&{AV_TECH_RPG_READY?:boolean}).AV_TECH_RPG_READY);

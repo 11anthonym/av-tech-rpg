@@ -47,6 +47,38 @@ export function createFieldArt(scene:Scene,root:TransformNode,area:AreaDefinitio
     for(const x of [2.45,3.55])box('elevator-door',[x,1.3,3.14],[1.06,2.6,.035],aluminium);
     label('elevator-sign','CLIENT FLOOR',[3,2.95,3.1],2.4,.3);
     for(const x of [-4.8,-3.5,-2.2]){box('waiting-seat',[x,.45,4],[1,.2,.75],steel);box('seat-back',[x,.9,4.35],[1,.9,.13],steel);}
+  } else if(area.id==='serviceOffice') {
+    // Original, material-batched conference equipment. No new downloaded art,
+    // lights or shadow casters; each finding has a recognizable physical source.
+    box('display-bezel',[2,1.7,4],[2.2,1.3,.14],black);
+    box('display-image',[2,1.7,3.92],[2.06,1.16,.02],glass);
+    box('display-wall-mount',[2,1.4,4.15],[.8,.6,.14],steel);
+    box('display-signal-line',[2,.9,4.05],[.03,1.2,.03],black);
+    label('display-sign','FAILED DISPLAY',[2,2.65,4],2.5,.3);
+    box('credenza',[-3,.48,3],[2,.95,.8],wood);
+    for(const x of [-3.5,-2.5]){box('cabinet-door',[x,.48,2.58],[.94,.84,.035],steel);box('cabinet-pull',[x,.65,2.55],[.22,.025,.025],aluminium);}
+    box('coupler',[-3,1.04,2.95],[.18,.08,.09],aluminium);
+    box('coupler-lead-in',[-3.35,1.02,2.95],[.6,.025,.025],black);
+    box('coupler-lead-out',[-2.65,1.02,2.95],[.6,.025,.025],black);
+    label('coupler-sign','CREDENZA / INPUT B',[-3,1.7,3],2.7,.3);
+    box('wall-input',[-4.7,.6,3],[.12,.2,.05],white);
+    label('wall-input-sign','WALL / INPUT A',[-4.6,1.1,3],1.3,.2);
+    box('phone-table',[-3,.72,-2],[1.5,.1,.7],wood);
+    for(const x of [-3.6,-2.4])box('phone-table-leg',[x,.35,-2],[.06,.7,.55],steel);
+    box('phone-base',[-3,.85,-2],[.4,.15,.24],black);box('phone-handset',[-3,.96,-2],[.42,.07,.1],steel);
+    label('phone-sign','CLIENT / ROOM PHONE',[-3,1.8,-2],2.6,.3);
+    box('replacement-display-box',[3,.35,-1],[1.5,.7,.25],wood);
+    box('mount-kit',[3,.18,-1.35],[.55,.36,.25],steel);
+    label('kit-sign','REPLACEMENT KIT',[3,1.4,-1],2.3,.3);
+    box('meeting-table-top',[0,.72,1],[1.4,.1,3],wood);
+    for(const z of [-.2,2.2])box('table-pedestal',[0,.35,z],[.6,.7,.4],steel);
+    for(const x of [-1.25,1.25])for(const z of [.2,1.8]){
+      box('chair-seat',[x,.43,z],[.55,.12,.55],black);box('chair-back',[x,.78,z+.23],[.55,.65,.08],steel);
+      cylinder('chair-column',[x,.22,z],.06,.4,aluminium);
+    }
+    box('service-exit',[0,1.3,-5.85],[2.4,2.6,.1],steel);
+    label('service-exit-sign','VAN 3 / SHOP',[0,2.8,-5.75],2.4,.3,root,Math.PI);
+    label('room-title','CONFERENCE ROOM 2B',[0,2.8,5.85],3,.4);
   } else {
     box('work-order-table',[-3,.9,1],[1.6,.1,.8],wood);for(const x of [-3.65,-2.35])box('table-leg',[x,.43,1],[.07,.86,.65],steel);
     box('work-order',[-3,.96,1],[.4,.02,.3],white);label('assignment-sign','TWO QUICK CARTS',[-3,2.6,2.7],3,.4);
