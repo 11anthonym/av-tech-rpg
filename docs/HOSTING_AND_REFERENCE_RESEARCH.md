@@ -45,6 +45,16 @@ Cloudflare's current overview directs new projects toward Workers, while still s
 6. **No expensive infrastructure by accident.** No database, real-time backend, Cloudflare R2, paid tier, custom domain or analytics collection in M1 unless the user explicitly approves cost, permissions or account connection. Larger future files may warrant asset-bucket hosting, but not as a response to unmeasured estimates.
 7. **Do not claim configured infrastructure.** The implementation agent may prepare manifests, deployment workflow and instructions in GitHub; a live Cloudflare URL requires an actual connected Cloudflare account and deployment evidence.
 
+### Runtime asset cache qualification (11/25/2026)
+
+The current loader (`game3d/src/render/assets.ts`) resolves GLBs under `import.meta.env.BASE_URL + assets/`; `game3d/src/render/renderer.ts` similarly loads `shop-lighting.env`. These files live in `game3d/public/assets/`. Vite copies public-directory files unchanged, including filenames; the hashed JS bundle and build identifier therefore do **not** establish that a browser has fetched the matching GLB or environment bytes.
+
+- Do not classify these stable-name runtime assets as immutable merely because they are part of a Vite production build. Keep existing hosting and loader behavior until a concrete cache issue or release requirement justifies a change.
+- When a GLB or environment asset changes, verify the actual hosted response bytes against the release artifact (SHA-256), then exercise a returning browser with its cache enabled as well as a fresh context. A cache-disabled smoke test alone cannot qualify an upgrade. Record response cache headers, URL, build ID and whether the changed asset was actually displayed.
+- If stale asset versions are observed, prefer content-versioned asset URLs (for example, a generated manifest of hashes or imported asset URLs) over a timestamp on every request. Preserve the portable base path, provenance notices and offline/self-contained asset policy. This is a conditional future implementation recommendation, not a demonstrated current defect.
+
+Sources: [Vite static asset handling](https://vite.dev/guide/assets.html#the-public-directory) (official); [Vite maintainer/community discussion #10392](https://github.com/vitejs/vite/discussions/10392) (explains the practical cache distinction). Repository inspection at `293cd105`; no hosted cache experiment was executed for this note.
+
 ## Community evidence and agent workflow ideas
 
 These are **individual user experiences**, not controlled benchmarks or endorsed rankings:
