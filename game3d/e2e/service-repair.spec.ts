@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 import path from 'node:path';
-import {go as walk,interact,snapshot} from './flows/shop-prep.ts';
+import {go as walk,interact,snapshot,approach} from './flows/shop-prep.ts';
 import {restored} from './flows/site-arrival.ts';
 
 // The dependency earns this through the full first shift and diagnosis with real input.
@@ -30,7 +30,19 @@ async function display(page:import('@playwright/test').Page){
   }
   await interact(page,'service-display');
 }
-async function kit(page:import('@playwright/test').Page){await go(page,'d',0,4.7,true);await go(page,'s',2,-3.8,false);await go(page,'a',0,3.2,false);await go(page,'w',2,-2.3,true);await interact(page,'service-pickup');}
+async function kit(page:import('@playwright/test').Page){
+  if((await snapshot(page)).position[0]!<0){
+    await go(page,'a',0,-4.8,false);await go(page,'s',2,-3.8,false);await go(page,'d',0,3.2,true);
+  }else{
+    await go(page,'d',0,4.7,true);await go(page,'s',2,-3.8,false);await go(page,'a',0,3.2,false);
+  }
+  // A delayed Shift key-up can leave a coarse waypoint outside the kit radius.
+  // Centre the final walking approach below the bench; its collision face then
+  // stops delayed releases safely while the actual contextual prompt guides us.
+  const x=(await snapshot(page)).position[0]!;
+  if(x>3.8)await walk(page,'a',0,3.8,false);else if(x<2.2)await walk(page,'d',0,2.2,true);
+  await approach(page,'w','service-pickup');await interact(page,'service-pickup');
+}
 async function pressure(page:import('@playwright/test').Page,document=false){
   await go(page,'d',0,4.7,true);await go(page,'s',2,-3.8,false);await go(page,'a',0,-4.8,false);await go(page,'w',2,1,true);await go(page,'d',0,-3,true);await go(page,'w',2,1.1,true);await interact(page,'service-room-pressure');
   for(let count=0;count<8;count++){
@@ -60,7 +72,7 @@ for(const route of ['careful','hardware','documented'] as const)test(`service re
   if(route!=='documented'){await pressure(page);}
   for(let component=0;component<2;component++){
     // Go around the meeting table on the same side as the replacement kit.
-    const x=(await snapshot(page)).position[0]!;if(x<0){await go(page,'a',0,-4.8,false);await go(page,'s',2,-3.8,false);await go(page,'d',0,3.2,true);await go(page,'w',2,-2.3,true);await interact(page,'service-pickup');}else await kit(page);
+    await kit(page);
     await page.locator('button[data-action="service.take-item"]').click();await close(page);
     const carrying=await snapshot(page);expect(carrying.serviceInstallation?.held).toBe(component===0?'replacement-display':'mount-hardware');
     await expect.poll(async()=>(await snapshot(page)).character?.carryPoseError??1).toBeLessThan(.08);
