@@ -391,3 +391,9 @@ M6-A implements a 3D-only browser check after Pages publishes: require the
 deployed commit, exercise assets/controls/settings/persistence, and retain
 public-site evidence. This is partial alpha qualification; the physical-GPU
 and first-time-player gates above remain open.
+
+**Next 3D gameplay slice — M6-B: Josh in the shop.** Introduce Josh as a
+visually distinct, rigged coworker with direct contextual conversation and
+persistent help/trust consequences. The current “Ask Josh” preparation option
+is not a physical NPC. Bring this introduction forward from M7; M7 retains the
+larger coworker/relationship arc. Current development and acceptance focus on 3D.

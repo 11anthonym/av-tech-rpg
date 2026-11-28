@@ -48,11 +48,17 @@ async function kit(page:import('@playwright/test').Page){
   }else{
     await go(page,'d',0,4.7,true);await go(page,'s',2,-3.8,false);await go(page,'a',0,3.2,false);
   }
-  // A delayed Shift key-up can leave a coarse waypoint outside the kit radius.
-  // Centre the final walking approach below the bench; its collision face then
-  // stops delayed releases safely while the actual contextual prompt guides us.
-  const x=(await snapshot(page)).position[0]!;
-  if(x>3.8)await walk(page,'a',0,3.8,false);else if(x<2.2)await walk(page,'d',0,2.2,true);
+  // Recorded software-rendered browsers can deliver key-up over a second late.
+  // A second held-key correction can overshoot in the opposite direction.
+  // Steer with short ordinary key presses, checking the actual landing each
+  // time, before approaching the bench's collision face and contextual prompt.
+  for(let attempt=0;attempt<16;attempt++){
+    const x=(await snapshot(page)).position[0]!;
+    if(x>=2.2&&x<=3.8)break;
+    await page.keyboard.press(x>3.8?'a':'d',{delay:60});
+  }
+  const aligned=(await snapshot(page)).position[0]!;
+  expect(aligned).toBeGreaterThanOrEqual(2.2);expect(aligned).toBeLessThanOrEqual(3.8);
   await approach(page,'w','service-pickup');await interact(page,'service-pickup');
 }
 async function pressure(page:import('@playwright/test').Page,document=false){
