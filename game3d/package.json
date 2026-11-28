@@ -15,6 +15,7 @@
     "build:portable": "tsc --noEmit && vite build --base=/ --outDir dist-portable",
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
     "test:browser": "playwright test",
+    "test:public": "playwright test --config=playwright.public.config.ts",
     "check": "pnpm test && pnpm build && pnpm build:portable && pnpm test:browser"
   },
   "dependencies": {

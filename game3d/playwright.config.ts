@@ -12,9 +12,9 @@ export default defineConfig({
     viewport: { width: 1280, height: 720 }, trace: { mode: "retain-on-failure", screenshots: false }, screenshot: "only-on-failure",
     video: process.env.RECORD_VIDEO === "1" ? { mode: "on", size: { width: 960, height: 540 } } : "off" },
   projects: [
-    { name: "chromium", testIgnore: ["portable.spec.ts","service-repair.spec.ts"], use: { browserName: "chromium", launchOptions: { ...(chrome ? { executablePath: chrome } : { channel: "chromium" }),
+    { name: "chromium", testIgnore: ["portable.spec.ts","service-repair.spec.ts","public-release.spec.ts"], use: { browserName: "chromium", launchOptions: { ...(chrome ? { executablePath: chrome } : { channel: "chromium" }),
       args: ["--enable-unsafe-swiftshader"] } } },
-    { name: "firefox", testIgnore: ["portable.spec.ts","service-repair.spec.ts"], use: { browserName: "firefox", headless: process.platform !== "linux",
+    { name: "firefox", testIgnore: ["portable.spec.ts","service-repair.spec.ts","public-release.spec.ts"], use: { browserName: "firefox", headless: process.platform !== "linux",
       launchOptions: { firefoxUserPrefs: { "webgl.force-enabled": true } } } },
     { name: "chromium-service", testMatch:"service-repair.spec.ts",dependencies:["chromium"],use:{browserName:"chromium",launchOptions:{...(chrome?{executablePath:chrome}:{channel:"chromium"}),args:["--enable-unsafe-swiftshader"]}} },
     { name: "firefox-service", testMatch:"service-repair.spec.ts",dependencies:["chromium"],use:{browserName:"firefox",headless:process.platform!=="linux",launchOptions:{firefoxUserPrefs:{"webgl.force-enabled":true}}} },

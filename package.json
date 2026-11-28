@@ -10,6 +10,7 @@
     "dev": "pnpm --dir game3d dev",
     "test": "pnpm --dir game3d test && node scripts/qa-all.js --fast",
     "test:browser": "pnpm --dir game3d test:browser",
+    "test:public": "pnpm --dir game3d test:public",
     "test:preview": "node --test scripts/tests/local-preview.test.mjs",
     "test:legacy": "node scripts/qa-all.js",
     "build:portable": "pnpm --dir game3d build:portable"
