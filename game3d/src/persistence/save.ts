@@ -7,28 +7,29 @@ import type { Vec3 } from "../world/shop.ts";
 import { getArea } from '../world/areas.ts';
 import { validTravelProgress } from '../domain/travel.ts';
 import {validWorkday,supervisorPresent} from '../domain/workday.ts';
-import {validService} from '../domain/service.ts';
+import {validService,migrateService} from '../domain/service.ts';
 
-export const SAVE_KEY = "av-tech-rpg-3d-dev-v5";
+export const SAVE_KEY = "av-tech-rpg-3d-dev-v6";
+export const M5A_SAVE_KEY = "av-tech-rpg-3d-dev-v5";
 export const M4B_SAVE_KEY = "av-tech-rpg-3d-dev-v4";
 export const M4A_SAVE_KEY = "av-tech-rpg-3d-dev-v3";
 export const PREVIOUS_SAVE_KEY = "av-tech-rpg-3d-dev-v2";
 export const M1_SAVE_KEY = "av-tech-rpg-3d-dev-v1";
 export interface SaveData {
-  version: 5;
+  version: 6;
   session: Session;
   position: Vec3;
   camera: { yaw: number; pitch: number; distance: number };
 }
 export function freshSave(seed=173): SaveData {
   const session=newSession();session.travel.seed=seed;
-  return { version: 5, session, position: shop.spawn,
+  return { version: 6, session, position: shop.spawn,
     camera: { yaw: 0, pitch: 0.35, distance: 5.5 } };
 }
 
 export function parseSave(raw: string): SaveData {
   const data = JSON.parse(raw) as Omit<SaveData,'version'> & {version:number};
-  if (![1, 2,3,4,5].includes(data?.version) || !areaIds.includes(data.session?.areaId) ||
+  if (![1, 2,3,4,5,6].includes(data?.version) || !areaIds.includes(data.session?.areaId) ||
     (data.version<5&&data.session.areaId==='serviceOffice')||
     (data.version<3&&data.session.areaId!==contentIds.area) ||
     data.session.technicianId !== contentIds.technician ||
@@ -57,13 +58,14 @@ export function parseSave(raw: string): SaveData {
     session={...session,areaId:data.session.areaId,flags:{...data.session.flags},burnout:data.session.burnout,
       delivered:data.session.delivered,travel:data.session.travel};
     if(data.version>=4)session={...session,workday:data.session.workday,career:data.session.career};
-    if(data.version===5)session={...session,service:data.session.service};
+    if(data.version>=5)session={...session,service:data.session.service};
+    if(data.version===5)session=migrateService(session);
     if(!validService(session)||!validTravelProgress(session)||!validWorkday(session))throw new Error('Invalid workday progress');
     session=structuredClone(session);
   }
   const area=getArea(session.areaId);
   const collisionArea=supervisorPresent(session)?area:{...area,props:area.props.filter(prop=>prop.id!=='supervisor')};
-  return { version: 5,
+  return { version: 6,
     session,
     position: isSafePosition(data.position,collisionArea) ? data.position : area.spawn,
     camera: { yaw: data.camera.yaw % (Math.PI * 2), pitch: Math.max(0.15, Math.min(1.05, data.camera.pitch)),
@@ -82,7 +84,7 @@ export class SaveRepository {
   load(): { data: SaveData; message: string } {
     try {
       this.lastRaw = this.storage.getItem(SAVE_KEY);
-      const raw = this.lastRaw ?? this.storage.getItem(M4B_SAVE_KEY) ?? this.storage.getItem(M4A_SAVE_KEY) ?? this.storage.getItem(PREVIOUS_SAVE_KEY) ?? this.storage.getItem(M1_SAVE_KEY);
+      const raw = this.lastRaw ?? this.storage.getItem(M5A_SAVE_KEY) ?? this.storage.getItem(M4B_SAVE_KEY) ?? this.storage.getItem(M4A_SAVE_KEY) ?? this.storage.getItem(PREVIOUS_SAVE_KEY) ?? this.storage.getItem(M1_SAVE_KEY);
       return { data: raw ? parseSave(raw) : freshSave(crypto.getRandomValues(new Uint32Array(1))[0]!), message: raw ? "3D session restored" : "New 3D session" };
     } catch {
       // Preserve damaged/unknown saves for recovery; do not overwrite them.

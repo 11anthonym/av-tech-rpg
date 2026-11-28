@@ -2,6 +2,7 @@ import {test} from '@playwright/test';
 import {arriveAtClient} from './flows/site-arrival.ts';
 import {completeWorkday} from './flows/complete-workday.ts';
 import {diagnoseService} from './flows/service-diagnosis.ts';
+import path from 'node:path';
 test.use({video:process.platform==='linux'||process.env.RECORD_VIDEO==='1'?{mode:'on',size:{width:960,height:540}}:'off'});
 test.afterEach(async({page},info)=>{
   if(page.isClosed())return;
@@ -18,5 +19,9 @@ test('complete workday: ordinary input through both carts, closeout, rewards, re
   test.setTimeout(900000);
   const {career,errors}=await arriveAtClient(page,info);
   await completeWorkday(page,info,info.project.name==='firefox'?'rush':'tidy',career,errors,
-    info.project.name==='chromium'?()=>diagnoseService(page,info):undefined);
+    info.project.name==='chromium'?async()=>{
+      await diagnoseService(page,info);
+      // An ordinary-input earned checkpoint, shared by alternative service replays.
+      await page.context().storageState({path:path.resolve('test-results/service-ready.json')});
+    }:undefined);
 });
