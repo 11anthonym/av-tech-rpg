@@ -81,7 +81,8 @@ for(const route of ['careful','hardware','documented'] as const)test(`service re
   }
   expect((await snapshot(page)).areaId).toBe('serviceOffice');
   await display(page);await expect(page.locator('#result-title')).toHaveText('Repair approaches');
-  const method=route==='hardware'?'stage-clean-swap':'negotiate-verification-window';await page.locator(`button[data-action="service.method.${method}"]`).click();await close(page);
+  if(route==='hardware')await expect(page.locator('button[data-action="service.method.stage-clean-swap"]')).toBeVisible();
+  const method=route==='hardware'?'ticket-swap':'negotiate-verification-window';await page.locator(`button[data-action="service.method.${method}"]`).click();await close(page);
   await page.screenshot({path:info.outputPath('repair-method.png')});
   if(route!=='documented'){await pressure(page);}
   for(let component=0;component<2;component++){
@@ -98,7 +99,12 @@ for(const route of ['careful','hardware','documented'] as const)test(`service re
   }
   await display(page);await page.locator(`button[data-action="service.test.${route==='documented'?'skip':'full'}"]`).click();await close(page);
   await page.reload();await restored(page);expect((await snapshot(page)).session.service?.finalTest).toBeTruthy();
+  if(route==='hardware')expect((await snapshot(page)).session.service?.finalTest?.status).toBe('weak');
   await pressure(page,route==='documented');
+  if(route==='hardware'){
+    expect((await snapshot(page)).session.service?.finalTest?.status).toBe('recovered');
+    expect((await snapshot(page)).session.service!.incidents.every(i=>i.recovered)).toBe(true);
+  }
   await go(page,'a',0,-4.8,false);await go(page,'s',2,-4.1,false);await go(page,'d',0,-3.6,true);await approach(page,'w','service-client');await interact(page,'service-client');
   await page.locator('button[data-action="service.closeout"]').click();await page.screenshot({path:info.outputPath('service-paid-handoff.png')});await close(page);
   const paid=(await snapshot(page)).session;expect(paid.career.cash).toBe(before.career.cash+96);expect(paid.career.xp).toBe(before.career.xp+paid.service!.closeout!.xp);

@@ -42,7 +42,10 @@ its 240-second budget and gameplay assertions.
 The ordinary-input Chromium first-day replay earns `test-results/service-ready.json`
 after the service diagnosis. Dependent Chromium/Firefox service projects restore
 that exact browser checkpoint for three alternative outcomes, rather than
-fabricating progression. Each uses keyboard/mouse movement, pickup, installation,
+fabricating progression. The fast ticket-swap replay exposes a dropout in the
+full room test, then stabilizes it before handoff; the drill-gated staged method
+also remains available and is checked against the original runtime. Each replay
+uses keyboard/mouse movement, pickup, installation,
 save/reload while carrying and after testing, paid handoff, return and follow-up.
 Screenshots, saved outcomes, traces on failure and Linux gameplay videos are
 included in `game3d-browser-evidence`. The unresolved replay negotiates more
