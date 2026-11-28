@@ -386,3 +386,8 @@ run results and scope limits belong with [M5 service acceptance](qa/M5_SERVICE_R
 The second overnight cycle and a playable callback dispatch remain later work.
 M6 qualification still needs physical-GPU measurements and observed first-time
 playtests; these are not satisfied by software-rendered CI.
+
+M6-A implements a 3D-only browser check after Pages publishes: require the
+deployed commit, exercise assets/controls/settings/persistence, and retain
+public-site evidence. This is partial alpha qualification; the physical-GPU
+and first-time-player gates above remain open.

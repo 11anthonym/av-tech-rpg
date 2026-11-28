@@ -58,7 +58,44 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  verify-public-3d:
+    name: Verify published 3D game
+    if: github.ref == 'refs/heads/main'
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    env:
+      EXPECTED_BUILD: ${{ github.sha }}
+      PLAYWRIGHT_PUBLIC_SITE: ${{ needs.deploy.outputs.page_url }}
+      RECORD_VIDEO: '1'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: game3d/package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: game3d/pnpm-lock.yaml
+      - run: pnpm bootstrap
+      - run: pnpm --dir game3d exec playwright install --with-deps chromium
+      - name: Exercise the actual published commit
+        run: pnpm test:public
+      - name: Retain public browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-3d-browser-evidence
+          path: |
+            game3d/public-test-results/
+            game3d/public-playwright-report/
